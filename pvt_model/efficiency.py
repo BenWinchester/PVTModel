@@ -50,7 +50,7 @@ def dc_electrical(
 
     """
 
-    # * Compute the electrical demand covered.
+    return (electrical_output - electrical_losses) / electrical_demand
 
 
 def dc_thermal(thermal_output: float, thermal_demand: float) -> float:
@@ -69,7 +69,7 @@ def dc_thermal(thermal_output: float, thermal_demand: float) -> float:
 
     """
 
-    # * Compute the thermal demand covered.
+    return thermal_output / thermal_demand
 
 
 def dc_average(
@@ -104,7 +104,10 @@ def dc_average(
 
     """
 
-    # * Determine the average output met by calling the other two functions.
+    return 0.5 * (
+        dc_electrical(electrical_output, electrical_losses, electrical_demand)
+        + dc_thermal(thermal_output, thermal_demand)
+    )
 
 
 def dc_average_from_dc_values(
@@ -126,7 +129,7 @@ def dc_average_from_dc_values(
 
     """
 
-    # * Determine the average output met by averagine the two input values.
+    return 0.5 * (dc_electrical_value + dc_thermal_value)
 
 
 def dc_weighted_average(
@@ -161,9 +164,11 @@ def dc_weighted_average(
 
     """
 
-    # * Determine the weighted average output met by calling the other two functions.
-    # * From these, the demand covered values are computed, and a weighted average is
-    # * determined.
+    return (
+        electrical_demand
+        * dc_electrical(electrical_output, electrical_losses, electrical_demand)
+        + thermal_demand * dc_thermal(thermal_output, thermal_demand)
+    ) / (electrical_demand + thermal_demand)
 
 
 def dc_weighted_average_from_dc_values(
@@ -194,5 +199,6 @@ def dc_weighted_average_from_dc_values(
 
     """
 
-    # * Determine the weighted average output met by averaging the two values in a
-    # * weighted fashion.
+    return (
+        electrical_demand * dc_electrical_value + thermal_demand * dc_thermal_value
+    ) / (electrical_demand + thermal_demand)
