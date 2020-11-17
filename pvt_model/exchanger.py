@@ -22,17 +22,34 @@ class Exchanger:
     """
     Represents a physical heat exchanger within a hot-water tank.
 
-    .. attribute::
-
     """
 
-    def __init__(self) -> None:
+    # Private Attributes:
+    #
+    # .. attribute:: _efficiency
+    #   The efficiency of the heat exchanger, defined between 0 and 1.
+
+    def __init__(self, efficiency) -> None:
         """
         Instantiate a heat exchanger instance.
 
+        :param efficiency:
+            The efficiency of the heat exchanger, defined between 0 and 1.
+
         """
 
-    def update(self, tank: tank.Tank, input_water_temperature: float) -> float:
+        self._efficiency = efficiency
+
+    def update(
+        self,
+        water_tank: tank.Tank,
+        input_water_temperature: float,
+        input_water_flow_rate: float,
+        input_water_heat_capacity: float,
+        ambient_tank_temperature: float,
+        mains_water_temperature: float,
+        demand_water_flow_rate: float,
+    ) -> float:
         """
         Updates the tank temperature based on the input water temperature.
 
@@ -43,16 +60,60 @@ class Exchanger:
             The temperature of the water being inputted to the heat exchanger, measured
             in Kelvin.
 
+        :param input_water_flow_rate:
+            The flow rate of water entering the exchanger from the PV-T panel, measured
+            in kilograms per unit time step.
+            ??? Check this! This may be incorrect, and it may, in fact, be defined per
+            ??? second or something.
+
+        :param input_water_heat_capacity:
+            The heat capacity of the water used to feed the heat exchanger, measured in
+            Joules per kilogram Kelvin.
+
+        :param ambient_tank_temperature:
+            The temperature of the air surrounding the tank, measured in Kelvin.
+
+        :param mains_water_temperature:
+            The temperature of the water used to feed the system, usually that of the
+            mains water supply, measured in Kelvin.
+
+        :param demand_water_flow_rate:
+            The flow rate of water required by the end user, measured in cubic meters
+            per time step.
+            ??? Again, the time interval here may be SI seconds or model time step.
+            ??? This needs thinking about... :p
+
         :return:
             The output water temperature from the heat exchanger, measured in Kelvin.
 
         """
 
-        # * Determine the new tank temperature using properties of the tank.
+        # Apply the first law of Thermodynamics to determine the output water
+        # temperature from the heat exchanger.
+        output_water_temperature = input_water_temperature - self._efficiency * (
+            input_water_temperature - water_tank.temperature
+        )
 
-        # * Apply the first law of Thermodynamics to determine the output water
-        # * temperature from the heat exchanger.
+        # Determine the new tank temperature using properties of the tank.
+        heat_added = (
+            self._efficiency * input_water_flow_rate * input_water_heat_capacity
+        ) * (input_water_temperature - water_tank.temperature)
 
-        # * Return this output temperature.
+        heat_lost = (
+            water_tank.area
+            * water_tank.heat_loss_coefficient
+            * (water_tank.temperature - ambient_tank_temperature)
+        )
 
-        return 0
+        heat_delivered = (
+            demand_water_flow_rate
+            * water_tank.heat_capacity
+            * (water_tank.temperature - mains_water_temperature)
+        )
+
+        water_tank.temperature = (heat_added - heat_lost - heat_delivered) / (
+            water_tank.mass * water_tank.heat_capacity
+        ) + water_tank.temperature
+
+        # Return the output temperature of the heat exchanger.
+        return output_water_temperature

@@ -29,9 +29,22 @@ class Tank:
     .. attribute:: heat_capacity
         The heat capacity of the water, measured in Joules per kilogram Kelvin.
 
+    .. attribute:: area
+        The surface area of the tank, measured in meters squared.
+
+    .. attribute:: heat_loss_coefficient
+        The heat lost from the tank, measured in Joules per meter squared Kelvin.
+
     """
 
-    def __init__(self, temperature: float, mass: float, heat_capacity: float) -> None:
+    def __init__(
+        self,
+        temperature: float,
+        mass: float,
+        heat_capacity: float,
+        area: float,
+        heat_loss_coefficient: float,
+    ) -> None:
         """
         Instantiate a hot-water tank.
 
@@ -46,8 +59,16 @@ class Tank:
             The heat capacity of water within the tank, measured in Joules per kilogram
             Kelvin.
 
+        :param area:
+            The surface area of the tank, measured in meters squared.
+
+        :param heat_loss_coefficient:
+            The heat lost from the tank, measured in Joules per meter squared Kelvin.
+
         """
 
         self.temperature = temperature
         self.mass = mass
         self.heat_capacity = heat_capacity
+        self.area = area
+        self.heat_loss_coefficient = heat_loss_coefficient
