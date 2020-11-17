@@ -79,7 +79,7 @@ def read_yaml(yaml_file_path: str) -> Dict[Any, Any]:
 
     """
 
-    # * Open the yaml data and read it.
+    # Open the yaml data and read it.
     if not os.path.isfile(yaml_file_path):
         raise yaml_file_path("")
     with open(yaml_file_path) as f:
