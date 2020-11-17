@@ -14,9 +14,13 @@ various modules throughout the PVT model.
 
 """
 
-from typing import NamedTuple
+import os
 
-__all__ = ("WeatherConditions",)
+from typing import Any, Dict, NamedTuple
+
+import yaml
+
+__all__ = ("WeatherConditions", "read_yaml")
 
 
 class WeatherConditions(NamedTuple):
@@ -61,3 +65,28 @@ class WeatherConditions(NamedTuple):
         """
 
         return 0.0552 * (self.ambient_temperature ** 1.5)
+
+
+def read_yaml(yaml_file_path: str) -> Dict[Any, Any]:
+    """
+    Read in some yaml data and return it.
+
+    :param yaml_file_path:
+        The path to the yaml data to read in.
+
+    :return:
+        A `dict` containing the data read in from the yaml file.
+
+    """
+
+    # * Open the yaml data and read it.
+    if not os.path.isfile(yaml_file_path):
+        raise yaml_file_path("")
+    with open(yaml_file_path) as f:
+        try:
+            data = yaml.safe_load(f)
+        except yaml.parser.ParserError as e:
+            # * Do some logging
+            raise
+
+    return data
