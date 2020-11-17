@@ -18,6 +18,9 @@ processing the command-line arguments that define the scope of the model.
 import logging
 import sys
 
+from dataclasses import dataclass
+from typing import Optional
+
 from . import exchanger, load, pvt, tank, weather
 
 
@@ -25,6 +28,55 @@ from . import exchanger, load, pvt, tank, weather
 
 
 # * Potentially a generator-wrap around the time module.
+
+
+@dataclass
+class SystemData:
+    """
+    Contains PVT system data at a given time step.
+
+    .. attribute:: pv_temperature
+        The temperature of the PV layer of the panel, measured in Kelvin.
+
+    .. attribute:: pv_efficiency
+        The efficiency of the PV panel, defined between 0 and 1.
+
+    .. attribute:: collector_temperature
+        The temperature of the thermal collector, measured in Kelvin.
+
+    .. attribute:: tank_temperature
+        The temperature of thw water within the hot-water tank, measured in Kelvin.
+
+    .. attribute:: electrical_load
+        The load (demand) placed on the PV-T panel's electrical output, measured in
+        Watts.
+
+    .. attribute:: thermal_load
+        The load (demand) placed on the hot-water tank's thermal output, measured in
+        Watts.
+
+    .. attribute:: auxiliary_heating
+        The additional energy needed to be supplied to the system through the auxiliary
+        heater when the tank temperature is below the required thermal output
+        temperature, measured in Watts.
+
+    .. attribute:: dc_electrical
+        The electrical demand covered, defined between 0 and 1.
+
+    .. attribute:: dc_thermal
+        The thermal demand covered, defined between 0 and 1.
+
+    """
+
+    pv_temperature: float
+    pv_efficiency: float
+    collector_temperature: float
+    tank_temperature: float
+    electrical_load: float
+    thermal_load: float
+    auxiliary_heating: float
+    dc_electrical: Optional[float] = None
+    dc_thermal: Optional[float] = None
 
 
 def main(args) -> None:
@@ -54,6 +106,8 @@ def main(args) -> None:
         # * tank s.t. it updates the tank correctly as well.
         # * Re-itterate through with the collector inlet temperature calculated based on
         # * the output temperature from the heat exchanger.
+
+        # * Store the information in the dictionary mapping between time step and data.
 
     # * Potentially generate some plots, and at least save the data.
 
