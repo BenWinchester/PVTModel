@@ -16,19 +16,163 @@ various modules throughout the PVT model.
 
 import os
 
-from typing import Any, Dict, NamedTuple
+from dataclasses import dataclass
+from typing import Any, Dict, Optional
 
 import yaml
 
-__all__ = ("WeatherConditions", "read_yaml")
+__all__ = (
+    "CollectorParameters",
+    "LayerParameters",
+    "OpticalLayerParameters",
+    "PVParameters",
+    "WeatherConditions",
+    "read_yaml",
+    "HEAT_CAPACITY_OF_WATER",
+)
 
 
-class WeatherConditions(NamedTuple):
+#############
+# Constants #
+#############
+
+
+# The Stefan-Boltzman constant, given in Watts per meter squared Kelvin to the four.
+STEFAN_BOLTZMAN_CONSTANT = 5.670374419 * 10 ** (-8)
+
+# The heat capacity of water, measured in Joules per kilogram Kelvin.
+HEAT_CAPACITY_OF_WATER = 4182
+
+# The free convective heat transfer coefficient of air. This varies, and potentially
+# could be extended to the weather module and calculated on the fly depending on various
+# environmental conditions etc..
+FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR = 25
+
+# The thermal conductivity of air is measured in Watts per meter Kelvin.
+# ! This is defined at 273 Kelvin.
+THERMAL_CONDUCTIVITY_OF_AIR = 0.024
+
+
+##############################
+# Functions and Data Classes #
+##############################
+
+
+@dataclass
+class LayerParameters:
+    """
+    Contains parameters needed to instantiate a layer within the PV-T panel.
+
+    .. attribute:: mass
+        The mass of the layer, measured in Kelvin.
+
+    .. attribute:: heat_capacity
+        The heat capacity of the layer, measured in Joules per kilogram Kelvin.
+
+    .. attribute:: area
+        The area of the layer, measured in meters squared.
+
+    .. attribute:: thickness
+        The thickness of the layer, measured in meters.
+
+    .. attribute:: temperature
+        The temperature at which to initialise the layer, measured in Kelvin.
+
+    """
+
+    mass: float
+    heat_capacity: float
+    area: float
+    thickness: float
+    temperature: Optional[float]
+
+
+@dataclass
+class CollectorParameters(LayerParameters):
+    """
+    Contains parameters needed to instantiate a collector layer within the PV-T panel.
+
+    .. attribute:: output_water_temperature
+        The temperature, in Kelvin, of water outputted by the layer.
+
+    .. attribute:: mass_flow_rate
+        The mass flow rate of heat-transfer fluid through the collector.
+
+    """
+
+    output_water_temperature: float
+    mass_flow_rate: float
+
+
+@dataclass
+class BackLayerParameters(LayerParameters):
+    """
+    Contains parameters needed to instantiate the back layer of the PV-T panel.
+
+    .. attribute:: conductance
+        The conductance of layer (to the environment/its surroundings), measured in
+        Watts per meter squared Kelvin.
+
+    """
+
+    conductivity: float
+
+
+@dataclass
+class OpticalLayerParameters(LayerParameters):
+    """
+    Contains parameters needed to instantiate a layer with optical properties.
+
+    .. attribute:: transmissivity
+        The transmissivity of the layer: a dimensionless number between 0 (nothing is
+        transmitted through the layer) and 1 (all light is transmitted).
+
+    .. attribute:: absorptivity
+        The absorptivity of the layer: a dimensionless number between 0 (nothing is
+        absorbed by the layer) and 1 (all light is absorbed).
+
+    .. attribute:: emissivity
+        The emissivity of the layer; a dimensionless number between 0 (nothing is
+        emitted by the layer) and 1 (the layer re-emits all incident light).
+
+    """
+
+    transmissivity: float
+    absorptivity: float
+    emissivity: float
+
+
+@dataclass
+class PVParameters(OpticalLayerParameters):
+    """
+    Contains parameters needed to instantiate a PV layer within the PV-T panel.
+
+    .. attribute:: reference_efficiency
+        The efficiency of the PV layer at the reference temperature. Thie value varies
+        between 1 (corresponding to 100% efficiency), and 0 (corresponding to 0%
+        efficiency)
+
+    .. attribute:: reference_temperature
+        The referencee temperature, in Kelvin, at which the reference efficiency is
+        defined.
+
+    .. attribute:: thermal_coefficient
+        The thermal coefficient for the efficiency of the panel.
+
+    """
+
+    reference_efficiency: float
+    reference_temperature: float
+    thermal_coefficient: float
+
+
+@dataclass
+class WeatherConditions:
     """
     Contains information about the various weather conditions at any given time.
 
     .. attribute:: irradiance
-        The solar irradiance in Watts.
+        The solar irradiance in Watts per meter squared.
 
     .. attribute:: declination
         The angle of declination of the sun above the horizon

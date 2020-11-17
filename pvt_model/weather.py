@@ -103,8 +103,8 @@ class WeatherForecaster:
 
         :return:
             A :class:`__utils__.WeatherConditions` giving the solar irradiance, in
-            watts, and the angles, both azimuthal and declination, of the sun's position
-            in the sky.
+            watts per meter squared, and the angles, both azimuthal and declination, of
+            the sun's position in the sky.
 
         """
 
