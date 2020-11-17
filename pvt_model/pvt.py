@@ -141,6 +141,21 @@ class PV(_Layer):
 
     """
 
+    # Private attributes:
+    #
+    # .. attribute:: _reference_efficiency
+    #   The efficiency of the PV layer at the reference temperature. Thie value varies
+    #   between 1 (corresponding to 100% efficiency), and 0 (corresponding to 0%
+    #   efficiency)
+    #
+    # .. attribute:: _reference_temperature
+    #   The referencee temperature, in Kelvin, at which the reference efficiency is
+    #   defined.
+    #
+    # .. attribute:: _thermal_coefficient
+    #   The thermal coefficient for the efficiency of the panel.
+    #
+
     def update(
         self, solar_irradiance: float, glass_temp: float, collector_temp: float
     ) -> None:
@@ -165,6 +180,19 @@ class PV(_Layer):
         # * Use this to compute the rise in temperature of the PV layer.
 
         # * Set the temperature of this layer appropriately.
+
+    @property
+    def efficiency(self) -> float:
+        """
+        Returns the percentage efficiency of the PV panel based on its temperature.
+
+        :return:
+            A decimal giving the percentage efficiency of the PV panel between 0 (0%
+            efficiency), and 1 (100% efficiency).
+
+        """
+
+        # * Determine the electrical efficiency of the panel and return it as a float.
 
 
 class PVT:

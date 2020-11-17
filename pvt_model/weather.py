@@ -81,11 +81,11 @@ class WeatherForecaster:
 
         return cls(dict(), dict())
 
-    def _cloud_cover(self, time_of_day: datetime.datetime) -> int:
+    def _cloud_cover(self, date_and_time: datetime.datetime) -> int:
         """
         Computes the percentage cloud clover based on weather conditions.
 
-        :param time_of_day:
+        :param date_and_time:
             The date and time of day, used to determine which month the cloud cover
             should be retrieved for.
 
@@ -94,11 +94,11 @@ class WeatherForecaster:
 
         """
 
-    def irradiance(self, time_of_day: datetime.datetime) -> WeatherConditions:
+    def irradiance(self, date_and_time: datetime.datetime) -> WeatherConditions:
         """
         Computes the solar irradiance based on weather conditions at the time of day.
 
-        :param time_of_day:
+        :param date_and_time:
             The date and time of day, used to calculate the irradiance.
 
         :return:
