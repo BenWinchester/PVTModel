@@ -22,6 +22,7 @@ import datetime
 
 from typing import Any, Dict
 
+import pysolar
 import yaml
 
 from .__utils__ import WeatherConditions
@@ -94,6 +95,26 @@ class WeatherForecaster:
 
         """
 
+    def _get_solar_angles(
+        self, date_and_time: datetime.datetime
+    ) -> Tuple[float, float]:
+        """
+        Determine the azimuthal_angle (right-angle) and declination of the sun.
+
+        :param date_and_time:
+            The current date and time.
+
+        :return:
+            A `tuple` containing the azimuthal angle and declination of the sun at the
+            given date and time.
+
+        """
+
+        return (
+            pysolar.solar.get_azimuth(self._latitude, self._longitude, date_and_time),
+            pysolar.solar.get_altitude(self._latitude, self._longitude, date_and_time),
+        )
+
     def irradiance(self, date_and_time: datetime.datetime) -> WeatherConditions:
         """
         Computes the solar irradiance based on weather conditions at the time of day.
@@ -114,8 +135,7 @@ class WeatherForecaster:
 
         # * Factor in the weather conditions and cloud cover to compute the current
         # * solar irradiance.
-        declination: float = 0
-        azimuthal_angle: float = 0
+        declination, azimuthal_angle = self._get_solar_angles(date_and_time)
 
         # * Compute the wind speed and ambient temperature
         wind_speed: float = 0
