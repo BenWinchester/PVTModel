@@ -22,6 +22,7 @@ from typing import Any, Dict, Optional
 import yaml
 
 __all__ = (
+    "MissingParametersError",
     "CollectorParameters",
     "LayerParameters",
     "OpticalLayerParameters",
@@ -38,19 +39,51 @@ __all__ = (
 
 
 # The Stefan-Boltzman constant, given in Watts per meter squared Kelvin to the four.
-STEFAN_BOLTZMAN_CONSTANT = 5.670374419 * 10 ** (-8)
+STEFAN_BOLTZMAN_CONSTANT: float = 5.670374419 * 10 ** (-8)
 
 # The heat capacity of water, measured in Joules per kilogram Kelvin.
-HEAT_CAPACITY_OF_WATER = 4182
+HEAT_CAPACITY_OF_WATER: int = 4182
 
 # The free convective heat transfer coefficient of air. This varies, and potentially
 # could be extended to the weather module and calculated on the fly depending on various
 # environmental conditions etc..
-FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR = 25
+FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR: int = 25
 
 # The thermal conductivity of air is measured in Watts per meter Kelvin.
 # ! This is defined at 273 Kelvin.
-THERMAL_CONDUCTIVITY_OF_AIR = 0.024
+THERMAL_CONDUCTIVITY_OF_AIR: float = 0.024
+
+# The temperature of absolute zero in Kelvin, used for converting Celcius to Kelvin and
+# vice-a-versa.
+ZERO_CELCIUS_OFFSET: float = 273.15
+
+
+##############
+# Exceptions #
+##############
+
+
+class MissingParametersError(Exception):
+    """
+    Raised when not all parameters have been specified that are needed to instantiate.
+
+    """
+
+    def __init__(self, class_name, message) -> None:
+        """
+        Instantiate a missing parameters error.
+
+        :param class_name:
+            The class for which insufficient parameters were specified.
+
+        :param message:
+            An appended message to display to the user.
+
+        """
+
+        super().__init__(
+            f"Missing parameters when initialising a '{class_name}' class: {message}."
+        )
 
 
 ##############################

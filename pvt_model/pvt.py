@@ -30,34 +30,6 @@ __all__ = ("PVT",)
 MINIMUM_SOLAR_DECLINATION = 5
 
 
-##############
-# Exceptions #
-##############
-
-
-class MissingParametersError(Exception):
-    """
-    Raised when not all parameters have been specified that are needed to instantiate.
-
-    """
-
-    def __init__(self, class_name, message) -> None:
-        """
-        Instantiate a missing parameters error.
-
-        :param class_name:
-            The class for which insufficient parameters were specified.
-
-        :param message:
-            An appended message to display to the user.
-
-        """
-
-        super().__init__(
-            f"Missing parameters when initialising a '{class_name}' class: {message}."
-        )
-
-
 ####################
 # Helper Functions #
 ####################

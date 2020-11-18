@@ -18,16 +18,80 @@ cooling effect on panels can be estimated and included into the model as well.
 
 """
 
+import calendar
 import datetime
 
-from typing import Any, Dict
+from dataclasses import dataclass
+from typing import Any, Dict, Tuple, Union
 
 import pysolar
 import yaml
 
-from .__utils__ import WeatherConditions
+from .__utils__ import MissingParametersError, WeatherConditions, read_yaml
 
 __all__ = ("WeatherForecaster",)
+
+
+@dataclass
+class _MonthlyWeatherData:
+    """
+    Contains weather data for a month.
+
+    .. attribute:: num_days
+        The average number of days in the month.
+
+    .. attribute:: cloud_cover
+        The probabilty that any given day within the month is cloudy.
+
+    .. attribute:: rainy_days
+        The average number of days in the month for which rain occurs.
+
+    .. attribute:: day_temp
+        The average daytime temperature, measured in Kelvin, for the month.
+
+    .. attribute:: night_temp
+        The average nighttime temperature, measured in Kelvin, for the month.
+
+    """
+
+    month_name: str
+    num_days: float
+    cloud_cover: float
+    rainy_days: float
+    day_temp: float
+    night_temp: float
+
+    @classmethod
+    def from_yaml(cls, month_name: str, monthly_weather_data: Dict[Any, Any]) -> Any:
+        """
+        Checks for present fields and instantiates from YAML data.
+
+        :param month_name:
+            A `str` giving a three-letter representation of the month.
+
+        :param monthly_weather_data:
+            A `dict` containing the weather data for the month, extracted raw from the
+            weather YAML file.
+
+        :return:
+            An instance of the class.
+
+        """
+
+        try:
+            return cls(
+                month_name,
+                monthly_weather_data["num_days"],
+                monthly_weather_data["cloud_cover"],
+                monthly_weather_data["rainy_days"],
+                monthly_weather_data["day_temp"],
+                monthly_weather_data["night_temp"],
+            )
+        except KeyError as e:
+            raise MissingParametersError(
+                "WeatherForecaster",
+                "Missing fields in YAML file. Error: {}".format(str(e)),
+            ) from None
 
 
 class WeatherForecaster:
@@ -38,28 +102,50 @@ class WeatherForecaster:
 
     # Private attributes:
     #
-    # .. attribute:: _monthly_temperature_averages
-    #   A `dict` mapping month number to the temperature average for that month,
-    #   measured in Kelvin.
+    # .. attribute:: _month_abbr_to_num
+    #   A mapping from month abbreviated name (eg, "jan", "feb" etc) to the number of
+    #   the month in the year.
     #
-    # .. attribute:: _monthly_cloud_cover_averages
-    #   A `dict` mapping month number to the average cloud cover for that month,
-    #   with the cloud cover being a measured of the cloud cover in some, as-of-yet to-
-    #   be-determined units.
+    # .. attribute:: _monthly_weather_data
+    #   A `dict` mapping month number to :class:`_MonthlyWeatherData` instances
+    #   containing weather information for that month.
     #
+    # .. attribute:: _solar_insolation
+    #   The solar insolation, measured in Watts per meter squared, that would hit the
+    #   UK on a clear day with no other factors present.
+    #
+
+    _month_abbr_to_num = {
+        name.lower(): num
+        for num, name in enumerate(calendar.month_abbr)
+        if num is not None
+    }
 
     def __init__(
         self,
-        monthly_temperature_averages: Dict[int, float],
-        monthly_cloud_cover_averages: Dict[int, float],
+        solar_insolation: float,
+        monthly_weather_data: Dict[str, Union[str, float]],
     ) -> None:
         """
         Instantiate a weather forecaster class.
 
+        :param solar_insolation:
+            The solar insolation, measured in Watts per meter squared, that would hit
+            the UK on a clear day with no other factors present.
+
+        :param monthly_weather_data:
+            The monthly weather data, extracted raw from the weather data YAML file.
+
         """
 
-        self._monthly_temperature_averages = monthly_temperature_averages
-        self._monthly_cloud_cover_averages = monthly_cloud_cover_averages
+        self._solar_insolation = solar_insolation
+
+        self._monthly_weather_data = {
+            self._month_abbr_to_num[month]: _MonthlyWeatherData.from_yaml(
+                _MonthlyWeatherData, month_data
+            )
+            for month, month_data in monthly_weather_data.values()
+        }
 
     @classmethod
     def from_yaml(cls, weather_data_path: str) -> Any:
@@ -74,32 +160,58 @@ class WeatherForecaster:
 
         """
 
-        # * Call out to the __utils__ module to read the yaml data.
+        # Call out to the __utils__ module to read the yaml data.
+        data = read_yaml(weather_data_path)
 
-        # * Check that all fields needed are specified.
+        # * Check that all months are specified.
+        try:
+            solar_insolation = data.pop("solar_insolation")
+        except KeyError:
+            raise MissingParametersError(
+                "WeatherForecaster",
+                "The solar insolation param is missing from {}.".format(
+                    weather_data_path
+                ),
+            ) from None
 
-        # * Instantiate and return a Weather Forecaster based off of this weather data.
+        # Instantiate and return a Weather Forecaster based off of this weather data.
 
-        return cls(dict(), dict())
+        return cls(solar_insolation, data)
 
-    def _cloud_cover(self, date_and_time: datetime.datetime) -> int:
+    def _cloud_cover(self, date_and_time: datetime.datetime) -> float:
         """
-        Computes the percentage cloud clover based on weather conditions.
+        Computes the cloud clover based on the time of day and various factors.
 
         :param date_and_time:
             The date and time of day, used to determine which month the cloud cover
             should be retrieved for.
 
         :return:
-            An `int` giving the fraction of cloud cover.
+            The fractional effect that the cloud cover has to reduce
 
         """
 
+        # * Extract the cloud cover probability for the month.
+
+        # * Generate a random number between 1 and 0 for that month based on this
+        # * factor.
+
+        # * Determine what effect the cloudy (or not cloudy) conditions have on the
+        # * solar insolation. Generate a fractional reduction based on this.
+
+        # * Return this number.
+
     def _get_solar_angles(
-        self, date_and_time: datetime.datetime
+        self, latitude: float, longitude: float, date_and_time: datetime.datetime
     ) -> Tuple[float, float]:
         """
         Determine the azimuthal_angle (right-angle) and declination of the sun.
+
+        :param latitude:
+            The latitude of the PV-T set-up.
+
+        :param longitude:
+            The longitude of the PV-T set-up.
 
         :param date_and_time:
             The current date and time.
@@ -111,13 +223,21 @@ class WeatherForecaster:
         """
 
         return (
-            pysolar.solar.get_azimuth(self._latitude, self._longitude, date_and_time),
-            pysolar.solar.get_altitude(self._latitude, self._longitude, date_and_time),
+            pysolar.solar.get_azimuth(latitude, longitude, date_and_time),
+            pysolar.solar.get_altitude(latitude, longitude, date_and_time),
         )
 
-    def irradiance(self, date_and_time: datetime.datetime) -> WeatherConditions:
+    def irradiance(
+        self, latitude: float, longitude: float, date_and_time: datetime.datetime
+    ) -> WeatherConditions:
         """
         Computes the solar irradiance based on weather conditions at the time of day.
+
+        :param latitude:
+            The latitude of the PV-T set-up.
+
+        :param longitude:
+            The longitude of the PV-T set-up.
 
         :param date_and_time:
             The date and time of day, used to calculate the irradiance.
@@ -129,13 +249,15 @@ class WeatherForecaster:
 
         """
 
-        # * Based on the time, compute the sun's position in the sky, making sure to
-        # * account for the seasonal variation.
-        irradiance: float = 0
+        # Based on the time, compute the sun's position in the sky, making sure to
+        # account for the seasonal variation.
+        declination, azimuthal_angle = self._get_solar_angles(
+            latitude, longitude, date_and_time
+        )
 
         # * Factor in the weather conditions and cloud cover to compute the current
         # * solar irradiance.
-        declination, azimuthal_angle = self._get_solar_angles(date_and_time)
+        irradiance: float = self._solar_insolation * self._cloud_cover(date_and_time)
 
         # * Compute the wind speed and ambient temperature
         wind_speed: float = 0
