@@ -20,6 +20,8 @@ from typing import Any, Dict
 
 import yaml
 
+from .__utils__ import MissingParametersError, from_yaml
+
 __all__ = (
     "Device",
     "get_devices_from_yaml",
@@ -93,11 +95,11 @@ class Device:
         self._weekend_nighttime_usage_probability = weekend_nighttime_usage_probability
 
     @classmethod
-    def from_dict(cls, dict_entry: Dict[Any, Any]) -> Any:
+    def from_yaml(cls, device_entry: Dict[Any, Any]) -> Any:
         """
         Returns a :class:`Device` instance from yaml data in the form of a dictionary.
 
-        :param dict_entry:
+        :param device_entry:
             A `dict` representing the device based on raw yaml data.
 
         :return:
@@ -105,7 +107,8 @@ class Device:
 
         """
 
-        # * Check that all the required fields are present
+        # Check that all the required fields are present.
+
         # ? Maybe this checking should be done when the YAML data is read in?
 
         # * Generate, and return, a Device instance as appropriate.

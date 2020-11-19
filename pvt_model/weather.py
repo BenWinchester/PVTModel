@@ -20,6 +20,7 @@ cooling effect on panels can be estimated and included into the model as well.
 
 import calendar
 import datetime
+import random
 
 from dataclasses import dataclass
 from typing import Any, Dict, Tuple, Union
@@ -30,6 +31,10 @@ import yaml
 from .__utils__ import MissingParametersError, WeatherConditions, read_yaml
 
 __all__ = ("WeatherForecaster",)
+
+
+# The resolution to which random numbers are generated
+RAND_RESOLUTION = 100
 
 
 @dataclass
@@ -191,15 +196,16 @@ class WeatherForecaster:
 
         """
 
-        # * Extract the cloud cover probability for the month.
+        # Extract the cloud cover probability for the month.
+        cloud_cover_prob = self._monthly_weather_data[date_and_time.month]
 
-        # * Generate a random number between 1 and 0 for that month based on this
-        # * factor.
+        # Generate a random number between 1 and 0 for that month based on this factor.
+        rand_prob: float = random.randrange(0, RAND_RESOLUTION, 1) / RAND_RESOLUTION
 
-        # * Determine what effect the cloudy (or not cloudy) conditions have on the
-        # * solar insolation. Generate a fractional reduction based on this.
-
-        # * Return this number.
+        # Determine what effect the cloudy (or not cloudy) conditions have on the solar
+        # insolation. Generate a fractional reduction based on this.
+        # Return this number
+        return cloud_cover_prob * rand_prob
 
     def _get_solar_angles(
         self, latitude: float, longitude: float, date_and_time: datetime.datetime
@@ -255,16 +261,15 @@ class WeatherForecaster:
             latitude, longitude, date_and_time
         )
 
-        # * Factor in the weather conditions and cloud cover to compute the current
-        # * solar irradiance.
+        # Factor in the weather conditions and cloud cover to compute the current solar
+        # irradiance.
         irradiance: float = self._solar_insolation * self._cloud_cover(date_and_time)
 
         # * Compute the wind speed and ambient temperature
         wind_speed: float = 0
         ambient_temperature: float = 0
 
-        # * Return all of these in a WeatherConditions variable.
-
+        # Return all of these in a WeatherConditions variable.
         return WeatherConditions(
             irradiance, declination, azimuthal_angle, wind_speed, ambient_temperature
         )
