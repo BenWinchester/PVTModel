@@ -22,6 +22,9 @@ from typing import Any, Dict, Optional
 import yaml
 
 __all__ = (
+    "InternalError",
+    "InvalidDataError",
+    "MissingDataError",
     "MissingParametersError",
     "CollectorParameters",
     "LayerParameters",
@@ -63,13 +66,66 @@ ZERO_CELCIUS_OFFSET: float = 273.15
 ##############
 
 
+class InternalError(Exception):
+    """
+    Used for internal error handling and catching where no information is needed.
+
+    """
+
+
+class InvalidDataError(Exception):
+    """
+    Raised when some proviced data is of the wrong format.
+
+    """
+
+    def __init__(self, data_file_name: str, message: str) -> None:
+        """
+        Instantiate an Invalid Data Error.
+
+        :param data_file_name:
+            The name of the data file containing the invalid data entry.
+
+        :param message:
+            An error message to be appended.
+
+        """
+
+        super().__init__(
+            "Invalid data error. "
+            "The file '{}' contained data of the wrong format: {}".format(
+                data_file_name, message
+            )
+        )
+
+
+class MissingDataError(Exception):
+    """
+    Raised when data is requested from a class that is missing.
+
+    """
+
+    def __init__(self, message: str) -> None:
+        """
+        Instantiate a Missing Data Error.
+
+        :param message:
+            The message to append for the user.
+
+        """
+
+        super().__init__(
+            "Data requested from a class could not be found: {}".format(message)
+        )
+
+
 class MissingParametersError(Exception):
     """
     Raised when not all parameters have been specified that are needed to instantiate.
 
     """
 
-    def __init__(self, class_name, message) -> None:
+    def __init__(self, class_name: str, message: str) -> None:
         """
         Instantiate a missing parameters error.
 
