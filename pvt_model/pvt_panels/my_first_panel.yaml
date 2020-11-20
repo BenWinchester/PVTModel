@@ -66,7 +66,7 @@ pv:
 collector:
   #
   mass: 20 # @@@ I think this actually isn't needed
-  thickness: 0.01
+  thickness: 0.0001
   heat_capacity: 100 # @@@ Taken as a guess! :p
   # The mass flow rate is measured in litres per half-hour.
   # [Citation needed]

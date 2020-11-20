@@ -111,7 +111,8 @@ def _htf_heat_transfer(
         measured in Joules per kilogram Kelvin.
 
     :return:
-        The heat transfer, in Watts, to the heat transfer fluid.
+        The heat transfer, in Joules per resolution time-step, to the heat transfer
+        fluid.
 
     """
 
@@ -124,6 +125,7 @@ def _htf_heat_transfer(
 
 def _pv_to_collector_conductive_transfer(
     ambient_temperature: float,
+    resolution: float,
     input_water_temperature: float,
     output_water_temperature: float,
     collector_temperature: float,
@@ -136,6 +138,9 @@ def _pv_to_collector_conductive_transfer(
 
     :param ambient_temperature:
         The ambient temperature in Kelvin.
+
+    :param resolution:
+        The resolution of the simulation being run, measured in minutes.
 
     :param input_water_temperature:
         The input water temperature to the PV-T panel, measured in Kelvin.
@@ -166,11 +171,16 @@ def _pv_to_collector_conductive_transfer(
         collector_temperature - ambient_temperature
     )
 
-    htf_heat_transfer = _htf_heat_transfer(
-        input_water_temperature,
-        output_water_temperature,
-        collector_mass_flow_rate,
-        collector_htf_heat_capacity,
+    # It's necessary to divide by the model resolution to convert from the resolution
+    # time-step to Watts.
+    htf_heat_transfer = (
+        _htf_heat_transfer(
+            input_water_temperature,
+            output_water_temperature,
+            collector_mass_flow_rate,
+            collector_htf_heat_capacity,
+        )
+        / resolution
     )
 
     return back_plate_heat_loss + htf_heat_transfer
@@ -533,6 +543,7 @@ class PV(_OpticalLayer):
         input_water_temperature: float,
         output_water_temperature: float,
         ambient_temperature: float,
+        resolution: float,
         air_gap_thickness: float,
         glass_temp: float,
         glass_emissivity: float,
@@ -557,6 +568,9 @@ class PV(_OpticalLayer):
         :param ambient_temperature:
             The ambient temperature of the air surrounding the panel, measured in
             Kelvin.
+
+        :param resolution:
+            The resolution of the simulation being run, measured in minutes.
 
         :param air_gap_thickness:
             The thickness of the gap between the glass and PV layers, measured in
@@ -606,6 +620,7 @@ class PV(_OpticalLayer):
             )
             + _pv_to_collector_conductive_transfer(
                 ambient_temperature,
+                resolution,
                 input_water_temperature,
                 output_water_temperature,
                 collector_temperature,
@@ -621,6 +636,7 @@ class PV(_OpticalLayer):
         input_water_temperature: float,
         output_water_temperature: float,
         ambient_temperature: float,
+        resolution: float,
         air_gap_thickness: float,
         glass_temp: float,
         glass_emissivity: float,
@@ -645,6 +661,9 @@ class PV(_OpticalLayer):
         :param ambient_temperature:
             The ambient temperature of the air surrounding the panel, measured in
             Kelvin.
+
+        :param resolution:
+            The resolution of the model being run, measured in minutes.
 
         :param air_gap_thickness:
             The thickness of the gap between the glass and PV layers, measured in
@@ -680,6 +699,7 @@ class PV(_OpticalLayer):
             input_water_temperature,
             output_water_temperature,
             ambient_temperature,
+            resolution,
             air_gap_thickness,
             glass_temp,
             glass_emissivity,
@@ -702,6 +722,7 @@ class PV(_OpticalLayer):
             input_water_temperature,
             output_water_temperature,
             ambient_temperature,
+            resolution,
             air_gap_thickness,
             glass_temp,
             glass_emissivity,
@@ -723,7 +744,9 @@ class PV(_OpticalLayer):
         """
 
         return self._reference_efficiency * (
-            1 - self._thermal_coefficient * (self.temperature)
+            1
+            - self._thermal_coefficient
+            * (self.temperature - self._reference_temperature)
         )
 
 
@@ -1023,6 +1046,7 @@ class PVT:
     def update(
         self,
         input_water_temperature: float,
+        resolution: float,
         weather_conditions: WeatherConditions,
     ) -> float:
         """
@@ -1030,6 +1054,9 @@ class PVT:
 
         :param input_water_temperature:
             The water temperature going into the PV-T collector.
+
+        :param resolution:
+            The resolution of the model being run, measured in minutes.
 
         :param weather_conditions:
             The weather conditions at the time of day being incremented to.
@@ -1039,7 +1066,7 @@ class PVT:
 
         """
 
-        solar_irradiance = self._get_solar_irradiance(weather_conditions)
+        solar_irradiance = self._get_solar_irradiance(weather_conditions) * resolution
 
         # Call the pv panel to update its temperature.
         if self._pv is not None:
@@ -1048,6 +1075,7 @@ class PVT:
                 input_water_temperature,
                 self._collector.output_water_temperature,
                 weather_conditions.ambient_temperature,
+                resolution,
                 self._air_gap_thickness,
                 self._glass.temperature,
                 self._glass.emissivity,
@@ -1107,7 +1135,7 @@ class PVT:
         if self._pv is None:
             return None
 
-        return self._pv.efficiency
+        return self._pv.temperature
 
     @property
     def collector_temperature(self) -> float:

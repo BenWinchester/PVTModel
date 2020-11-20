@@ -97,6 +97,6 @@ class Tank:
         self.temperature = (
             self.temperature * (self.mass - water_demand_volume)
             + mains_water_temp * water_demand_volume
-        ) / (water_demand_volume + self.mass)
+        ) / self.mass
 
         return delivery_temp

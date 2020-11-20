@@ -84,6 +84,32 @@ class _Day(enum.Enum):
     SAT = 2
     SUN = 3
 
+    @classmethod
+    def from_day_number(cls, day_number: int) -> Any:
+        """
+        Return a :class:`_Day` instance based on the day of the week being processed.
+
+        :param day_number:
+            The day number, ie mon = 1, tue = 2, etc..
+
+        :return:
+            A :class:`_Day` instance based on this.
+
+        """
+
+        if not isinstance(day_number, int):
+            raise Exception("The day must be an integer!")
+
+        if day_number == 0:
+            return cls(0)
+        if 1 <= day_number <= 5:
+            return cls(1)
+        if day_number == 6:
+            return cls(2)
+        if day_number == 7:
+            return cls(3)
+        raise Exception("The day must fall between 1 and 7 inclusive, or 0 for no day.")
+
 
 class ProfileType(enum.Enum):
     """
@@ -475,7 +501,9 @@ class LoadSystem:
         try:
             return self._seasonal_load_profiles[load_data][
                 _Season.from_month(date_and_time.month)
-            ][_Day(date_and_time.weekday())].load(resolution, date_and_time.time())
+            ][_Day.from_day_number(date_and_time.weekday())].load(
+                resolution, date_and_time.time()
+            )
         except KeyError:
             pass
 

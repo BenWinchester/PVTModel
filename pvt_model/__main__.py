@@ -142,6 +142,23 @@ class SystemData:
     dc_electrical: Optional[float] = None
     dc_thermal: Optional[float] = None
 
+    def __str__(self) -> str:
+        """
+        Output a pretty picture.
+
+        :return:
+            A `str` containing the system data info.
+
+        """
+
+        return (
+            f"T_pv/K {round(self.pv_temperature, 2)} T_c/K "
+            f"{round(self.collector_temperature, 2)} T_t/K "
+            f"{round(self.tank_temperature, 2)} pv_eff {round(self.pv_efficiency, 2)} "
+            f"aux {round(self.auxiliary_heating, 2)} "
+            f"dc_e {round(self.dc_electrical, 2)} dc_t {round(self.dc_thermal, 2)}"
+        )
+
 
 def _parse_args(args) -> argparse.Namespace:
     """
@@ -592,11 +609,6 @@ def main(args) -> None:  # pylint: disable=too-many-locals
         resolution=parsed_args.resolution,
         timezone=pvt_panel.timezone,
     ):
-
-        import pdb
-
-        pdb.set_trace()
-
         # Generate weather and load conditions from the load and weather classes.
         current_weather = weather_forecaster.get_weather(
             *pvt_panel.coordinates, date_and_time
@@ -610,7 +622,7 @@ def main(args) -> None:  # pylint: disable=too-many-locals
 
         # Call the pvt module to generate the new temperatures at this time step.
         output_water_temperature = pvt_panel.update(
-            input_water_temperature, current_weather
+            input_water_temperature, parsed_args.resolution, current_weather
         )
 
         # Propogate this information through to the heat exchanger and pass in the
