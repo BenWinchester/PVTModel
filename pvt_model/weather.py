@@ -26,9 +26,13 @@ from dataclasses import dataclass
 from typing import Any, Dict, Tuple, Union
 
 import pysolar
-import yaml
 
-from .__utils__ import MissingParametersError, WeatherConditions, read_yaml
+from .__utils__ import (
+    ZERO_CELCIUS_OFFSET,
+    MissingParametersError,
+    WeatherConditions,
+    read_yaml,
+)
 
 __all__ = ("WeatherForecaster",)
 
@@ -67,7 +71,9 @@ class _MonthlyWeatherData:
     night_temp: float
 
     @classmethod
-    def from_yaml(cls, month_name: str, monthly_weather_data: Dict[Any, Any]) -> Any:
+    def from_yaml(
+        cls, month_name: str, monthly_weather_data: Dict[str, Union[str, float]]
+    ) -> Any:
         """
         Checks for present fields and instantiates from YAML data.
 
@@ -86,17 +92,44 @@ class _MonthlyWeatherData:
         try:
             return cls(
                 month_name,
-                monthly_weather_data["num_days"],
-                monthly_weather_data["cloud_cover"],
-                monthly_weather_data["rainy_days"],
-                monthly_weather_data["day_temp"],
-                monthly_weather_data["night_temp"],
+                float(monthly_weather_data["num_days"]),
+                float(monthly_weather_data["cloud_cover"]),
+                float(monthly_weather_data["rainy_days"]),
+                float(monthly_weather_data["day_temp"]) + ZERO_CELCIUS_OFFSET,
+                float(monthly_weather_data["night_temp"]) + ZERO_CELCIUS_OFFSET,
             )
         except KeyError as e:
             raise MissingParametersError(
                 "WeatherForecaster",
                 "Missing fields in YAML file. Error: {}".format(str(e)),
             ) from None
+
+
+def _get_solar_angles(
+    latitude: float, longitude: float, date_and_time: datetime.datetime
+) -> Tuple[float, float]:
+    """
+    Determine the azimuthal_angle (right-angle) and declination of the sun.
+
+    :param latitude:
+        The latitude of the PV-T set-up.
+
+    :param longitude:
+        The longitude of the PV-T set-up.
+
+    :param date_and_time:
+        The current date and time.
+
+    :return:
+        A `tuple` containing the azimuthal angle and declination of the sun at the
+        given date and time.
+
+    """
+
+    return (
+        pysolar.solar.get_azimuth(latitude, longitude, date_and_time),
+        pysolar.solar.get_altitude(latitude, longitude, date_and_time),
+    )
 
 
 class WeatherForecaster:
@@ -129,14 +162,18 @@ class WeatherForecaster:
     def __init__(
         self,
         solar_insolation: float,
-        monthly_weather_data: Dict[str, Union[str, float]],
+        mains_water_temp: float,
+        monthly_weather_data: Dict[str, Dict[str, Union[str, float]]],
     ) -> None:
         """
         Instantiate a weather forecaster class.
 
         :param solar_insolation:
             The solar insolation, measured in Watts per meter squared, that would hit
-            the UK on a clear day with no other factors present.
+            the location on a clear day with no other factors present.
+
+        :param mains_water_temp:
+            The mains water temperature, measured in Kelvin.
 
         :param monthly_weather_data:
             The monthly weather data, extracted raw from the weather data YAML file.
@@ -145,11 +182,13 @@ class WeatherForecaster:
 
         self._solar_insolation = solar_insolation
 
+        self.mains_water_temp = mains_water_temp + ZERO_CELCIUS_OFFSET
+
         self._monthly_weather_data = {
             self._month_abbr_to_num[month]: _MonthlyWeatherData.from_yaml(
-                _MonthlyWeatherData, month_data
+                month, month_data  # type: ignore
             )
-            for month, month_data in monthly_weather_data.values()
+            for month, month_data in monthly_weather_data.items()
         }
 
     @classmethod
@@ -179,9 +218,19 @@ class WeatherForecaster:
                 ),
             ) from None
 
+        try:
+            mains_water_temp = data.pop("mains_water_temp")
+        except KeyError:
+            raise MissingParametersError(
+                "WeatherForecaster",
+                "The mains water temperature param is missing from {}.".format(
+                    weather_data_path
+                ),
+            ) from None
+
         # Instantiate and return a Weather Forecaster based off of this weather data.
 
-        return cls(solar_insolation, data)
+        return cls(solar_insolation, mains_water_temp, data)
 
     def _cloud_cover(self, date_and_time: datetime.datetime) -> float:
         """
@@ -197,7 +246,7 @@ class WeatherForecaster:
         """
 
         # Extract the cloud cover probability for the month.
-        cloud_cover_prob = self._monthly_weather_data[date_and_time.month]
+        cloud_cover_prob = self._monthly_weather_data[date_and_time.month].cloud_cover
 
         # Generate a random number between 1 and 0 for that month based on this factor.
         rand_prob: float = random.randrange(0, RAND_RESOLUTION, 1) / RAND_RESOLUTION
@@ -207,33 +256,7 @@ class WeatherForecaster:
         # Return this number
         return cloud_cover_prob * rand_prob
 
-    def _get_solar_angles(
-        self, latitude: float, longitude: float, date_and_time: datetime.datetime
-    ) -> Tuple[float, float]:
-        """
-        Determine the azimuthal_angle (right-angle) and declination of the sun.
-
-        :param latitude:
-            The latitude of the PV-T set-up.
-
-        :param longitude:
-            The longitude of the PV-T set-up.
-
-        :param date_and_time:
-            The current date and time.
-
-        :return:
-            A `tuple` containing the azimuthal angle and declination of the sun at the
-            given date and time.
-
-        """
-
-        return (
-            pysolar.solar.get_azimuth(latitude, longitude, date_and_time),
-            pysolar.solar.get_altitude(latitude, longitude, date_and_time),
-        )
-
-    def irradiance(
+    def get_weather(
         self, latitude: float, longitude: float, date_and_time: datetime.datetime
     ) -> WeatherConditions:
         """
@@ -257,17 +280,31 @@ class WeatherForecaster:
 
         # Based on the time, compute the sun's position in the sky, making sure to
         # account for the seasonal variation.
-        declination, azimuthal_angle = self._get_solar_angles(
+        azimuthal_angle, declination = _get_solar_angles(
             latitude, longitude, date_and_time
         )
 
         # Factor in the weather conditions and cloud cover to compute the current solar
         # irradiance.
-        irradiance: float = self._solar_insolation * self._cloud_cover(date_and_time)
+        irradiance: float = (
+            self._solar_insolation * self._cloud_cover(date_and_time)
+            if declination > 0
+            else 0
+        )
 
-        # * Compute the wind speed and ambient temperature
+        # * Compute the wind speed
         wind_speed: float = 0
-        ambient_temperature: float = 0
+
+        # Compute the ambient temperature.
+        # @@@ For now, this just gets the average temperature that day.
+        if 6 < date_and_time.hour < 18:
+            ambient_temperature: float = self._monthly_weather_data[
+                date_and_time.month
+            ].day_temp
+        else:
+            ambient_temperature = self._monthly_weather_data[
+                date_and_time.month
+            ].night_temp
 
         # Return all of these in a WeatherConditions variable.
         return WeatherConditions(

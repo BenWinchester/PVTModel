@@ -1,0 +1,8 @@
+########################################################################################
+# my_first_exchanger.yaml - Data about the heat-exchanger
+#
+# Copyright 2020, Ben Winchester
+########################################################################################
+
+# The efficiency is a dimensionless constant defined between 0 and 1.
+efficiency: 1

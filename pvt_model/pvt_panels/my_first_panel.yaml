@@ -1,0 +1,79 @@
+########################################################################################
+# my_first_panel.yaml - Data about the PV-T panel
+#
+# Copyright 2020, Ben Winchester
+########################################################################################
+
+# Some properties obtained from
+# Trinuruk, P., Sorapipatana, C., et al.,
+# "Effects of Air Gap Spacing between a Photovoltaic Panel and Building Envelope on
+# Electricity Generation and Heat Gains through a Building";
+# https://www.researchgate.net/figure/Physical-properties-of-photovoltaic-components-and-building-materials-11-12-13-and-14_tbl1_242288788
+#
+# PV Absorptivity data for a PV layer in a PV-T system obtained from
+# Santbergen, R., van Zolingen, R. J. C.;
+# The absorption factor of crystalline silicon PV cells: A numerical and experimental
+# study
+# https://www.sciencedirect.com/science/article/pii/S0927024807004023
+#
+# PV transmissivity and efficiency data taken from:
+#
+# https://www.sciencedirect.com/science/article/pii/S0360544218310508#bib10
+#
+
+pvt_system:
+  latitude: 51.4934
+  longitude: 0.0098
+  # The timezone offset in Hours from UTC.
+  timezone: 0
+  # The air gap thickness is measured in meters.
+  air_gap_thickness: 0.005
+  # The area is measured in meters squared.
+  area: 2
+  # These parameters set up how the panel is orientated.
+  # All angles are measured in degrees
+  tilt: 45
+  azimuthal_orientation: 180
+  horizontal_tracking: False
+  vertical_tracking: False
+glass:
+  density: 2500
+  thickness: 0.006
+  heat_capacity: 840
+  thermal_conductivity: 1.04
+  absorptivity: 0.93
+  transmissivity: 0.8265
+  t_a_product: 0.77
+  emissivity: 0.94
+pv:
+  # Density measured in kilograms per meter squared.
+  density: 2330
+  # Thickness measured in meters.
+  thickness: 0.00038
+  # Heat capacity measured in Joules per kilogram Kelvin.
+  heat_capacity: 712
+  # Therma308l conductivity measured in Watts per meter Kelvin.
+  thermal_conductivity: 148
+  absorptivity: 0.9
+  transmissivity: 0.9
+  emissivity: 0.9 # @@@ Why not!!
+  reference_efficiency: 0.1432
+  # The reference temperature is measured in Kelvin
+  reference_temperature: 298
+  # The thermal coefficient gives the efficiency drop per degree rise in
+  # temperature above the reference temperature.
+  thermal_coefficient: 0.0045
+collector:
+  #
+  mass: 20 # @@@ I think this actually isn't needed
+  thickness: 0.01
+  heat_capacity: 100 # @@@ Taken as a guess! :p
+  # The mass flow rate is measured in litres per half-hour.
+  # [Citation needed]
+  mass_flow_rate: 10
+# Quantities for the back plate taken as those for Tedlar.
+back:
+  density: 2330
+  thickness: 0.00017
+  heat_capacity: 1130
+  thermal_conductivity: 0.14

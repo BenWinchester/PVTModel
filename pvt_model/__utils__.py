@@ -26,6 +26,8 @@ __all__ = (
     "InvalidDataError",
     "MissingDataError",
     "MissingParametersError",
+    "ResolutionMismatchError",
+    "BackLayerParameters",
     "CollectorParameters",
     "LayerParameters",
     "OpticalLayerParameters",
@@ -33,6 +35,10 @@ __all__ = (
     "WeatherConditions",
     "read_yaml",
     "HEAT_CAPACITY_OF_WATER",
+    "ZERO_CELCIUS_OFFSET",
+    "STEFAN_BOLTZMAN_CONSTANT",
+    "FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR",
+    "THERMAL_CONDUCTIVITY_OF_AIR",
 )
 
 
@@ -142,6 +148,30 @@ class MissingParametersError(Exception):
         )
 
 
+class ResolutionMismatchError(Exception):
+    """
+    Raised when an error occurs attempting to match up data and simulation resolutions.
+
+    """
+
+    def __init__(self, message: str) -> None:
+        """
+        Instantiate a resolution mismatch error.
+
+        :param message:
+            An appended message to display to the user.
+
+        """
+
+        super().__init__(
+            "Due to the nature of the load data, an integer multiple of resolutions, "
+            "or divsions of resolutions, must be supplied with the '--resolution' or "
+            "'-r' flag.\nI appreciate that this is poor coding, but at least I took "
+            "the time to write a custom exception for it :p .\n Error message: "
+            f"{message}"
+        )
+
+
 ##############################
 # Functions and Data Classes #
 ##############################
@@ -187,10 +217,15 @@ class CollectorParameters(LayerParameters):
     .. attribute:: mass_flow_rate
         The mass flow rate of heat-transfer fluid through the collector.
 
+    .. attribute:: htf_heat_capacity#
+        The heat capacity of the heat-transfer fluid through the collector, measured in
+        Joules per kilogram Kelvin.
+
     """
 
     output_water_temperature: float
     mass_flow_rate: float
+    htf_heat_capacity: float
 
 
 @dataclass
@@ -314,12 +349,13 @@ def read_yaml(yaml_file_path: str) -> Dict[Any, Any]:
 
     # Open the yaml data and read it.
     if not os.path.isfile(yaml_file_path):
-        raise yaml_file_path("")
+        raise FileNotFoundError(yaml_file_path)
     with open(yaml_file_path) as f:
         try:
             data = yaml.safe_load(f)
         except yaml.parser.ParserError as e:
             # * Do some logging
+            print(f"Failed to parse YAML. Internal error: {str(e)}")
             raise
 
     return data

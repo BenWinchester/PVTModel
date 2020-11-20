@@ -25,7 +25,7 @@ from .__utils__ import (
     InternalError,
     InvalidDataError,
     MissingDataError,
-    MissingParametersError,
+    ResolutionMismatchError,
     read_yaml,
 )
 
@@ -33,6 +33,7 @@ __all__ = (
     "LoadData",
     "LoadProfile",
     "LoadSystem",
+    "ProfileType",
 )
 
 
@@ -80,17 +81,17 @@ class _Day(enum.Enum):
 
     DAYLESS = 0
     WEEKDAY = 1
-    SATURDAY = 2
-    SUNDAY = 3
+    SAT = 2
+    SUN = 3
 
 
-class _ProfileType(enum.Enum):
+class ProfileType(enum.Enum):
     """
     Used to label whether a profile is a hot-water or electrical (or other) profile.
 
     """
 
-    ELECTRICAL = 0
+    ELECTRICITY = 0
     HOT_WATER = 1
 
 
@@ -230,20 +231,40 @@ class LoadProfile:
     #   A mapping of hour to the load at that hour.
     #
 
-    def __init__(self, resolution: int, profile_data: Dict[str, float]) -> None:
+    def __init__(self, profile_data: Dict[str, float]) -> None:
         """
         Instantiate a load profile.
-
-        :param resolution:
-            The resolution of the load profile, measured in minutes.
 
         :param profile_data:
             The profile data: a mapping of time to the load at that time step.
 
         """
 
-        self.resolution = resolution
-        self._profile = profile_data
+        try:
+            self._profile: Dict[datetime.time, float] = {
+                datetime.time(int(key.split(":")[0]), int(key.split(":")[1])): float(
+                    value
+                )
+                for key, value in profile_data.items()
+            }
+        except KeyError as e:
+            raise InvalidDataError(
+                "Load YAML",
+                f"The profile data provided could not be cast to floats: {str(e)}",
+            ) from None
+
+        time_list = list(self._profile.keys())
+        try:
+            resolution = datetime.datetime.combine(
+                datetime.datetime.min, time_list[1]
+            ) - datetime.datetime.combine(datetime.datetime.min, time_list[0])
+            self.resolution = resolution.total_seconds() / 60
+        except KeyError as e:
+            raise InvalidDataError(
+                "Load YAML",
+                "The resolution could not be computed as an integer from the data: "
+                f"{str(e)}",
+            ) from None
 
     @classmethod
     def from_yaml(cls, yaml_data: Dict[Any, Any]) -> Any:
@@ -264,16 +285,16 @@ class LoadProfile:
         except ValueError as e:
             raise InternalError(str(e)) from None
 
-        try:
-            resolution = list(yaml_data.keys())[1] - list(yaml_data.keys())[0]
-        except TypeError as e:
-            raise InternalError(str(e)) from None
+        return cls(yaml_data)
 
-        return cls(resolution, yaml_data)
-
-    def load(self, time: datetime.time) -> float:
+    def load(self, resolution: int, time: datetime.time) -> float:
         """
         Get the load from the load profile at the given time.
+
+        NOTE: Logic is neede here to determine the load when the given resolution is
+        either too fine (in which case, division is needed to roughly interpolate the
+        load) or is too course (in which case, summation is needed to determine the load
+        that has occured in the time interval since the last request).
 
         :param resolution:
             The time-step resolution (in minutes) of the model being run.
@@ -286,15 +307,78 @@ class LoadProfile:
 
         """
 
-        try:
-            return self._profile["{:02d}{:02d}".format(time.hour, time.minute)]
-        except KeyError as e:
-            raise MissingDataError(
-                "A request was made for load data at time "
-                "{:02d}:{:02d}. This was undefined: {}".format(
-                    time.hour, time.minute, str(e)
+        # If the simulation is being run at the resolution of the data, then attempt to
+        # return the load data at the time step requested.
+        if resolution == self.resolution:
+            try:
+                return self._profile[time]
+            except KeyError as e:
+                raise MissingDataError(
+                    "A request was made for load data at time "
+                    "{:02d}:{:02d}. This was undefined: {}".format(
+                        time.hour, time.minute, str(e)
+                    )
+                ) from None
+
+        # If the simulation is being run at a courser resolution, then summation is
+        # needed.
+        if resolution > self.resolution:
+            system_courseness = resolution / self.resolution
+            if int(system_courseness) != system_courseness:
+                raise ResolutionMismatchError(
+                    f"The resolution of the simulation, {resolution}, is not a multiple"
+                    f"of the resolution of the load data provided, {self.resolution}."
                 )
-            ) from None
+            try:
+                return sum(
+                    [
+                        data_point
+                        for time_entry, data_point in self._profile
+                        if time_entry
+                        < time.replace(
+                            hour=time.hour + resolution // 60,
+                            minute=time.minute + resolution % 60,
+                        )
+                    ]
+                )
+            except KeyError as e:
+                raise MissingDataError(
+                    "A request was made for load data at time "
+                    "{:02d}:{:02d}. This was undefined: {}".format(
+                        time.hour, time.minute, str(e)
+                    )
+                ) from None
+
+        # If the simulation is being run at a finer resolution, then interpolation is
+        # needed.
+        if resolution < self.resolution:
+            system_courseness = self.resolution / resolution
+            if int(system_courseness) != system_courseness:
+                raise ResolutionMismatchError(
+                    f"The resolution of the data, {self.resolution}, is not a multiple"
+                    f"of the resolution of the simulation being run, {resolution}."
+                )
+            try:
+                # Generate a dictionary keyed by the time different, in minutes, to the
+                # current time.
+                delta_time_profile = {
+                    abs(
+                        (time_entry.hour - time.hour) * 60
+                        + (time_entry.minute - time.minute)
+                    ): data_entry
+                    for time_entry, data_entry in self._profile.items()
+                }
+                return delta_time_profile.get(
+                    0,
+                    delta_time_profile[min(delta_time_profile.keys())],
+                )
+            except KeyError as e:
+                raise MissingDataError(
+                    "A request was made for load data at time "
+                    "{:02d}:{:02d}. This was undefined: {}".format(
+                        time.hour, time.minute, str(e)
+                    )
+                ) from None
 
 
 class LoadSystem:
@@ -312,7 +396,7 @@ class LoadSystem:
     def __init__(
         self,
         seasonal_load_profiles: Dict[
-            _ProfileType : Dict[_Season : Dict[_Day:LoadProfile]]
+            ProfileType, Dict[_Season, Dict[_Day, LoadProfile]]
         ],
     ) -> None:
         """
@@ -334,14 +418,25 @@ class LoadSystem:
         """
 
         yaml_data = read_yaml(load_data_path)
-        seasonal_load_profiles: collections.defaultdict = collections.defaultdict(dict)
+        seasonal_load_profiles: Dict[
+            ProfileType, Dict[_Season, Dict[_Day, LoadProfile]]
+        ] = dict()
 
-        for profile_type, type_data in yaml_data.values():
-            for season, seasonal_data in type_data.values():
-                for day, day_data in seasonal_data.values():
+        for profile_type, type_data in yaml_data.items():
+            seasonal_load_profiles[ProfileType.__members__[profile_type.upper()]]: Dict[
+                ProfileType, Dict[_Season, Dict[_Day, LoadProfile]]
+            ] = dict()
+
+            for season, seasonal_data in type_data.items():
+                seasonal_load_profiles[ProfileType.__members__[profile_type.upper()]][
+                    _Season.__members__[season.upper()]
+                ] = dict()
+
+                for day, day_data in seasonal_data.items():
+
                     try:
                         seasonal_load_profiles[
-                            _ProfileType.__members__[profile_type.upper()]
+                            ProfileType.__members__[profile_type.upper()]
                         ][_Season.__members__[season.upper()]][
                             _Day.__members__[day.upper()]
                         ] = LoadProfile.from_yaml(
@@ -357,10 +452,13 @@ class LoadSystem:
         return cls(seasonal_load_profiles)
 
     def get_load_from_time(
-        self, load_data: LoadData, date_and_time: datetime.datetime
-    ) -> LoadData:
+        self, resolution: int, load_data: ProfileType, date_and_time: datetime.datetime
+    ) -> float:
         """
         Return the electrical and hot-water loads based on YAML data at a given time.
+
+        :param resolution:
+            The time-step resolution (in minutes) of the model being run.
 
         :param load_data:
             The type of load data being requested.
@@ -369,7 +467,7 @@ class LoadSystem:
             The date and time at which the load data should be fetched.
 
         :return:
-            The hot-water and electrical data.
+            The hot-water or electrical load data, depending on the load type requested.
 
         """
 
@@ -377,7 +475,7 @@ class LoadSystem:
         try:
             return self._seasonal_load_profiles[load_data][
                 _Season.from_month(date_and_time.month)
-            ][_Day(date_and_time.weekday())].load(date_and_time.time())
+            ][_Day(date_and_time.weekday())].load(resolution, date_and_time.time())
         except KeyError:
             pass
 
@@ -385,14 +483,14 @@ class LoadSystem:
         try:
             return self._seasonal_load_profiles[load_data][
                 _Season.from_month(date_and_time.month)
-            ][_Day(0)].load(date_and_time.time())
+            ][_Day(0)].load(resolution, date_and_time.time())
         except KeyError:
             pass
 
         # Try to extract season-unspecific data.
         try:
             return self._seasonal_load_profiles[load_data][_Season(0)][_Day(0)].load(
-                date_and_time.time()
+                resolution, date_and_time.time()
             )
         except KeyError as e:
             raise MissingDataError(
