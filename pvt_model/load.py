@@ -62,6 +62,9 @@ class _Season(enum.Enum):
 
         """
 
+        if month == 0:
+            return cls(0)
+
         try:
             return cls((month % 12 + 3) // 3)
         except TypeError as e:
@@ -501,7 +504,7 @@ class LoadSystem:
         try:
             return self._seasonal_load_profiles[load_data][
                 _Season.from_month(date_and_time.month)
-            ][_Day.from_day_number(date_and_time.weekday())].load(
+            ][_Day.from_day_number(date_and_time.weekday() + 1)].load(
                 resolution, date_and_time.time()
             )
         except KeyError:
@@ -521,6 +524,9 @@ class LoadSystem:
                 resolution, date_and_time.time()
             )
         except KeyError as e:
+            import pdb
+
+            pdb.set_trace()
             raise MissingDataError(
                 "Load data could not be obtained. "
                 "Attempt was for {} data ".format(str(load_data))

@@ -19,7 +19,7 @@
 #
 
 # The solar insolation is measured in Watts per meter squared.
-solar_insolation: 114
+solar_insolation: 110
 mains_water_temp: 10.6
 jan:
   num_days: 31

@@ -63,8 +63,6 @@ class Exchanger:
         :param input_water_flow_rate:
             The flow rate of water entering the exchanger from the PV-T panel, measured
             in kilograms per unit time step.
-            ??? Check this! This may be incorrect, and it may, in fact, be defined per
-            ??? second or something.
 
         :param input_water_heat_capacity:
             The heat capacity of the water used to feed the heat exchanger, measured in
@@ -88,17 +86,6 @@ class Exchanger:
 
         """
 
-        # Apply the first law of Thermodynamics to determine the output water
-        # temperature from the heat exchanger.
-        output_water_temperature = input_water_temperature - self._efficiency * (
-            input_water_temperature - water_tank.temperature
-        )
-
-        # Determine the new tank temperature using properties of the tank.
-        heat_added = (
-            self._efficiency * input_water_flow_rate * input_water_heat_capacity
-        ) * (input_water_temperature - water_tank.temperature)
-
         heat_lost = (
             water_tank.area
             * water_tank.heat_loss_coefficient
@@ -110,6 +97,25 @@ class Exchanger:
             * water_tank.heat_capacity
             * (water_tank.temperature - mains_water_temperature)
         )
+
+        # If the water inputted to the exchanger is less than the tank temperature, then
+        # run it straight back into the next cycle.
+        if input_water_temperature <= water_tank.temperature:
+            water_tank.temperature = water_tank.temperature - (
+                heat_lost + heat_delivered
+            ) / (water_tank.mass * water_tank.heat_capacity)
+            return input_water_temperature
+
+        # Apply the first law of Thermodynamics to determine the output water
+        # temperature from the heat exchanger.
+        output_water_temperature = input_water_temperature - self._efficiency * (
+            input_water_temperature - water_tank.temperature
+        )
+
+        # Determine the new tank temperature using properties of the tank.
+        heat_added = (
+            self._efficiency * input_water_flow_rate * input_water_heat_capacity
+        ) * (input_water_temperature - water_tank.temperature)
 
         water_tank.temperature = (heat_added - heat_lost - heat_delivered) / (
             water_tank.mass * water_tank.heat_capacity

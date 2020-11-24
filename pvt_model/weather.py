@@ -20,6 +20,7 @@ cooling effect on panels can be estimated and included into the model as well.
 
 import calendar
 import datetime
+import logging
 import random
 
 from dataclasses import dataclass
@@ -29,6 +30,7 @@ import pysolar
 
 from .__utils__ import (
     ZERO_CELCIUS_OFFSET,
+    LOGGER_NAME,
     MissingParametersError,
     WeatherConditions,
     read_yaml,
@@ -39,6 +41,8 @@ __all__ = ("WeatherForecaster",)
 
 # The resolution to which random numbers are generated
 RAND_RESOLUTION = 100
+
+logger = logging.getLogger(LOGGER_NAME)
 
 
 @dataclass
@@ -69,6 +73,25 @@ class _MonthlyWeatherData:
     rainy_days: float
     day_temp: float
     night_temp: float
+
+    def __repr__(self) -> str:
+        """
+        Return a standard representation of the class.
+
+        :return:
+            A nicely-formatted monthly-weather data string.
+
+        """
+
+        return "_MonthlyWeatherData(month: {}, num_days: {}, cloud_cover: {}, ".format(
+            self.month_name,
+            self.num_days,
+            self.cloud_cover,
+        ) + "rainy_days: {}, day_temp: {}, night_temp: {})".format(
+            self.rainy_days,
+            self.day_temp,
+            self.night_temp,
+        )
 
     @classmethod
     def from_yaml(
@@ -191,6 +214,19 @@ class WeatherForecaster:
             for month, month_data in monthly_weather_data.items()
         }
 
+    def __repr__(self) -> str:
+        """
+        Return a nice-looking representation of the weather forecaster.
+
+        :return:
+            A nicely-formatted string giving information about the weather forecaster.
+
+        """
+
+        return "WeatherForecaster(solar_insolation: {}, mains_water_temp: {}, ".format(
+            self._solar_insolation, self.mains_water_temp
+        ) + "num_months: {})".format(len(self._monthly_weather_data.keys()))
+
     @classmethod
     def from_yaml(cls, weather_data_path: str) -> Any:
         """
@@ -211,6 +247,10 @@ class WeatherForecaster:
         try:
             solar_insolation = data.pop("solar_insolation")
         except KeyError:
+            logger.error(
+                "Weather forecaster from %s is missing 'solar_insolation' data.",
+                weather_data_path,
+            )
             raise MissingParametersError(
                 "WeatherForecaster",
                 "The solar insolation param is missing from {}.".format(
@@ -221,6 +261,10 @@ class WeatherForecaster:
         try:
             mains_water_temp = data.pop("mains_water_temp")
         except KeyError:
+            logger.error(
+                "Weather forecaster from %s is missing 'mains_water_temp' data.",
+                weather_data_path,
+            )
             raise MissingParametersError(
                 "WeatherForecaster",
                 "The mains water temperature param is missing from {}.".format(
@@ -232,9 +276,16 @@ class WeatherForecaster:
 
         return cls(solar_insolation, mains_water_temp, data)
 
-    def _cloud_cover(self, date_and_time: datetime.datetime) -> float:
+    def _cloud_cover(
+        self, cloud_efficacy_factor: float, date_and_time: datetime.datetime
+    ) -> float:
         """
         Computes the cloud clover based on the time of day and various factors.
+
+        :param cloud_efficacy_factor:
+            The extend to which cloud cover affects the sunlight. This is multiplied by
+            a random number which further reduces the effect of the cloud cover in
+            reducing the sunlight.
 
         :param date_and_time:
             The date and time of day, used to determine which month the cloud cover
@@ -254,10 +305,14 @@ class WeatherForecaster:
         # Determine what effect the cloudy (or not cloudy) conditions have on the solar
         # insolation. Generate a fractional reduction based on this.
         # Return this number
-        return cloud_cover_prob * rand_prob
+        return cloud_cover_prob * rand_prob * cloud_efficacy_factor
 
     def get_weather(
-        self, latitude: float, longitude: float, date_and_time: datetime.datetime
+        self,
+        latitude: float,
+        longitude: float,
+        cloud_efficacy_factor: float,
+        date_and_time: datetime.datetime,
     ) -> WeatherConditions:
         """
         Computes the solar irradiance based on weather conditions at the time of day.
@@ -267,6 +322,11 @@ class WeatherForecaster:
 
         :param longitude:
             The longitude of the PV-T set-up.
+
+        :param cloud_efficacy_factor:
+            The extend to which cloud cover affects the sunlight. This is multiplied by
+            a random number which further reduces the effect of the cloud cover in
+            reducing the sunlight.
 
         :param date_and_time:
             The date and time of day, used to calculate the irradiance.
@@ -287,7 +347,8 @@ class WeatherForecaster:
         # Factor in the weather conditions and cloud cover to compute the current solar
         # irradiance.
         irradiance: float = (
-            self._solar_insolation * self._cloud_cover(date_and_time)
+            self._solar_insolation
+            * (1 - self._cloud_cover(cloud_efficacy_factor, date_and_time))
             if declination > 0
             else 0
         )

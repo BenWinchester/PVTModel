@@ -14,6 +14,7 @@ various modules throughout the PVT model.
 
 """
 
+import logging
 import os
 
 from dataclasses import dataclass
@@ -35,10 +36,11 @@ __all__ = (
     "WeatherConditions",
     "read_yaml",
     "HEAT_CAPACITY_OF_WATER",
-    "ZERO_CELCIUS_OFFSET",
-    "STEFAN_BOLTZMAN_CONSTANT",
     "FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR",
+    "LOGGER_NAME",
+    "STEFAN_BOLTZMAN_CONSTANT",
     "THERMAL_CONDUCTIVITY_OF_AIR",
+    "ZERO_CELCIUS_OFFSET",
 )
 
 
@@ -46,6 +48,9 @@ __all__ = (
 # Constants #
 #############
 
+
+LOGGER_NAME = "my_first_pvt_model"
+logger = logging.getLogger(LOGGER_NAME)
 
 # The Stefan-Boltzman constant, given in Watts per meter squared Kelvin to the four.
 STEFAN_BOLTZMAN_CONSTANT: float = 5.670374419 * 10 ** (-8)
@@ -312,11 +317,25 @@ class WeatherConditions:
 
     """
 
-    irradiance: float
+    _irradiance: float
     declination: float
     azimuthal_angle: float
     wind_speed: float
     ambient_temperature: float
+
+    @property
+    def irradiance(self) -> float:
+        """
+        The irradiance should only be definied if the sun is above the horizon.
+
+        :return:
+            The solar irradiance, adjusted for the day-night cycle.
+
+        """
+
+        if self.declination > 0:
+            return self._irradiance
+        return 0
 
     @property
     def sky_temperature(self) -> float:
@@ -334,6 +353,25 @@ class WeatherConditions:
 
         return 0.0552 * (self.ambient_temperature ** 1.5)
 
+    def __repr__(self) -> str:
+        """
+        Return a nice representation of the weather conditions.
+
+        :return:
+            A nicely-formatted string containing weather conditions data.
+
+        """
+
+        return (
+            "WeatherConditions(irradiance: {}, declination: {}, ".format(
+                self.irradiance, self.declination
+            )
+            + "azimuthal_angle: {}, wind_speed: {}, ambient_temperature: {}, ".format(
+                self.azimuthal_angle, self.wind_speed, self.ambient_temperature
+            )
+            + "sky_temperature: {}".format(self.sky_temperature)
+        )
+
 
 def read_yaml(yaml_file_path: str) -> Dict[Any, Any]:
     """
@@ -349,13 +387,17 @@ def read_yaml(yaml_file_path: str) -> Dict[Any, Any]:
 
     # Open the yaml data and read it.
     if not os.path.isfile(yaml_file_path):
+        logger.error(
+            "A YAML data file, '%s', could not be found. Exiting...", yaml_file_path
+        )
         raise FileNotFoundError(yaml_file_path)
     with open(yaml_file_path) as f:
         try:
             data = yaml.safe_load(f)
         except yaml.parser.ParserError as e:
-            # * Do some logging
+            logger.error("Failed to read YAML file '%s'.", yaml_file_path)
             print(f"Failed to parse YAML. Internal error: {str(e)}")
             raise
 
+    logger.info("Data successfully read from '%s'.", yaml_file_path)
     return data

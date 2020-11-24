@@ -29,7 +29,7 @@ pvt_system:
   # The air gap thickness is measured in meters.
   air_gap_thickness: 0.005
   # The area is measured in meters squared.
-  area: 2
+  area: 3
   # These parameters set up how the panel is orientated.
   # All angles are measured in degrees
   tilt: 45
@@ -67,10 +67,10 @@ collector:
   #
   mass: 20 # @@@ I think this actually isn't needed
   thickness: 0.0001
-  heat_capacity: 100 # @@@ Taken as a guess! :p
-  # The mass flow rate is measured in litres per half-hour.
+  heat_capacity: 386 # @@@ Taken as that for copper.
+  # The mass flow rate is measured in litres per hour.
   # [Citation needed]
-  mass_flow_rate: 10
+  mass_flow_rate: 20
 # Quantities for the back plate taken as those for Tedlar.
 back:
   density: 2330
