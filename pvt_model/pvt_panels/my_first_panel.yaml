@@ -28,6 +28,9 @@ pvt_system:
   timezone: 0
   # The air gap thickness is measured in meters.
   air_gap_thickness: 0.005
+  # The conductance, measured in Watts per meter squared Kelvin, between the PV layer
+  # and collector layers of the panel.
+  pv_to_collector_conductance: 500
   # The area is measured in meters squared.
   area: 3
   # These parameters set up how the panel is orientated.
@@ -41,10 +44,10 @@ glass:
   thickness: 0.006
   heat_capacity: 840
   thermal_conductivity: 1.04
-  absorptivity: 0.93
+  absorptivity: 0.43
   transmissivity: 0.8265
   t_a_product: 0.77
-  emissivity: 0.94
+  emissivity: 0.93
 pv:
   # Density measured in kilograms per meter squared.
   density: 2330
@@ -70,7 +73,7 @@ collector:
   heat_capacity: 386 # @@@ Taken as that for copper.
   # The mass flow rate is measured in litres per hour.
   # [Citation needed]
-  mass_flow_rate: 20
+  mass_flow_rate: 40
 # Quantities for the back plate taken as those for Tedlar.
 back:
   density: 2330

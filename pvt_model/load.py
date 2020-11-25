@@ -296,12 +296,18 @@ class LoadProfile:
             ) from None
 
     @classmethod
-    def from_yaml(cls, yaml_data: Dict[Any, Any]) -> Any:
+    def from_yaml(
+        cls, yaml_data: Dict[Any, Any], household_occupancy_increase_factor: float
+    ) -> Any:
         """
         Instantiate a load profile based on some YAML data.
 
         :param yaml_data:
             The raw, load-profile data extracted from a YAML file.
+
+        :param household_occupancy_increase_factor:
+            The amount, by which, the data should be multiplied by due to the household
+            having more than one member.
 
         :return:
             A :class:`LoadProfile` instance, based on the YAML data provided.
@@ -310,11 +316,31 @@ class LoadProfile:
 
         # Convert the data entries to floating point numbers.
         try:
-            yaml_data = {str(key): float(value) for key, value in yaml_data.items()}
+            yaml_data = {
+                str(key): float(value) * household_occupancy_increase_factor
+                for key, value in yaml_data.items()
+            }
         except ValueError as e:
             raise InternalError(str(e)) from None
 
         return cls(yaml_data)
+
+    def _closest_value(self, time: datetime.time) -> float:
+        """
+        Returns the closest value.
+
+        :param time:
+            The current time being looked for.
+
+        :return:
+            The closest value.
+
+        """
+
+        if time in self._profile:
+            return self._profile[time]
+        time.replace(minute=time.minute + self.resolution)
+        return self._closest_value(time)
 
     def load(self, resolution: int, time: datetime.time) -> float:
         """
@@ -359,17 +385,7 @@ class LoadProfile:
                     f"of the resolution of the load data provided, {self.resolution}."
                 )
             try:
-                return sum(
-                    [
-                        data_point
-                        for time_entry, data_point in self._profile
-                        if time_entry
-                        < time.replace(
-                            hour=time.hour + resolution // 60,
-                            minute=time.minute + resolution % 60,
-                        )
-                    ]
-                )
+                return self._closest_value(time) * system_courseness
             except KeyError as e:
                 raise MissingDataError(
                     "A request was made for load data at time "
@@ -440,9 +456,18 @@ class LoadSystem:
         self._seasonal_load_profiles = seasonal_load_profiles
 
     @classmethod
-    def from_yaml(cls, load_data_path: str) -> Any:
+    def from_yaml(cls, load_data_path: str, number_of_people: int) -> Any:
         """
         Returns a :class:`LoadSystem` instance based on the YAML data inputted.
+
+        :param load_data_path:
+            The path to the load data file.
+
+        :param number_of_people:
+            The number of people to consider in the household.
+
+        :return:
+            An instantiated :class:`LoadSystem`.
 
         """
 
@@ -463,13 +488,20 @@ class LoadSystem:
 
                 for day, day_data in seasonal_data.items():
 
+                    if (
+                        ProfileType.__members__[profile_type.upper()]
+                        == ProfileType.ELECTRICITY
+                    ):
+                        household_occupancy_increase_factor = number_of_people
+                    else:
+                        household_occupancy_increase_factor = 1
                     try:
                         seasonal_load_profiles[
                             ProfileType.__members__[profile_type.upper()]
                         ][_Season.__members__[season.upper()]][
                             _Day.__members__[day.upper()]
                         ] = LoadProfile.from_yaml(
-                            day_data
+                            day_data, household_occupancy_increase_factor
                         )
                     except InternalError as e:
                         raise InvalidDataError(

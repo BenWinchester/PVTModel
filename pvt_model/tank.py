@@ -73,7 +73,12 @@ class Tank:
         self.area = area
         self.heat_loss_coefficient = heat_loss_coefficient
 
-    def update(self, water_demand_volume: float, mains_water_temp: float) -> float:
+    def update(
+        self,
+        water_demand_volume: float,
+        mains_water_temp: float,
+        ambient_tank_temperature: float,
+    ) -> float:
         """
         Updates the tank temperature when a certain volume of hot water is demanded.
 
@@ -84,12 +89,22 @@ class Tank:
             The temperature of the mains water used to fill the tank, measured in
             Kelvin.
 
+        :param ambient_tank_temperature:
+            The temperature of the air surrounding the tank, measured in Kelvin.
+
         :return:
             The temperature of the hot-water delivered.
 
         """
 
+        heat_loss = (
+            self.area * self.heat_loss_coefficient * self.temperature
+            - ambient_tank_temperature
+        )
+
         delivery_temp = self.temperature
+
+        self.temperature -= heat_loss / (self.mass * self.heat_capacity)
 
         # The new temperature is computed by a mass-weighted average of the temperatures
         # of the various water sources that go into making up the new content of the

@@ -104,6 +104,18 @@ class SystemData:
     .. attribute:: time
         The time.
 
+    .. attribute:: ambient_temperature
+        The ambient temperature, in Celcius.
+
+    .. attribute:: sky_temperature
+        The sky temperature, radiatively, in Celcius.
+
+    .. attribute:: solar_irradiance
+        The solar irradiance in Watts per meter squared.
+
+    .. attribute:: normal_irradiance
+        The solar irradiance, in Watts, normal to the panel.
+
     .. attribute:: glass_temperature
         The temperatuer of the glass layer of the panel, measured in Celcius.
 
@@ -121,8 +133,15 @@ class SystemData:
     .. attribute:: collector_output_temperature
         The temperature of the HTF outputted from the collector, measured in Celcius.
 
+    .. attribute:: collector_temperature_gain
+        The temperature gain of the HTF through the collector, measured in Celcius.
+
     .. attribute:: tank_temperature
-        The temperature of thw water within the hot-water tank, measured in Celcius.
+        The temperature of the water within the hot-water tank, measured in Celcius.
+
+    .. attribute:: tank_output_temperature
+        The temperature of the water outputted from the hot-water tank, measured in
+        Celcius.
 
     .. attribute:: electrical_load
         The load (demand) placed on the PV-T panel's electrical output, measured in
@@ -147,12 +166,18 @@ class SystemData:
 
     date: str
     time: str
+    ambient_temperature: float
+    sky_temperature: float
+    solar_irradiance: float
+    normal_irradiance: float
     glass_temperature: float
     pv_temperature: Optional[float]
     pv_efficiency: Optional[float]
     collector_temperature: float
     collector_output_temperature: float
+    collector_temperature_gain: float
     tank_temperature: float
+    tank_output_temperature: float
     electrical_load: float
     thermal_load: float
     auxiliary_heating: float
@@ -275,6 +300,12 @@ def _parse_args(args) -> argparse.Namespace:
         action="store_true",
         default=False,
         help="Used to specify a PV-T panel with no PV layer: ie, a Thermal collector.",
+    )
+    parser.add_argument(
+        "--number-of-people",
+        "-n",
+        type=int,
+        help="The number of household members to consider in this model.",
     )
     parser.add_argument(
         "--output",
@@ -522,6 +553,7 @@ def pvt_panel_from_path(
             collector_parameters,
             back_parameters,
             pvt_data["pvt_system"]["air_gap_thickness"],
+            pvt_data["pvt_system"]["pv_to_collector_conductance"],
             datetime.timezone(
                 datetime.timedelta(hours=int(pvt_data["pvt_system"]["timezone"]))
             ),
@@ -667,7 +699,8 @@ def main(args) -> None:  # pylint: disable=too-many-locals
         os.path.join(parsed_args.location, WEATHER_DATA_FILENAME)
     )
     load_system = load.LoadSystem.from_yaml(
-        os.path.join(parsed_args.location, LOAD_DATA_FILENAME)
+        os.path.join(parsed_args.location, LOAD_DATA_FILENAME),
+        parsed_args.number_of_people,
     )
     logger.info(
         "Weather forecaster and load system successfully instantiated:\n  %s\n  %s",
@@ -760,14 +793,13 @@ def main(args) -> None:  # pylint: disable=too-many-locals
             output_water_temperature,
             pvt_panel.mass_flow_rate * parsed_args.resolution * 60,
             pvt_panel.htf_heat_capacity,
-            current_weather.ambient_temperature,
-            weather_forecaster.mains_water_temp,
-            current_hot_water_load / parsed_args.resolution,
         )
 
         # Compute the new tank temperature after supplying this demand
         tank_output_water_temp = hot_water_tank.update(
-            current_hot_water_load, weather_forecaster.mains_water_temp
+            current_hot_water_load,
+            weather_forecaster.mains_water_temp,
+            current_weather.ambient_temperature,
         )
 
         # Determine various efficiency factors
@@ -804,12 +836,18 @@ def main(args) -> None:  # pylint: disable=too-many-locals
         system_data[run_number] = SystemData(
             f"{date_and_time.day}/{date_and_time.month}/{date_and_time.year}",
             f"{date_and_time.hour}:{date_and_time.minute}",
+            current_weather.ambient_temperature - ZERO_CELCIUS_OFFSET,
+            current_weather.sky_temperature - ZERO_CELCIUS_OFFSET,
+            current_weather.irradiance,
+            pvt_panel.get_solar_irradiance(current_weather),
             pvt_panel.glass_temperature - ZERO_CELCIUS_OFFSET,
             pvt_panel.pv_temperature - ZERO_CELCIUS_OFFSET,
             pvt_panel.electrical_efficiency,
             pvt_panel.collector_temperature - ZERO_CELCIUS_OFFSET,
             pvt_panel.collector_output_temperature - ZERO_CELCIUS_OFFSET,
+            pvt_panel.collector_output_temperature - input_water_temperature,
             hot_water_tank.temperature - ZERO_CELCIUS_OFFSET,
+            tank_output_water_temp - ZERO_CELCIUS_OFFSET,
             current_electrical_load,
             current_hot_water_load,
             auxiliary_heating,

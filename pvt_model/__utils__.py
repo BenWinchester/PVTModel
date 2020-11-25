@@ -37,10 +37,12 @@ __all__ = (
     "read_yaml",
     "HEAT_CAPACITY_OF_WATER",
     "FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR",
+    "CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_WATER",
     "LOGGER_NAME",
     "STEFAN_BOLTZMAN_CONSTANT",
     "THERMAL_CONDUCTIVITY_OF_AIR",
     "ZERO_CELCIUS_OFFSET",
+    "WIND_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT",
 )
 
 
@@ -53,15 +55,24 @@ LOGGER_NAME = "my_first_pvt_model"
 logger = logging.getLogger(LOGGER_NAME)
 
 # The Stefan-Boltzman constant, given in Watts per meter squared Kelvin to the four.
-STEFAN_BOLTZMAN_CONSTANT: float = 5.670374419 * 10 ** (-8)
+STEFAN_BOLTZMAN_CONSTANT: float = 5.670374419 * (10 ** (-8))
 
 # The heat capacity of water, measured in Joules per kilogram Kelvin.
 HEAT_CAPACITY_OF_WATER: int = 4182
 
-# The free convective heat transfer coefficient of air. This varies, and potentially
+# The free convective, heat-transfer coefficient of air. This varies, and potentially
 # could be extended to the weather module and calculated on the fly depending on various
 # environmental conditions etc..
 FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR: int = 25
+
+# The convective, heat-transfer coefficienct of water. This varies (a LOT), and is
+# measured in units of Watts per meter squared Kelvin.
+CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_WATER: int = 3000
+
+# The wind convective heat transfer coefficient. This should be temperature dependant,
+# @@@ Improve this.
+# This should be measured in Watts per Kelvin.
+WIND_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT = 0
 
 # The thermal conductivity of air is measured in Watts per meter Kelvin.
 # ! This is defined at 273 Kelvin.

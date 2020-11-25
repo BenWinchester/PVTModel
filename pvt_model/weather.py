@@ -21,10 +21,11 @@ cooling effect on panels can be estimated and included into the model as well.
 import calendar
 import datetime
 import logging
+import math
 import random
 
 from dataclasses import dataclass
-from typing import Any, Dict, Tuple, Union
+from typing import Any, Dict, Optional, Tuple, Union
 
 import pysolar
 
@@ -38,6 +39,9 @@ from .__utils__ import (
 
 __all__ = ("WeatherForecaster",)
 
+
+# A parameter used in modelling weather data curves.
+G_CONST = 1
 
 # The resolution to which random numbers are generated
 RAND_RESOLUTION = 100
@@ -65,6 +69,12 @@ class _MonthlyWeatherData:
     .. attribute:: night_temp
         The average nighttime temperature, measured in Kelvin, for the month.
 
+    .. attribute:: sunrise
+        The sunrise time. Can be set later.
+
+    .. attribute:: sunset
+        The sunset time. Can be set later.
+
     """
 
     month_name: str
@@ -73,6 +83,8 @@ class _MonthlyWeatherData:
     rainy_days: float
     day_temp: float
     night_temp: float
+    sunrise: Optional[datetime.time] = None
+    sunset: Optional[datetime.time] = None
 
     def __repr__(self) -> str:
         """
@@ -152,6 +164,71 @@ def _get_solar_angles(
     return (
         pysolar.solar.get_azimuth(latitude, longitude, date_and_time),
         pysolar.solar.get_altitude(latitude, longitude, date_and_time),
+    )
+
+
+def _get_sunrise(
+    latitude: float,
+    longitude: float,
+    date_and_time: datetime.datetime,
+) -> float:
+    """
+    Determine the sunrise time for the month.
+
+    :param latitude:
+        The latitude of the PV-T set-up.
+
+    :param longitude:
+        The longitude of the PV-T set-up.
+
+    :param date_and_time:
+        The current date and time.
+
+    :return:
+        The time of sunrise for the month, returned as a :class:`datetime.time`.
+
+    """
+
+    _, declination = _get_solar_angles(latitude, longitude, date_and_time)
+    if declination > 0:
+        return date_and_time.time()
+    return _get_sunrise(
+        latitude,
+        longitude,
+        date_and_time.replace(hour=date_and_time.hour + 1),
+    )
+
+
+def _get_sunset(
+    latitude: float,
+    longitude: float,
+    date_and_time: datetime.datetime,
+    declination=0,
+) -> float:
+    """
+    Determine the sunset time for the month.
+
+    :param latitude:
+        The latitude of the PV-T set-up.
+
+    :param longitude:
+        The longitude of the PV-T set-up.
+
+    :param date_and_time:
+        The current date and time.
+
+    :return:
+        The time of sunset for the month, returned as a :class:`datetime.time`.
+
+    """
+
+    _, declination = _get_solar_angles(latitude, longitude, date_and_time)
+    if declination > 0:
+        return date_and_time.time()
+    return _get_sunset(
+        latitude,
+        longitude,
+        date_and_time.replace(hour=date_and_time.hour - 1),
     )
 
 
@@ -307,6 +384,55 @@ class WeatherForecaster:
         # Return this number
         return cloud_cover_prob * rand_prob * cloud_efficacy_factor
 
+    def _ambient_temperature(
+        self, latitude: float, longitude: float, date_and_time: datetime.datetime
+    ) -> float:
+        """
+        Return the ambient temperature, in Kelvin, based on the date and time.
+
+        A sine curve is fitted, and the temp extracted.
+
+        The models used in this function are obtained, with permission, from
+        https://mathscinotes.com/wp-content/uploads/2012/12/dailytempvariation.pdf
+        and use an improved theoretical model from a previous paper.
+
+        :param latitude:
+            The latitude of the set-up.
+
+        :param longitude:
+            The longitude of the set-up.
+
+        :param date_and_time:
+            The current date and time.
+
+        :return:
+            The temperature in Kelvin.
+
+        """
+
+        max_temp = self._monthly_weather_data[date_and_time.month].day_temp
+        min_temp = self._monthly_weather_data[date_and_time.month].night_temp
+        temp_range = max_temp - min_temp
+
+        if (
+            self._monthly_weather_data[date_and_time.month].sunrise is None
+            or self._monthly_weather_data[date_and_time.month].sunset is None
+        ):
+            self._monthly_weather_data[date_and_time.month].sunrise = _get_sunrise(
+                latitude, longitude, date_and_time.replace(hour=0)
+            )
+            self._monthly_weather_data[date_and_time.month].sunset = _get_sunset(
+                latitude, longitude, date_and_time.replace(hour=23)
+            )
+
+        return (
+            temp_range
+            * math.exp(-(date_and_time.hour + date_and_time.minute / 60 - 12) * G_CONST)
+            * (1 + (date_and_time.hour + date_and_time.minute / 60 - 12) / 12)
+            ** (G_CONST * 12)
+            + min_temp
+        )
+
     def get_weather(
         self,
         latitude: float,
@@ -357,15 +483,9 @@ class WeatherForecaster:
         wind_speed: float = 0
 
         # Compute the ambient temperature.
-        # @@@ For now, this just gets the average temperature that day.
-        if 6 < date_and_time.hour < 18:
-            ambient_temperature: float = self._monthly_weather_data[
-                date_and_time.month
-            ].day_temp
-        else:
-            ambient_temperature = self._monthly_weather_data[
-                date_and_time.month
-            ].night_temp
+        ambient_temperature = self._ambient_temperature(
+            latitude, longitude, date_and_time
+        )
 
         # Return all of these in a WeatherConditions variable.
         return WeatherConditions(
