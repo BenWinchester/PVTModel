@@ -90,6 +90,30 @@ def plot(
     return line
 
 
+def save_figure(figure_name: str) -> None:
+    """
+    Saves the figure, shuffling existing files out of the way.
+
+    :param figure_name:
+        The name of the figure to save.
+
+    """
+
+    # Determine the maximum figure that already exists.
+    figure_int = 1
+    while os.path.exists("figure_{}_{}.jpg".format(figure_name, figure_int)):
+        figure_int += 1
+    # Shuffle all figures along
+    while figure_int >= 2:
+        os.rename(
+            "figure_{}_{}.jpg".format(figure_name, figure_int - 1),
+            "figure_{}_{}.jpg".format(figure_name, figure_int),
+        )
+        figure_int -= 1
+    # Save the figure
+    plt.savefig("figure_{}_1.jpg".format(figure_name))
+
+
 if __name__ == "__main__":
     data = load_data("data_output.json")
 
@@ -106,10 +130,7 @@ if __name__ == "__main__":
         for thing in things_to_plot
     ]
     plt.legend(lines, things_to_plot)
-    figure_int = 1
-    while os.path.exists("figure_tank_temperature_{}.jpg".format(figure_int)):
-        figure_int += 1
-    plt.savefig("figure_tank_temperature_{}.jpg".format(figure_int))
+    save_figure("tank_temperature")
 
     plt.clf()
 
@@ -125,10 +146,8 @@ if __name__ == "__main__":
         for thing in things_to_plot
     ]
     plt.legend(lines, things_to_plot)
-    figure_int = 1
-    while os.path.exists("figure_temperature_{}.jpg".format(figure_int)):
-        figure_int += 1
-    plt.savefig("figure_temperature_{}.jpg".format(figure_int))
+
+    save_figure("temperature")
 
     plt.clf()
 
@@ -157,10 +176,7 @@ if __name__ == "__main__":
     ]
     plt.legend(lines, demand_to_plot)
 
-    figure_int = 1
-    while os.path.exists("figure_dc_{}.jpg".format(figure_int)):
-        figure_int += 1
-    plt.savefig("figure_dc_{}.jpg".format(figure_int))
+    save_figure("dc")
 
     plt.clf()
     other_to_plot = ["solar_irradiance", "normal_irradiance"]
@@ -170,7 +186,4 @@ if __name__ == "__main__":
     ]
     plt.legend(lines, other_to_plot)
 
-    figure_int = 1
-    while os.path.exists("figure_solar_irradiance_{}.jpg".format(figure_int)):
-        figure_int += 1
-    plt.savefig("figure_solar_irradiance_{}.jpg".format(figure_int))
+    save_figure("solar_irradiance")
