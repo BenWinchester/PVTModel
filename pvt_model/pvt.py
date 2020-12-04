@@ -128,6 +128,7 @@ def _htf_heat_transfer(
 
 
 def _pv_to_collector_conductive_transfer(
+    pv_area: float,
     pv_to_collector_thermal_conductance: float,
     pv_temperature: float,
     collector_temperature: float,
@@ -136,6 +137,9 @@ def _pv_to_collector_conductive_transfer(
     Computes the heat transfer from the PV layer to the thermal collector.
 
     This value is returned in Watts.
+
+    :param pv_area:
+        The area of the panel.
 
     :param pv_to_collector_thermal_conductance:
         The conductance, measured in Watts per meter squared Kelvin.
@@ -151,8 +155,10 @@ def _pv_to_collector_conductive_transfer(
 
     """
 
-    return pv_to_collector_thermal_conductance * (
-        pv_temperature - collector_temperature
+    return (
+        pv_to_collector_thermal_conductance
+        * (pv_temperature - collector_temperature)
+        * pv_area
     )
 
 
@@ -327,7 +333,7 @@ class _Layer:
         self._mass = layer_params.mass
         self._heat_capacity = layer_params.heat_capacity
         self.temperature = (
-            layer_params.temperature if layer_params.temperature is not None else 273
+            layer_params.temperature if layer_params.temperature is not None else 293
         )
         self.area = layer_params.area
         self.thickness = layer_params.thickness
@@ -455,30 +461,32 @@ class Glass(_OpticalLayer):
 
     def _layer_to_sky_radiative_transfer(self, sky_temperature: float) -> float:
         """
-        Calculates the heat loss to the sky radiatively from the layer.
+        Calculates the heat loss to the sky radiatively from the layer in Watts.
 
         :param sky_temperature:
             The radiative temperature of the sky, measured in Kelvin.
 
         :return:
-            The heat transfer, in Watts per meter squared, radiatively to the sky.
+            The heat transfer, in Watts, radiatively to the sky.
 
         """
 
         return (
             self.emissivity
             * STEFAN_BOLTZMAN_CONSTANT
+            * self.area
             * (self.temperature ** 4 - sky_temperature)
         )
 
     # @@@ The unused-import flag is disabled as wind_speed will be included eventually
-    def _layer_to_air_conductive_transfer(
+    def _layer_to_air_convective_transfer(
         self,
         ambient_temperature: float,
         wind_speed: float,  # pylint: disable=unused-import
     ) -> float:
         """
-        Calculates the heat loss to the surrounding air by conduction and convection.
+        Calculates the heat loss to the surrounding air by conduction and convection in
+        Watts.
 
         :param ambient_temperature:
             The ambient temperature of the air, measured in Kelvin.
@@ -535,28 +543,32 @@ class Glass(_OpticalLayer):
         """
 
         # Set the temperature of this layer appropriately.
-        heat_losses = (
-            self._layer_to_air_conductive_transfer(
-                weather_conditions.ambient_temperature, weather_conditions.wind_speed
-            )
-            + self._layer_to_sky_radiative_transfer(weather_conditions.sky_temperature)
-            * self.area
-        )
+        # ! All in Watts now
+        # heat_losses = self._layer_to_air_convective_transfer(
+        #     weather_conditions.ambient_temperature, weather_conditions.wind_speed
+        # ) + self._layer_to_sky_radiative_transfer(weather_conditions.sky_temperature)
 
-        heat_input = pv_to_glass_conductive_transfer(
-            air_gap_thickness, self.temperature, pv_area, pv_temperature
-        ) + pv_to_glass_radiative_transfer(
-            self.temperature, self.emissivity, pv_area, pv_temperature, pv_emissivity
-        )
+        # heat_input = pv_to_glass_conductive_transfer(
+        #     air_gap_thickness, self.temperature, pv_area, pv_temperature
+        # ) + pv_to_glass_radiative_transfer(
+        #     self.temperature,
+        #     self.emissivity,
+        #     pv_area,
+        #     pv_temperature,
+        #     pv_emissivity,
+        # )
 
-        # excess_heat = heat_input - heat_losses
-        excess_heat = heat_input - heat_losses
+        # # This heat input, in Watts, is supplied throughout the duration, and so does
+        # # not need to be multiplied by the resolution.
+        # self.temperature = (
+        #     self.temperature
+        #     + (heat_input - heat_losses)
+        #     / (self._mass * self._heat_capacity)
+        #     * resolution
+        #     * 60
+        # )
 
-        # This heat input, in Watts, is supplied throughout the duration, and so does
-        # not need to be multiplied by the resolution.
-        self.temperature = self.temperature + excess_heat / (
-            self._mass * self._heat_capacity
-        )
+        self.temperature = pv_temperature
 
 
 class PV(_OpticalLayer):
@@ -626,7 +638,7 @@ class PV(_OpticalLayer):
 
     def excess_heat(
         self,
-        solar_irradiance: float,
+        solar_energy_input: float,
         resolution: float,
         air_gap_thickness: float,
         pv_to_collector_thermal_conductance: float,
@@ -637,8 +649,8 @@ class PV(_OpticalLayer):
         """
         Computes the excess heat provided to the PV layer.
 
-        :param solar_irradiance:
-            The solar irradiance, normal to the panel, measured in Joules per meter
+        :param solar_energy_input:
+            The solar energy inputted, normal to the panel, measured in Joules per meter
             squared.
 
         :param resolution:
@@ -662,9 +674,12 @@ class PV(_OpticalLayer):
 
         """
 
+        # @@@
+        # @ Irradiance is in Joules.
+
         # The solar heat input is in Joules
         solar_heat_input = _solar_heat_input(
-            solar_irradiance,
+            solar_energy_input,
             self.area,
             self.efficiency,
             self._absorptivity,
@@ -699,6 +714,7 @@ class PV(_OpticalLayer):
         # interval.
         pv_to_collector = (
             _pv_to_collector_conductive_transfer(
+                self.area,
                 pv_to_collector_thermal_conductance,
                 self.temperature,
                 collector_temperature,
@@ -711,7 +727,7 @@ class PV(_OpticalLayer):
 
     def update(
         self,
-        solar_irradiance: float,
+        solar_energy_input: float,
         resolution: float,
         air_gap_thickness: float,
         pv_to_collector_thermal_conductance: float,
@@ -768,7 +784,7 @@ class PV(_OpticalLayer):
         # Determine the excess heat that has been inputted into the panel during this
         # time step, measured in Joules.
         excess_heat = self.excess_heat(
-            solar_irradiance,
+            solar_energy_input,
             resolution,
             air_gap_thickness,
             pv_to_collector_thermal_conductance,
@@ -786,7 +802,10 @@ class PV(_OpticalLayer):
         # Return the excess heat, transferred to the collector, based on the new PV-T
         # temperature.
         return _pv_to_collector_conductive_transfer(
-            pv_to_collector_thermal_conductance, self.temperature, collector_temperature
+            self.area,
+            pv_to_collector_thermal_conductance,
+            self.temperature,
+            collector_temperature,
         )
 
     @property
@@ -822,6 +841,9 @@ class Collector(_Layer):
     .. attribute:: output_water_temperature
         The temperature of the water outputted by the layer, measured in Kelvin.
 
+    .. attribute:: pump_power
+        The power consumed by the water pump, measured in Watts.
+
     """
 
     # Pirvate Attributes:
@@ -852,6 +874,7 @@ class Collector(_Layer):
         self.output_water_temperature = collector_params.output_water_temperature
         self._mass_flow_rate = collector_params.mass_flow_rate
         self.htf_heat_capacity = collector_params.htf_heat_capacity
+        self.pump_power = collector_params.pump_power
 
     @property
     def mass_flow_rate(self) -> float:
@@ -1254,7 +1277,7 @@ class PVT:
 
         """
 
-        solar_irradiance = (
+        solar_energy_input = (
             self.get_solar_irradiance(weather_conditions) * resolution * 60
         )
 
@@ -1262,7 +1285,7 @@ class PVT:
         if self._pv is not None:
             # The excese PV heat generated is in units of Watts.
             pv_to_collector_heat = self._pv.update(
-                solar_irradiance,
+                solar_energy_input,
                 resolution,
                 self._air_gap_thickness,
                 self._pv_to_collector_thermal_conductance,
@@ -1411,6 +1434,18 @@ class PVT:
         """
 
         return self._collector.output_water_temperature
+
+    @property
+    def pump_power(self) -> float:
+        """
+        Returns the power, in Watts, consumed by the HTF pump.
+
+        :return:
+            The water-pump power consumption in Watts.
+
+        """
+
+        return self._collector.pump_power
 
     def electrical_output(
         self, resolution: float, weather_conditions: WeatherConditions

@@ -51,7 +51,7 @@ LOAD_DATA_FILENAME = "loads_watts.yaml"
 # The initial date and time for the simultion to run from.
 INITIAL_DATE_AND_TIME = datetime.datetime(2020, 1, 1, 0, 0)
 # The initial temperature for the system to be instantiated at, measured in Kelvin.
-INITIAL_SYSTEM_TEMPERATURE = 300
+INITIAL_SYSTEM_TEMPERATURE = 293  # [K]
 # The temperature of hot-water required by the end-user, measured in Kelvin.
 HOT_WATER_DEMAND_TEMP = 60 + ZERO_CELCIUS_OFFSET
 
@@ -143,6 +143,9 @@ class SystemData:
         The temperature of the water outputted from the hot-water tank, measured in
         Celcius.
 
+    .. attribute:: tank_heat_addition
+        The heat added to the tank, in Watts.
+
     .. attribute:: electrical_load
         The load (demand) placed on the PV-T panel's electrical output, measured in
         Watts.
@@ -151,10 +154,21 @@ class SystemData:
         The load (demand) placed on the hot-water tank's thermal output, measured in
         Watts.
 
+    .. attribute:: thermal_output
+        The thermal output from the PV-T system supplied - this is really a combnination
+        of the demand required and the temperature of the system, measured in Watts.
+
     .. attribute:: auxiliary_heating
         The additional energy needed to be supplied to the system through the auxiliary
         heater when the tank temperature is below the required thermal output
         temperature, measured in Watts.
+
+    .. attribute:: gross_electrical_output
+        The electrical power produced by the panel, measured in Watts.
+
+    .. attribute:: net_electrical_output
+        The electrical power produced by the panel which is in excess of the demand
+        required by the household. IE: gross - demand. This is measured in Watts.
 
     .. attribute:: dc_electrical
         The electrical demand covered, defined between 0 and 1.
@@ -170,7 +184,7 @@ class SystemData:
     sky_temperature: float
     solar_irradiance: float
     normal_irradiance: float
-    glass_temperature: float
+    glass_temperature: Optional[float]
     pv_temperature: Optional[float]
     pv_efficiency: Optional[float]
     collector_temperature: float
@@ -178,9 +192,13 @@ class SystemData:
     collector_temperature_gain: float
     tank_temperature: float
     tank_output_temperature: float
+    tank_heat_addition: float
     electrical_load: float
     thermal_load: float
+    thermal_output: float
     auxiliary_heating: float
+    gross_electrical_output: float
+    net_electrical_output: float
     dc_electrical: Optional[float] = None
     dc_thermal: Optional[float] = None
 
@@ -357,16 +375,18 @@ def glass_params_from_data(
 
     try:
         return OpticalLayerParameters(
-            glass_data["mass"]
+            glass_data["mass"]  # [kg]
             if "mass" in glass_data
-            else glass_data["density"] * glass_data["thickness"] * area,
-            glass_data["heat_capacity"],
-            area,
-            glass_data["thickness"],
-            INITIAL_SYSTEM_TEMPERATURE,
-            glass_data["transmissivity"],
-            glass_data["absorptivity"],
-            glass_data["emissivity"],
+            else glass_data["density"]  # [kg/m^3]
+            * glass_data["thickness"]  # [m]
+            * area,  # [m^2]
+            glass_data["heat_capacity"],  # [J/kg*K]
+            area,  # [m^2]
+            glass_data["thickness"],  # [m]
+            INITIAL_SYSTEM_TEMPERATURE,  # [K]
+            glass_data["transmissivity"],  # [unitless]
+            glass_data["absorptivity"],  # [unitless]
+            glass_data["emissivity"],  # [unitless]
         )
     except KeyError as e:
         raise MissingDataError(
@@ -394,19 +414,21 @@ def pv_params_from_data(area: float, pv_data: Dict[str, Any]) -> PVParameters:
 
     try:
         return PVParameters(
-            pv_data["mass"]
+            pv_data["mass"]  # [kg]
             if "mass" in pv_data
-            else pv_data["density"] * area * pv_data["thickness"],
-            pv_data["heat_capacity"],
-            area,
-            pv_data["thickness"],
-            INITIAL_SYSTEM_TEMPERATURE,
-            pv_data["transmissivity"],
-            pv_data["absorptivity"],
-            pv_data["emissivity"],
-            pv_data["reference_efficiency"],
-            pv_data["reference_temperature"],
-            pv_data["thermal_coefficient"],
+            else pv_data["density"]  # [kg/m^3]
+            * area  # [m^2]
+            * pv_data["thickness"],  # [m]
+            pv_data["heat_capacity"],  # [J/kg*K]
+            area,  # [m^2]
+            pv_data["thickness"],  # [m]
+            INITIAL_SYSTEM_TEMPERATURE,  # [K]
+            pv_data["transmissivity"],  # [unitless]
+            pv_data["absorptivity"],  # [unitless]
+            pv_data["emissivity"],  # [unitless]
+            pv_data["reference_efficiency"],  # [unitless]
+            pv_data["reference_temperature"],  # [K]
+            pv_data["thermal_coefficient"],  # [K^-1]
         )
     except KeyError as e:
         raise MissingDataError(
@@ -444,18 +466,21 @@ def collector_params_from_data(
 
     try:
         return CollectorParameters(
-            collector_data["mass"]
+            collector_data["mass"]  # [kg]
             if "mass" in collector_data
-            else area * collector_data["density"] * collector_data["thickness"],
-            collector_data["heat_capacity"],
-            area,
-            collector_data["thickness"],
-            INITIAL_SYSTEM_TEMPERATURE,
-            initial_collector_htf_tempertaure,
-            collector_data["mass_flow_rate"],
-            collector_data["htf_heat_capacity"]
+            else area  # [m^2]
+            * collector_data["density"]  # [kg/m^3]
+            * collector_data["thickness"],  # [m]
+            collector_data["heat_capacity"],  # [J/kg*K]
+            area,  # [m^2]
+            collector_data["thickness"],  # [m]
+            INITIAL_SYSTEM_TEMPERATURE,  # [K]
+            initial_collector_htf_tempertaure,  # [K]
+            collector_data["mass_flow_rate"],  # [Litres/hour]
+            collector_data["htf_heat_capacity"]  # [J/kg*K]
             if "htf_heat_capacity" in collector_data
-            else HEAT_CAPACITY_OF_WATER,
+            else HEAT_CAPACITY_OF_WATER,  # [J/kg*K]
+            collector_data["pump_power"],  # [W]
         )
     except KeyError as e:
         raise MissingDataError(
@@ -485,14 +510,16 @@ def back_params_from_data(
 
     try:
         return BackLayerParameters(
-            back_data["mass"]
+            back_data["mass"]  # [kg]
             if "mass" in back_data
-            else back_data["density"] * area * back_data["thickness"],
-            back_data["heat_capacity"],
-            area,
-            back_data["thickness"],
-            INITIAL_SYSTEM_TEMPERATURE,
-            back_data["thermal_conductivity"],
+            else back_data["density"]  # [kg/m^3]
+            * area  # [m^2]
+            * back_data["thickness"],  # [m]
+            back_data["heat_capacity"],  # [J/kg*K]
+            area,  # [m^2]
+            back_data["thickness"],  # [m]
+            INITIAL_SYSTEM_TEMPERATURE,  # [K]
+            back_data["thermal_conductivity"],  # [W/m*K]
         )
     except KeyError as e:
         raise MissingDataError(
@@ -537,8 +564,8 @@ def pvt_panel_from_path(
         else None
     )
     collector_parameters = collector_params_from_data(
-        pvt_data["pvt_system"]["area"],
-        initial_collector_htf_tempertaure,
+        pvt_data["pvt_system"]["area"],  # [m^2]
+        initial_collector_htf_tempertaure,  # [K]
         pvt_data["collector"],
     )
     back_parameters = back_params_from_data(
@@ -547,22 +574,24 @@ def pvt_panel_from_path(
 
     try:
         pvt_panel = pvt.PVT(
-            pvt_data["pvt_system"]["latitude"],
-            pvt_data["pvt_system"]["longitude"],
+            pvt_data["pvt_system"]["latitude"],  # [deg]
+            pvt_data["pvt_system"]["longitude"],  # [deg]
             glass_parameters,
             collector_parameters,
             back_parameters,
-            pvt_data["pvt_system"]["air_gap_thickness"],
-            pvt_data["pvt_system"]["pv_to_collector_conductance"],
+            pvt_data["pvt_system"]["air_gap_thickness"],  # [m]
+            pvt_data["pvt_system"]["pv_to_collector_conductance"],  # [W/m^2*K]
             datetime.timezone(
                 datetime.timedelta(hours=int(pvt_data["pvt_system"]["timezone"]))
             ),
             pv_layer_included="pv" in pvt_data and pv_layer_included,
             pv_parameters=pv_parameters if pv_layer_included else None,
-            tilt=pvt_data["pvt_system"]["tilt"]
+            tilt=pvt_data["pvt_system"]["tilt"]  # [deg]
             if "tilt" in pvt_data["pvt_system"]
             else None,
-            azimuthal_orientation=pvt_data["pvt_system"]["azimuthal_orientation"]
+            azimuthal_orientation=pvt_data["pvt_system"][
+                "azimuthal_orientation"
+            ]  # [deg]
             if "azimuthal_orientation" in pvt_data["pvt_system"]
             else None,
             horizontal_tracking=pvt_data["pvt_system"]["horizontal_tracking"],
@@ -594,7 +623,7 @@ def heat_exchanger_from_path(exchanger_data_file: str) -> exchanger.Exchanger:
 
     exchanger_data = read_yaml(exchanger_data_file)
     try:
-        return exchanger.Exchanger(float(exchanger_data["efficiency"]))
+        return exchanger.Exchanger(float(exchanger_data["efficiency"]))  # [unitless]
     except KeyError as e:
         raise MissingDataError(
             f"The file '{exchanger_data_file}' "
@@ -625,11 +654,11 @@ def hot_water_tank_from_path(tank_data_file: str, mains_water_temp: float) -> ta
     tank_data = read_yaml(tank_data_file)
     try:
         return tank.Tank(
-            mains_water_temp,
-            float(tank_data["mass"]),
-            HEAT_CAPACITY_OF_WATER,
-            float(tank_data["area"]),
-            float(tank_data["heat_loss_coefficient"]),
+            mains_water_temp,  # [K]
+            float(tank_data["mass"]),  # [kg]
+            HEAT_CAPACITY_OF_WATER,  # [J/kg*K]
+            float(tank_data["area"]),  # [m^2]
+            float(tank_data["heat_loss_coefficient"]),  # [W/m^2*K]
         )
     except KeyError as e:
         raise MissingDataError(
@@ -726,19 +755,19 @@ def main(args) -> None:  # pylint: disable=too-many-locals
         parsed_args.input_water_temperature + ZERO_CELCIUS_OFFSET
         if parsed_args.input_water_temperature is not None
         else INITIAL_SYSTEM_TEMPERATURE
-    )
+    )  # [K]
 
     num_months = (
         (parsed_args.initial_month if parsed_args.initial_month is not None else 1)
         - 1
         + parsed_args.months
-    )
+    )  # [months]
 
     start_month = (
         parsed_args.initial_month
         if 1 <= parsed_args.initial_month <= 12
         else INITIAL_DATE_AND_TIME.month
-    )
+    )  # [months]
 
     first_date_and_time = INITIAL_DATE_AND_TIME.replace(
         hour=parsed_args.start_time, month=start_month
@@ -751,7 +780,11 @@ def main(args) -> None:  # pylint: disable=too-many-locals
     else:
         final_date_and_time = first_date_and_time + relativedelta(days=parsed_args.days)
 
-    logger.debug("Beginning itterative model...")
+    logger.debug(
+        "Beginning itterative model:\n  Running from: %s\n  Running to: %s",
+        str(first_date_and_time),
+        str(final_date_and_time),
+    )
     for run_number, date_and_time in enumerate(
         time_iterator(
             first_time=first_date_and_time,
@@ -765,12 +798,17 @@ def main(args) -> None:  # pylint: disable=too-many-locals
         current_weather = weather_forecaster.get_weather(
             *pvt_panel.coordinates, parsed_args.cloud_efficacy_factor, date_and_time
         )
+
+        # NOTE: The electrical load will have the same units as the entries in the load
+        # data file passed in on the command-line interface. If the file contains data
+        # entries in units kilo Watts, then the electrical load here will have units of
+        # kilo Watts.
         current_electrical_load = load_system.get_load_from_time(
             parsed_args.resolution, load.ProfileType.ELECTRICITY, date_and_time
-        )
+        )  # [Watts]
         current_hot_water_load = load_system.get_load_from_time(
             parsed_args.resolution, load.ProfileType.HOT_WATER, date_and_time
-        )
+        )  # [litres/time step]
 
         # logger.info(
         #     "Weather and load conditions determined at time %s:\n  %s"
@@ -784,37 +822,44 @@ def main(args) -> None:  # pylint: disable=too-many-locals
         # Call the pvt module to generate the new temperatures at this time step.
         output_water_temperature = pvt_panel.update(
             input_water_temperature, parsed_args.resolution, current_weather
-        )
+        )  # [K]
 
         # Propogate this information through to the heat exchanger and pass in the
         # tank s.t. it updates the tank correctly as well.
-        input_water_temperature = heat_exchanger.update(
+        # The tank heat gain here is measured in Joules.
+        input_water_temperature, tank_heat_gain = heat_exchanger.update(  # [K], [J]
             hot_water_tank,
-            output_water_temperature,
-            pvt_panel.mass_flow_rate * parsed_args.resolution * 60,
-            pvt_panel.htf_heat_capacity,
+            output_water_temperature,  # [K]
+            pvt_panel.mass_flow_rate * parsed_args.resolution * 60,  # [kg]
+            pvt_panel.htf_heat_capacity,  # [J/kg*K]
         )
 
         # Compute the new tank temperature after supplying this demand
-        tank_output_water_temp = hot_water_tank.update(
-            current_hot_water_load,
-            weather_forecaster.mains_water_temp,
-            current_weather.ambient_temperature,
+        tank_output_water_temp = hot_water_tank.update(  # [K]
+            tank_heat_gain,  # [J]
+            parsed_args.resolution,  # [minutes]
+            current_hot_water_load,  # [litres/time step]
+            weather_forecaster.mains_water_temp,  # [K]
+            current_weather.ambient_temperature,  # [K]
         )
 
         # Determine various efficiency factors
+        # The auxiliary heating will be measured in Watts.
         auxiliary_heating = (
-            current_hot_water_load
-            * HEAT_CAPACITY_OF_WATER
-            * (HOT_WATER_DEMAND_TEMP - tank_output_water_temp)
-        )
+            1  # [kg/litres]
+            * current_hot_water_load  # [litres/time step]
+            * HEAT_CAPACITY_OF_WATER  # [J/kg*K]
+            * (HOT_WATER_DEMAND_TEMP - tank_output_water_temp)  # [K]
+        ) / (
+            parsed_args.resolution * 60  # We need to convert from Joules to Watts
+        )  # [time step in seconds]
 
         dc_electrical = (
             efficiency.dc_electrical(
                 electrical_output=pvt_panel.electrical_output(
                     parsed_args.resolution, current_weather
                 ),
-                electrical_losses=0,
+                electrical_losses=pvt_panel.pump_power,
                 electrical_demand=current_electrical_load,
             )
             * 100
@@ -834,25 +879,43 @@ def main(args) -> None:  # pylint: disable=too-many-locals
 
         # Store the information in the dictionary mapping between time step and data.
         system_data[run_number] = SystemData(
-            f"{date_and_time.day}/{date_and_time.month}/{date_and_time.year}",
-            f"{date_and_time.hour}:{date_and_time.minute}",
-            current_weather.ambient_temperature - ZERO_CELCIUS_OFFSET,
-            current_weather.sky_temperature - ZERO_CELCIUS_OFFSET,
-            current_weather.irradiance,
-            pvt_panel.get_solar_irradiance(current_weather),
-            pvt_panel.glass_temperature - ZERO_CELCIUS_OFFSET,
-            pvt_panel.pv_temperature - ZERO_CELCIUS_OFFSET,
-            pvt_panel.electrical_efficiency,
-            pvt_panel.collector_temperature - ZERO_CELCIUS_OFFSET,
-            pvt_panel.collector_output_temperature - ZERO_CELCIUS_OFFSET,
-            pvt_panel.collector_output_temperature - input_water_temperature,
-            hot_water_tank.temperature - ZERO_CELCIUS_OFFSET,
-            tank_output_water_temp - ZERO_CELCIUS_OFFSET,
-            current_electrical_load,
-            current_hot_water_load,
-            auxiliary_heating,
-            dc_electrical,
-            dc_thermal,
+            date=f"{date_and_time.day}/{date_and_time.month}/{date_and_time.year}",
+            time=f"{date_and_time.hour}:{date_and_time.minute}",
+            ambient_temperature=current_weather.ambient_temperature
+            - ZERO_CELCIUS_OFFSET,
+            sky_temperature=current_weather.sky_temperature - ZERO_CELCIUS_OFFSET,
+            solar_irradiance=current_weather.irradiance,
+            normal_irradiance=pvt_panel.get_solar_irradiance(current_weather),
+            glass_temperature=pvt_panel.glass_temperature - ZERO_CELCIUS_OFFSET,
+            pv_temperature=pvt_panel.pv_temperature - ZERO_CELCIUS_OFFSET,
+            pv_efficiency=pvt_panel.electrical_efficiency,
+            collector_temperature=pvt_panel.collector_temperature - ZERO_CELCIUS_OFFSET,
+            collector_output_temperature=pvt_panel.collector_output_temperature
+            - ZERO_CELCIUS_OFFSET,
+            collector_temperature_gain=pvt_panel.collector_output_temperature
+            - input_water_temperature,
+            tank_temperature=hot_water_tank.temperature - ZERO_CELCIUS_OFFSET,
+            tank_output_temperature=tank_output_water_temp - ZERO_CELCIUS_OFFSET,
+            tank_heat_addition=tank_heat_gain / (parsed_args.resolution * 60),
+            electrical_load=current_electrical_load,
+            thermal_load=current_hot_water_load
+            * HEAT_CAPACITY_OF_WATER
+            * 50
+            / (parsed_args.resolution * 60),
+            thermal_output=current_hot_water_load
+            * HEAT_CAPACITY_OF_WATER
+            * (tank_output_water_temp - 10 - ZERO_CELCIUS_OFFSET)
+            / (parsed_args.resolution * 60),
+            auxiliary_heating=auxiliary_heating,
+            gross_electrical_output=pvt_panel.electrical_output(
+                parsed_args.resolution, current_weather
+            ),
+            net_electrical_output=pvt_panel.electrical_output(
+                parsed_args.resolution, current_weather
+            )
+            - current_electrical_load,
+            dc_electrical=dc_electrical,
+            dc_thermal=dc_thermal,
         )
 
         logger.info(

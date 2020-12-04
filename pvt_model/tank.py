@@ -13,6 +13,8 @@ This module represents the hot-water tank.
 
 """
 
+from .__utils__ import HEAT_CAPACITY_OF_WATER
+
 __all__ = ("Tank",)
 
 
@@ -33,7 +35,7 @@ class Tank:
         The surface area of the tank, measured in meters squared.
 
     .. attribute:: heat_loss_coefficient
-        The heat lost from the tank, measured in Joules per meter squared Kelvin.
+        The heat lost from the tank, measured in Watts per meter squared Kelvin.
 
     """
 
@@ -63,7 +65,7 @@ class Tank:
             The surface area of the tank, measured in meters squared.
 
         :param heat_loss_coefficient:
-            The heat lost from the tank, measured in Joules per meter squared Kelvin.
+            The heat lost from the tank, measured in Watts per meter squared Kelvin.
 
         """
 
@@ -75,12 +77,17 @@ class Tank:
 
     def update(
         self,
+        heat_gain: float,
+        resolution: float,
         water_demand_volume: float,
         mains_water_temp: float,
         ambient_tank_temperature: float,
     ) -> float:
         """
         Updates the tank temperature when a certain volume of hot water is demanded.
+
+        :param resolution:
+            The resolution of the model currently being run, measured in minutes.
 
         :param water_demand_volume:
             The volume of hot water demanded by the end user, measured in litres.
@@ -97,21 +104,38 @@ class Tank:
 
         """
 
+        # We need to multiply by the resolution in order to compute the total heat lost
+        # from the tank during the time duration.
         heat_loss = (
-            self.area * self.heat_loss_coefficient * self.temperature
-            - ambient_tank_temperature
+            (
+                self.area
+                * self.heat_loss_coefficient
+                * (self.temperature - ambient_tank_temperature)
+            )
+            * resolution
+            * 60
         )
 
         delivery_temp = self.temperature
 
-        self.temperature -= heat_loss / (self.mass * self.heat_capacity)
+        net_enthalpy_gain = (
+            water_demand_volume
+            * HEAT_CAPACITY_OF_WATER
+            * (mains_water_temp - delivery_temp)
+        )
+
+        # We lose this heat, as we're considering things as 30min "block" inputs and
+        # outputs.
+        self.temperature += (heat_gain - heat_loss + net_enthalpy_gain) / (
+            self.mass * self.heat_capacity
+        )
 
         # The new temperature is computed by a mass-weighted average of the temperatures
         # of the various water sources that go into making up the new content of the
         # hot-water tank.
-        self.temperature = (
-            self.temperature * (self.mass - water_demand_volume)
-            + mains_water_temp * water_demand_volume
-        ) / self.mass
+        # self.temperature = (
+        #     self.temperature * (self.mass - water_demand_volume)
+        #     + mains_water_temp * water_demand_volume
+        # ) / self.mass
 
         return delivery_temp

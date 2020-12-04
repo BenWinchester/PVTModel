@@ -6,9 +6,11 @@
 
 # The mass of water held in the tank, in kilograms. This roughly corresponds to the
 # capacity of the tank in litres.
-mass: 40
+# Increased after a Google Search - 02/12/2020
+mass: 200 # [kg]
 # The area of a typical tank is used in this example:
-area: 24
+# This is measured in meters squared.
+area: 2.0735 # [m^2]
 # @@@ This could be extended to be temperature dependent
 # The heat-loss coefficient is measured in Watts per meter squared.
-heat_loss_coefficient: 15
+heat_loss_coefficient: 15 # [W/m^2]

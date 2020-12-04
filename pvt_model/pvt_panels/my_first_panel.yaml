@@ -22,61 +22,72 @@
 #
 
 pvt_system:
-  latitude: 51.4934
-  longitude: 0.0098
+  latitude: 51.4934 # [deg]
+  longitude: 0.0098 # [deg]
   # The timezone offset in Hours from UTC.
-  timezone: 0
+  timezone: 0 # [hours]
   # The air gap thickness is measured in meters.
-  air_gap_thickness: 0.005
+  air_gap_thickness: 0.005 # [m]
   # The conductance, measured in Watts per meter squared Kelvin, between the PV layer
   # and collector layers of the panel.
-  pv_to_collector_conductance: 500
+  pv_to_collector_conductance: 500 # [W/m^2*K]
   # The area is measured in meters squared.
-  area: 3
+  area: 3 # [m^2]
   # These parameters set up how the panel is orientated.
   # All angles are measured in degrees
-  tilt: 45
-  azimuthal_orientation: 180
+  tilt: 45 # [deg]
+  azimuthal_orientation: 180 # [deg]
   horizontal_tracking: False
   vertical_tracking: False
 glass:
-  density: 2500
-  thickness: 0.006
-  heat_capacity: 840
-  thermal_conductivity: 1.04
-  absorptivity: 0.43
-  transmissivity: 0.8265
-  t_a_product: 0.77
-  emissivity: 0.93
+  density: 2500 # [kg/m^3]
+  thickness: 0.006 # [m]
+  heat_capacity: 840 # [840J/kg*K]
+  # The thermal conductivity of glass is obtained from;
+  # https://www.engineeringtoolbox.com/thermal-conductivity-d_429.html
+  # and is measured in Watts per meter Kelvin.
+  thermal_conductivity: 1.04 # [W/m*K]
+  absorptivity: 0.43 # [unitless]
+  transmissivity: 0.8265 # [unitless]
+  t_a_product: 0.77 # [unitless]
+  emissivity: 0.93 # [unitless]
 pv:
-  # Density measured in kilograms per meter squared.
-  density: 2330
+  # Density measured in kilograms per meter cubed.
+  # The value for this is (unfortunately) obtained from
+  # https://en.wikipedia.org/wiki/Amorphous_silicon#:~:text=The%20density%20of%20amorphous%20Si,cm3)%20at%20300%20K.
+  density: 2330 # [kg/m^3]
   # Thickness measured in meters.
-  thickness: 0.00038
+  thickness: 0.00038 # [m]
   # Heat capacity measured in Joules per kilogram Kelvin.
-  heat_capacity: 712
+  heat_capacity: 712 # [J/kg*K]
   # Therma308l conductivity measured in Watts per meter Kelvin.
-  thermal_conductivity: 148
-  absorptivity: 0.9
-  transmissivity: 0.9
-  emissivity: 0.9 # @@@ Why not!!
-  reference_efficiency: 0.1432
+  thermal_conductivity: 148 # [W/m*K]
+  absorptivity: 0.9 # [unitless]
+  transmissivity: 0.9 # [unitless]
+  # *** Updated and accurate value for the emissivity is needed
+  emissivity: 0.9 # [unitless]
+  reference_efficiency: 0.1432 # [unitless]
   # The reference temperature is measured in Kelvin
-  reference_temperature: 298
+  reference_temperature: 298 # [K]
   # The thermal coefficient gives the efficiency drop per degree rise in
   # temperature above the reference temperature.
-  thermal_coefficient: 0.0045
+  thermal_coefficient: 0.0045 # [K^-1]
 collector:
-  #
-  mass: 20 # @@@ I think this actually isn't needed
-  thickness: 0.0001
-  heat_capacity: 386 # @@@ Taken as that for copper.
+  # *** The mass parameter may not be needed
+  mass: 108 # [kg]
+  thickness: 0.0001 # [m]
+  # *** The heat capacity is taken as that for copper
+  heat_capacity: 386 # [J/kg*K]
   # The mass flow rate is measured in litres per hour.
   # [Citation needed]
-  mass_flow_rate: 40
+  # 108 L/h is the value used by Maria for the mass flow rate - this is faster than many
+  # conventional systems.
+  mass_flow_rate: 108 # [L/h]
+  # The power used in the water pump, measured in Watts.
+  pump_power: 60 # [W]
 # Quantities for the back plate taken as those for Tedlar.
 back:
-  density: 2330
-  thickness: 0.00017
-  heat_capacity: 1130
-  thermal_conductivity: 0.14
+  density: 2330 # [kg/m^3]
+  thickness: 0.00017 # [m]
+  heat_capacity: 1130 # [J/kg*K]
+  thermal_conductivity: 0.14 # [W/m*K]

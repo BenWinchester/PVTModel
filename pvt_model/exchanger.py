@@ -13,6 +13,8 @@ This module represents the heat exchanger within the hot-water tank.
 
 """
 
+from typing import Tuple
+
 from . import tank
 
 __all__ = ("Exchanger",)
@@ -46,7 +48,7 @@ class Exchanger:
         input_water_temperature: float,
         input_water_flow_rate: float,
         input_water_heat_capacity: float,
-    ) -> float:
+    ) -> Tuple[float]:
         """
         Updates the tank temperature based on the input water temperature.
 
@@ -66,14 +68,15 @@ class Exchanger:
             Joules per kilogram Kelvin.
 
         :return:
-            The output water temperature from the heat exchanger, measured in Kelvin.
+            The output water temperature from the heat exchanger, measured in Kelvin,
+            and the heat added to the hot-water tank, measured in Joules, as a Tuple.
 
         """
 
         # If the water inputted to the exchanger is less than the tank temperature, then
         # run it straight back into the next cycle.
         if input_water_temperature <= water_tank.temperature:
-            return input_water_temperature
+            return input_water_temperature, 0
 
         # Apply the first law of Thermodynamics to determine the output water
         # temperature from the heat exchanger.
@@ -83,15 +86,14 @@ class Exchanger:
 
         # Determine the new tank temperature using properties of the tank.
         # Determine the heat added in Joules. Because the input water flow rate is
-        # measured in Joules per time step, this can be used as is as a total mass flow
-        # param in kilograms.
+        # measured in kilograms per time step, this can be used as is as a total mass
+        # flow param in kilograms.
         heat_added = (
             self._efficiency * input_water_flow_rate * input_water_heat_capacity
         ) * (input_water_temperature - water_tank.temperature)
 
-        water_tank.temperature += heat_added / (
-            water_tank.mass * water_tank.heat_capacity
-        )
-
         # Return the output temperature of the heat exchanger.
-        return output_water_temperature
+        return (
+            output_water_temperature,
+            heat_added,
+        )

@@ -242,6 +242,7 @@ class CollectorParameters(LayerParameters):
     output_water_temperature: float
     mass_flow_rate: float
     htf_heat_capacity: float
+    pump_power: float
 
 
 @dataclass
