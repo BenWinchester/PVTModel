@@ -31,6 +31,8 @@ pvt_system:
   # The conductance, measured in Watts per meter squared Kelvin, between the PV layer
   # and collector layers of the panel.
   pv_to_collector_conductance: 500 # [W/m^2*K]
+  # The length of the collector is measured in meters.
+  length: 1 # [m]
   # The area is measured in meters squared.
   area: 3 # [m^2]
   # These parameters set up how the panel is orientated.
@@ -83,8 +85,15 @@ collector:
   # 108 L/h is the value used by Maria for the mass flow rate - this is faster than many
   # conventional systems.
   mass_flow_rate: 108 # [L/h]
+  # The diameter of the pipes, in meters.
+  pipe_diameter: 0.005 # [m]
+  # The number of pipe flowing along the back of the collector.
+  number_of_pipes: 5 # [pipes]
   # The power used in the water pump, measured in Watts.
   pump_power: 60 # [W]
+  absorptivity: 0.9 # [unitless]
+  emissivity: 0.9 # [unitless]
+  transmissivity: 0.9 # [unitless]
 # Quantities for the back plate taken as those for Tedlar.
 back:
   density: 2330 # [kg/m^3]

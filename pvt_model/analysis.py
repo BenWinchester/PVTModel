@@ -4,7 +4,7 @@ Does some analysis.
 
 """
 
-import argparse
+import logging
 import os
 
 from typing import Any, List, Dict, Optional, Tuple
@@ -14,13 +14,15 @@ import re
 
 from matplotlib import pyplot as plt
 
+from __utils__ import get_logger
+
 # The directory in which old figures are saved
 OLD_FIGURES_DIRECTORY = "old_figures"
 # How many values there should be between each tick on the x-axis
 X_TICK_SEPARATION = 4
 
 # The first day to include in the output graph.
-FIRST_DAY: int = 0
+FIRST_DAY: int = 28
 # The number of days to include in the output graph.
 NUM_DAYS_TO_PLOT: int = 2
 # The number of days that the model was run for
@@ -58,7 +60,7 @@ def plot(
     axes=None,
     shape: str = "x",
     colour: str = None,
-) -> None:
+) -> Optional[Any]:
     """
     Plots some model_data based on input parameters.
 
@@ -71,7 +73,6 @@ def plot(
         The label to assign to the y axis when plotting.
 
     :param resolution:
-        @@@ Unused
         The resolution of the model that was run. This is measured in minutes.
 
     :param model_data:
@@ -95,27 +96,44 @@ def plot(
     # If we are not averaging the model_data, then we simply plot the model_data running from the
     # first day to plot to the last day to plot.
     if not AVERAGE:
-        x_model_data, y_model_data = (
-            list(
-                list(model_data.keys())[
+        try:
+            x_model_data, y_model_data = (
+                list(
+                    list(model_data.keys())[
+                        (FIRST_DAY * STEPS_PER_DAY) : (FIRST_DAY + NUM_DAYS_TO_PLOT)
+                        * STEPS_PER_DAY
+                    ]
+                ),
+                list([value[label] for value in model_data.values()])[
                     (FIRST_DAY * STEPS_PER_DAY) : (FIRST_DAY + NUM_DAYS_TO_PLOT)
                     * STEPS_PER_DAY
-                ]
-            ),
-            list([value[label] for value in model_data.values()])[
-                (FIRST_DAY * STEPS_PER_DAY) : (FIRST_DAY + NUM_DAYS_TO_PLOT)
-                * STEPS_PER_DAY
-            ],
-        )
+                ],
+            )
+        except KeyError as e:
+            logger.error(
+                "The label %s could not be found in the data. See log for details.",
+                label,
+            )
+            logger.debug(str(e))
+            return None
 
     # If the model_data is being averaged, then we take an average over the selection
     # specified.
     else:
         # Extract all model_data
-        x_model_data, y_raw = (
-            list(model_data.keys()),
-            list([value[label] for value in model_data.values()]),
-        )
+        try:
+            x_model_data, y_raw = (
+                list(model_data.keys()),
+                list([value[label] for value in model_data.values()]),
+            )
+        except KeyError as e:
+            logger.error(
+                "The label %s could not be found in the data. See log for details.",
+                label,
+            )
+            logger.debug(str(e))
+            return None
+
         # Construct averages
         x_model_data = x_model_data[:STEPS_PER_DAY]
         y_model_data: list() = []
@@ -126,6 +144,9 @@ def plot(
     # If we are not holding the graph, then clear the model_data.
     if not hold:
         plt.clf()
+
+    # Reduce the values on the x axis to be times.
+    # x_model_data = [float(item) / (resolution / 60) for item in x_model_data]
 
     # If we are not using axes, then the model_data can be straight plotted...
     if axes is None:
@@ -159,11 +180,15 @@ def save_figure(figure_name: str) -> None:
     """
 
     # Create a regex for cycling through the files.
-    file_regex = re.compile("figure_.*(?P<old_index>[0-9]).jpg")
+    file_regex = re.compile("figure_{}_(?P<old_index>[0-9]).jpg".format(figure_name))
 
     # We need to work download from large numbers to new numbers.
     filenames = sorted(os.listdir(OLD_FIGURES_DIRECTORY))
     filenames.reverse()
+
+    # import pdb
+
+    # pdb.set_trace()
 
     # Incriment all files in the old_figures directory.
     for filename in filenames:
@@ -256,11 +281,11 @@ def plot_figure(
 
     # Set the y limits if appropriate
     if first_axis_y_limits is not None:
-        plt.legend(lines, first_axis_things_to_plot)
         plt.ylim(*first_axis_y_limits)
 
     # Save the figure and return if only one axis is plotted.
     if second_axis_things_to_plot is None:
+        plt.legend(lines, first_axis_things_to_plot)  # , loc="upper left")
         save_figure(figure_name)
         return
 
@@ -282,7 +307,7 @@ def plot_figure(
         ]
     )
 
-    plt.legend(lines, second_axis_things_to_plot)
+    plt.legend(lines, first_axis_things_to_plot + second_axis_things_to_plot)
 
     ax2.set_xticks(ax2.get_xticks()[::X_TICK_SEPARATION])
 
@@ -294,6 +319,9 @@ def plot_figure(
 
 
 if __name__ == "__main__":
+
+    # * Set up the logger
+    logger = get_logger("pvt_analysis")
 
     # * Extract the data.
     data = load_model_data("data_output.json")
@@ -339,6 +367,31 @@ if __name__ == "__main__":
         [
             "glass_temperature",
             "pv_temperature",
+            "collector_temperature",
+            "ambient_temperature",
+            "sky_temperature",
+        ],
+        "Temperature / degC",
+    )
+
+    # * Plotting all temperatures in an unglazed panel
+    plot_figure(
+        "unglazed_pvt_temperature",
+        data,
+        [
+            "pv_temperature",
+            "collector_temperature",
+            "ambient_temperature",
+            "sky_temperature",
+        ],
+        "Temperature / degC",
+    )
+
+    # * Plotting thermal-collector-only temperatures
+    plot_figure(
+        "isolated_thermal_collector",
+        data,
+        [
             "collector_temperature",
             "ambient_temperature",
             "sky_temperature",

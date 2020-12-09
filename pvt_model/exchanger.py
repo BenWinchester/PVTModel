@@ -48,7 +48,7 @@ class Exchanger:
         input_water_temperature: float,
         input_water_flow_rate: float,
         input_water_heat_capacity: float,
-    ) -> Tuple[float]:
+    ) -> Tuple[float, float]:
         """
         Updates the tank temperature based on the input water temperature.
 

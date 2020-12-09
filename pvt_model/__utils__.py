@@ -32,17 +32,19 @@ __all__ = (
     "CollectorParameters",
     "LayerParameters",
     "OpticalLayerParameters",
+    "ProgrammerJudgementFault",
     "PVParameters",
     "WeatherConditions",
+    "get_logger",
     "read_yaml",
-    "HEAT_CAPACITY_OF_WATER",
     "FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR",
-    "CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_WATER",
+    "HEAT_CAPACITY_OF_WATER",
     "LOGGER_NAME",
-    "STEFAN_BOLTZMAN_CONSTANT",
+    "NUSSELT_NUMBER" "STEFAN_BOLTZMAN_CONSTANT",
     "THERMAL_CONDUCTIVITY_OF_AIR",
-    "ZERO_CELCIUS_OFFSET",
+    "THERMAL_CONDUCTIVITY_OF_WATER",
     "WIND_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT",
+    "ZERO_CELCIUS_OFFSET",
 )
 
 
@@ -62,17 +64,24 @@ HEAT_CAPACITY_OF_WATER: int = 4182
 
 # The free convective, heat-transfer coefficient of air. This varies, and potentially
 # could be extended to the weather module and calculated on the fly depending on various
-# environmental conditions etc..
+# environmental conditions etc.. This is measured in Watts per meter squared
+# Kelvin.
 FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR: int = 25
 
 # The convective, heat-transfer coefficienct of water. This varies (a LOT), and is
 # measured in units of Watts per meter squared Kelvin.
-CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_WATER: int = 3000
+# This is determined by the following formula:
+#   Nu = h_w * D / k_w
+# where D is the diameter of the pipe, in meters, and k_w is the thermal conductivity of
+# water.
+# The thermal conductivity of water is obtained from
+# http://hyperphysics.phy-astr.gsu.edu/hbase/Tables/thrcn.html
+THERMAL_CONDUCTIVITY_OF_WATER: float = 0.6  # [W/m*K]
 
 # The wind convective heat transfer coefficient. This should be temperature dependant,
 # @@@ Improve this.
 # This should be measured in Watts per Kelvin.
-WIND_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT = 0
+WIND_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT = 5
 
 # The thermal conductivity of air is measured in Watts per meter Kelvin.
 # ! This is defined at 273 Kelvin.
@@ -81,6 +90,9 @@ THERMAL_CONDUCTIVITY_OF_AIR: float = 0.024
 # The temperature of absolute zero in Kelvin, used for converting Celcius to Kelvin and
 # vice-a-versa.
 ZERO_CELCIUS_OFFSET: float = 273.15
+
+# The Nusselt number of the flow is given as 6 in Maria's paper.
+NUSSELT_NUMBER: float = 6
 
 
 ##############
@@ -188,6 +200,24 @@ class ResolutionMismatchError(Exception):
         )
 
 
+class ProgrammerJudgementFault(Exception):
+    """
+    Raised when an error is hit due to poor programming.
+
+    """
+
+    def __init__(self, message: str) -> None:
+        """
+        Instantiate a programmer judgement fault error.
+
+        :param message:
+            A message to append when displaying the error to the user.
+
+        """
+
+        super().__init__(f"A programmer judgement fault has occurred: {message}")
+
+
 ##############################
 # Functions and Data Classes #
 ##############################
@@ -220,29 +250,6 @@ class LayerParameters:
     area: float
     thickness: float
     temperature: Optional[float]
-
-
-@dataclass
-class CollectorParameters(LayerParameters):
-    """
-    Contains parameters needed to instantiate a collector layer within the PV-T panel.
-
-    .. attribute:: output_water_temperature
-        The temperature, in Kelvin, of water outputted by the layer.
-
-    .. attribute:: mass_flow_rate
-        The mass flow rate of heat-transfer fluid through the collector.
-
-    .. attribute:: htf_heat_capacity#
-        The heat capacity of the heat-transfer fluid through the collector, measured in
-        Joules per kilogram Kelvin.
-
-    """
-
-    output_water_temperature: float
-    mass_flow_rate: float
-    htf_heat_capacity: float
-    pump_power: float
 
 
 @dataclass
@@ -281,6 +288,48 @@ class OpticalLayerParameters(LayerParameters):
     transmissivity: float
     absorptivity: float
     emissivity: float
+
+
+@dataclass
+class CollectorParameters(OpticalLayerParameters):
+    """
+    Contains parameters needed to instantiate a collector layer within the PV-T panel.
+
+    .. attribute:: length
+        The legnth of the collector, measured in meters.
+
+    .. attribute:: number_of_pipes
+        The number of pipes attached to the back of the thermal collector.
+        NOTE: This parameter is very geography/design-specific, and will only be
+        relevant/useful to the current design of collector being modeled. Namely, when
+        multiple pipes flow linearly down the length of the collector, with the HTF
+        taking a single pass through the collector.
+
+    .. attribute:: output_water_temperature
+        The temperature, in Kelvin, of water outputted by the layer.
+
+    .. attribute:: pipe_diameter
+        The diameter of the pipe, in meters.
+
+    .. attribute:: mass_flow_rate
+        The mass flow rate of heat-transfer fluid through the collector.
+
+    .. attribute:: htf_heat_capacity
+        The heat capacity of the heat-transfer fluid through the collector, measured in
+        Joules per kilogram Kelvin.
+
+    .. attribute:: pump_power
+        The electrical power, in Watts, consumed by the water pump in the collector.
+
+    """
+
+    length: float
+    number_of_pipes: float
+    output_water_temperature: float
+    pipe_diameter: float
+    mass_flow_rate: float
+    htf_heat_capacity: float
+    pump_power: float
 
 
 @dataclass
@@ -413,3 +462,40 @@ def read_yaml(yaml_file_path: str) -> Dict[Any, Any]:
 
     logger.info("Data successfully read from '%s'.", yaml_file_path)
     return data
+
+
+def get_logger(logger_name: str) -> logging.Logger:
+    """
+    Set-up and return a logger.
+
+    :param logger_name:
+        The name of the logger to instantiate.
+
+    :return:
+        The logger for the component.
+
+    """
+
+    # Create a logger with the current component name.
+    logger = logging.getLogger(logger_name)
+    logger.setLevel(logging.DEBUG)
+    # Create a file handler which logs even debug messages.
+    if os.path.exists(f"{logger_name}.log"):
+        os.rename(f"{logger_name}.log", f"{logger_name}.log.1")
+    fh = logging.FileHandler("pvt_analysis.log")
+    fh.setLevel(logging.DEBUG)
+    # Create a console handler with a higher log level.
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.ERROR)
+    # Create a formatter and add it to the handlers.
+    formatter = logging.Formatter(
+        "%(asctime)s: %(name)s: %(levelname)s: %(message)s",
+        datefmt="%d/%m/%Y %I:%M:%S %p",
+    )
+    fh.setFormatter(formatter)
+    ch.setFormatter(formatter)
+    # add the handlers to the logger
+    logger.addHandler(fh)
+    logger.addHandler(ch)
+
+    return logger

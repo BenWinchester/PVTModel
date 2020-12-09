@@ -26,6 +26,7 @@ from .__utils__ import (
     InvalidDataError,
     MissingDataError,
     ResolutionMismatchError,
+    ProgrammerJudgementFault,
     read_yaml,
 )
 
@@ -339,7 +340,7 @@ class LoadProfile:
 
         if time in self._profile:
             return self._profile[time]
-        time.replace(minute=time.minute + self.resolution)
+        time.replace(minute=time.minute + int(self.resolution))
         return self._closest_value(time)
 
     def load(self, resolution: int, time: datetime.time) -> float:
@@ -424,6 +425,8 @@ class LoadProfile:
                         time.hour, time.minute, str(e)
                     )
                 ) from None
+
+        raise ProgrammerJudgementFault("Error in the load module code.")
 
 
 class LoadSystem:

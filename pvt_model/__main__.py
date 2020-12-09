@@ -38,6 +38,7 @@ from .__utils__ import (
     OpticalLayerParameters,
     PVParameters,
     read_yaml,
+    get_logger,
     HEAT_CAPACITY_OF_WATER,
     LOGGER_NAME,
     ZERO_CELCIUS_OFFSET,
@@ -212,51 +213,26 @@ class SystemData:
         """
 
         return (
-            f"System Data at {self.date}::{self.time}: "
-            f"T_g/C {round(self.glass_temperature, 2)}"
-            f"T_pv/C {round(self.pv_temperature, 2)} T_c/C "
-            f"{round(self.collector_temperature, 2)} T_t/C "
-            f"{round(self.tank_temperature, 2)} pv_eff {round(self.pv_efficiency, 2)} "
-            f"aux {round(self.auxiliary_heating, 2)} "
-            f"dc_e {round(self.dc_electrical, 2)} dc_t {round(self.dc_thermal, 2)}"
+            f"System Data[{self.date}::{self.time}]("
+            + "T_g/C {}K, T_pv/C {}K, T_c/C {:.2f}K, T_t/C {:.2f}K,".format(
+                round(self.glass_temperature, 2)
+                if self.glass_temperature is not None
+                else None,
+                round(self.pv_temperature, 2)
+                if self.pv_temperature is not None
+                else None,
+                self.collector_temperature,
+                self.tank_temperature,
+            )
+            + " pv_eff {}, aux {:.2f}W, dc_e {:.2f}%, dc_therm {:.2f}%)".format(
+                round(self.pv_efficiency, 2)
+                if self.pv_efficiency is not None
+                else None,
+                self.auxiliary_heating,
+                self.dc_electrical,
+                self.dc_thermal,
+            )
         )
-
-
-def _get_logger(logger_name: str) -> logging.Logger:
-    """
-    Set-up and return a logger.
-
-    :param logger_name:
-        The name of the logger to instantiate.
-
-    :return:
-        The logger for the component.
-
-    """
-
-    # Create a logger with the current component name.
-    logger = logging.getLogger(logger_name)
-    logger.setLevel(logging.DEBUG)
-    # Create a file handler which logs even debug messages.
-    if os.path.exists("pvt_simulator.log"):
-        os.rename("pvt_simulator.log", "pvt_simulator.log.1")
-    fh = logging.FileHandler("pvt_simulator.log")
-    fh.setLevel(logging.DEBUG)
-    # Create a console handler with a higher log level.
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.ERROR)
-    # Create a formatter and add it to the handlers.
-    formatter = logging.Formatter(
-        "%(asctime)s: %(name)s: %(levelname)s: %(message)s",
-        datefmt="%d/%m/%Y %I:%M:%S %p",
-    )
-    fh.setFormatter(formatter)
-    ch.setFormatter(formatter)
-    # add the handlers to the logger
-    logger.addHandler(fh)
-    logger.addHandler(ch)
-
-    return logger
 
 
 def _parse_args(args) -> argparse.Namespace:
@@ -351,6 +327,13 @@ def _parse_args(args) -> argparse.Namespace:
         "-t",
         help="The location of the Hot-Water Tank system YAML data file.",
     )
+    parser.add_argument(
+        "--unglazed",
+        "-u",
+        help="If specified, the panel will be un-glazed, i.e., without a glass coating.",
+        action="store_true",
+        default=False,
+    )
 
     return parser.parse_args(args)
 
@@ -440,6 +423,7 @@ def pv_params_from_data(area: float, pv_data: Dict[str, Any]) -> PVParameters:
 
 def collector_params_from_data(
     area: float,
+    length: float,
     initial_collector_htf_tempertaure: float,
     collector_data: Dict[str, Any],
 ) -> CollectorParameters:
@@ -451,6 +435,9 @@ def collector_params_from_data(
 
     :param area:
         The area of the PV-T system, measured in meters squared.
+
+    :param length:
+        The length of the PV-T system, measured in meters.
 
     :param initial_collector_htf_tempertaure:
         The initial temperature of heat-transfer fluid in the collector.
@@ -476,7 +463,13 @@ def collector_params_from_data(
             collector_data["thickness"],  # [m]
             INITIAL_SYSTEM_TEMPERATURE,  # [K]
             initial_collector_htf_tempertaure,  # [K]
+            collector_data["transmissivity"],  # [unitless]
+            collector_data["absorptivity"],  # [unitless]
+            collector_data["emissivity"],  # [unitless]
+            length,  # [m]
+            collector_data["number_of_pipes"],  # [pipes]
             collector_data["mass_flow_rate"],  # [Litres/hour]
+            collector_data["pipe_diameter"],  # [m]
             collector_data["htf_heat_capacity"]  # [J/kg*K]
             if "htf_heat_capacity" in collector_data
             else HEAT_CAPACITY_OF_WATER,  # [J/kg*K]
@@ -533,6 +526,7 @@ def pvt_panel_from_path(
     pvt_data_file: str,
     initial_collector_htf_tempertaure: float,
     pv_layer_included: bool,
+    unglazed: bool,
 ) -> pvt.PVT:
     """
     Generate a :class:`pvt.PVT` instance based on the path to the data file.
@@ -546,6 +540,10 @@ def pvt_panel_from_path(
 
     :param pv_layer_included:
         Whether or not a PV layer is included in the panel.
+
+    :param ungalzed:
+        Whether or not a glass layer (ie, glazing) is included in the panel. If set to
+        `True`, then no glass layer is used.
 
     :return:
         A :class:`pvt.PVT` instance representing the PVT panel.
@@ -565,6 +563,7 @@ def pvt_panel_from_path(
     )
     collector_parameters = collector_params_from_data(
         pvt_data["pvt_system"]["area"],  # [m^2]
+        pvt_data["pvt_system"]["length"],  # [m]
         initial_collector_htf_tempertaure,  # [K]
         pvt_data["collector"],
     )
@@ -576,6 +575,8 @@ def pvt_panel_from_path(
         pvt_panel = pvt.PVT(
             pvt_data["pvt_system"]["latitude"],  # [deg]
             pvt_data["pvt_system"]["longitude"],  # [deg]
+            pvt_data["pvt_system"]["area"],  # [m^2]
+            not unglazed,
             glass_parameters,
             collector_parameters,
             back_parameters,
@@ -672,7 +673,9 @@ def hot_water_tank_from_path(tank_data_file: str, mains_water_temp: float) -> ta
         ) from None
 
 
-def _save_data(system_data: Dict[int, SystemData], output_file_name: str) -> None:
+def _save_data(
+    system_data: Dict[datetime.datetime, SystemData], output_file_name: str
+) -> None:
     """
     Save data when called.
 
@@ -702,7 +705,7 @@ def main(args) -> None:  # pylint: disable=too-many-locals
     """
 
     # Set up logging with a file handler etc.
-    logger = _get_logger(LOGGER_NAME)
+    logger = get_logger(LOGGER_NAME)
     logger.info("Logger successfully instantiated.")
 
     # Parse the system arguments from the commandline.
@@ -739,7 +742,10 @@ def main(args) -> None:  # pylint: disable=too-many-locals
 
     # Initialise the PV-T class, tank, exchanger, etc..
     pvt_panel = pvt_panel_from_path(
-        parsed_args.pvt_data_file, INITIAL_SYSTEM_TEMPERATURE, not parsed_args.no_pv
+        parsed_args.pvt_data_file,
+        INITIAL_SYSTEM_TEMPERATURE,
+        not parsed_args.no_pv,
+        parsed_args.unglazed,
     )
     logger.info("PV-T panel successfully instantiated: %s", str(pvt_panel))
     heat_exchanger = heat_exchanger_from_path(parsed_args.exchanger_data_file)
@@ -819,10 +825,15 @@ def main(args) -> None:  # pylint: disable=too-many-locals
         #     current_hot_water_load,
         # )
 
-        # Call the pvt module to generate the new temperatures at this time step.
-        output_water_temperature = pvt_panel.update(
-            input_water_temperature, parsed_args.resolution, current_weather
-        )  # [K]
+        try:
+            # Call the pvt module to generate the new temperatures at this time step.
+            output_water_temperature = pvt_panel.update(
+                input_water_temperature, parsed_args.resolution, current_weather
+            )  # [K]
+        except BaseException as e:
+            logger.error("Crash caught, saving data. Error: %s", str(e))
+            _save_data(system_data, parsed_args.output)
+            break
 
         # Propogate this information through to the heat exchanger and pass in the
         # tank s.t. it updates the tank correctly as well.
@@ -863,7 +874,7 @@ def main(args) -> None:  # pylint: disable=too-many-locals
                 electrical_demand=current_electrical_load,
             )
             * 100
-        )
+        )  # [%]
 
         dc_thermal = (
             efficiency.dc_thermal(
@@ -875,7 +886,7 @@ def main(args) -> None:  # pylint: disable=too-many-locals
                 * (HOT_WATER_DEMAND_TEMP - weather_forecaster.mains_water_temp),
             )
             * 100
-        )
+        )  # [%]
 
         # Store the information in the dictionary mapping between time step and data.
         system_data[run_number] = SystemData(
@@ -886,8 +897,12 @@ def main(args) -> None:  # pylint: disable=too-many-locals
             sky_temperature=current_weather.sky_temperature - ZERO_CELCIUS_OFFSET,
             solar_irradiance=current_weather.irradiance,
             normal_irradiance=pvt_panel.get_solar_irradiance(current_weather),
-            glass_temperature=pvt_panel.glass_temperature - ZERO_CELCIUS_OFFSET,
-            pv_temperature=pvt_panel.pv_temperature - ZERO_CELCIUS_OFFSET,
+            glass_temperature=pvt_panel.glass_temperature - ZERO_CELCIUS_OFFSET  # type: ignore
+            if pvt_panel.glazed
+            else None,
+            pv_temperature=pvt_panel.pv_temperature - ZERO_CELCIUS_OFFSET  # type: ignore
+            if not parsed_args.no_pv
+            else None,
             pv_efficiency=pvt_panel.electrical_efficiency,
             collector_temperature=pvt_panel.collector_temperature - ZERO_CELCIUS_OFFSET,
             collector_output_temperature=pvt_panel.collector_output_temperature
