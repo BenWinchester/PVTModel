@@ -24,7 +24,7 @@ X_TICK_SEPARATION = 4
 # The first day to include in the output graph.
 FIRST_DAY: int = 28
 # The number of days to include in the output graph.
-NUM_DAYS_TO_PLOT: int = 2
+NUM_DAYS_TO_PLOT: int = 1
 # The number of days that the model was run for
 NUM_DAYS_MODEL_RUN_FOR: int = 30
 # Whether to average the model_data.
@@ -452,4 +452,18 @@ if __name__ == "__main__":
         data,
         ["thermal_load", "thermal_output"],
         "Thermal Power Output / W",
+    )
+
+    # * Plotting the collector input, output, gain, and temperature.
+    plot_figure(
+        "collector_temperatures",
+        data,
+        [
+            "collector_temperature",
+            "collector_output_temperature",
+            "collector_input_temperature",
+            "collector_temperature_gain",
+            "tank_temperature",
+        ],
+        "Temperature / K",
     )

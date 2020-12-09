@@ -131,6 +131,9 @@ class SystemData:
     .. attribute:: collector_temperature
         The temperature of the thermal collector, measured in Celcius.
 
+    .. attribute:: collector_input_temperature
+        The temperature of water flowing into the collector, measured in Celcius.
+
     .. attribute:: collector_output_temperature
         The temperature of the HTF outputted from the collector, measured in Celcius.
 
@@ -189,6 +192,7 @@ class SystemData:
     pv_temperature: Optional[float]
     pv_efficiency: Optional[float]
     collector_temperature: float
+    collector_input_temperature: float
     collector_output_temperature: float
     collector_temperature_gain: float
     tank_temperature: float
@@ -905,6 +909,7 @@ def main(args) -> None:  # pylint: disable=too-many-locals
             else None,
             pv_efficiency=pvt_panel.electrical_efficiency,
             collector_temperature=pvt_panel.collector_temperature - ZERO_CELCIUS_OFFSET,
+            collector_input_temperature=input_water_temperature - ZERO_CELCIUS_OFFSET,
             collector_output_temperature=pvt_panel.collector_output_temperature
             - ZERO_CELCIUS_OFFSET,
             collector_temperature_gain=pvt_panel.collector_output_temperature
