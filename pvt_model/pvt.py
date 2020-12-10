@@ -530,7 +530,7 @@ class Glass(_OpticalLayer):
 
     def update(
         self,
-        resolution: float,
+        internal_resolution: float,
         air_gap_thickness: float,
         pv_area: float,
         weather_conditions: WeatherConditions,
@@ -539,8 +539,8 @@ class Glass(_OpticalLayer):
         """
         Update the internal properties of the PV layer based on external factors.
 
-        :param resolution:
-            The resolution of the simulation currently being run, measured in minutes.
+        :param internal_resolution:
+            The resolution of the simulation currently being run, measured in seconds.
 
         :param air_gap_thickness:
             The thickness, in meters, of the air gap between the PV and glass layers.
@@ -568,7 +568,7 @@ class Glass(_OpticalLayer):
         # not need to be multiplied by the resolution.
         self.temperature = self.temperature + (  # [K]
             heat_input - heat_losses
-        ) * resolution * 60 / (  # [W]  # [minutes]  # [s/minute]
+        ) * internal_resolution / (  # [W] * [seconds]
             self._mass * self._heat_capacity
         )  # [kg] * [J/kg*K]
 
@@ -646,7 +646,7 @@ class PV(_OpticalLayer):
         glazed: bool,
         solar_energy_input: float,
         weather_conditions: WeatherConditions,
-        resolution: float,
+        internal_resolution: float,
         air_gap_thickness: float,
         pv_to_collector_thermal_conductance: float,
         glass_temperature: Optional[float],
@@ -668,8 +668,8 @@ class PV(_OpticalLayer):
             The current weather conditions, passed in as a :class:`WeatherConditions`
             instance.
 
-        :param resolution:
-            The resolution of the model being run, measured in minutes.
+        :param internal_resolution:
+            The resolution of the model being run, measured in seconds.
 
         :param air_gap_thickness:
             The thickness of the gap between the glass and PV layers, measured in
@@ -694,7 +694,7 @@ class PV(_OpticalLayer):
 
         """
 
-        pdb.set_trace(header="PV Module's Update Method.")
+        # pdb.set_trace(header="PV Module's Update Method.")
 
         # Determine the excess heat that has been inputted into the panel during this
         # time step, measured in Joules.
@@ -715,8 +715,7 @@ class PV(_OpticalLayer):
                     self.temperature,
                     self.emissivity,
                 )  # [W]
-                * resolution  # [minutes]
-                * 60  # [s/minute]
+                * internal_resolution  # [seconds]
             )  # [J]
 
             convective_loss_upwards = (
@@ -726,26 +725,23 @@ class PV(_OpticalLayer):
                     self.area,
                     self.temperature,
                 )  # [W]
-                * resolution  # [minutes]
-                * 60  # [s/minute]
+                * internal_resolution  # [seconds]
             )  # [J]
         else:
             radiative_loss_upwards = (
                 self._layer_to_sky_radiative_transfer(
                     weather_conditions.sky_temperature
-                )
-                * resolution
-                * 60
-            )
+                )  # [W]
+                * internal_resolution  # [seconds]
+            )  # [J]
 
             convective_loss_upwards = (
                 self._layer_to_air_convective_transfer(
                     weather_conditions.ambient_temperature,
                     weather_conditions.wind_speed,
-                )
-                * resolution
-                * 60
-            )
+                )  # [W]
+                * internal_resolution  # [seconds]
+            )  # [J]
 
         # This value is returned in Watts, and so needs to be multiplied by the time
         # interval.
@@ -756,11 +752,12 @@ class PV(_OpticalLayer):
                 self.temperature,
                 collector_temperature,
             )  # [W]
-            * resolution  # [minutes]
-            * 60  # [s/minute]
-        )
+            * internal_resolution  # [seconds]
+        )  # [J]
 
-        heat_lost = radiative_loss_upwards + convective_loss_upwards + pv_to_collector
+        heat_lost = (
+            radiative_loss_upwards + convective_loss_upwards + pv_to_collector
+        )  # [J]
 
         # Use this to compute the rise in temperature of the PV layer and set the
         # temperature appropriately.
@@ -770,9 +767,11 @@ class PV(_OpticalLayer):
 
         # Return the heat transfered to the glass and collector layers.
         return (
-            pv_to_collector,
-            (radiative_loss_upwards + convective_loss_upwards)  # [J] + [J]
-            / (resolution * 60),  # [minutes] * [s/minute]
+            pv_to_collector,  # [J]
+            (
+                (radiative_loss_upwards + convective_loss_upwards)  # [J] + [J]
+                / (internal_resolution)  # [seconds]
+            ),  # [W]
         )
 
     @property
@@ -915,7 +914,7 @@ class Collector(_OpticalLayer):
 
     def update(
         self,
-        resolution: float,
+        internal_resolution: float,
         air_gap_thickness: float,
         glass_layer_included: bool,
         glass_temperature: Optional[float],
@@ -925,12 +924,12 @@ class Collector(_OpticalLayer):
         input_water_temperature: float,
         weather_conditions: WeatherConditions,
         back_plate: BackPlate,
-    ) -> float:
+    ) -> Tuple[float, float]:
         """
         Update the internal properties of the PV layer based on external factors.
 
-        :param resolution:
-            The resolution at which the simulation is being run, measured in minutes.
+        :param internal_resolution:
+            The resolution at which the simulation is being run, measured in seconds.
 
         :param air_gap_thickness:
             The thickness, measured in meters, of the air gap between the glass layer
@@ -983,14 +982,10 @@ class Collector(_OpticalLayer):
         # * From the excess heat, compute what is not lost to the environment, and,
         # * from there, what is transferred to the HTF.
         back_plate_heat_loss = (
-            (
-                back_plate.conductance  # [W/m^2*K]
-                * self.area  # [m^2]
-                * (self.temperature - weather_conditions.ambient_temperature)  # [K]
-            )
-            * resolution  # [minutes]
-            * 60  # [s/minute]
-        )  # [J]
+            back_plate.conductance  # [W/m^2*K]
+            * self.area  # [m^2]
+            * (self.temperature - weather_conditions.ambient_temperature)  # [K]
+        ) * internal_resolution  # [seconds]  # [J]
 
         # If there are no glass or PV layers, then we lose heat from the collector
         # layer directly.
@@ -1003,6 +998,11 @@ class Collector(_OpticalLayer):
         # If there is a glass layer, but no PV layer, then we need to compute the energy
         # transferred to the glass layer.
         elif glass_layer_included and not pv_layer_included:
+            if glass_temperature is None or glass_emissivity is None:
+                raise ProgrammerJudgementFault(
+                    "The system attempted to compute a radiative and/or conductive "
+                    "transfer to a non-existant glass layer."
+                )
             upward_heat_losses = layer_to_glass_radiative_transfer(
                 glass_temperature,
                 glass_emissivity,
@@ -1019,7 +1019,7 @@ class Collector(_OpticalLayer):
         # This heat is now converted into Joules.
         remaining_heat = collector_heat_input - (  # [J]
             back_plate_heat_loss  # [J]
-            + upward_heat_losses * resolution * 60  # [W] * [minutes] * [s/minute]
+            + upward_heat_losses * internal_resolution  # [W] * [seconds]
         )
 
         # If there is no PV layer, then the heat all goes to the collector.
@@ -1080,8 +1080,7 @@ class Collector(_OpticalLayer):
         # * The bulk water gains this heat.
         self.temperature -= (
             self.mass_flow_rate  # [kg/s]
-            * resolution  # [minutes]
-            * 60  # [s/minute]
+            * internal_resolution  # [seconds]
             * self.htf_heat_capacity  # [J/kg*K]
             * (self.output_water_temperature - input_water_temperature)  # [K] - [K]
         ) / (
@@ -1331,7 +1330,7 @@ class PVT:
     def update(
         self,
         input_water_temperature: float,
-        resolution: float,
+        internal_resolution: float,
         weather_conditions: WeatherConditions,
     ) -> float:
         """
@@ -1340,8 +1339,8 @@ class PVT:
         :param input_water_temperature:
             The water temperature going into the PV-T collector.
 
-        :param resolution:
-            The resolution of the model being run, measured in minutes.
+        :param internal_resolution:
+            The resolution of the model being run, measured in seconds.
 
         :param weather_conditions:
             The weather conditions at the time of day being incremented to.
@@ -1351,23 +1350,23 @@ class PVT:
 
         """
 
-        pdb.set_trace(header="Debug PVT Module.")
+        # pdb.set_trace(header="Debug PVT Module.")
 
         # Compute the solar energy inputted to the system in Joules per meter squared.
         solar_energy_input = (
             self.get_solar_irradiance(weather_conditions)  # [W/m^2]
-            * resolution  # [minutes]
-            * 60  # [seconds/minute]
+            * internal_resolution  # [seconds]
         )  # [J/time_step*m^2]
 
         # Call the pv panel to update its temperature.
+        pv_to_glass_heat_input: Optional[float] = None
         if self._pv is not None:
             # The excese PV heat generated is in units of Watts.
             collector_heat_input, pv_to_glass_heat_input = self._pv.update(
                 self.glazed,
                 solar_energy_input,
                 weather_conditions,
-                resolution,
+                internal_resolution,
                 self._air_gap_thickness,
                 self._pv_to_collector_thermal_conductance,
                 self._glass.temperature if self._glass is not None else None,
@@ -1386,7 +1385,7 @@ class PVT:
             output_water_temperature,  # [K]
             collector_to_glass_heat_input,  # [W]
         ) = self._collector.update(
-            resolution,
+            internal_resolution,
             self._air_gap_thickness,
             self._glass is not None,
             self._glass.temperature if self._glass is not None else None,
@@ -1399,9 +1398,9 @@ class PVT:
         )
 
         # Determine the heat inputted to the glass layer.
-        if self._pv is not None:
-            glass_heat_input = pv_to_glass_heat_input
-        elif self._collector is not None:
+        if pv_to_glass_heat_input is not None:
+            glass_heat_input: float = pv_to_glass_heat_input
+        elif collector_to_glass_heat_input is not None:
             glass_heat_input = collector_to_glass_heat_input
         else:
             raise ProgrammerJudgementFault(
@@ -1411,7 +1410,7 @@ class PVT:
         # Pass this new temperature through to the glass instance to update it.
         if self._glass is not None:
             self._glass.update(
-                resolution,
+                internal_resolution,
                 self._air_gap_thickness,
                 self.area,
                 weather_conditions,
@@ -1561,15 +1560,9 @@ class PVT:
 
         return self._collector.pump_power
 
-    def electrical_output(
-        self, resolution: float, weather_conditions: WeatherConditions
-    ) -> float:
+    def electrical_output(self, weather_conditions: WeatherConditions) -> float:
         """
         Returns the electrical output of the PV-T panel in Watts.
-
-        :param resolution:
-            The resolution - I think this is needed.
-            @@@ Check this!
 
         :param weather_conditions:
             The current weather conditions at the time step being incremented to.

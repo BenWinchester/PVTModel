@@ -6,20 +6,24 @@ Does some analysis.
 
 import logging
 import os
+import pdb
 
 from typing import Any, List, Dict, Optional, Tuple
 
 import json
 import re
+import yaml
 
 from matplotlib import pyplot as plt
 
-from __utils__ import get_logger
+from __utils__ import ProgrammerJudgementFault, GraphDetail, get_logger
 
 # The directory in which old figures are saved
-OLD_FIGURES_DIRECTORY = "old_figures"
+OLD_FIGURES_DIRECTORY: str = "old_figures"
 # How many values there should be between each tick on the x-axis
-X_TICK_SEPARATION = 4
+X_TICK_SEPARATION: int = 8
+# How detailed the graph should be
+GRAPH_DETAIL: GraphDetail = GraphDetail.low
 
 # The first day to include in the output graph.
 FIRST_DAY: int = 28
@@ -30,9 +34,162 @@ NUM_DAYS_MODEL_RUN_FOR: int = 30
 # Whether to average the model_data.
 AVERAGE: bool = False
 # The number of steps per day
-STEPS_PER_DAY = 48
+STEPS_PER_DAY = 24 * 60 * 2
 # The resolution of the model that was run, measured in minutes
 RESOLUTION = 30
+
+
+def _resolution_from_graph_detail(
+    graph_detail: GraphDetail, num_data_points: int
+) -> int:
+    """
+    Determine the x-step resolution of the plot.
+
+    I realise here that the word "resolution" is over-used. Here, the number of data
+    points (in the system data) that need to be absorbed into one graph point is
+    calculated and returned.
+
+    :param graph_detail:
+        The detail level needed on the graph.
+
+    :param num_data_points:
+        The number of data points recorded in the plot.
+
+    :return:
+        The number of data points that need to be absorbed per graph point.
+
+    """
+
+    # * For "lowest", include one point every half-hour.
+    if graph_detail == GraphDetail.lowest:
+        if int(num_data_points / 48) != num_data_points / 48:
+            raise ProgrammerJudgementFault(
+                "The number of data points recorded is not divisible by 48."
+            )
+        return int(num_data_points / 48)
+
+    # * For "low", include one point every ten minutes
+    if graph_detail == GraphDetail.low:
+        if int(num_data_points / (24 * 6)) != num_data_points / (24 * 6):
+            raise ProgrammerJudgementFault(
+                "The number of data points recorded is not divisible by {}.".format(
+                    str(24 * 6)
+                )
+            )
+        return int(num_data_points / (24 * 6))
+
+    # * For "medium", include one point every two minutes
+    if graph_detail == GraphDetail.medium:
+        if int(num_data_points / (24 * 30)) != num_data_points / (24 * 30):
+            raise ProgrammerJudgementFault(
+                "The number of data points recorded is not divisible by {}.".format(
+                    str(24 * 30)
+                )
+            )
+        return int(num_data_points / (24 * 30))
+
+    # * For "high", include one point every thirty seconds
+    if graph_detail == GraphDetail.high:
+        if int(num_data_points / (24 * 60 * 2)) != num_data_points / (24 * 60 * 2):
+            raise ProgrammerJudgementFault(
+                "The number of data points recorded is not divisible by {}.".format(
+                    str(24 * 60 * 2)
+                )
+            )
+        return int(num_data_points / (24 * 60 * 2))
+
+    # * For highest, include all data points
+    return 1
+
+
+def _reduce_data(
+    data: Dict[str, Dict[Any, Any]], graph_detail: GraphDetail
+) -> Dict[str, Dict[Any, Any]]:
+    """
+    This processes the data, using sums to reduce the resolution so it can be plotted.
+
+    :param data:
+        The raw, JSON data, contained within a `dict`.
+
+    :param graph_detail:
+        The level of detail required in the graph.
+
+    :return:
+        The cropped/summed up data, returned at a lower resolution as specified by the
+        graph detail.
+
+    """
+
+    data_points_per_graph_point: int = _resolution_from_graph_detail(
+        graph_detail, len(data)
+    )
+
+    reduced_data: Dict[str : Dict[Any, Any]] = {
+        index: dict() for index in range(int(len(data) / data_points_per_graph_point))
+    }
+
+    # Depending on the type of data entry, i.e., whether it is a temperature, load,
+    # demand covered, or irradiance (or other), the way that it is processed will vary.
+    for data_entry_name in data["0"].keys():
+        # pdb.set_trace(header="Beginning of reduction loop.")
+        # * If the entry is a date or time, just take the value
+        if data_entry_name in ["date", "time"]:
+            for index in range(len(reduced_data)):
+                reduced_data[index][data_entry_name] = data[
+                    str(index * data_points_per_graph_point)
+                ][data_entry_name]
+            continue
+
+        # * If the data entry is a temperature, or a power output, then take a rolling
+        # average
+        if any(
+            [
+                key in data_entry_name
+                for key in ["temperature", "irradiance", "efficiency", "electrical"]
+                if key != "dc_electrical"
+            ]
+        ):
+            try:
+                for outer_index, _ in enumerate(reduced_data):
+                    reduced_data[outer_index][data_entry_name] = sum(
+                        [
+                            float(data[str(inner_index)][data_entry_name])
+                            / data_points_per_graph_point
+                            for inner_index in range(
+                                int(data_points_per_graph_point * outer_index),
+                                int(data_points_per_graph_point * (outer_index + 1)),
+                            )
+                        ]
+                    )
+                continue
+            except TypeError as e:
+                logger.error("A value was none. Setting to 'None': %s", str(e))
+                for index, _ in enumerate(reduced_data):
+                    reduced_data[index][data_entry_name] = None
+                continue
+
+        # * If the data entry is a load, then take a sum
+        if any([key in data_entry_name for key in ["load", "output"]]):
+            for outer_index, _ in enumerate(reduced_data):
+                reduced_data[outer_index][data_entry_name] = sum(
+                    [
+                        float(data[str(inner_index)][data_entry_name])
+                        for inner_index in range(
+                            int(data_points_per_graph_point * outer_index),
+                            int(data_points_per_graph_point * (outer_index + 1)),
+                        )
+                    ]
+                )
+            continue
+
+        # * Otherwise, we just use the data point.
+        for index, _ in enumerate(reduced_data):
+            reduced_data[index][data_entry_name] = data[
+                str(index * data_points_per_graph_point)
+            ][data_entry_name]
+        continue
+
+    return reduced_data
 
 
 def load_model_data(filename: str) -> Dict[Any, Any]:
@@ -47,7 +204,7 @@ def load_model_data(filename: str) -> Dict[Any, Any]:
 
     """
 
-    with open(filename) as f:
+    with open(filename, "r") as f:
         return json.load(f)
 
 
@@ -93,53 +250,10 @@ def plot(
 
     """
 
-    # If we are not averaging the model_data, then we simply plot the model_data running from the
-    # first day to plot to the last day to plot.
-    if not AVERAGE:
-        try:
-            x_model_data, y_model_data = (
-                list(
-                    list(model_data.keys())[
-                        (FIRST_DAY * STEPS_PER_DAY) : (FIRST_DAY + NUM_DAYS_TO_PLOT)
-                        * STEPS_PER_DAY
-                    ]
-                ),
-                list([value[label] for value in model_data.values()])[
-                    (FIRST_DAY * STEPS_PER_DAY) : (FIRST_DAY + NUM_DAYS_TO_PLOT)
-                    * STEPS_PER_DAY
-                ],
-            )
-        except KeyError as e:
-            logger.error(
-                "The label %s could not be found in the data. See log for details.",
-                label,
-            )
-            logger.debug(str(e))
-            return None
-
-    # If the model_data is being averaged, then we take an average over the selection
-    # specified.
-    else:
-        # Extract all model_data
-        try:
-            x_model_data, y_raw = (
-                list(model_data.keys()),
-                list([value[label] for value in model_data.values()]),
-            )
-        except KeyError as e:
-            logger.error(
-                "The label %s could not be found in the data. See log for details.",
-                label,
-            )
-            logger.debug(str(e))
-            return None
-
-        # Construct averages
-        x_model_data = x_model_data[:STEPS_PER_DAY]
-        y_model_data: list() = []
-        for _ in range(STEPS_PER_DAY):
-            y_model_data.append(sum(y_raw[::STEPS_PER_DAY]) / NUM_DAYS_MODEL_RUN_FOR)
-            y_raw.pop(0)
+    x_model_data, y_model_data = (
+        [entry["time"] for entry in model_data.values()],
+        [entry[label] for entry in model_data.values()],
+    )
 
     # If we are not holding the graph, then clear the model_data.
     if not hold:
@@ -164,7 +278,7 @@ def plot(
             )
 
     # Set the labels for the axes.
-    plt.xlabel("Time / Resolution Steps From Model Start")
+    plt.xlabel("Time of Day")
     plt.ylabel(y_label)
 
     return line
@@ -263,7 +377,7 @@ def plot_figure(
     """
 
     # Generate the necessary local variables needed for sub-plotting.
-    fig, ax1 = plt.subplots()
+    _, ax1 = plt.subplots()
 
     lines = [
         plot(
@@ -320,11 +434,16 @@ def plot_figure(
 
 if __name__ == "__main__":
 
+    # pdb.set_trace(header="Start of main function.")
+
     # * Set up the logger
     logger = get_logger("pvt_analysis")
 
     # * Extract the data.
     data = load_model_data("data_output.json")
+
+    # * Reduce the resolution of the data.
+    data = _reduce_data(data, GRAPH_DETAIL)
 
     # * Plotting all tank-related temperatures
     plot_figure(

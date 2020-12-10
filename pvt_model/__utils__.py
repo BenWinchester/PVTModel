@@ -14,6 +14,7 @@ various modules throughout the PVT model.
 
 """
 
+import enum
 import logging
 import os
 
@@ -23,24 +24,31 @@ from typing import Any, Dict, Optional
 import yaml
 
 __all__ = (
+    # Exceptions
     "InternalError",
     "InvalidDataError",
     "MissingDataError",
     "MissingParametersError",
     "ResolutionMismatchError",
+    # Dataclasses, Enums and Named Tuples
     "BackLayerParameters",
     "CollectorParameters",
+    "FileType",
+    "GraphDetail",
     "LayerParameters",
     "OpticalLayerParameters",
     "ProgrammerJudgementFault",
     "PVParameters",
     "WeatherConditions",
+    # Helper functions
     "get_logger",
     "read_yaml",
+    # Constants
     "FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR",
     "HEAT_CAPACITY_OF_WATER",
     "LOGGER_NAME",
-    "NUSSELT_NUMBER" "STEFAN_BOLTZMAN_CONSTANT",
+    "NUSSELT_NUMBER",
+    "STEFAN_BOLTZMAN_CONSTANT",
     "THERMAL_CONDUCTIVITY_OF_AIR",
     "THERMAL_CONDUCTIVITY_OF_WATER",
     "WIND_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT",
@@ -54,7 +62,6 @@ __all__ = (
 
 
 LOGGER_NAME = "my_first_pvt_model"
-logger = logging.getLogger(LOGGER_NAME)
 
 # The Stefan-Boltzman constant, given in Watts per meter squared Kelvin to the four.
 STEFAN_BOLTZMAN_CONSTANT: float = 5.670374419 * (10 ** (-8))
@@ -221,6 +228,50 @@ class ProgrammerJudgementFault(Exception):
 ##############################
 # Functions and Data Classes #
 ##############################
+
+
+class GraphDetail(enum.Enum):
+    """
+    The level of detail to go into when graphing.
+
+    .. attribute:: highest
+        The highest level of detail - all data points are plotted.
+
+    .. attribute:: high
+        A "high" level of detail, to be determined by the analysis script.
+
+    .. attribute:; medium
+        A "medium" level of detail, to be determined by the analysis script.
+
+    .. attribute:: low
+        A "low" level of detail, to be determined by the analysis script.
+
+    .. attribute:: lowest
+        The lowest level of detail, with points only every half an hour.
+
+    """
+
+    highest = 0
+    high = 1
+    medium = 2
+    low = 3
+    lowest = 4
+
+
+class FileType(enum.Enum):
+    """
+    Tells what type of file is being used for the data.
+
+    .. attribute:: YAML
+        A YAML file is being used.
+
+    .. attribute:: JSON
+        A JSON file is being used.
+
+    """
+
+    YAML = 0
+    JSON = 1
 
 
 @dataclass
@@ -446,6 +497,8 @@ def read_yaml(yaml_file_path: str) -> Dict[Any, Any]:
 
     """
 
+    logger = logging.getLogger(LOGGER_NAME)
+
     # Open the yaml data and read it.
     if not os.path.isfile(yaml_file_path):
         logger.error(
@@ -482,7 +535,7 @@ def get_logger(logger_name: str) -> logging.Logger:
     # Create a file handler which logs even debug messages.
     if os.path.exists(f"{logger_name}.log"):
         os.rename(f"{logger_name}.log", f"{logger_name}.log.1")
-    fh = logging.FileHandler("pvt_analysis.log")
+    fh = logging.FileHandler(f"{logger_name}.log")
     fh.setLevel(logging.DEBUG)
     # Create a console handler with a higher log level.
     ch = logging.StreamHandler()

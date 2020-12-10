@@ -343,7 +343,7 @@ class LoadProfile:
         time.replace(minute=time.minute + int(self.resolution))
         return self._closest_value(time)
 
-    def load(self, resolution: int, time: datetime.time) -> float:
+    def load(self, internal_resolution: int, time: datetime.time) -> float:
         """
         Get the load from the load profile at the given time.
 
@@ -352,8 +352,8 @@ class LoadProfile:
         load) or is too course (in which case, summation is needed to determine the load
         that has occured in the time interval since the last request).
 
-        :param resolution:
-            The time-step resolution (in minutes) of the model being run.
+        :param internal_resolution:
+            The time-step resolution (in seconds) of the model being run.
 
         :param time:
             The time for which to fetch the load data.
@@ -365,7 +365,7 @@ class LoadProfile:
 
         # If the simulation is being run at the resolution of the data, then attempt to
         # return the load data at the time step requested.
-        if resolution == self.resolution:
+        if internal_resolution == self.resolution * 60:
             try:
                 return self._profile[time]
             except KeyError as e:
@@ -378,11 +378,11 @@ class LoadProfile:
 
         # If the simulation is being run at a courser resolution, then summation is
         # needed.
-        if resolution > self.resolution:
-            system_courseness = resolution / self.resolution
+        if internal_resolution > self.resolution * 60:
+            system_courseness = internal_resolution / self.resolution * 60
             if int(system_courseness) != system_courseness:
                 raise ResolutionMismatchError(
-                    f"The resolution of the simulation, {resolution}, is not a multiple"
+                    f"The resolution of the simulation, {internal_resolution}, is not a multiple"
                     f"of the resolution of the load data provided, {self.resolution}."
                 )
             try:
@@ -397,12 +397,12 @@ class LoadProfile:
 
         # If the simulation is being run at a finer resolution, then interpolation is
         # needed.
-        if resolution < self.resolution:
-            system_courseness = self.resolution / resolution
+        if internal_resolution < self.resolution * 60:
+            system_courseness = self.resolution * 60 / internal_resolution
             if int(system_courseness) != system_courseness:
                 raise ResolutionMismatchError(
                     f"The resolution of the data, {self.resolution}, is not a multiple"
-                    f"of the resolution of the simulation being run, {resolution}."
+                    f"of the resolution of the simulation being run, {internal_resolution}."
                 )
             try:
                 # Generate a dictionary keyed by the time different, in minutes, to the
@@ -414,9 +414,12 @@ class LoadProfile:
                     ): data_entry
                     for time_entry, data_entry in self._profile.items()
                 }
-                return delta_time_profile.get(
-                    0,
-                    delta_time_profile[min(delta_time_profile.keys())],
+                return (
+                    delta_time_profile.get(
+                        0,
+                        delta_time_profile[min(delta_time_profile.keys())],
+                    )
+                    / system_courseness
                 )
             except KeyError as e:
                 raise MissingDataError(
@@ -480,8 +483,8 @@ class LoadSystem:
         ] = dict()
 
         for profile_type, type_data in yaml_data.items():
-            seasonal_load_profiles[ProfileType.__members__[profile_type.upper()]]: Dict[
-                ProfileType, Dict[_Season, Dict[_Day, LoadProfile]]
+            seasonal_load_profiles[
+                ProfileType.__members__[profile_type.upper()]
             ] = dict()
 
             for season, seasonal_data in type_data.items():
@@ -490,7 +493,6 @@ class LoadSystem:
                 ] = dict()
 
                 for day, day_data in seasonal_data.items():
-
                     if (
                         ProfileType.__members__[profile_type.upper()]
                         == ProfileType.ELECTRICITY
@@ -559,9 +561,6 @@ class LoadSystem:
                 resolution, date_and_time.time()
             )
         except KeyError as e:
-            import pdb
-
-            pdb.set_trace()
             raise MissingDataError(
                 "Load data could not be obtained. "
                 "Attempt was for {} data ".format(str(load_data))

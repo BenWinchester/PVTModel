@@ -18,13 +18,15 @@ processing the command-line arguments that define the scope of the model.
 import argparse
 import dataclasses
 import datetime
-import logging  # pylint: disable=unused-import
+import logging
 import os
+import pdb
 import sys
 
 from typing import Any, Dict, Generator, Optional
 
 import json
+import yaml
 
 from dateutil.relativedelta import relativedelta
 
@@ -35,6 +37,7 @@ from .__utils__ import (
     MissingParametersError,
     BackLayerParameters,
     CollectorParameters,
+    FileType,
     OpticalLayerParameters,
     PVParameters,
     read_yaml,
@@ -64,7 +67,7 @@ def time_iterator(
     *,
     first_time: datetime.datetime,
     last_time: datetime.datetime,
-    resolution: int,
+    internal_resolution: int,
     timezone: datetime.timezone,
 ) -> Generator[datetime.datetime, None, None]:
     """
@@ -76,8 +79,8 @@ def time_iterator(
     :param last_time:
         The last time, which, when reached, should cause the generator to stop.
 
-    :param resolution:
-        The time step, in minutes, to run the iterator for.
+    :param internal_resolution:
+        The time step, in seconds, for which the simulation should be run before saving.
 
     :param timezone:
         The timezone of the PV-T set-up.
@@ -91,7 +94,11 @@ def time_iterator(
     current_time = first_time
     while current_time < last_time:
         yield current_time.replace(tzinfo=timezone)
-        current_time += relativedelta(minutes=resolution)
+        current_time += relativedelta(
+            hours=internal_resolution // 3600,
+            minutes=internal_resolution // 60,
+            seconds=internal_resolution % 60,
+        )
 
 
 @dataclasses.dataclass
@@ -218,7 +225,7 @@ class SystemData:
 
         return (
             f"System Data[{self.date}::{self.time}]("
-            + "T_g/C {}K, T_pv/C {}K, T_c/C {:.2f}K, T_t/C {:.2f}K,".format(
+            + "T_g/degC {}, T_pv/degC {}, T_c/degC {:.2f}K, T_t/degC {:.2f}K,".format(
                 round(self.glass_temperature, 2)
                 if self.glass_temperature is not None
                 else None,
@@ -228,13 +235,17 @@ class SystemData:
                 self.collector_temperature,
                 self.tank_temperature,
             )
-            + " pv_eff {}, aux {:.2f}W, dc_e {:.2f}%, dc_therm {:.2f}%)".format(
+            + " pv_eff {}, aux {}W, dc_e {}%, dc_therm {}%)".format(
                 round(self.pv_efficiency, 2)
                 if self.pv_efficiency is not None
                 else None,
-                self.auxiliary_heating,
-                self.dc_electrical,
-                self.dc_thermal,
+                round(self.auxiliary_heating, 2)
+                if self.auxiliary_heating is not None
+                else None,
+                round(self.dc_electrical, 2)
+                if self.dc_electrical is not None
+                else None,
+                round(self.dc_thermal, 2) if self.dc_thermal is not None else None,
             )
         )
 
@@ -282,6 +293,13 @@ def _parse_args(args) -> argparse.Namespace:
         "-it",
         help="The input water temperature to instantiate the system, measured in "
         "Celcius. Defaults to 20 Celcius if not provided.",
+    )
+    parser.add_argument(
+        "--internal-resolution",
+        "-ir",
+        help="The internal resolution, in seconds, used by the model.",
+        type=int,
+        default=1,
     )
     parser.add_argument(
         "--location", "-l", help="The location for which to run the simulation."
@@ -678,10 +696,10 @@ def hot_water_tank_from_path(tank_data_file: str, mains_water_temp: float) -> ta
 
 
 def _save_data(
-    system_data: Dict[datetime.datetime, SystemData], output_file_name: str
+    system_data: Dict[int, SystemData], output_file_name: str, file_type: FileType
 ) -> None:
     """
-    Save data when called.
+    Save data when called. The data entry should be appended to the file.
 
     :param system_data:
         The data to save.
@@ -689,14 +707,36 @@ def _save_data(
     :param output_file_name:
         The destination file name.
 
+    :param file_type:
+        The file type that's being saved.
+
     """
 
-    with open(output_file_name, "w+") as f:
-        json.dump(
-            {key: dataclasses.asdict(value) for key, value in system_data.items()},
-            f,
-            indent=4,
-        )
+    # Convert the system data entry to JSON-readable format
+    system_data = {key: dataclasses.asdict(value) for key, value in system_data.items()}
+
+    # If we're saving YAML data part-way through, then append to the file.
+    if file_type == FileType.YAML:
+        with open("{}.{}".format(output_file_name, "yaml"), "a") as f:
+            yaml.dump(
+                system_data,
+                f,
+            )
+
+    if file_type == FileType.JSON:
+        # Shift existing data if it exists.
+        if os.path.isfile("{}.{}".format(output_file_name, "json")):
+            os.rename(
+                "{}.{}".format(output_file_name, "json"),
+                "{}.{}.1".format(output_file_name, "json"),
+            )
+        # Save the data
+        with open("{}.{}".format(output_file_name, "json"), "w") as f:
+            json.dump(
+                system_data,
+                f,
+                indent=4,
+            )
 
 
 def main(args) -> None:  # pylint: disable=too-many-locals
@@ -723,9 +763,9 @@ def main(args) -> None:  # pylint: disable=too-many-locals
         raise MissingParametersError(
             "Command-Line Interface", "An output file name must be provided."
         )
-    if not parsed_args.output.endswith(".json"):
-        logger.error("The output filename must end with .json.")
-        raise Exception("The output file must be in json format.")
+    if parsed_args.output.endswith(".yaml") or parsed_args.output.endswith(".json"):
+        logger.error("The output filename must be irrespective of data type..")
+        raise Exception("The output file must be irrespecitve of extension/data type.")
     if os.path.isfile(parsed_args.output):
         logger.debug("The output file specified already exists. Moving...")
         os.rename(parsed_args.output, f"{parsed_args.output}.1")
@@ -757,9 +797,6 @@ def main(args) -> None:  # pylint: disable=too-many-locals
         parsed_args.tank_data_file, weather_forecaster.mains_water_temp
     )
 
-    # Set up a way to store system data.
-    system_data: Dict[datetime.datetime, SystemData] = dict()
-
     # Loop through all times and iterate the system.
     input_water_temperature: float = (
         parsed_args.input_water_temperature + ZERO_CELCIUS_OFFSET
@@ -790,6 +827,9 @@ def main(args) -> None:  # pylint: disable=too-many-locals
     else:
         final_date_and_time = first_date_and_time + relativedelta(days=parsed_args.days)
 
+    # Set up a dictionary for storing the system data.
+    system_data: Dict[int:SystemData] = dict()
+
     logger.debug(
         "Beginning itterative model:\n  Running from: %s\n  Running to: %s",
         str(first_date_and_time),
@@ -799,10 +839,12 @@ def main(args) -> None:  # pylint: disable=too-many-locals
         time_iterator(
             first_time=first_date_and_time,
             last_time=final_date_and_time,
-            resolution=parsed_args.resolution,
+            internal_resolution=parsed_args.internal_resolution,
             timezone=pvt_panel.timezone,
         )
     ):
+
+        # pdb.set_trace(header="Starting an itterative cycle...")
 
         # Generate weather and load conditions from the load and weather classes.
         current_weather = weather_forecaster.get_weather(
@@ -813,11 +855,27 @@ def main(args) -> None:  # pylint: disable=too-many-locals
         # data file passed in on the command-line interface. If the file contains data
         # entries in units kilo Watts, then the electrical load here will have units of
         # kilo Watts.
-        current_electrical_load = load_system.get_load_from_time(
-            parsed_args.resolution, load.ProfileType.ELECTRICITY, date_and_time
+        # FIXME
+        # @ Currently, the elctrical resolution is returned as 2 seconds out of 30
+        # @ minutes worth of data. This therefore needs to be multipled by 30 * 60 / 2
+        # pdb.set_trace(header="Looking at the electrical load.")
+
+        current_electrical_load = (
+            load_system.get_load_from_time(
+                parsed_args.internal_resolution,
+                load.ProfileType.ELECTRICITY,
+                date_and_time,
+            )  # [W] / [seconds per data resolution]
+            * 30  # [minutes/data resolution]
+            * 60  #  [s/minute]
+            / parsed_args.internal_resolution  # [model step adjustment]
         )  # [Watts]
+        # @@@ Mad fix factor...
+        current_electrical_load = current_electrical_load * 8 / 7
+        if date_and_time.hour == 12:
+            pdb.set_trace(header="Investigating the hot-water load.")
         current_hot_water_load = load_system.get_load_from_time(
-            parsed_args.resolution, load.ProfileType.HOT_WATER, date_and_time
+            parsed_args.internal_resolution, load.ProfileType.HOT_WATER, date_and_time
         )  # [litres/time step]
 
         # logger.info(
@@ -829,15 +887,12 @@ def main(args) -> None:  # pylint: disable=too-many-locals
         #     current_hot_water_load,
         # )
 
-        try:
-            # Call the pvt module to generate the new temperatures at this time step.
-            output_water_temperature = pvt_panel.update(
-                input_water_temperature, parsed_args.resolution, current_weather
-            )  # [K]
-        except BaseException as e:
-            logger.error("Crash caught, saving data. Error: %s", str(e))
-            _save_data(system_data, parsed_args.output)
-            break
+        # Call the pvt module to generate the new temperatures at this time step.
+        output_water_temperature = pvt_panel.update(
+            input_water_temperature,
+            parsed_args.internal_resolution,
+            current_weather,
+        )  # [K]
 
         # Propogate this information through to the heat exchanger and pass in the
         # tank s.t. it updates the tank correctly as well.
@@ -845,14 +900,14 @@ def main(args) -> None:  # pylint: disable=too-many-locals
         input_water_temperature, tank_heat_gain = heat_exchanger.update(  # [K], [J]
             hot_water_tank,
             output_water_temperature,  # [K]
-            pvt_panel.mass_flow_rate * parsed_args.resolution * 60,  # [kg]
+            pvt_panel.mass_flow_rate * parsed_args.internal_resolution,  # [kg]
             pvt_panel.htf_heat_capacity,  # [J/kg*K]
         )
 
         # Compute the new tank temperature after supplying this demand
         tank_output_water_temp = hot_water_tank.update(  # [K]
             tank_heat_gain,  # [J]
-            parsed_args.resolution,  # [minutes]
+            parsed_args.internal_resolution,  # [minutes]
             current_hot_water_load,  # [litres/time step]
             weather_forecaster.mains_water_temp,  # [K]
             current_weather.ambient_temperature,  # [K]
@@ -866,14 +921,12 @@ def main(args) -> None:  # pylint: disable=too-many-locals
             * HEAT_CAPACITY_OF_WATER  # [J/kg*K]
             * (HOT_WATER_DEMAND_TEMP - tank_output_water_temp)  # [K]
         ) / (
-            parsed_args.resolution * 60  # We need to convert from Joules to Watts
+            parsed_args.internal_resolution  # We need to convert from Joules to Watts
         )  # [time step in seconds]
 
         dc_electrical = (
             efficiency.dc_electrical(
-                electrical_output=pvt_panel.electrical_output(
-                    parsed_args.resolution, current_weather
-                ),
+                electrical_output=pvt_panel.electrical_output(current_weather),
                 electrical_losses=pvt_panel.pump_power,
                 electrical_demand=current_electrical_load,
             )
@@ -893,61 +946,65 @@ def main(args) -> None:  # pylint: disable=too-many-locals
         )  # [%]
 
         # Store the information in the dictionary mapping between time step and data.
-        system_data[run_number] = SystemData(
-            date=f"{date_and_time.day}/{date_and_time.month}/{date_and_time.year}",
-            time=f"{date_and_time.hour}:{date_and_time.minute}",
-            ambient_temperature=current_weather.ambient_temperature
-            - ZERO_CELCIUS_OFFSET,
-            sky_temperature=current_weather.sky_temperature - ZERO_CELCIUS_OFFSET,
-            solar_irradiance=current_weather.irradiance,
-            normal_irradiance=pvt_panel.get_solar_irradiance(current_weather),
-            glass_temperature=pvt_panel.glass_temperature - ZERO_CELCIUS_OFFSET  # type: ignore
-            if pvt_panel.glazed
-            else None,
-            pv_temperature=pvt_panel.pv_temperature - ZERO_CELCIUS_OFFSET  # type: ignore
-            if not parsed_args.no_pv
-            else None,
-            pv_efficiency=pvt_panel.electrical_efficiency,
-            collector_temperature=pvt_panel.collector_temperature - ZERO_CELCIUS_OFFSET,
-            collector_input_temperature=input_water_temperature - ZERO_CELCIUS_OFFSET,
-            collector_output_temperature=pvt_panel.collector_output_temperature
-            - ZERO_CELCIUS_OFFSET,
-            collector_temperature_gain=pvt_panel.collector_output_temperature
-            - input_water_temperature,
-            tank_temperature=hot_water_tank.temperature - ZERO_CELCIUS_OFFSET,
-            tank_output_temperature=tank_output_water_temp - ZERO_CELCIUS_OFFSET,
-            tank_heat_addition=tank_heat_gain / (parsed_args.resolution * 60),
-            electrical_load=current_electrical_load,
-            thermal_load=current_hot_water_load
-            * HEAT_CAPACITY_OF_WATER
-            * 50
-            / (parsed_args.resolution * 60),
-            thermal_output=current_hot_water_load
-            * HEAT_CAPACITY_OF_WATER
-            * (tank_output_water_temp - 10 - ZERO_CELCIUS_OFFSET)
-            / (parsed_args.resolution * 60),
-            auxiliary_heating=auxiliary_heating,
-            gross_electrical_output=pvt_panel.electrical_output(
-                parsed_args.resolution, current_weather
-            ),
-            net_electrical_output=pvt_panel.electrical_output(
-                parsed_args.resolution, current_weather
+        system_data_entry = {
+            run_number: SystemData(
+                date=f"{date_and_time.day}/{date_and_time.month}/{date_and_time.year}",
+                time=f"{date_and_time.hour:02d}:{date_and_time.minute:02d}:{date_and_time.second:02d}",
+                ambient_temperature=current_weather.ambient_temperature
+                - ZERO_CELCIUS_OFFSET,
+                sky_temperature=current_weather.sky_temperature - ZERO_CELCIUS_OFFSET,
+                solar_irradiance=current_weather.irradiance,
+                normal_irradiance=pvt_panel.get_solar_irradiance(current_weather),
+                glass_temperature=pvt_panel.glass_temperature - ZERO_CELCIUS_OFFSET  # type: ignore
+                if pvt_panel.glazed
+                else None,
+                pv_temperature=pvt_panel.pv_temperature - ZERO_CELCIUS_OFFSET  # type: ignore
+                if not parsed_args.no_pv
+                else None,
+                pv_efficiency=pvt_panel.electrical_efficiency,
+                collector_temperature=pvt_panel.collector_temperature
+                - ZERO_CELCIUS_OFFSET,
+                collector_input_temperature=input_water_temperature
+                - ZERO_CELCIUS_OFFSET,
+                collector_output_temperature=pvt_panel.collector_output_temperature
+                - ZERO_CELCIUS_OFFSET,
+                collector_temperature_gain=pvt_panel.collector_output_temperature
+                - input_water_temperature,
+                tank_temperature=hot_water_tank.temperature - ZERO_CELCIUS_OFFSET,
+                tank_output_temperature=tank_output_water_temp - ZERO_CELCIUS_OFFSET,
+                tank_heat_addition=tank_heat_gain / (parsed_args.internal_resolution),
+                electrical_load=current_electrical_load,
+                thermal_load=current_hot_water_load
+                * HEAT_CAPACITY_OF_WATER
+                * 50
+                / (parsed_args.internal_resolution),
+                thermal_output=current_hot_water_load
+                * HEAT_CAPACITY_OF_WATER
+                * (tank_output_water_temp - 10 - ZERO_CELCIUS_OFFSET)
+                / (parsed_args.internal_resolution),
+                auxiliary_heating=auxiliary_heating,
+                gross_electrical_output=pvt_panel.electrical_output(current_weather),
+                net_electrical_output=pvt_panel.electrical_output(current_weather)
+                - current_electrical_load,
+                dc_electrical=dc_electrical,
+                dc_thermal=dc_thermal,
             )
-            - current_electrical_load,
-            dc_electrical=dc_electrical,
-            dc_thermal=dc_thermal,
-        )
+        }
 
         logger.info(
-            "System data determined at time %s:\n%s",
+            "System data determined at time %s: %s",
             date_and_time,
-            system_data[run_number],
+            system_data_entry[run_number],
         )
 
-    # Dump the data generated to the output JSON file.
-    _save_data(system_data, parsed_args.output)
+        # Dump the data generated to the output YAML file.
+        _save_data(system_data_entry, parsed_args.output, FileType.YAML)
+        system_data[run_number] = system_data_entry[run_number]
 
-    # * Potentially generate some plots, and at least save the data.
+        logger.info("File updated. An additional entry was stored.")
+
+    # Dump the data generated to the output JSON file.
+    _save_data(system_data, parsed_args.output, FileType.JSON)
 
 
 if __name__ == "__main__":

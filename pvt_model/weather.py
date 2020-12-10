@@ -171,7 +171,7 @@ def _get_sunrise(
     latitude: float,
     longitude: float,
     date_and_time: datetime.datetime,
-) -> float:
+) -> datetime.time:
     """
     Determine the sunrise time for the month.
 
@@ -204,7 +204,7 @@ def _get_sunset(
     longitude: float,
     date_and_time: datetime.datetime,
     declination=0,
-) -> float:
+) -> datetime.time:
     """
     Determine the sunset time for the month.
 
