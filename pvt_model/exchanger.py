@@ -46,7 +46,7 @@ class Exchanger:
         self,
         water_tank: tank.Tank,
         input_water_temperature: float,
-        input_water_flow_rate: float,
+        input_water_mass: float,
         input_water_heat_capacity: float,
     ) -> Tuple[float, float]:
         """
@@ -59,9 +59,11 @@ class Exchanger:
             The temperature of the water being inputted to the heat exchanger, measured
             in Kelvin.
 
-        :param input_water_flow_rate:
+        :param input_water_mass:
             The flow rate of water entering the exchanger from the PV-T panel, measured
-            in kilograms per unit time step.
+            in kilograms per unit time step. As this has been multiplied by the number
+            of seconds per unit time step, it is effectively just the mass that has
+            passed through the exchanger and delivered some heat.
 
         :param input_water_heat_capacity:
             The heat capacity of the water used to feed the heat exchanger, measured in
@@ -89,7 +91,7 @@ class Exchanger:
         # measured in kilograms per time step, this can be used as is as a total mass
         # flow param in kilograms.
         heat_added = (
-            self._efficiency * input_water_flow_rate * input_water_heat_capacity
+            self._efficiency * input_water_mass * input_water_heat_capacity
         ) * (input_water_temperature - water_tank.temperature)
 
         # Return the output temperature of the heat exchanger.

@@ -78,7 +78,7 @@ class Tank:
     def update(
         self,
         heat_gain: float,
-        resolution: float,
+        internal_resolution: float,
         water_demand_volume: float,
         mains_water_temp: float,
         ambient_tank_temperature: float,
@@ -86,8 +86,8 @@ class Tank:
         """
         Updates the tank temperature when a certain volume of hot water is demanded.
 
-        :param resolution:
-            The resolution of the model currently being run, measured in minutes.
+        :param internal_resolution:
+            The internal_resolution of the model currently being run, measured in seconds.
 
         :param water_demand_volume:
             The volume of hot water demanded by the end user, measured in litres.
@@ -104,17 +104,13 @@ class Tank:
 
         """
 
-        # We need to multiply by the resolution in order to compute the total heat lost
+        # We need to multiply by the internal_resolution in order to compute the total heat lost
         # from the tank during the time duration.
         heat_loss = (
-            (
-                self.area
-                * self.heat_loss_coefficient
-                * (self.temperature - ambient_tank_temperature)
-            )
-            * resolution
-            * 60
-        )
+            self.area
+            * self.heat_loss_coefficient
+            * (self.temperature - ambient_tank_temperature)
+        ) * internal_resolution
 
         delivery_temp = self.temperature
 

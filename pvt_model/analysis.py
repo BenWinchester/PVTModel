@@ -23,20 +23,11 @@ OLD_FIGURES_DIRECTORY: str = "old_figures"
 # How many values there should be between each tick on the x-axis
 X_TICK_SEPARATION: int = 8
 # How detailed the graph should be
-GRAPH_DETAIL: GraphDetail = GraphDetail.low
-
-# The first day to include in the output graph.
-FIRST_DAY: int = 28
-# The number of days to include in the output graph.
-NUM_DAYS_TO_PLOT: int = 1
-# The number of days that the model was run for
-NUM_DAYS_MODEL_RUN_FOR: int = 30
-# Whether to average the model_data.
-AVERAGE: bool = False
-# The number of steps per day
-STEPS_PER_DAY = 24 * 60 * 2
-# The resolution of the model that was run, measured in minutes
-RESOLUTION = 30
+GRAPH_DETAIL: GraphDetail = GraphDetail.lowest
+# Which days of data to include
+DAYS_TO_INCLUDE: List[bool] = [False, True]
+# The name of the data file to use.
+DATA_FILE_NAME = "data_output_two_july_days.json"
 
 
 def _resolution_from_graph_detail(
@@ -119,6 +110,11 @@ def _reduce_data(
         graph detail.
 
     """
+
+    # * First, only include the bits of data we want.
+    # @@@ This only works for two days so far:
+    data = dict(list(data.items())[int(len(data) / 2) :])
+    data = {str(int(key) - 43200): value for key, value in data.items()}
 
     data_points_per_graph_point: int = _resolution_from_graph_detail(
         graph_detail, len(data)
@@ -211,7 +207,6 @@ def load_model_data(filename: str) -> Dict[Any, Any]:
 def plot(
     label: str,
     y_label: str,
-    resolution: float,
     model_data: Dict[Any, Any],
     hold=False,
     axes=None,
@@ -383,7 +378,6 @@ def plot_figure(
         plot(
             entry,
             first_axis_label,
-            RESOLUTION,
             model_data,
             hold=True,
             axes=ax1,
@@ -411,7 +405,6 @@ def plot_figure(
             plot(
                 entry,
                 second_axis_label,
-                RESOLUTION,
                 model_data,
                 hold=True,
                 axes=ax2,
@@ -440,7 +433,7 @@ if __name__ == "__main__":
     logger = get_logger("pvt_analysis")
 
     # * Extract the data.
-    data = load_model_data("data_output.json")
+    data = load_model_data(DATA_FILE_NAME)
 
     # * Reduce the resolution of the data.
     data = _reduce_data(data, GRAPH_DETAIL)
@@ -454,7 +447,7 @@ if __name__ == "__main__":
             "collector_output_temperature",
             "collector_temperature_gain",
             "tank_temperature",
-            "tank_output_temperature",
+            # "tank_output_temperature",
             "ambient_temperature",
             "sky_temperature",
         ],
@@ -470,7 +463,7 @@ if __name__ == "__main__":
             "collector_output_temperature",
             "collector_temperature_gain",
             "tank_temperature",
-            "tank_output_temperature",
+            # "tank_output_temperature",
             "ambient_temperature",
             "sky_temperature",
             "glass_temperature",
@@ -585,4 +578,26 @@ if __name__ == "__main__":
             "tank_temperature",
         ],
         "Temperature / K",
+    )
+
+    # * Plotting the tank temperature, collector temperature, and heat inputted into the
+    # * tank.
+    plot_figure(
+        "tank_heat_gain_profile",
+        data,
+        first_axis_things_to_plot=["tank_temperature", "collector_temperature"],
+        first_axis_label="Temperature / deg C",
+        first_axis_y_limits=(0, 100),
+        second_axis_things_to_plot=["tank_heat_addition"],
+        second_axis_label="Tank Heat Input / Watts",
+    )
+
+    # * Plotting the tank temperature, collector temperature, and heat inputted into the
+    # * tank.
+    plot_figure(
+        "ambient_temperature",
+        data,
+        first_axis_things_to_plot=["ambient_temperature", "sky_temperature"],
+        first_axis_label="Temperature / deg C",
+        first_axis_y_limits=(0, 100),
     )

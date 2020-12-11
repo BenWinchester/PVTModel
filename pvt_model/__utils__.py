@@ -363,7 +363,8 @@ class CollectorParameters(OpticalLayerParameters):
         The diameter of the pipe, in meters.
 
     .. attribute:: mass_flow_rate
-        The mass flow rate of heat-transfer fluid through the collector.
+        The mass flow rate of heat-transfer fluid through the collector. Measured in
+        litres per hour.
 
     .. attribute:: htf_heat_capacity
         The heat capacity of the heat-transfer fluid through the collector, measured in

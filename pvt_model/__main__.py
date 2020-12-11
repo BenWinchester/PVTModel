@@ -484,14 +484,14 @@ def collector_params_from_data(
             area,  # [m^2]
             collector_data["thickness"],  # [m]
             INITIAL_SYSTEM_TEMPERATURE,  # [K]
-            initial_collector_htf_tempertaure,  # [K]
             collector_data["transmissivity"],  # [unitless]
             collector_data["absorptivity"],  # [unitless]
             collector_data["emissivity"],  # [unitless]
             length,  # [m]
             collector_data["number_of_pipes"],  # [pipes]
-            collector_data["mass_flow_rate"],  # [Litres/hour]
+            initial_collector_htf_tempertaure,  # [K]
             collector_data["pipe_diameter"],  # [m]
+            collector_data["mass_flow_rate"],  # [Litres/hour]
             collector_data["htf_heat_capacity"]  # [J/kg*K]
             if "htf_heat_capacity" in collector_data
             else HEAT_CAPACITY_OF_WATER,  # [J/kg*K]
@@ -835,6 +835,7 @@ def main(args) -> None:  # pylint: disable=too-many-locals
         str(first_date_and_time),
         str(final_date_and_time),
     )
+
     for run_number, date_and_time in enumerate(
         time_iterator(
             first_time=first_date_and_time,
@@ -872,8 +873,6 @@ def main(args) -> None:  # pylint: disable=too-many-locals
         )  # [Watts]
         # @@@ Mad fix factor...
         current_electrical_load = current_electrical_load * 8 / 7
-        if date_and_time.hour == 12:
-            pdb.set_trace(header="Investigating the hot-water load.")
         current_hot_water_load = load_system.get_load_from_time(
             parsed_args.internal_resolution, load.ProfileType.HOT_WATER, date_and_time
         )  # [litres/time step]

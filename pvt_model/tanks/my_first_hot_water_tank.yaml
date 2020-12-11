@@ -7,7 +7,7 @@
 # The mass of water held in the tank, in kilograms. This roughly corresponds to the
 # capacity of the tank in litres.
 # Increased after a Google Search - 02/12/2020
-mass: 200 # [kg]
+mass: 50 # [kg]
 # The area of a typical tank is used in this example:
 # This is measured in meters squared.
 area: 2.0735 # [m^2]

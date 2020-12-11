@@ -6,4 +6,4 @@
 
 # The efficiency is a dimensionless constant defined between 0 and 1.
 # @BW Changed from the usual value of 0.5
-efficiency: 1.0 # [unitless]
+efficiency: 0.8 # [unitless]
