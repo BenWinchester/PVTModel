@@ -890,7 +890,12 @@ class Collector(_OpticalLayer):
 
         """
 
-        return NUSSELT_NUMBER * THERMAL_CONDUCTIVITY_OF_WATER / self._pipe_diameter
+        # @@@ Maria here used a value of 259, irrespective of these properties.
+        # @@@ For temporary consistency, this value is used.
+
+        return 259
+
+        # return NUSSELT_NUMBER * THERMAL_CONDUCTIVITY_OF_WATER / self._pipe_diameter
 
     @property
     def htf_surface_area(self) -> float:

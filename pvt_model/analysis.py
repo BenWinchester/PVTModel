@@ -27,7 +27,7 @@ GRAPH_DETAIL: GraphDetail = GraphDetail.lowest
 # Which days of data to include
 DAYS_TO_INCLUDE: List[bool] = [False, True]
 # The name of the data file to use.
-DATA_FILE_NAME = "data_output_two_july_days.json"
+DATA_FILE_NAME = "data_output_two_july_days_rerunning.json"
 
 
 def _resolution_from_graph_detail(
@@ -114,7 +114,7 @@ def _reduce_data(
     # * First, only include the bits of data we want.
     # @@@ This only works for two days so far:
     data = dict(list(data.items())[int(len(data) / 2) :])
-    data = {str(int(key) - 43200): value for key, value in data.items()}
+    data = {str(int(key) - 86400): value for key, value in data.items()}
 
     data_points_per_graph_point: int = _resolution_from_graph_detail(
         graph_detail, len(data)
@@ -130,7 +130,7 @@ def _reduce_data(
         # pdb.set_trace(header="Beginning of reduction loop.")
         # * If the entry is a date or time, just take the value
         if data_entry_name in ["date", "time"]:
-            for index in range(len(reduced_data)):
+            for index, _ in enumerate(reduced_data):
                 reduced_data[index][data_entry_name] = data[
                     str(index * data_points_per_graph_point)
                 ][data_entry_name]

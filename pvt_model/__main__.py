@@ -56,11 +56,11 @@ LOAD_DATA_FILENAME = "loads_watts.yaml"
 INITIAL_DATE_AND_TIME = datetime.datetime(2020, 1, 1, 0, 0)
 # The initial temperature for the system to be instantiated at, measured in Kelvin.
 INITIAL_SYSTEM_TEMPERATURE = 293  # [K]
+# THe initial temperature of the hot-water tank, at which it should be instantiated,
+# measured in Kelvin.
+INITIAL_TANK_TEMPERATURE = ZERO_CELCIUS_OFFSET + 34.75  # [K]
 # The temperature of hot-water required by the end-user, measured in Kelvin.
 HOT_WATER_DEMAND_TEMP = 60 + ZERO_CELCIUS_OFFSET
-
-
-# * Arg-parsing method
 
 
 def time_iterator(
@@ -327,6 +327,12 @@ def _parse_args(args) -> argparse.Namespace:
         "--output",
         "-o",
         help="The output file to save data to. This should be of JSON format.",
+    )
+    parser.add_argument(
+        "--pv-cover",
+        "-pc",
+        type=float,
+        help="The proportion of the collector which is covered with PV cells.",
     )
     parser.add_argument(
         "--pvt-data-file", "-p", help="The location of the PV-T system YAML data file."
@@ -677,7 +683,7 @@ def hot_water_tank_from_path(tank_data_file: str, mains_water_temp: float) -> ta
     tank_data = read_yaml(tank_data_file)
     try:
         return tank.Tank(
-            mains_water_temp,  # [K]
+            INITIAL_TANK_TEMPERATURE,  # [K]
             float(tank_data["mass"]),  # [kg]
             HEAT_CAPACITY_OF_WATER,  # [J/kg*K]
             float(tank_data["area"]),  # [m^2]

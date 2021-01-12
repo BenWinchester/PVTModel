@@ -16,10 +16,10 @@
 # study
 # https://www.sciencedirect.com/science/article/pii/S0927024807004023
 #
-# PV transmissivity and efficiency data taken from:
-#
-# https://www.sciencedirect.com/science/article/pii/S0360544218310508#bib10
-#
+# The remaining parameters were taken from Maria's paper,
+# A UK-based assessment of hybrid PV and solar-thermal systems for domestic heating and
+# power System performance;
+# downloaded and stored in Google Drive.
 
 pvt_system:
   latitude: 51.4934 # [deg]
@@ -34,32 +34,34 @@ pvt_system:
   # The length of the collector is measured in meters.
   length: 1 # [m]
   # The area is measured in meters squared.
-  area: 3 # [m^2]
+  area: 15 # [m^2]
   # These parameters set up how the panel is orientated.
   # All angles are measured in degrees
-  tilt: 45 # [deg]
+  tilt: 35 # [deg]
   azimuthal_orientation: 180 # [deg]
   horizontal_tracking: False
   vertical_tracking: False
 glass:
   density: 2500 # [kg/m^3]
-  thickness: 0.006 # [m]
+  thickness: 0.0032 # [m]
   heat_capacity: 840 # [840J/kg*K]
   # The thermal conductivity of glass is obtained from;
   # https://www.engineeringtoolbox.com/thermal-conductivity-d_429.html
   # and is measured in Watts per meter Kelvin.
   thermal_conductivity: 1.04 # [W/m*K]
   absorptivity: 0.43 # [unitless]
-  transmissivity: 0.8265 # [unitless]
-  t_a_product: 0.77 # [unitless]
-  emissivity: 0.93 # [unitless]
+  transmissivity: 0.9 # [unitless]
+  emissivity: 0.88 # [unitless]
+air_gap:
+  thickness: 0.005 # [m]
+  thermal_conductivity: 0.025 # [W/m*K]
 pv:
   # Density measured in kilograms per meter cubed.
   # The value for this is (unfortunately) obtained from
   # https://en.wikipedia.org/wiki/Amorphous_silicon#:~:text=The%20density%20of%20amorphous%20Si,cm3)%20at%20300%20K.
   density: 2330 # [kg/m^3]
   # Thickness measured in meters.
-  thickness: 0.00038 # [m]
+  thickness: 0.00035 # [m]
   # Heat capacity measured in Joules per kilogram Kelvin.
   heat_capacity: 712 # [J/kg*K]
   # Therma308l conductivity measured in Watts per meter Kelvin.
@@ -74,6 +76,15 @@ pv:
   # The thermal coefficient gives the efficiency drop per degree rise in
   # temperature above the reference temperature.
   thermal_coefficient: 0.0045 # [K^-1]
+eva:
+  thickness: 0.0005 # [m]
+  thermal_conductivity: 0.35 # [W/m*K]
+adhesive:
+  thickness: 0.00005 # [m]
+  thermal_conductivity: 0.85 # [W/m*K]
+tedlar:
+  thickenss: 0.0001 # [m]
+  thermal_conductivity: 0.2 # [W/m*K]
 collector:
   # *** The mass parameter may not be needed
   mass: 108 # [kg]
@@ -86,17 +97,23 @@ collector:
   # conventional systems.
   mass_flow_rate: 200 # [L/h]
   # The diameter of the pipes, in meters.
-  pipe_diameter: 0.005 # [m]
+  pipe_diameter: 0.01 # [m]
   # The number of pipe flowing along the back of the collector.
-  number_of_pipes: 5 # [pipes]
+  number_of_pipes: 11 # [pipes]
+  # The spacing between adjacent tubes along the rear of the collector.
+  pipe_spacing: 0.095 # [m]
   # The power used in the water pump, measured in Watts.
   pump_power: 60 # [W]
-  absorptivity: 0.9 # [unitless]
-  emissivity: 0.9 # [unitless]
+  absorptivity: 0.95 # [unitless]
+  emissivity: 0.05 # [unitless]
   transmissivity: 0.9 # [unitless]
+  thermal_conductivity: 310 # [W/m*K]
 # Quantities for the back plate taken as those for Tedlar.
 back:
   density: 2330 # [kg/m^3]
   thickness: 0.00017 # [m]
   heat_capacity: 1130 # [J/kg*K]
   thermal_conductivity: 0.14 # [W/m*K]
+insulation:
+  thickness: 0.02 # [m]
+  thermal_conductivity: 0.035 # [W/m*K]
