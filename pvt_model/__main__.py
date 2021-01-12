@@ -50,6 +50,8 @@ from .__utils__ import (
 
 # Name of the weather data file.
 WEATHER_DATA_FILENAME = "weather.yaml"
+# Folder containing the solar irradiance profiles
+SOLAR_IRRADIANCE_FOLDERNAME = "solar_irradiance_profiles"
 # Name of the load data file.
 LOAD_DATA_FILENAME = "loads_watts.yaml"
 # The initial date and time for the simultion to run from.
@@ -777,8 +779,15 @@ def main(args) -> None:  # pylint: disable=too-many-locals
         os.rename(parsed_args.output, f"{parsed_args.output}.1")
 
     # Set-up the weather and load modules with the weather and load probabilities.
-    weather_forecaster = weather.WeatherForecaster.from_yaml(
-        os.path.join(parsed_args.location, WEATHER_DATA_FILENAME)
+    solar_irradiance_filenames = [
+        os.path.join(parsed_args.location, SOLAR_IRRADIANCE_FOLDERNAME, filename)
+        for filename in os.listdir(
+            os.path.join(parsed_args.location, SOLAR_IRRADIANCE_FOLDERNAME)
+        )
+    ]
+    weather_forecaster = weather.WeatherForecaster.from_data(
+        os.path.join(parsed_args.location, WEATHER_DATA_FILENAME),
+        solar_irradiance_filenames,
     )
     load_system = load.LoadSystem.from_yaml(
         os.path.join(parsed_args.location, LOAD_DATA_FILENAME),
