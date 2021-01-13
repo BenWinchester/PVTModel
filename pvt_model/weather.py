@@ -19,6 +19,7 @@ cooling effect on panels can be estimated and included into the model as well.
 """
 
 import calendar
+import collections
 import datetime
 import logging
 import math
@@ -62,7 +63,7 @@ class _DailySolarIrradianceProfile:
     #   A mapping of the time of day to the solar irradiance, measured in Watts per
     #   meter squared, at that time.
 
-    def __init__(self, profile: Dict[datetime.time, float]) -> None:
+    def __init__(self, profile: Dict[datetime.time, float] = None) -> None:
         """
         Instantiate the daily solar irradiance profile.
 
@@ -71,6 +72,9 @@ class _DailySolarIrradianceProfile:
             solar irradiance, measured in Watts per meter squared.
 
         """
+
+        if profile is None:
+            profile = dict()
 
         if not isinstance(profile, dict):
             raise ProgrammerJudgementFault(
@@ -98,7 +102,14 @@ class _DailySolarIrradianceProfile:
         # If the index is not in the profile, then the closest value needs to be
         # determined. If there is a tie, this does not matter.
         delta_t_to_t_map = {
-            (time.hour * 60 + time.minute - index.hour * 60 - index.minute): time
+            (
+                abs(
+                    time.hour * 3600
+                    + time.minute * 60
+                    + time.second
+                    - (index.hour * 3600 + index.minute * 60 + index.second)
+                )
+            ): time
             for time in self._profile
         }
         return self._profile[delta_t_to_t_map[min(delta_t_to_t_map)]]
@@ -117,6 +128,20 @@ class _DailySolarIrradianceProfile:
         """
 
         self._profile[index] = value
+
+    def update(self, profile: Dict[datetime.time, float]) -> None:
+        """
+        Updates the internal profile with the mapping provided.
+
+        :param profile:
+            The profile to add to the currently-stored internal profile.
+
+        """
+
+        if self._profile is None:
+            self._profile = profile
+        else:
+            self._profile.update(profile)
 
 
 @dataclass
@@ -344,7 +369,7 @@ class WeatherForecaster:
         self,
         mains_water_temp: float,
         monthly_weather_data: Dict[str, Dict[str, Union[str, float]]],
-        solar_irradiance_data: Dict[int, Dict[int, Dict[datetime.time]]],
+        solar_irradiance_data: Dict[int, Dict[int, Dict[datetime.time, float]]],
     ) -> None:
         """
         Instantiate a weather forecaster class.
@@ -367,7 +392,11 @@ class WeatherForecaster:
         }
 
         for month, weather_data in self._monthly_weather_data.items():
-            weather_data.solar_irradiance_profile = solar_irradiance_data[month]
+            weather_data.solar_irradiance_profile = {
+                date.day: profile
+                for date, profile in solar_irradiance_data.items()
+                if date.month == month
+            }
 
     def __repr__(self) -> str:
         """
@@ -408,7 +437,7 @@ class WeatherForecaster:
 
         # * Check that all months are specified.
         try:
-            solar_insolation = data.pop("solar_insolation")
+            data.pop("solar_insolation")
         except KeyError:
             logger.error(
                 "Weather forecaster from %s is missing 'solar_insolation' data.",
@@ -438,27 +467,29 @@ class WeatherForecaster:
         # Extract the solar irradiance data from the files.
         solar_irradiance_data: Dict[
             int : Dict[int : Dict[datetime.time, float]]
-        ] = dict()
+        ] = collections.defaultdict(_DailySolarIrradianceProfile)
+        # Extract and open each file in series.
         for filename in solar_irradiance_filenames:
             with open(filename) as f:
                 filedata = json.load(f)
-                processed_filedata = {
-                    datetime.datetime.strptime(entry["time"], "%Y%m%d:%H%M"): entry[
-                        "G(i)"
-                    ]
-                    for entry in filedata["outputs"]["hourly"]
-                }
-                temp_dict = {
-                    key.month: {key.day: {datetime.time(key.hour, key.minute): value}}
-                    for key, value in processed_filedata
-                }
-                # Update with daily solar profiles
-                for month, monthly_data in temp_dict.items():
-                    for day, daily_data in monthly_data.items():
-                        temp_dict[month][day] = _DailySolarIrradianceProfile(daily_data)
+                # Compile a dictionary consisting of the combined data from all files.
+            processed_filedata = {
+                datetime.datetime.strptime(entry["time"], "%Y%m%d:%H%M"): entry["G(i)"]
+                for entry in filedata["outputs"]["hourly"]
+            }
 
-                # Update the running dictionary.
-                solar_irradiance_data.update(temp_dict)
+            # Create a temporary mapping of date to daily profile.
+            date_to_profile_mapping: Dict[
+                datetime.datetime : Dict
+            ] = collections.defaultdict(dict)
+            for date_and_time, irradiance in processed_filedata.items():
+                date_to_profile_mapping[date_and_time.date()].update(
+                    {date_and_time.time(): irradiance}
+                )
+
+            # Update the running dictionary.
+            for date, profile in date_to_profile_mapping.items():
+                solar_irradiance_data[date].update(profile)
 
         # Instantiate and return a Weather Forecaster based off of this weather data.
         return cls(mains_water_temp, data, solar_irradiance_data)
@@ -507,7 +538,9 @@ class WeatherForecaster:
 
         """
 
-        return self._monthly_weather_data[date_and_time.day][date_and_time.time()]
+        return self._monthly_weather_data[date_and_time.month].solar_irradiance_profile[
+            date_and_time.day
+        ][date_and_time.time()]
 
     def _ambient_temperature(
         self, latitude: float, longitude: float, date_and_time: datetime.datetime
