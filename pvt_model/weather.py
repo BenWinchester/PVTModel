@@ -618,7 +618,7 @@ class WeatherForecaster:
         )
 
         # * Compute the wind speed
-        wind_speed: float = 0
+        wind_speed: float = 5  # [m/s]
 
         # Compute the ambient temperature.
         ambient_temperature = self._ambient_temperature(

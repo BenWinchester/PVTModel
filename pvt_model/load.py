@@ -431,6 +431,10 @@ class LoadSystem:
                 profile_type, profile_data = _process_csv(data_file_name)
             elif data_file_name.endswith(".yaml"):
                 profile_type, profile_data = _process_yaml(data_file_name)
+            else:
+                raise ProgrammerJudgementFault(
+                    "Only .csv and .yaml files supported for load profiles."
+                )
             seasonal_load_profiles[profile_type].update(profile_data)
 
         return cls(seasonal_load_profiles)

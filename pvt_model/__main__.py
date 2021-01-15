@@ -59,7 +59,7 @@ LOAD_DATA_FILENAME = "loads_watts.yaml"
 # The initial date and time for the simultion to run from.
 INITIAL_DATE_AND_TIME = datetime.datetime(2014, 1, 1, 0, 0)
 # The initial temperature for the system to be instantiated at, measured in Kelvin.
-INITIAL_SYSTEM_TEMPERATURE = 293  # [K]
+INITIAL_SYSTEM_TEMPERATURE = 283  # [K]
 # THe initial temperature of the hot-water tank, at which it should be instantiated,
 # measured in Kelvin.
 INITIAL_TANK_TEMPERATURE = ZERO_CELCIUS_OFFSET + 34.75  # [K]
@@ -341,10 +341,11 @@ def _parse_args(args) -> argparse.Namespace:
         help="The output file to save data to. This should be of JSON format.",
     )
     parser.add_argument(
-        "--pv-cover",
+        "--portion-covered",
         "-pc",
         type=float,
-        help="The proportion of the collector which is covered with PV cells.",
+        help="The portion of the panel which is covered in PV, "
+        "from 1 (all) to 0 (none).",
     )
     parser.add_argument(
         "--pvt-data-file", "-p", help="The location of the PV-T system YAML data file."
@@ -565,6 +566,7 @@ def back_params_from_data(
 def pvt_panel_from_path(
     pvt_data_file: str,
     initial_collector_htf_tempertaure: float,
+    portion_covered: float,
     pv_layer_included: bool,
     unglazed: bool,
 ) -> pvt.PVT:
@@ -577,6 +579,9 @@ def pvt_panel_from_path(
     :param initial_collector_htf_tempertaure:
         The intial temperature, measured in Kelvin, of the HTF within the thermal
         collector.
+
+    :param portion_covered:
+        The portion of the PV-T panel which is covered in PV.
 
     :param pv_layer_included:
         Whether or not a PV layer is included in the panel.
@@ -621,6 +626,7 @@ def pvt_panel_from_path(
             collector_parameters,
             back_parameters,
             pvt_data["pvt_system"]["air_gap_thickness"],  # [m]
+            portion_covered,  # [unitless]
             pvt_data["pvt_system"]["pv_to_collector_conductance"],  # [W/m^2*K]
             datetime.timezone(
                 datetime.timedelta(hours=int(pvt_data["pvt_system"]["timezone"]))
@@ -830,6 +836,7 @@ def main(args) -> None:  # pylint: disable=too-many-locals
     pvt_panel = pvt_panel_from_path(
         parsed_args.pvt_data_file,
         INITIAL_SYSTEM_TEMPERATURE,
+        parsed_args.portion_covered,
         not parsed_args.no_pv,
         parsed_args.unglazed,
     )
@@ -939,7 +946,10 @@ def main(args) -> None:  # pylint: disable=too-many-locals
         # Propogate this information through to the heat exchanger and pass in the
         # tank s.t. it updates the tank correctly as well.
         # The tank heat gain here is measured in Joules.
-        input_water_temperature, tank_heat_gain = heat_exchanger.update(  # [K], [J]
+        (
+            updated_input_water_temperature,
+            tank_heat_gain,
+        ) = heat_exchanger.update(  # [K], [J]
             hot_water_tank,
             output_water_temperature,  # [K]
             pvt_panel.mass_flow_rate * parsed_args.internal_resolution,  # [kg]
@@ -1050,6 +1060,9 @@ def main(args) -> None:  # pylint: disable=too-many-locals
         # Dump the data generated to the output YAML file.
         _save_data(system_data_entry, parsed_args.output, FileType.YAML)
         system_data[run_number] = system_data_entry[run_number]
+
+        # Cycle around the water.
+        input_water_temperature = updated_input_water_temperature
 
     # Compute the carbon emissions and savings
     carbon_emissions = mains_supply.get_carbon_emissions(total_power_data)

@@ -56,7 +56,6 @@ __all__ = (
     "STEFAN_BOLTZMAN_CONSTANT",
     "THERMAL_CONDUCTIVITY_OF_AIR",
     "THERMAL_CONDUCTIVITY_OF_WATER",
-    "WIND_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT",
     "ZERO_CELCIUS_OFFSET",
 )
 
@@ -89,11 +88,6 @@ FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR: int = 25
 # The thermal conductivity of water is obtained from
 # http://hyperphysics.phy-astr.gsu.edu/hbase/Tables/thrcn.html
 THERMAL_CONDUCTIVITY_OF_WATER: float = 0.6  # [W/m*K]
-
-# The wind convective heat transfer coefficient. This should be temperature dependant,
-# @@@ Improve this.
-# This should be measured in Watts per Kelvin.
-WIND_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT = 5
 
 # The thermal conductivity of air is measured in Watts per meter Kelvin.
 # ! This is defined at 273 Kelvin.
@@ -649,6 +643,23 @@ class WeatherConditions:
 
         return 0.0552 * (self.ambient_temperature ** 1.5)
 
+    @property
+    def wind_heat_transfer_coefficient(self) -> float:
+        """
+        Determines the convective heat transfer coefficient, either free, or forced.
+
+        In the absence of any wind, the "free" wind_heat_transfer_coefficient is
+        returned. If there is wind present, then this parameter is known as the "forced"
+        wind_heat_transfer_coefficient.
+
+        :return:
+            The convective heat transfer coefficient due to the wind, measured in Watts
+            per meter squared Kelvin.
+
+        """
+
+        return 4.5 + 2.9 * self.wind_speed
+
     def __repr__(self) -> str:
         """
         Return a nice representation of the weather conditions.
@@ -665,7 +676,9 @@ class WeatherConditions:
             + "azimuthal_angle: {}, wind_speed: {}, ambient_temperature: {}, ".format(
                 self.azimuthal_angle, self.wind_speed, self.ambient_temperature
             )
-            + "sky_temperature: {}".format(self.sky_temperature)
+            + "sky_temperature: {}, wind_heat_transfer_coefficient: {0:2f})".format(
+                self.sky_temperature, self.wind_heat_transfer_coefficient
+            )
         )
 
 

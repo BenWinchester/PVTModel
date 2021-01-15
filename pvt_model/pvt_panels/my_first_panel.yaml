@@ -87,7 +87,7 @@ tedlar:
   thermal_conductivity: 0.2 # [W/m*K]
 collector:
   # *** The mass parameter may not be needed
-  mass: 108 # [kg]
+  mass: 13.44 # [kg]
   thickness: 0.0001 # [m]
   # *** The heat capacity is taken as that for copper
   heat_capacity: 386 # [J/kg*K]
@@ -95,7 +95,7 @@ collector:
   # [Citation needed]
   # 108 L/h is the value used by Maria for the mass flow rate - this is faster than many
   # conventional systems.
-  mass_flow_rate: 200 # [L/h]
+  mass_flow_rate: 108 # [L/h]
   # The diameter of the pipes, in meters.
   pipe_diameter: 0.01 # [m]
   # The number of pipe flowing along the back of the collector.
