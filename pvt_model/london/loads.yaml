@@ -606,6 +606,7 @@ electricity:
       "23:00": "0.5"
       "23:30": "0.42"
 
+# Hot-water values are stored in litres per hour.
 hot_water:
   seasonless:
     dayless:

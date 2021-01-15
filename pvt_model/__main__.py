@@ -30,16 +30,18 @@ import yaml
 
 from dateutil.relativedelta import relativedelta
 
-from . import efficiency, exchanger, load, pvt, tank, weather
+from . import efficiency, exchanger, load, mains_power, pvt, tank, weather
 from .__utils__ import (
     InvalidDataError,
     MissingDataError,
     MissingParametersError,
     BackLayerParameters,
+    CarbonEmissions,
     CollectorParameters,
     FileType,
     OpticalLayerParameters,
     PVParameters,
+    TotalPowerData,
     read_yaml,
     get_logger,
     HEAT_CAPACITY_OF_WATER,
@@ -55,7 +57,7 @@ SOLAR_IRRADIANCE_FOLDERNAME = "solar_irradiance_profiles"
 # Name of the load data file.
 LOAD_DATA_FILENAME = "loads_watts.yaml"
 # The initial date and time for the simultion to run from.
-INITIAL_DATE_AND_TIME = datetime.datetime(2020, 1, 1, 0, 0)
+INITIAL_DATE_AND_TIME = datetime.datetime(2014, 1, 1, 0, 0)
 # The initial temperature for the system to be instantiated at, measured in Kelvin.
 INITIAL_SYSTEM_TEMPERATURE = 293  # [K]
 # THe initial temperature of the hot-water tank, at which it should be instantiated,
@@ -266,6 +268,14 @@ def _parse_args(args) -> argparse.Namespace:
 
     parser = argparse.ArgumentParser()
 
+    parser.add_argument(
+        "--average-irradiance",
+        "-ar",
+        action="store_true",
+        default=False,
+        help="Whether to average the solar irradiance intensities on a monthly basis, "
+        "or to use the data for each day individually.",
+    )
     parser.add_argument(
         "--cloud-efficacy-factor",
         "-c",
@@ -704,7 +714,11 @@ def hot_water_tank_from_path(tank_data_file: str, mains_water_temp: float) -> ta
 
 
 def _save_data(
-    system_data: Dict[int, SystemData], output_file_name: str, file_type: FileType
+    system_data: Dict[int, SystemData],
+    output_file_name: str,
+    file_type: FileType,
+    total_power_data: Optional[TotalPowerData] = None,
+    carbon_emissions: Optional[CarbonEmissions] = None,
 ) -> None:
     """
     Save data when called. The data entry should be appended to the file.
@@ -717,6 +731,12 @@ def _save_data(
 
     :param file_type:
         The file type that's being saved.
+
+    :param total_power_data:
+        The total power data for the run.
+
+    :param carbon_emissions:
+        The carbon emissions data for the run.
 
     """
 
@@ -738,6 +758,10 @@ def _save_data(
                 "{}.{}".format(output_file_name, "json"),
                 "{}.{}.1".format(output_file_name, "json"),
             )
+        # Append the total power and emissions data for the run.
+        system_data.update(dataclasses.asdict(total_power_data))
+        system_data.update(dataclasses.asdict(carbon_emissions))
+
         # Save the data
         with open("{}.{}".format(output_file_name, "json"), "w") as f:
             json.dump(
@@ -786,13 +810,16 @@ def main(args) -> None:  # pylint: disable=too-many-locals
         )
     ]
     weather_forecaster = weather.WeatherForecaster.from_data(
+        parsed_args.average_irradiance,
         os.path.join(parsed_args.location, WEATHER_DATA_FILENAME),
         solar_irradiance_filenames,
     )
-    load_system = load.LoadSystem.from_yaml(
-        os.path.join(parsed_args.location, LOAD_DATA_FILENAME),
-        parsed_args.number_of_people,
-    )
+
+    load_profiles = {
+        os.path.join(parsed_args.location, "load_profiles", filename)
+        for filename in os.listdir(os.path.join(parsed_args.location, "load_profiles"))
+    }.union({os.path.join(parsed_args.location, LOAD_DATA_FILENAME)})
+    load_system = load.LoadSystem.from_data(load_profiles)
     logger.info(
         "Weather forecaster and load system successfully instantiated:\n  %s\n  %s",
         str(weather_forecaster),
@@ -810,6 +837,11 @@ def main(args) -> None:  # pylint: disable=too-many-locals
     heat_exchanger = heat_exchanger_from_path(parsed_args.exchanger_data_file)
     hot_water_tank = hot_water_tank_from_path(
         parsed_args.tank_data_file, weather_forecaster.mains_water_temp
+    )
+
+    # Intiailise the mains supply system.
+    mains_supply = mains_power.MainsSupply.from_yaml(
+        os.path.join(parsed_args.location, "utilities.yaml")
     )
 
     # Loop through all times and iterate the system.
@@ -845,6 +877,9 @@ def main(args) -> None:  # pylint: disable=too-many-locals
     # Set up a dictionary for storing the system data.
     system_data: Dict[int:SystemData] = dict()
 
+    # Set up a holder for the information.
+    total_power_data = TotalPowerData()
+
     logger.debug(
         "Beginning itterative model:\n  Running from: %s\n  Running to: %s",
         str(first_date_and_time),
@@ -876,20 +911,13 @@ def main(args) -> None:  # pylint: disable=too-many-locals
         # @ minutes worth of data. This therefore needs to be multipled by 30 * 60 / 2
         # pdb.set_trace(header="Looking at the electrical load.")
 
-        current_electrical_load = (
-            load_system.get_load_from_time(
-                parsed_args.internal_resolution,
-                load.ProfileType.ELECTRICITY,
-                date_and_time,
-            )  # [W] / [seconds per data resolution]
-            * 30  # [minutes/data resolution]
-            * 60  #  [s/minute]
-            / parsed_args.internal_resolution  # [model step adjustment]
-        )  # [Watts]
-        # @@@ Mad fix factor...
-        current_electrical_load = current_electrical_load * 8 / 7
-        current_hot_water_load = load_system.get_load_from_time(
-            parsed_args.internal_resolution, load.ProfileType.HOT_WATER, date_and_time
+        current_electrical_load = load_system[
+            (load.ProfileType.ELECTRICITY, date_and_time)
+        ]  # [Watts]
+        current_hot_water_load = (
+            load_system[(load.ProfileType.HOT_WATER, date_and_time)]  # [litres/hour]
+            * parsed_args.internal_resolution
+            / 3600  # [hours/internal time step]
         )  # [litres/time step]
 
         # logger.info(
@@ -947,14 +975,20 @@ def main(args) -> None:  # pylint: disable=too-many-locals
             * 100
         )  # [%]
 
+        thermal_output = (
+            current_hot_water_load
+            * HEAT_CAPACITY_OF_WATER
+            * (tank_output_water_temp - weather_forecaster.mains_water_temp)
+        )
+        thermal_demand = (
+            current_hot_water_load
+            * HEAT_CAPACITY_OF_WATER
+            * (HOT_WATER_DEMAND_TEMP - weather_forecaster.mains_water_temp)
+        )
+
         dc_thermal = (
             efficiency.dc_thermal(
-                thermal_output=current_hot_water_load
-                * HEAT_CAPACITY_OF_WATER
-                * (tank_output_water_temp - weather_forecaster.mains_water_temp),
-                thermal_demand=current_hot_water_load
-                * HEAT_CAPACITY_OF_WATER
-                * (HOT_WATER_DEMAND_TEMP - weather_forecaster.mains_water_temp),
+                thermal_output=thermal_output, thermal_demand=thermal_demand
             )
             * 100
         )  # [%]
@@ -962,8 +996,8 @@ def main(args) -> None:  # pylint: disable=too-many-locals
         # Store the information in the dictionary mapping between time step and data.
         system_data_entry = {
             run_number: SystemData(
-                date=f"{date_and_time.day}/{date_and_time.month}/{date_and_time.year}",
-                time=f"{date_and_time.hour:02d}:{date_and_time.minute:02d}:{date_and_time.second:02d}",
+                date=datetime.date.strftime(date_and_time, "%d/%m/%y"),
+                time=datetime.date.strftime(date_and_time, "%H:%M:%S"),
                 ambient_temperature=current_weather.ambient_temperature
                 - ZERO_CELCIUS_OFFSET,
                 sky_temperature=current_weather.sky_temperature - ZERO_CELCIUS_OFFSET,
@@ -1005,20 +1039,29 @@ def main(args) -> None:  # pylint: disable=too-many-locals
             )
         }
 
-        logger.info(
-            "System data determined at time %s: %s",
-            date_and_time,
-            system_data_entry[run_number],
+        total_power_data.increment(
+            pvt_panel.electrical_output(current_weather)
+            * parsed_args.internal_resolution,
+            current_electrical_load * parsed_args.internal_resolution,
+            thermal_output,
+            thermal_demand,
         )
 
         # Dump the data generated to the output YAML file.
         _save_data(system_data_entry, parsed_args.output, FileType.YAML)
         system_data[run_number] = system_data_entry[run_number]
 
-        logger.info("File updated. An additional entry was stored.")
+    # Compute the carbon emissions and savings
+    carbon_emissions = mains_supply.get_carbon_emissions(total_power_data)
 
     # Dump the data generated to the output JSON file.
-    _save_data(system_data, parsed_args.output, FileType.JSON)
+    _save_data(
+        system_data,
+        parsed_args.output,
+        FileType.JSON,
+        total_power_data,
+        carbon_emissions,
+    )
 
 
 if __name__ == "__main__":

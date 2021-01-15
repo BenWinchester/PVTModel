@@ -36,6 +36,7 @@ from .__utils__ import (
     LOGGER_NAME,
     MissingParametersError,
     ProgrammerJudgementFault,
+    BaseDailyProfile,
     WeatherConditions,
     read_yaml,
 )
@@ -52,96 +53,23 @@ RAND_RESOLUTION = 100
 logger = logging.getLogger(LOGGER_NAME)
 
 
-class _DailySolarIrradianceProfile:
+class _DailySolarIrradianceProfile(BaseDailyProfile):
     """
     Represents a day's solar irradiance profile.
 
     """
 
-    # Private Attributes:
-    # .. attribute:: _profile
-    #   A mapping of the time of day to the solar irradiance, measured in Watts per
-    #   meter squared, at that time.
-
-    def __init__(self, profile: Dict[datetime.time, float] = None) -> None:
+    @property
+    def profile(self) -> Dict[datetime.time, float]:
         """
-        Instantiate the daily solar irradiance profile.
-
-        :param profile:
-            The solar irradiance profile as a mapping between the time of day and the
-            solar irradiance, measured in Watts per meter squared.
-
-        """
-
-        if profile is None:
-            profile = dict()
-
-        if not isinstance(profile, dict):
-            raise ProgrammerJudgementFault(
-                "The solar irradiance profile provided is not a mapping of the correct type."
-            )
-
-        self._profile = profile
-
-    def __getitem__(self, index: datetime.time) -> float:
-        """
-        Return an irradiance value from the profile.
-
-        :param index:
-            The index of the item to return, must be a valid :class:`datetime.time`
-            instance.
+        Publically yields the internal "_profile" for average purposes.
 
         :return:
-            The solar irradiance at that time, measured in Watts per meter squared.
+            The profile as a mapping between time and value.
 
         """
 
-        if index in self._profile:
-            return self._profile[index]
-
-        # If the index is not in the profile, then the closest value needs to be
-        # determined. If there is a tie, this does not matter.
-        delta_t_to_t_map = {
-            (
-                abs(
-                    time.hour * 3600
-                    + time.minute * 60
-                    + time.second
-                    - (index.hour * 3600 + index.minute * 60 + index.second)
-                )
-            ): time
-            for time in self._profile
-        }
-        return self._profile[delta_t_to_t_map[min(delta_t_to_t_map)]]
-
-    def __setitem__(self, index: datetime.time, value: float) -> None:
-        """
-        Sets an item in the profile.
-
-        :param index:
-            The index, i.e., :class:`datetime.time` instance, for which to set the
-            irradiance.
-
-        :param value:
-            The irradiance value to set, measured in Watts per meter squared.
-
-        """
-
-        self._profile[index] = value
-
-    def update(self, profile: Dict[datetime.time, float]) -> None:
-        """
-        Updates the internal profile with the mapping provided.
-
-        :param profile:
-            The profile to add to the currently-stored internal profile.
-
-        """
-
-        if self._profile is None:
-            self._profile = profile
-        else:
-            self._profile.update(profile)
+        return self._profile
 
 
 @dataclass
@@ -182,7 +110,8 @@ class _MonthlyWeatherData:
     rainy_days: float
     day_temp: float
     night_temp: float
-    solar_irradiance_profile: Dict[int, _DailySolarIrradianceProfile] = None
+    solar_irradiance_profile: Optional[Dict[int, _DailySolarIrradianceProfile]] = None
+    _average_irradiance_profile: Optional[_DailySolarIrradianceProfile] = None
     sunrise: Optional[datetime.time] = None
     sunset: Optional[datetime.time] = None
 
@@ -244,6 +173,34 @@ class _MonthlyWeatherData:
                 "WeatherForecaster",
                 "Missing fields in YAML file. Error: {}".format(str(e)),
             ) from None
+
+    @property
+    def average_irradiance_profile(self) -> _DailySolarIrradianceProfile:
+        """
+        Returns the average daily solar irradiance profile for the month.
+
+        :return:
+            The average solar irradiance profile for the month as a
+            :class:`_DailySolarIrradianceProfile` instance.
+
+        """
+
+        if self._average_irradiance_profile is not None:
+            return self._average_irradiance_profile
+
+        average_irradiance_profile_counter = collections.Counter(dict())
+
+        for profile in self.solar_irradiance_profile.values():
+            average_irradiance_profile_counter += collections.Counter(profile.profile)
+
+        self._average_irradiance_profile = _DailySolarIrradianceProfile(
+            {
+                key: value / len(average_irradiance_profile_counter)
+                for key, value in dict(average_irradiance_profile_counter).items()
+            }
+        )
+
+        return self._average_irradiance_profile
 
 
 def _get_solar_angles(
@@ -346,6 +303,10 @@ class WeatherForecaster:
 
     # Private attributes:
     #
+    # .. attribute:: _average_irradiance
+    #   A `bool` giving whether to average the solar irradiance intensities (True), or
+    #   use the data for each day as called (False).
+    #
     # .. attribute:: _month_abbr_to_num
     #   A mapping from month abbreviated name (eg, "jan", "feb" etc) to the number of
     #   the month in the year.
@@ -367,6 +328,7 @@ class WeatherForecaster:
 
     def __init__(
         self,
+        average_irradiance: bool,
         mains_water_temp: float,
         monthly_weather_data: Dict[str, Dict[str, Union[str, float]]],
         solar_irradiance_data: Dict[int, Dict[int, Dict[datetime.time, float]]],
@@ -374,13 +336,22 @@ class WeatherForecaster:
         """
         Instantiate a weather forecaster class.
 
+        :param average_irradiance:
+            Whether to average the solar intensity for each month (True), or use the
+            data for each day (False) as required.
+
         :param mains_water_temp:
             The mains water temperature, measured in Kelvin.
 
         :param monthly_weather_data:
             The monthly weather data, extracted raw from the weather data YAML file.
 
+        :param solar_irradiance_data:
+            A mapping between month, day, and solar irradiance intensity.
+
         """
+
+        self._average_irradiance = average_irradiance
 
         self.mains_water_temp = mains_water_temp + ZERO_CELCIUS_OFFSET
 
@@ -413,10 +384,17 @@ class WeatherForecaster:
 
     @classmethod
     def from_data(
-        cls, weather_data_path: str, solar_irradiance_filenames: List[str]
+        cls,
+        average_irradiance: bool,
+        weather_data_path: str,
+        solar_irradiance_filenames: List[str],
     ) -> Any:
         """
         Instantiate a :class:`WeatherForecaster` from paths to various data files.
+
+        :param average_irradiance:
+            Whether to average the solar irradiances wihtin each month (True), or use
+            the value for each day specifically when called (False).
 
         :param weather_data_path:
             The path to the weather-data file. This contains basic information about the
@@ -492,7 +470,7 @@ class WeatherForecaster:
                 solar_irradiance_data[date].update(profile)
 
         # Instantiate and return a Weather Forecaster based off of this weather data.
-        return cls(mains_water_temp, data, solar_irradiance_data)
+        return cls(average_irradiance, mains_water_temp, data, solar_irradiance_data)
 
     def _cloud_cover(
         self, cloud_efficacy_factor: float, date_and_time: datetime.datetime
@@ -537,6 +515,11 @@ class WeatherForecaster:
             The solar irradiance, in Watts per meter squared.
 
         """
+
+        if self._average_irradiance:
+            return self._monthly_weather_data[
+                date_and_time.month
+            ].average_irradiance_profile[date_and_time.time()]
 
         return self._monthly_weather_data[date_and_time.month].solar_irradiance_profile[
             date_and_time.day

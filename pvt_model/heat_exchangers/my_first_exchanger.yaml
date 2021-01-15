@@ -10,4 +10,3 @@ efficiency: 0.4 # [unitless]
 # The number of heat-transfer units in the exchanger. The efficiency of the heat
 # exchanger depends on this property.
 number_of_transfer_units: 4 # [unitless]
-
