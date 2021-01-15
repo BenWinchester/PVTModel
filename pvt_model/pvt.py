@@ -1595,7 +1595,7 @@ class PVT:
         return (
             self.electrical_efficiency
             * self.get_solar_irradiance(weather_conditions)
-            * self.area
+            * self._pv.area
             if self.electrical_efficiency is not None
             else 0
         )
