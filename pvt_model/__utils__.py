@@ -36,6 +36,7 @@ __all__ = (
     "BaseDailyProfile",
     "CarbonEmissions",
     "CollectorParameters",
+    "Date",
     "FileType",
     "GraphDetail",
     "LayerParameters",
@@ -327,10 +328,10 @@ class GraphDetail(enum.Enum):
     """
 
     highest = 0
-    high = 1
-    medium = 2
-    low = 3
-    lowest = 4
+    high = 2880
+    medium = 720
+    low = 144
+    lowest = 48
 
 
 class FileType(enum.Enum):
@@ -482,6 +483,52 @@ class BaseDailyProfile:
             self._profile = profile
         else:
             self._profile.update(profile)
+
+
+@dataclass
+class Date:
+    """
+    Represents a date, containing informaiton about the month and day.
+
+    .. attribute:: day
+        The day of the month, ranging from 1 to 31, expressed as an `int`.
+
+    .. attribute:: month
+        The month of the year, expressed as an `int`.
+
+    """
+
+    day: int
+    month: int
+
+    def __hash__(self) -> int:
+        """
+        Returns a hash of the :class:`Date`.
+
+        This is calulated using the inbuilt hashability of the datetime.date module.
+
+        :return:
+            A unique hash.
+
+        """
+
+        return hash(datetime.date(2000, self.month, self.day))
+
+    @classmethod
+    def from_date(cls, date: datetime.date) -> Any:
+        """
+        Instantiates a :class:`Date` instance based on a :class:`datetime.date` object.
+
+        :param date:
+            The date from which to instantiate this :class:`Date` instance.
+
+        :return:
+            An instantiated :class:`Date` instanced based on the information attached
+            to the :class:`datetime.date` instance passed in.
+
+        """
+
+        return cls(date.day, date.month)
 
 
 @dataclass

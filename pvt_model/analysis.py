@@ -4,7 +4,6 @@ Does some analysis.
 
 """
 
-import logging
 import os
 import pdb
 
@@ -12,22 +11,21 @@ from typing import Any, List, Dict, Optional, Tuple
 
 import json
 import re
-import yaml
 
 from matplotlib import pyplot as plt
 
-from __utils__ import ProgrammerJudgementFault, GraphDetail, get_logger
+from __utils__ import GraphDetail, get_logger, HEAT_CAPACITY_OF_WATER
 
 # The directory in which old figures are saved
 OLD_FIGURES_DIRECTORY: str = "old_figures"
-# How many values there should be between each tick on the x-axis
-X_TICK_SEPARATION: int = 8
 # How detailed the graph should be
 GRAPH_DETAIL: GraphDetail = GraphDetail.lowest
+# How many values there should be between each tick on the x-axis
+X_TICK_SEPARATION: int = int(8 * GRAPH_DETAIL.value / 48)
 # Which days of data to include
 DAYS_TO_INCLUDE: List[bool] = [False, True]
 # The name of the data file to use.
-DATA_FILE_NAME = "data_output_two_july_days_rerunning.json"
+DATA_FILE_NAME = "data_output_july_day_new_method_average_irradiance_2.json"
 
 
 def _resolution_from_graph_detail(
@@ -52,54 +50,19 @@ def _resolution_from_graph_detail(
     """
 
     # * For "lowest", include one point every half-hour.
-    if graph_detail == GraphDetail.lowest:
-        if int(num_data_points / 48) != num_data_points / 48:
-            raise ProgrammerJudgementFault(
-                "The number of data points recorded is not divisible by 48."
-            )
-        return int(num_data_points / 48)
+    if graph_detail == GraphDetail.highest:
+        return 1
 
-    # * For "low", include one point every ten minutes
-    if graph_detail == GraphDetail.low:
-        if int(num_data_points / (24 * 6)) != num_data_points / (24 * 6):
-            raise ProgrammerJudgementFault(
-                "The number of data points recorded is not divisible by {}.".format(
-                    str(24 * 6)
-                )
-            )
-        return int(num_data_points / (24 * 6))
-
-    # * For "medium", include one point every two minutes
-    if graph_detail == GraphDetail.medium:
-        if int(num_data_points / (24 * 30)) != num_data_points / (24 * 30):
-            raise ProgrammerJudgementFault(
-                "The number of data points recorded is not divisible by {}.".format(
-                    str(24 * 30)
-                )
-            )
-        return int(num_data_points / (24 * 30))
-
-    # * For "high", include one point every thirty seconds
-    if graph_detail == GraphDetail.high:
-        if int(num_data_points / (24 * 60 * 2)) != num_data_points / (24 * 60 * 2):
-            raise ProgrammerJudgementFault(
-                "The number of data points recorded is not divisible by {}.".format(
-                    str(24 * 60 * 2)
-                )
-            )
-        return int(num_data_points / (24 * 60 * 2))
-
-    # * For highest, include all data points
-    return 1
+    return int(num_data_points / graph_detail.value)
 
 
 def _reduce_data(
-    data: Dict[str, Dict[Any, Any]], graph_detail: GraphDetail
+    data_to_reduce: Dict[str, Dict[Any, Any]], graph_detail: GraphDetail
 ) -> Dict[str, Dict[Any, Any]]:
     """
     This processes the data, using sums to reduce the resolution so it can be plotted.
 
-    :param data:
+    :param data_to_reduce:
         The raw, JSON data, contained within a `dict`.
 
     :param graph_detail:
@@ -113,25 +76,29 @@ def _reduce_data(
 
     # * First, only include the bits of data we want.
     # @@@ This only works for two days so far:
-    data = dict(list(data.items())[int(len(data) / 2) :])
-    data = {str(int(key) - 86400): value for key, value in data.items()}
+    # data = dict(list(data.items())[int(len(data) / 2) :])
+    # data = {
+    #     str(int(key) - 86400): value
+    #     for key, value in data.items()
+    # }
 
     data_points_per_graph_point: int = _resolution_from_graph_detail(
-        graph_detail, len(data)
+        graph_detail, len(data_to_reduce)
     )
 
-    reduced_data: Dict[str : Dict[Any, Any]] = {
-        index: dict() for index in range(int(len(data) / data_points_per_graph_point))
+    reduced_data: Dict[str, Dict[Any, Any]] = {
+        index: dict()
+        for index in range(int(len(data_to_reduce) / data_points_per_graph_point))
     }
 
     # Depending on the type of data entry, i.e., whether it is a temperature, load,
     # demand covered, or irradiance (or other), the way that it is processed will vary.
-    for data_entry_name in data["0"].keys():
+    for data_entry_name in data_to_reduce["0"].keys():
         # pdb.set_trace(header="Beginning of reduction loop.")
         # * If the entry is a date or time, just take the value
         if data_entry_name in ["date", "time"]:
             for index, _ in enumerate(reduced_data):
-                reduced_data[index][data_entry_name] = data[
+                reduced_data[index][data_entry_name] = data_to_reduce[
                     str(index * data_points_per_graph_point)
                 ][data_entry_name]
             continue
@@ -141,15 +108,14 @@ def _reduce_data(
         if any(
             [
                 key in data_entry_name
-                for key in ["temperature", "irradiance", "efficiency", "electrical"]
-                if key != "dc_electrical"
+                for key in ["temperature", "irradiance", "efficiency"]
             ]
         ):
             try:
                 for outer_index, _ in enumerate(reduced_data):
                     reduced_data[outer_index][data_entry_name] = sum(
                         [
-                            float(data[str(inner_index)][data_entry_name])
+                            float(data_to_reduce[str(inner_index)][data_entry_name])
                             / data_points_per_graph_point
                             for inner_index in range(
                                 int(data_points_per_graph_point * outer_index),
@@ -165,27 +131,65 @@ def _reduce_data(
                 continue
 
         # * If the data entry is a load, then take a sum
-        if any([key in data_entry_name for key in ["load", "output"]]):
+        elif any([key in data_entry_name for key in ["load", "output"]]):
+            # @@@
+            # FIXME
+            # * Here, the data is divided by 3600 to convert from Joules to Watt Hours.
+            # * This only works provided that we are dealing with values in Joules...
             for outer_index, _ in enumerate(reduced_data):
-                reduced_data[outer_index][data_entry_name] = sum(
-                    [
-                        float(data[str(inner_index)][data_entry_name])
-                        for inner_index in range(
-                            int(data_points_per_graph_point * outer_index),
-                            int(data_points_per_graph_point * (outer_index + 1)),
-                        )
-                    ]
+                reduced_data[outer_index][data_entry_name] = (
+                    sum(
+                        [
+                            float(data_to_reduce[str(inner_index)][data_entry_name])
+                            for inner_index in range(
+                                int(data_points_per_graph_point * outer_index),
+                                int(data_points_per_graph_point * (outer_index + 1)),
+                            )
+                        ]
+                    )
+                    / 3600
                 )
             continue
 
         # * Otherwise, we just use the data point.
         for index, _ in enumerate(reduced_data):
-            reduced_data[index][data_entry_name] = data[
+            reduced_data[index][data_entry_name] = data_to_reduce[
                 str(index * data_points_per_graph_point)
             ][data_entry_name]
         continue
 
     return reduced_data
+
+
+def _post_process_data(
+    data_to_post_process: Dict[str, Dict[Any, Any]]
+) -> Dict[str, Dict[Any, Any]]:
+    """
+    Carries out post-processing on data where necessary.
+
+    Things to be computed:
+        - Bulk Water Temperautre
+        - Litres consumed
+
+    :param data_to_post_process:
+        The data to be post processed.
+
+    :return:
+        The post-processed data.
+
+    """
+
+    # * Cycle through all the data points and compute the new values as needed.
+    for data_entry in data_to_post_process.values():
+        data_entry["bulk_water_temperature"] = (
+            data_entry["collector_input_temperature"]
+            + data_entry["collector_output_temperature"]
+        ) / 2
+        # Conversion needed from Wh to Joules.
+        data_entry["litres_consumed"] = (
+            data_entry["thermal_load"] / (HEAT_CAPACITY_OF_WATER * 50) * 3600
+        )
+    return data_to_post_process
 
 
 def load_model_data(filename: str) -> Dict[Any, Any]:
@@ -202,6 +206,55 @@ def load_model_data(filename: str) -> Dict[Any, Any]:
 
     with open(filename, "r") as f:
         return json.load(f)
+
+
+def _annotate_maximum(
+    model_data: Dict[Any, Any], x_lab: str, y_axis_labels: List[str], axis
+) -> None:
+    """
+    Annotates the maximum value on a plot.
+
+    .. citation:: Taken with permission from:
+    https://stackoverflow.com/questions/43374920/how-to-automatically-annotate-maximum-value-in-pyplot/43375405
+
+    :param data:
+        The model data to find the maxima from.
+
+    :param x_lab:
+        The x-axis label to display.
+
+    :param y_axis_labels:
+        Labels for the y axis to process.
+
+    :param axis:
+        The axis object, if relevant.
+
+    """
+
+    # * For each series, determine the maximum data points:
+    box_text = ""
+    x_series = [data_entry["time"] for data_entry in model_data.values()]
+    for y_lab in y_axis_labels:
+        y_series = [data_entry[y_lab] for data_entry in model_data.values()]
+        x_max = x_series[max(enumerate(y_series))[0]]
+        y_max = max(y_series)
+        box_text += f"max({y_lab})={y_max:.2f} at {x_max}\n"
+    box_text.strip()
+
+    # Fetch the axis if necessary.
+    if not axis:
+        axis = plt.gca()
+    bbox_props = dict(boxstyle="square,pad=0.3", fc="w", ec="k", lw=0.72)
+    arrowprops = dict(arrowstyle="->", connectionstyle="angle,angleA=0,angleB=85")
+    kwargs = dict(
+        xycoords="data",
+        textcoords="axes fraction",
+        arrowprops=arrowprops,
+        bbox=bbox_props,
+        ha="right",
+        va="top",
+    )
+    axis.annotate(box_text, xy=(x_max, y_max), xytext=(0.8, 0.8), **kwargs)
 
 
 def plot(
@@ -230,11 +283,11 @@ def plot(
     :param model_data:
         The model_data, loaded from the model's output file.
 
-    :param hold:
-        Whether to hold the screen between plots (True) or reset it (False).
-
     :param axes:
         If provided, a separate axis is used for plotting the model_data.
+
+    :param hold:
+        Whether to hold the screen between plots (True) or reset it (False).
 
     :param shape:
         This sets the shape of the marker for `matplotlib.pyplot` to use when plotting
@@ -295,10 +348,6 @@ def save_figure(figure_name: str) -> None:
     filenames = sorted(os.listdir(OLD_FIGURES_DIRECTORY))
     filenames.reverse()
 
-    # import pdb
-
-    # pdb.set_trace()
-
     # Incriment all files in the old_figures directory.
     for filename in filenames:
         file_match = re.match(file_regex, filename)
@@ -339,6 +388,7 @@ def plot_figure(
     second_axis_things_to_plot: Optional[List[str]] = None,
     second_axis_label: Optional[str] = None,
     second_axis_y_limits: Optional[Tuple[int, int]] = None,
+    annotate_maximum: bool = False,
 ) -> None:
     """
     Does all the work needed to plot a figure with up to two axes and save it.
@@ -369,6 +419,9 @@ def plot_figure(
         A `tuple` giving the lower and upper limits to set for the y axis for the second
         axis.
 
+    :param annotate_maximum:
+        If specified, the maximum will be plotted on the graph.
+
     """
 
     # Generate the necessary local variables needed for sub-plotting.
@@ -390,6 +443,15 @@ def plot_figure(
     # Set the y limits if appropriate
     if first_axis_y_limits is not None:
         plt.ylim(*first_axis_y_limits)
+
+    # Plot a maximum value box if requested
+    if annotate_maximum:
+        _annotate_maximum(
+            model_data,
+            "Time",
+            first_axis_things_to_plot,
+            ax1,
+        )
 
     # Save the figure and return if only one axis is plotted.
     if second_axis_things_to_plot is None:
@@ -422,12 +484,19 @@ def plot_figure(
     if second_axis_y_limits is not None:
         plt.ylim(*second_axis_y_limits)
 
+    # Plot a maximum value box if requested
+    if annotate_maximum:
+        _annotate_maximum(
+            model_data,
+            "Time",
+            second_axis_things_to_plot,
+            ax2,
+        )
+
     save_figure(figure_name)
 
 
 if __name__ == "__main__":
-
-    # pdb.set_trace(header="Start of main function.")
 
     # * Set up the logger
     logger = get_logger("pvt_analysis")
@@ -438,7 +507,111 @@ if __name__ == "__main__":
     # * Reduce the resolution of the data.
     data = _reduce_data(data, GRAPH_DETAIL)
 
-    # * Plotting all tank-related temperatures
+    # * Create new data values where needed.
+    data = _post_process_data(data)
+
+    # Plot Figure 4a: Electrical Demand
+    plot_figure(
+        "maria_4a_electrical_load",
+        data,
+        ["electrical_load"],
+        "Dwelling Load Profile / W",
+    )
+
+    # Plot Figure 4b: Thermal Demand
+    plot_figure(
+        "maria_4b_thermal_load",
+        data,
+        ["litres_consumed"],
+        "Hot Water Consumption / Litres",
+    )
+
+    # Plot Figure 5a: Diurnal Solar Irradiance
+    plot_figure(
+        "maria_5a_solar_irradiance",
+        data,
+        [
+            "solar_irradiance",
+            # "normal_irradiance"
+        ],
+        "Solar Irradiance / Watts / meter squared",
+        annotate_maximum=True,
+    )
+
+    # Plot Figure 5b: Ambient Temperature
+    plot_figure(
+        "maria_5b_ambient_temperature",
+        data,
+        first_axis_things_to_plot=["ambient_temperature", "sky_temperature"],
+        first_axis_label="Temperature / deg C",
+    )
+
+    # Plot Figure 6a: Panel-related Temperatures
+    plot_figure(
+        "maria_6a_panel_temperature",
+        data,
+        first_axis_things_to_plot=[
+            "ambient_temperature",
+            "bulk_water_temperature",
+            "collector_temperature",
+            "glass_temperature",
+            "pv_temperature",
+            "sky_temperature",
+        ],
+        first_axis_label="Temperature / deg C",
+        annotate_maximum=True,
+    )
+
+    # Plot Figure 6b: Tank-related Temperatures
+    plot_figure(
+        "maria_6b_tank_temperature",
+        data,
+        first_axis_things_to_plot=[
+            "collector_input_temperature",
+            "collector_output_temperature",
+            "tank_temperature",
+        ],
+        first_axis_label="Temperature / deg C",
+    )
+
+    # Plot Figure 7: Stream-related Temperatures
+    plot_figure(
+        "maria_7_stream_temperature",
+        data,
+        first_axis_things_to_plot=[
+            "collector_temperature_gain",
+            "exchanger_temperature_drop",
+        ],
+        first_axis_label="Temperature Gain / deg C",
+        second_axis_things_to_plot=["tank_heat_addition"],
+        second_axis_label="Tank Heat Addition / W",
+    )
+
+    # Plot Figure 8A - Electrical Power and Net Electrical Power
+    plot_figure(
+        "maria_8a_electrical_output",
+        data,
+        ["gross_electrical_output", "net_electrical_output"],
+        "Electrical Energy Supplied / Wh",
+    )
+
+    # Plot Figure 8B - Thermal Power Supplied and Thermal Power Demanded
+    plot_figure(
+        "maria_8b_thermal_output",
+        data,
+        ["thermal_load", "thermal_output"],
+        "Thermal Energy Supplied / Wh",
+    )
+
+    # Plot Figure 10 - Electrical Power, Gross only
+    plot_figure(
+        "maria_10_gross_electrical_output",
+        data,
+        ["gross_electrical_output"],
+        "Electrical Energy Supplied / Wh",
+    )
+
+    """# * Plotting all tank-related temperatures
     plot_figure(
         "tank_temperature",
         data,
@@ -519,15 +692,7 @@ if __name__ == "__main__":
         first_axis_label="Demand Covered / %",
         first_axis_y_limits=(0, 100),
         second_axis_things_to_plot=["thermal_load", "thermal_output"],
-        second_axis_label="Thermal Power / Watts",
-    )
-
-    # * Plotting the solar irradiance and irradiance normal to the panel
-    plot_figure(
-        "solar_irradiance",
-        data,
-        ["solar_irradiance", "normal_irradiance"],
-        "Solar Irradiance / Watts / meter squared",
+        second_axis_label="Thermal Energy Supplied / Wh",
     )
 
     # * Plotting the auxiliary heating required along with the thermal load on the
@@ -539,31 +704,7 @@ if __name__ == "__main__":
         first_axis_things_to_plot=["auxiliary_heating", "tank_heat_addition"],
         first_axis_label="Auxiliary Heating and Tank Heat Addition / Watts",
         second_axis_things_to_plot=["thermal_load", "thermal_output"],
-        second_axis_label="Thermal Power / Watts",
-    )
-
-    # * Plotting Maria's figure 8A - Electrical Power and Net Electrical Power
-    plot_figure(
-        "electrical_output_8A",
-        data,
-        ["gross_electrical_output", "net_electrical_output"],
-        "Electrical Power Output / W",
-    )
-
-    # * Plotting Maria's figure 10 - Electrical Power
-    plot_figure(
-        "gross_electrical_output_10",
-        data,
-        ["gross_electrical_output"],
-        "Electrical Power Output / W",
-    )
-
-    # * Plotting Maria's figure 8B - Thermal Power Supplied and Thermal Power Demanded
-    plot_figure(
-        "thermal_output_8B",
-        data,
-        ["thermal_load", "thermal_output"],
-        "Thermal Power Output / W",
+        second_axis_label="Thermal Energy Supplied / Wh",
     )
 
     # * Plotting the collector input, output, gain, and temperature.
@@ -594,10 +735,4 @@ if __name__ == "__main__":
 
     # * Plotting the tank temperature, collector temperature, and heat inputted into the
     # * tank.
-    plot_figure(
-        "ambient_temperature",
-        data,
-        first_axis_things_to_plot=["ambient_temperature", "sky_temperature"],
-        first_axis_label="Temperature / deg C",
-        first_axis_y_limits=(0, 100),
-    )
+"""

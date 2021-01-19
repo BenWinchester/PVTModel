@@ -37,6 +37,7 @@ from .__utils__ import (
     MissingParametersError,
     ProgrammerJudgementFault,
     BaseDailyProfile,
+    Date,
     WeatherConditions,
     read_yaml,
 )
@@ -347,7 +348,7 @@ class WeatherForecaster:
             The monthly weather data, extracted raw from the weather data YAML file.
 
         :param solar_irradiance_data:
-            A mapping between month, day, and solar irradiance intensity.
+            A mapping between :class:`__utils__.Date` instances and irradiance profiles.
 
         """
 
@@ -444,7 +445,7 @@ class WeatherForecaster:
 
         # Extract the solar irradiance data from the files.
         solar_irradiance_data: Dict[
-            int : Dict[int : Dict[datetime.time, float]]
+            Date : Dict[datetime.time, float]
         ] = collections.defaultdict(_DailySolarIrradianceProfile)
         # Extract and open each file in series.
         for filename in solar_irradiance_filenames:
@@ -457,11 +458,9 @@ class WeatherForecaster:
             }
 
             # Create a temporary mapping of date to daily profile.
-            date_to_profile_mapping: Dict[
-                datetime.datetime : Dict
-            ] = collections.defaultdict(dict)
+            date_to_profile_mapping: Dict[Date:Dict] = collections.defaultdict(dict)
             for date_and_time, irradiance in processed_filedata.items():
-                date_to_profile_mapping[date_and_time.date()].update(
+                date_to_profile_mapping[Date.from_date(date_and_time.date())].update(
                     {date_and_time.time(): irradiance}
                 )
 

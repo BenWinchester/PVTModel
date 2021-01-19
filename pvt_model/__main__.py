@@ -57,7 +57,7 @@ SOLAR_IRRADIANCE_FOLDERNAME = "solar_irradiance_profiles"
 # Name of the load data file.
 LOAD_DATA_FILENAME = "loads_watts.yaml"
 # The initial date and time for the simultion to run from.
-INITIAL_DATE_AND_TIME = datetime.datetime(2014, 1, 1, 0, 0)
+INITIAL_DATE_AND_TIME = datetime.datetime(2005, 1, 1, 0, 0)
 # The initial temperature for the system to be instantiated at, measured in Kelvin.
 INITIAL_SYSTEM_TEMPERATURE = 283  # [K]
 # THe initial temperature of the hot-water tank, at which it should be instantiated,
@@ -110,37 +110,13 @@ class SystemData:
     """
     Contains PVT system data at a given time step.
 
-    .. attribute:: date
-        The date.
-
-    .. attribute:: time
-        The time.
-
     .. attribute:: ambient_temperature
         The ambient temperature, in Celcius.
 
-    .. attribute:: sky_temperature
-        The sky temperature, radiatively, in Celcius.
-
-    .. attribute:: solar_irradiance
-        The solar irradiance in Watts per meter squared.
-
-    .. attribute:: normal_irradiance
-        The solar irradiance, in Watts, normal to the panel.
-
-    .. attribute:: glass_temperature
-        The temperatuer of the glass layer of the panel, measured in Celcius.
-
-    .. attribute:: pv_temperature
-        The temperature of the PV layer of the panel, measured in Celcius. This is set
-        to `None` if no PV layer is present.
-
-    .. attribute:: pv_efficiency
-        The efficiency of the PV panel, defined between 0 and 1. This is set to `None`
-        if no PV layer is present.
-
-    .. attribute:: collector_temperature
-        The temperature of the thermal collector, measured in Celcius.
+    .. attribute:: auxiliary_heating
+        The additional energy needed to be supplied to the system through the auxiliary
+        heater when the tank temperature is below the required thermal output
+        temperature, measured in Watts.
 
     .. attribute:: collector_input_temperature
         The temperature of water flowing into the collector, measured in Celcius.
@@ -148,22 +124,67 @@ class SystemData:
     .. attribute:: collector_output_temperature
         The temperature of the HTF outputted from the collector, measured in Celcius.
 
+    .. attribute:: collector_temperature
+        The temperature of the thermal collector, measured in Celcius.
+
     .. attribute:: collector_temperature_gain
         The temperature gain of the HTF through the collector, measured in Celcius.
 
-    .. attribute:: tank_temperature
-        The temperature of the water within the hot-water tank, measured in Celcius.
+    .. attribute:: date
+        The date, formatted as "DD/MM/YYYY".
+
+    .. attribute:: dc_electrical
+        The electrical demand covered, defined between 0 and 1.
+
+    .. attribute:: dc_thermal
+        The thermal demand covered, defined between 0 and 1.
+
+    .. attribute:: electrical_load
+        The load (demand) placed on the PV-T panel's electrical output, measured in
+        Watts.
+
+    .. attribute:: exchanger_temperature_drop
+        The temperature drop, in Kelvin, across the heat exchanger.
+
+    .. attribute:: glass_temperature
+        The temperatuer of the glass layer of the panel, measured in Celcius.
+
+    .. attribute:: gross_electrical_output
+        The electrical power produced by the panel, measured in Watts.
+
+    .. attribute:: net_electrical_output
+        The electrical power produced by the panel which is in excess of the demand
+        required by the household. IE: gross - demand. This is measured in Watts.
+
+    .. attribute:: normal_irradiance
+        The solar irradiance, in Watts, normal to the panel.
+
+    .. attribute:: pv_efficiency
+        The efficiency of the PV panel, defined between 0 and 1. This is set to `None`
+        if no PV layer is present.
+
+    .. attribute:: pv_temperature
+        The temperature of the PV layer of the panel, measured in Celcius. This is set
+        to `None` if no PV layer is present.
+
+    .. attribute:: sky_temperature
+        The sky temperature, radiatively, in Celcius.
+
+    .. attribute:: solar_irradiance
+        The solar irradiance in Watts per meter squared.
+
+    .. attribute:: time
+        The time.
+
+    .. attribute:: tank_heat_addition
+        The heat added to the tank, in Watts.
 
     .. attribute:: tank_output_temperature
         The temperature of the water outputted from the hot-water tank, measured in
         Celcius.
 
-    .. attribute:: tank_heat_addition
-        The heat added to the tank, in Watts.
-
-    .. attribute:: electrical_load
-        The load (demand) placed on the PV-T panel's electrical output, measured in
-        Watts.
+    .. attribute:: tank_temperature
+        The temperature of the water within the hot-water tank, measured in Celcius.
 
     .. attribute:: thermal_load
         The load (demand) placed on the hot-water tank's thermal output, measured in
@@ -173,50 +194,33 @@ class SystemData:
         The thermal output from the PV-T system supplied - this is really a combnination
         of the demand required and the temperature of the system, measured in Watts.
 
-    .. attribute:: auxiliary_heating
-        The additional energy needed to be supplied to the system through the auxiliary
-        heater when the tank temperature is below the required thermal output
-        temperature, measured in Watts.
-
-    .. attribute:: gross_electrical_output
-        The electrical power produced by the panel, measured in Watts.
-
-    .. attribute:: net_electrical_output
-        The electrical power produced by the panel which is in excess of the demand
-        required by the household. IE: gross - demand. This is measured in Watts.
-
-    .. attribute:: dc_electrical
-        The electrical demand covered, defined between 0 and 1.
-
-    .. attribute:: dc_thermal
-        The thermal demand covered, defined between 0 and 1.
-
     """
 
-    date: str
-    time: str
     ambient_temperature: float
-    sky_temperature: float
-    solar_irradiance: float
-    normal_irradiance: float
-    glass_temperature: Optional[float]
-    pv_temperature: Optional[float]
-    pv_efficiency: Optional[float]
-    collector_temperature: float
+    auxiliary_heating: float
     collector_input_temperature: float
     collector_output_temperature: float
+    collector_temperature: float
     collector_temperature_gain: float
-    tank_temperature: float
-    tank_output_temperature: float
-    tank_heat_addition: float
+    date: str
+    dc_electrical: Optional[float]
+    dc_thermal: Optional[float]
     electrical_load: float
-    thermal_load: float
-    thermal_output: float
-    auxiliary_heating: float
+    exchanger_temperature_drop: float
+    glass_temperature: Optional[float]
     gross_electrical_output: float
     net_electrical_output: float
-    dc_electrical: Optional[float] = None
-    dc_thermal: Optional[float] = None
+    normal_irradiance: float
+    pv_temperature: Optional[float]
+    pv_efficiency: Optional[float]
+    sky_temperature: float
+    solar_irradiance: float
+    tank_heat_addition: float
+    tank_temperature: float
+    tank_output_temperature: float
+    thermal_load: float
+    thermal_output: float
+    time: str
 
     def __str__(self) -> str:
         """
@@ -1006,32 +1010,39 @@ def main(args) -> None:  # pylint: disable=too-many-locals
         # Store the information in the dictionary mapping between time step and data.
         system_data_entry = {
             run_number: SystemData(
-                date=datetime.date.strftime(date_and_time, "%d/%m/%y"),
-                time=datetime.date.strftime(date_and_time, "%H:%M:%S"),
                 ambient_temperature=current_weather.ambient_temperature
                 - ZERO_CELCIUS_OFFSET,
-                sky_temperature=current_weather.sky_temperature - ZERO_CELCIUS_OFFSET,
-                solar_irradiance=current_weather.irradiance,
-                normal_irradiance=pvt_panel.get_solar_irradiance(current_weather),
-                glass_temperature=pvt_panel.glass_temperature - ZERO_CELCIUS_OFFSET  # type: ignore
-                if pvt_panel.glazed
-                else None,
-                pv_temperature=pvt_panel.pv_temperature - ZERO_CELCIUS_OFFSET  # type: ignore
-                if not parsed_args.no_pv
-                else None,
-                pv_efficiency=pvt_panel.electrical_efficiency,
-                collector_temperature=pvt_panel.collector_temperature
-                - ZERO_CELCIUS_OFFSET,
+                auxiliary_heating=auxiliary_heating,
                 collector_input_temperature=input_water_temperature
                 - ZERO_CELCIUS_OFFSET,
                 collector_output_temperature=pvt_panel.collector_output_temperature
                 - ZERO_CELCIUS_OFFSET,
+                collector_temperature=pvt_panel.collector_temperature
+                - ZERO_CELCIUS_OFFSET,
                 collector_temperature_gain=pvt_panel.collector_output_temperature
                 - input_water_temperature,
-                tank_temperature=hot_water_tank.temperature - ZERO_CELCIUS_OFFSET,
-                tank_output_temperature=tank_output_water_temp - ZERO_CELCIUS_OFFSET,
-                tank_heat_addition=tank_heat_gain / (parsed_args.internal_resolution),
+                date=datetime.date.strftime(date_and_time, "%d/%m/%y"),
+                dc_electrical=dc_electrical,
+                dc_thermal=dc_thermal,
                 electrical_load=current_electrical_load,
+                exchanger_temperature_drop=updated_input_water_temperature
+                - pvt_panel.collector_output_temperature,
+                glass_temperature=pvt_panel.glass_temperature - ZERO_CELCIUS_OFFSET,  # type: ignore
+                gross_electrical_output=pvt_panel.electrical_output(current_weather),
+                net_electrical_output=pvt_panel.electrical_output(current_weather)
+                - current_electrical_load,
+                normal_irradiance=pvt_panel.get_solar_irradiance(current_weather),
+                pv_efficiency=pvt_panel.electrical_efficiency,
+                pv_temperature=pvt_panel.pv_temperature - ZERO_CELCIUS_OFFSET  # type: ignore
+                if not parsed_args.no_pv
+                else None,
+                sky_temperature=current_weather.sky_temperature - ZERO_CELCIUS_OFFSET,
+                solar_irradiance=current_weather.irradiance
+                if pvt_panel.glazed
+                else None,
+                tank_temperature=hot_water_tank.temperature - ZERO_CELCIUS_OFFSET,
+                tank_heat_addition=tank_heat_gain / (parsed_args.internal_resolution),
+                tank_output_temperature=tank_output_water_temp - ZERO_CELCIUS_OFFSET,
                 thermal_load=current_hot_water_load
                 * HEAT_CAPACITY_OF_WATER
                 * 50
@@ -1040,12 +1051,7 @@ def main(args) -> None:  # pylint: disable=too-many-locals
                 * HEAT_CAPACITY_OF_WATER
                 * (tank_output_water_temp - 10 - ZERO_CELCIUS_OFFSET)
                 / (parsed_args.internal_resolution),
-                auxiliary_heating=auxiliary_heating,
-                gross_electrical_output=pvt_panel.electrical_output(current_weather),
-                net_electrical_output=pvt_panel.electrical_output(current_weather)
-                - current_electrical_load,
-                dc_electrical=dc_electrical,
-                dc_thermal=dc_thermal,
+                time=datetime.date.strftime(date_and_time, "%H:%M:%S"),
             )
         }
 
