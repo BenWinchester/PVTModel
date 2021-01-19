@@ -20,14 +20,14 @@ from __utils__ import ProgrammerJudgementFault, GraphDetail, get_logger
 
 # The directory in which old figures are saved
 OLD_FIGURES_DIRECTORY: str = "old_figures"
-# How many values there should be between each tick on the x-axis
-X_TICK_SEPARATION: int = 8
 # How detailed the graph should be
-GRAPH_DETAIL: GraphDetail = GraphDetail.lowest
+GRAPH_DETAIL: GraphDetail = GraphDetail.low
+# How many values there should be between each tick on the x-axis
+X_TICK_SEPARATION: int = int(8 * GRAPH_DETAIL.value / 48)
 # Which days of data to include
 DAYS_TO_INCLUDE: List[bool] = [False, True]
 # The name of the data file to use.
-DATA_FILE_NAME = "data_output_two_july_days_rerunning.json"
+DATA_FILE_NAME = "data_output_july_days_new_method_average_irradiance.json"
 
 
 def _resolution_from_graph_detail(
@@ -53,41 +53,41 @@ def _resolution_from_graph_detail(
 
     # * For "lowest", include one point every half-hour.
     if graph_detail == GraphDetail.lowest:
-        if int(num_data_points / 48) != num_data_points / 48:
-            raise ProgrammerJudgementFault(
-                "The number of data points recorded is not divisible by 48."
-            )
-        return int(num_data_points / 48)
+        # if int(num_data_points / 48) != num_data_points / 48:
+        #     raise ProgrammerJudgementFault(
+        #         "The number of data points recorded is not divisible by 48."
+        #     )
+        return int(num_data_points / GraphDetail.lowest.value)
 
     # * For "low", include one point every ten minutes
     if graph_detail == GraphDetail.low:
-        if int(num_data_points / (24 * 6)) != num_data_points / (24 * 6):
-            raise ProgrammerJudgementFault(
-                "The number of data points recorded is not divisible by {}.".format(
-                    str(24 * 6)
-                )
-            )
-        return int(num_data_points / (24 * 6))
+        # if int(num_data_points / (24 * 6)) != num_data_points / (24 * 6):
+        #     raise ProgrammerJudgementFault(
+        #         "The number of data points recorded is not divisible by {}.".format(
+        #             str(24 * 6)
+        #         )
+        #     )
+        return int(num_data_points / GraphDetail.low.value)
 
     # * For "medium", include one point every two minutes
     if graph_detail == GraphDetail.medium:
-        if int(num_data_points / (24 * 30)) != num_data_points / (24 * 30):
-            raise ProgrammerJudgementFault(
-                "The number of data points recorded is not divisible by {}.".format(
-                    str(24 * 30)
-                )
-            )
-        return int(num_data_points / (24 * 30))
+        # if int(num_data_points / (24 * 30)) != num_data_points / (24 * 30):
+        #     raise ProgrammerJudgementFault(
+        #         "The number of data points recorded is not divisible by {}.".format(
+        #             str(24 * 30)
+        #         )
+        #     )
+        return int(num_data_points / GraphDetail.medium.value)
 
     # * For "high", include one point every thirty seconds
     if graph_detail == GraphDetail.high:
-        if int(num_data_points / (24 * 60 * 2)) != num_data_points / (24 * 60 * 2):
-            raise ProgrammerJudgementFault(
-                "The number of data points recorded is not divisible by {}.".format(
-                    str(24 * 60 * 2)
-                )
-            )
-        return int(num_data_points / (24 * 60 * 2))
+        # if int(num_data_points / (24 * 60 * 2)) != num_data_points / (24 * 60 * 2):
+        #     raise ProgrammerJudgementFault(
+        #         "The number of data points recorded is not divisible by {}.".format(
+        #             str(24 * 60 * 2)
+        #         )
+        #     )
+        return int(num_data_points / GraphDetail.high.value)
 
     # * For highest, include all data points
     return 1
@@ -113,8 +113,11 @@ def _reduce_data(
 
     # * First, only include the bits of data we want.
     # @@@ This only works for two days so far:
-    data = dict(list(data.items())[int(len(data) / 2) :])
-    data = {str(int(key) - 86400): value for key, value in data.items()}
+    # data = dict(list(data.items())[int(len(data) / 2) :])
+    # data = {
+    #     str(int(key) - 86400): value
+    #     for key, value in data.items()
+    # }
 
     data_points_per_graph_point: int = _resolution_from_graph_detail(
         graph_detail, len(data)
@@ -165,16 +168,23 @@ def _reduce_data(
                 continue
 
         # * If the data entry is a load, then take a sum
-        if any([key in data_entry_name for key in ["load", "output"]]):
+        elif any([key in data_entry_name for key in ["load", "output"]]):
+            # @@@
+            # FIXME
+            # * Here, the data is divided by 3600 to convert from Joules to Watt Hours.
+            # * This only works provided that we are dealing with values in Joules...
             for outer_index, _ in enumerate(reduced_data):
-                reduced_data[outer_index][data_entry_name] = sum(
-                    [
-                        float(data[str(inner_index)][data_entry_name])
-                        for inner_index in range(
-                            int(data_points_per_graph_point * outer_index),
-                            int(data_points_per_graph_point * (outer_index + 1)),
-                        )
-                    ]
+                reduced_data[outer_index][data_entry_name] = (
+                    sum(
+                        [
+                            float(data[str(inner_index)][data_entry_name])
+                            for inner_index in range(
+                                int(data_points_per_graph_point * outer_index),
+                                int(data_points_per_graph_point * (outer_index + 1)),
+                            )
+                        ]
+                    )
+                    / 3600
                 )
             continue
 
@@ -294,10 +304,6 @@ def save_figure(figure_name: str) -> None:
     # We need to work download from large numbers to new numbers.
     filenames = sorted(os.listdir(OLD_FIGURES_DIRECTORY))
     filenames.reverse()
-
-    # import pdb
-
-    # pdb.set_trace()
 
     # Incriment all files in the old_figures directory.
     for filename in filenames:
@@ -427,8 +433,6 @@ def plot_figure(
 
 if __name__ == "__main__":
 
-    # pdb.set_trace(header="Start of main function.")
-
     # * Set up the logger
     logger = get_logger("pvt_analysis")
 
@@ -437,6 +441,14 @@ if __name__ == "__main__":
 
     # * Reduce the resolution of the data.
     data = _reduce_data(data, GRAPH_DETAIL)
+
+    # f Plot Figure 4a: Electrical Demand
+    plot_figure(
+        "maria_4a_electrical_load",
+        data,
+        ["electrical_load"],
+        "Dwelling Load Profile / W",
+    )
 
     # * Plotting all tank-related temperatures
     plot_figure(
@@ -519,7 +531,7 @@ if __name__ == "__main__":
         first_axis_label="Demand Covered / %",
         first_axis_y_limits=(0, 100),
         second_axis_things_to_plot=["thermal_load", "thermal_output"],
-        second_axis_label="Thermal Power / Watts",
+        second_axis_label="Thermal Energy Supplied / Wh",
     )
 
     # * Plotting the solar irradiance and irradiance normal to the panel
@@ -539,7 +551,7 @@ if __name__ == "__main__":
         first_axis_things_to_plot=["auxiliary_heating", "tank_heat_addition"],
         first_axis_label="Auxiliary Heating and Tank Heat Addition / Watts",
         second_axis_things_to_plot=["thermal_load", "thermal_output"],
-        second_axis_label="Thermal Power / Watts",
+        second_axis_label="Thermal Energy Supplied / Wh",
     )
 
     # * Plotting Maria's figure 8A - Electrical Power and Net Electrical Power
@@ -563,7 +575,7 @@ if __name__ == "__main__":
         "thermal_output_8B",
         data,
         ["thermal_load", "thermal_output"],
-        "Thermal Power Output / W",
+        "Thermal Energy Supplied / Wh",
     )
 
     # * Plotting the collector input, output, gain, and temperature.
@@ -599,5 +611,4 @@ if __name__ == "__main__":
         data,
         first_axis_things_to_plot=["ambient_temperature", "sky_temperature"],
         first_axis_label="Temperature / deg C",
-        first_axis_y_limits=(0, 100),
     )

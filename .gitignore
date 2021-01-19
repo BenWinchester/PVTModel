@@ -8,6 +8,7 @@
 **/pyyaml
 # Ignore data files
 *.json*
-*.yaml*
+*data_*.yaml*
+*output_*.yaml
 # Additional files
 foo.txt
