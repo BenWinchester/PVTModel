@@ -1,3 +1,9 @@
+# Ignore model outputs
 *.log
 *.jpg
+# Ignore internal Python directories
 **/__pycache__
+# Ignore data files
+*.json
+*.yaml
+
