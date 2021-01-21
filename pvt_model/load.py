@@ -321,7 +321,7 @@ def _process_yaml(
     load_profile = LoadProfile(
         3600,
         {
-            datetime.datetime.strptime(key, "%H:%M"): float(value)
+            datetime.datetime.strptime(key, "%H:%M").time(): float(value)
             for key, value in yaml_data["hot_water"]["seasonless"]["dayless"].items()
         },
     )
@@ -347,9 +347,7 @@ class LoadSystem:
 
     def __init__(
         self,
-        seasonal_load_profiles: Dict[
-            ProfileType, Dict[_MonthAndDay, Dict[_Day, LoadProfile]]
-        ],
+        seasonal_load_profiles: Dict[ProfileType, Dict[_MonthAndDay, LoadProfile]],
     ) -> None:
         """
         Instantiate a Load System.

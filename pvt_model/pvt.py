@@ -1371,7 +1371,7 @@ class PVT:
 
         # Call the pv panel to update its temperature.
         pv_to_glass_heat_input: Optional[float] = None
-        if self._pv is not None or self._portion_covered != 0:
+        if self._pv is not None:
             # The excese PV heat generated is in units of Watts.
             collector_heat_input, pv_to_glass_heat_input = self._pv.update(
                 self.glazed,
@@ -1584,6 +1584,10 @@ class PVT:
         """
         Returns the electrical output of the PV-T panel in Watts.
 
+        NOTE: We here need to include the portion of the panel that is covered s.t. the
+        correct electricitiy-generating area is accounted for, rather than accidentailly
+        inculding areas which do not generated electricity.
+
         :param weather_conditions:
             The current weather conditions at the time step being incremented to.
 
@@ -1595,7 +1599,8 @@ class PVT:
         return (
             self.electrical_efficiency
             * self.get_solar_irradiance(weather_conditions)
-            * self._pv.area
+            * self.area
+            * self._portion_covered
             if self.electrical_efficiency is not None
             else 0
         )

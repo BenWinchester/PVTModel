@@ -72,6 +72,44 @@ class _DailySolarIrradianceProfile(BaseDailyProfile):
 
         return self._profile
 
+    def __add__(self, other) -> Any:
+        """
+        Adds two profiles together and returns the result.
+
+        :param other:
+            The other instance of a :class:`_DailySolarIrradianceProilfe` to which this
+            one should be add, then the two returned.
+
+        :return:
+            A new :class:`_DailySolarIrradianceProfile` instance, instantiated with the
+            profile made by combining the two profiles.
+
+        """
+
+        profile = {
+            key: self_value + other.profile[key]
+            for key, self_value in self.profile.items()
+        }
+
+        return _DailySolarIrradianceProfile(profile)
+
+    def __truediv__(self, divisor: float) -> Any:
+        """
+        Divides every value in the profile by the divisor.
+
+        :param divisor:
+            The number by which every value in the profile should be divided.
+
+        :return:
+            A new :class:`_DailySolarIrradianceProfile` instance, instantiated with the
+            profile made by dividing the current profile by the divisor.
+
+        """
+
+        profile = {key: value / divisor for key, value in self.profile.items()}
+
+        return _DailySolarIrradianceProfile(profile)
+
 
 @dataclass
 class _MonthlyWeatherData:
@@ -189,7 +227,14 @@ class _MonthlyWeatherData:
         if self._average_irradiance_profile is not None:
             return self._average_irradiance_profile
 
-        average_irradiance_profile_counter = collections.Counter(dict())
+        average_irradiance_profile_counter: collections.Counter = collections.Counter(
+            dict()
+        )
+
+        if self.solar_irradiance_profile is None:
+            raise ProgrammerJudgementFault(
+                "The irradiance profile in the weather module should not be None."
+            )
 
         for profile in self.solar_irradiance_profile.values():
             average_irradiance_profile_counter += collections.Counter(profile.profile)
@@ -332,7 +377,7 @@ class WeatherForecaster:
         average_irradiance: bool,
         mains_water_temp: float,
         monthly_weather_data: Dict[str, Dict[str, Union[str, float]]],
-        solar_irradiance_data: Dict[int, Dict[int, Dict[datetime.time, float]]],
+        solar_irradiance_data: Dict[datetime.date, _DailySolarIrradianceProfile],
     ) -> None:
         """
         Instantiate a weather forecaster class.
@@ -356,7 +401,7 @@ class WeatherForecaster:
 
         self.mains_water_temp = mains_water_temp + ZERO_CELCIUS_OFFSET
 
-        self._monthly_weather_data = {
+        self._monthly_weather_data: Dict[int, _MonthlyWeatherData] = {
             self._month_abbr_to_num[month]: _MonthlyWeatherData.from_yaml(
                 month, month_data  # type: ignore
             )
@@ -445,7 +490,7 @@ class WeatherForecaster:
 
         # Extract the solar irradiance data from the files.
         solar_irradiance_data: Dict[
-            Date : Dict[datetime.time, float]
+            datetime.date, _DailySolarIrradianceProfile
         ] = collections.defaultdict(_DailySolarIrradianceProfile)
         # Extract and open each file in series.
         for filename in solar_irradiance_filenames:
@@ -458,15 +503,34 @@ class WeatherForecaster:
             }
 
             # Create a temporary mapping of date to daily profile.
-            date_to_profile_mapping: Dict[Date:Dict] = collections.defaultdict(dict)
+            date_to_profile_mapping: Dict[
+                date, Dict[datetime.time, float]
+            ] = collections.defaultdict(dict)
             for date_and_time, irradiance in processed_filedata.items():
-                date_to_profile_mapping[Date.from_date(date_and_time.date())].update(
+                date_to_profile_mapping[date_and_time.date()].update(
                     {date_and_time.time(): irradiance}
                 )
 
             # Update the running dictionary.
             for date, profile in date_to_profile_mapping.items():
                 solar_irradiance_data[date].update(profile)
+
+        # * Having extracted the solar irradiance data, this needs to be combined in
+        # * such a way that the data for each year present is avereaged.
+
+        averaged_solar_irradiance_data: Dict[
+            Date, _DailySolarIrradianceProfile
+        ] = collections.defaultdict(_DailySolarIrradianceProfile)
+
+        num_years = len({date.year for date in solar_irradiance_data})
+
+        # * The profiles are cycled through, and combined by adding 1 / num_year'th the
+        # * values contained within that profile.
+        for date, profile in solar_irradiance_data.items():
+            averaged_solar_irradiance_data[Date.from_date(date)] = (
+                averaged_solar_irradiance_data[Date.from_date(date)]
+                + profile / num_years
+            )
 
         # Instantiate and return a Weather Forecaster based off of this weather data.
         return cls(average_irradiance, mains_water_temp, data, solar_irradiance_data)

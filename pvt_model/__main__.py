@@ -23,7 +23,7 @@ import os
 import pdb
 import sys
 
-from typing import Any, Dict, Generator, Optional
+from typing import Any, Dict, Generator, Optional, Union
 
 import json
 import yaml
@@ -724,7 +724,7 @@ def hot_water_tank_from_path(tank_data_file: str, mains_water_temp: float) -> ta
 
 
 def _save_data(
-    system_data: Dict[int, SystemData],
+    system_data: Dict[Union[int, str], SystemData],
     output_file_name: str,
     file_type: FileType,
     total_power_data: Optional[TotalPowerData] = None,
@@ -751,13 +751,15 @@ def _save_data(
     """
 
     # Convert the system data entry to JSON-readable format
-    system_data = {key: dataclasses.asdict(value) for key, value in system_data.items()}
+    system_data_dict = {
+        key: dataclasses.asdict(value) for key, value in system_data.items()
+    }
 
     # If we're saving YAML data part-way through, then append to the file.
     if file_type == FileType.YAML:
         with open("{}.{}".format(output_file_name, "yaml"), "a") as f:
             yaml.dump(
-                system_data,
+                system_data_dict,
                 f,
             )
 
@@ -769,13 +771,13 @@ def _save_data(
                 "{}.{}.1".format(output_file_name, "json"),
             )
         # Append the total power and emissions data for the run.
-        system_data.update(dataclasses.asdict(total_power_data))
-        system_data.update(dataclasses.asdict(carbon_emissions))
+        system_data_dict.update(dataclasses.asdict(total_power_data))
+        system_data_dict.update(dataclasses.asdict(carbon_emissions))
 
         # Save the data
         with open("{}.{}".format(output_file_name, "json"), "w") as f:
             json.dump(
-                system_data,
+                system_data_dict,
                 f,
                 indent=4,
             )
@@ -886,7 +888,7 @@ def main(args) -> None:  # pylint: disable=too-many-locals
         final_date_and_time = first_date_and_time + relativedelta(days=parsed_args.days)
 
     # Set up a dictionary for storing the system data.
-    system_data: Dict[int:SystemData] = dict()
+    system_data: Dict[Union[int, str], SystemData] = dict()
 
     # Set up a holder for the information.
     total_power_data = TotalPowerData()

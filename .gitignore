@@ -1,3 +1,5 @@
+# Internal git files
+*.diff
 # Ignore model outputs
 *.log*
 *.jpg*
