@@ -25,7 +25,7 @@ X_TICK_SEPARATION: int = int(8 * GRAPH_DETAIL.value / 48)
 # Which days of data to include
 DAYS_TO_INCLUDE: List[bool] = [False, True]
 # The name of the data file to use.
-DATA_FILE_NAME = "data_output_july_day_new_method_average_irradiance_2.json"
+DATA_FILE_NAME = "data_output_july_day_new_method_average_irradiance_4.json"
 
 
 def _resolution_from_graph_detail(
@@ -535,7 +535,6 @@ if __name__ == "__main__":
             # "normal_irradiance"
         ],
         "Solar Irradiance / Watts / meter squared",
-        annotate_maximum=True,
     )
 
     # Plot Figure 5b: Ambient Temperature
@@ -559,7 +558,6 @@ if __name__ == "__main__":
             "sky_temperature",
         ],
         first_axis_label="Temperature / deg C",
-        annotate_maximum=True,
     )
 
     # Plot Figure 6b: Tank-related Temperatures

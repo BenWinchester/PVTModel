@@ -888,7 +888,9 @@ def main(args) -> None:  # pylint: disable=too-many-locals
         final_date_and_time = first_date_and_time + relativedelta(days=parsed_args.days)
 
     # Set up a dictionary for storing the system data.
-    system_data: Dict[Union[int, str], SystemData] = dict()
+    system_data: Dict[Union[int, str], SystemData] = dict.fromkeys(
+        set(range((final_date_and_time - first_date_and_time).seconds))
+    )
 
     # Set up a holder for the information.
     total_power_data = TotalPowerData()
@@ -1027,8 +1029,8 @@ def main(args) -> None:  # pylint: disable=too-many-locals
                 dc_electrical=dc_electrical,
                 dc_thermal=dc_thermal,
                 electrical_load=current_electrical_load,
-                exchanger_temperature_drop=updated_input_water_temperature
-                - pvt_panel.collector_output_temperature,
+                exchanger_temperature_drop=pvt_panel.collector_output_temperature
+                - updated_input_water_temperature,
                 glass_temperature=pvt_panel.glass_temperature - ZERO_CELCIUS_OFFSET,  # type: ignore
                 gross_electrical_output=pvt_panel.electrical_output(current_weather),
                 net_electrical_output=pvt_panel.electrical_output(current_weather)

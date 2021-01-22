@@ -437,6 +437,7 @@ class BaseDailyProfile:
 
         """
 
+        # If the index is in the profile, return the index.
         if index in self._profile:
             return self._profile[index]
 

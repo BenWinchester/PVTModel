@@ -45,9 +45,46 @@ __all__ = (
 ################
 
 
-class _Day(enum.Enum):
+class ProfileType(enum.Enum):
     """
-    Used to label the type of day, eg, weekday, Saturday, or Sunday.
+    Used to label whether a profile is a hot-water or electrical (or other) profile.
+
+    """
+
+    ELECTRICITY = 0
+    HOT_WATER = 1
+
+
+@dataclass
+class LoadData:
+    """
+    Conaints information about the various loads on the system.
+
+    .. attribute:: electrical_load
+        The electrical load on the system, measured in Watts.
+
+    .. attribute:: hot_water_load
+        The hot-water load on the system, measured in Litres.
+
+    """
+
+    electrical_load: float
+    hot_water_load: float
+
+
+class _DayType(enum.Enum):
+    """
+    Contains information about the type of day.
+
+    .. attribute:: WEEKDAY
+        A weekday is being represented here.
+
+    .. attribute:: WEEKEND
+        A weekend day is being represented here.
+
+    .. attribute:: DAYLESS
+        The type of day, i.e., weekday or weekend, is irrelevant. This information is
+        carried around the code as a :class:`_DayType`.DAYLESS instance.
 
     """
 
@@ -81,70 +118,47 @@ class _Day(enum.Enum):
 
 
 @dataclass
-class _MonthAndDay:
+class _MonthAndDayType:
     """
-    Used to label the type of day, eg, weekday, Saturday, or Sunday, and the Month.
+    Contains information about the month and the weekday.
 
     .. attribute:: month
-        The month, stored as an integer. If zero, then the data is "monthless."
+        The month, expressed as an integer.
 
-    .. attribute:: day
-        The day, stored as a :class:`_Day`.
+    .. attribute:: day_type
+        The day type, expressed as a :class:`_DayType`.
 
     """
 
     month: int
-    day: _Day
+    day_type: _DayType
+
+    def __hash__(self) -> float:
+        """
+        Generates a hash s.t. :class:`_MonthAndDayType` instances can be used as keys.
+
+        :return:
+            A hash of the :class:`_MonthAndDayType` instnace.
+
+        """
+
+        return hash(self.month * 31 + self.day_type.value)
 
     @classmethod
     def from_date(cls, date: datetime.date) -> Any:
         """
-        Returns a :class:`_MonthAndDay` instance from the date.
+        Returns a :class:`_MonthAndWeekday` instance based on the date.
 
         :param date:
-            The current date, used to instantiate the class.
-
-        """
-
-        return cls(date.month, _Day.from_day_number(date.weekday()))
-
-    def __hash__(self) -> int:
-        """
-        Returns a hash so the class can be keyed.
+            The date for which to generate a month and weekday instance, passed in as a
+            :class:`datetime.date` instance.
 
         :return:
-            A value representing a unique hash of the class.
+            An instantiated :class:`_MonthAndWeekday` instance.
 
         """
 
-        return hash(self.month * 4 + self.day.value)
-
-
-class ProfileType(enum.Enum):
-    """
-    Used to label whether a profile is a hot-water or electrical (or other) profile.
-
-    """
-
-    ELECTRICITY = 0
-    HOT_WATER = 1
-
-
-@dataclass
-class LoadData:
-    """
-    Conaints information about the various loads on the system.
-
-    .. attribute:: electrical_load
-        The electrical load on the system, measured in Watts.
-
-    .. attribute:: hot_water_load
-        The hot-water load on the system, measured in Litres.
-
-    """
-
-    electrical_load: float
-    hot_water_load: float
+        return cls(date.month, _DayType.from_day_number(date.weekday()))
 
 
 class LoadProfile(BaseDailyProfile):
@@ -188,7 +202,7 @@ class LoadProfile(BaseDailyProfile):
 
 def _process_csv(
     csv_file_path: str,
-) -> Tuple[ProfileType, Dict[_MonthAndDay, LoadProfile]]:
+) -> Tuple[ProfileType, Dict[_MonthAndDayType, LoadProfile]]:
     """
     Processs a CSV data file and return a mapping of month and day to profile.
 
@@ -197,7 +211,7 @@ def _process_csv(
 
     :return:
         A `tuple` containing the profile type and a  mapping between the
-        :class:`_MonthAndDay` and the load profile as a dict.
+        :class:`_MonthAndDayType` and the load profile as a dict.
 
     """
 
@@ -205,9 +219,9 @@ def _process_csv(
     # @@@ -coded in. Ideally, there would be some regex matching here.
     profile_type = ProfileType.ELECTRICITY
 
-    electrical_load_profile: Dict[_MonthAndDay, LoadProfile] = collections.defaultdict(
-        LoadProfile
-    )
+    electrical_load_profile: Dict[
+        _MonthAndDayType, LoadProfile
+    ] = collections.defaultdict(LoadProfile)
 
     # Open the csv file, and cycle through the rows, processing them.
     with open(csv_file_path, "r") as csv_file:
@@ -223,76 +237,76 @@ def _process_csv(
             time = datetime.datetime.strptime(row[0], "%H:%M").time()
 
             # Set the various profile values accordingly.
-            electrical_load_profile[_MonthAndDay(1, _Day(1))].update(
+            electrical_load_profile[_MonthAndDayType(1, _DayType(1))].update(
                 {time: float(row[2])}
             )
-            electrical_load_profile[_MonthAndDay(1, _Day(2))].update(
+            electrical_load_profile[_MonthAndDayType(1, _DayType(2))].update(
                 {time: float(row[6])}
             )
-            electrical_load_profile[_MonthAndDay(2, _Day(1))].update(
+            electrical_load_profile[_MonthAndDayType(2, _DayType(1))].update(
                 {time: float(row[10])}
             )
-            electrical_load_profile[_MonthAndDay(2, _Day(2))].update(
+            electrical_load_profile[_MonthAndDayType(2, _DayType(2))].update(
                 {time: float(row[14])}
             )
-            electrical_load_profile[_MonthAndDay(3, _Day(1))].update(
+            electrical_load_profile[_MonthAndDayType(3, _DayType(1))].update(
                 {time: float(row[18])}
             )
-            electrical_load_profile[_MonthAndDay(3, _Day(2))].update(
+            electrical_load_profile[_MonthAndDayType(3, _DayType(2))].update(
                 {time: float(row[22])}
             )
-            electrical_load_profile[_MonthAndDay(4, _Day(1))].update(
+            electrical_load_profile[_MonthAndDayType(4, _DayType(1))].update(
                 {time: float(row[26])}
             )
-            electrical_load_profile[_MonthAndDay(4, _Day(2))].update(
+            electrical_load_profile[_MonthAndDayType(4, _DayType(2))].update(
                 {time: float(row[30])}
             )
-            electrical_load_profile[_MonthAndDay(5, _Day(1))].update(
+            electrical_load_profile[_MonthAndDayType(5, _DayType(1))].update(
                 {time: float(row[34])}
             )
-            electrical_load_profile[_MonthAndDay(5, _Day(2))].update(
+            electrical_load_profile[_MonthAndDayType(5, _DayType(2))].update(
                 {time: float(row[38])}
             )
-            electrical_load_profile[_MonthAndDay(6, _Day(1))].update(
+            electrical_load_profile[_MonthAndDayType(6, _DayType(1))].update(
                 {time: float(row[42])}
             )
-            electrical_load_profile[_MonthAndDay(6, _Day(2))].update(
+            electrical_load_profile[_MonthAndDayType(6, _DayType(2))].update(
                 {time: float(row[46])}
             )
-            electrical_load_profile[_MonthAndDay(7, _Day(1))].update(
+            electrical_load_profile[_MonthAndDayType(7, _DayType(1))].update(
                 {time: float(row[50])}
             )
-            electrical_load_profile[_MonthAndDay(7, _Day(2))].update(
+            electrical_load_profile[_MonthAndDayType(7, _DayType(2))].update(
                 {time: float(row[54])}
             )
-            electrical_load_profile[_MonthAndDay(8, _Day(1))].update(
+            electrical_load_profile[_MonthAndDayType(8, _DayType(1))].update(
                 {time: float(row[58])}
             )
-            electrical_load_profile[_MonthAndDay(8, _Day(2))].update(
+            electrical_load_profile[_MonthAndDayType(8, _DayType(2))].update(
                 {time: float(row[62])}
             )
-            electrical_load_profile[_MonthAndDay(9, _Day(1))].update(
+            electrical_load_profile[_MonthAndDayType(9, _DayType(1))].update(
                 {time: float(row[66])}
             )
-            electrical_load_profile[_MonthAndDay(9, _Day(2))].update(
+            electrical_load_profile[_MonthAndDayType(9, _DayType(2))].update(
                 {time: float(row[70])}
             )
-            electrical_load_profile[_MonthAndDay(10, _Day(1))].update(
+            electrical_load_profile[_MonthAndDayType(10, _DayType(1))].update(
                 {time: float(row[74])}
             )
-            electrical_load_profile[_MonthAndDay(10, _Day(2))].update(
+            electrical_load_profile[_MonthAndDayType(10, _DayType(2))].update(
                 {time: float(row[78])}
             )
-            electrical_load_profile[_MonthAndDay(11, _Day(1))].update(
+            electrical_load_profile[_MonthAndDayType(11, _DayType(1))].update(
                 {time: float(row[82])}
             )
-            electrical_load_profile[_MonthAndDay(11, _Day(2))].update(
+            electrical_load_profile[_MonthAndDayType(11, _DayType(2))].update(
                 {time: float(row[86])}
             )
-            electrical_load_profile[_MonthAndDay(12, _Day(1))].update(
+            electrical_load_profile[_MonthAndDayType(12, _DayType(1))].update(
                 {time: float(row[90])}
             )
-            electrical_load_profile[_MonthAndDay(12, _Day(2))].update(
+            electrical_load_profile[_MonthAndDayType(12, _DayType(2))].update(
                 {time: float(row[94])}
             )
 
@@ -301,7 +315,7 @@ def _process_csv(
 
 def _process_yaml(
     yaml_file_path: str,
-) -> Tuple[ProfileType, Dict[_MonthAndDay, LoadProfile]]:
+) -> Tuple[ProfileType, Dict[_MonthAndDayType, LoadProfile]]:
     """
     Process a YAML file and return a tuple containing the profile type and profile map.
 
@@ -325,7 +339,7 @@ def _process_yaml(
             for key, value in yaml_data["hot_water"]["seasonless"]["dayless"].items()
         },
     )
-    return profile_type, {_MonthAndDay(0, _Day(0)): load_profile}
+    return profile_type, {_MonthAndDayType(0, _DayType(0)): load_profile}
 
 
 #########################
@@ -347,7 +361,7 @@ class LoadSystem:
 
     def __init__(
         self,
-        seasonal_load_profiles: Dict[ProfileType, Dict[_MonthAndDay, LoadProfile]],
+        seasonal_load_profiles: Dict[ProfileType, Dict[_MonthAndDayType, LoadProfile]],
     ) -> None:
         """
         Instantiate a Load System.
@@ -374,7 +388,7 @@ class LoadSystem:
         """
 
         profile_type, date_and_time = index
-        month_and_day = _MonthAndDay.from_date(date_and_time.date())
+        month_and_day = _MonthAndDayType.from_date(date_and_time.date())
 
         try:
             return self._seasonal_load_profiles[profile_type][month_and_day][
@@ -384,7 +398,7 @@ class LoadSystem:
             pass
 
         # * Attempt to get dayless data.
-        month_and_day.day = _Day(0)
+        month_and_day.day_type = _DayType(0)
         try:
             return self._seasonal_load_profiles[profile_type][month_and_day][
                 date_and_time.time()
@@ -419,7 +433,9 @@ class LoadSystem:
 
         """
 
-        seasonal_load_profiles: Dict[ProfileType, Dict[_MonthAndDay, LoadProfile]] = {
+        seasonal_load_profiles: Dict[
+            ProfileType, Dict[_MonthAndDayType, LoadProfile]
+        ] = {
             ProfileType.ELECTRICITY: collections.defaultdict(LoadProfile),
             ProfileType.HOT_WATER: collections.defaultdict(LoadProfile),
         }
