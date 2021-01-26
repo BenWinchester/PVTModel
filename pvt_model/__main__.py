@@ -54,15 +54,18 @@ from .__utils__ import (
 WEATHER_DATA_FILENAME = "weather.yaml"
 # Folder containing the solar irradiance profiles
 SOLAR_IRRADIANCE_FOLDERNAME = "solar_irradiance_profiles"
-# Name of the load data file.
-LOAD_DATA_FILENAME = "loads_watts.yaml"
+# Folder containing the temperature profiles
+TEMPERATURE_FOLDERNAME = "temperature_profiles"
 # The initial date and time for the simultion to run from.
 INITIAL_DATE_AND_TIME = datetime.datetime(2005, 1, 1, 0, 0)
 # The initial temperature for the system to be instantiated at, measured in Kelvin.
 INITIAL_SYSTEM_TEMPERATURE = 283  # [K]
-# THe initial temperature of the hot-water tank, at which it should be instantiated,
+# The initial temperature of the hot-water tank, at which it should be instantiated,
 # measured in Kelvin.
 INITIAL_TANK_TEMPERATURE = ZERO_CELCIUS_OFFSET + 34.75  # [K]
+# The average temperature of the air surrounding the tank, which is internal to the
+# household, measured in Kelvin.
+INTERNAL_HOUSEHOLD_AMBIENT_TEMPERATURE = ZERO_CELCIUS_OFFSET + 20  # [K]
 # The temperature of hot-water required by the end-user, measured in Kelvin.
 HOT_WATER_DEMAND_TEMP = 60 + ZERO_CELCIUS_OFFSET
 
@@ -371,6 +374,13 @@ def _parse_args(args) -> argparse.Namespace:
         "--tank-data-file",
         "-t",
         help="The location of the Hot-Water Tank system YAML data file.",
+    )
+    parser.add_argument(
+        "--use-pvgis",
+        default=False,
+        action="store_true",
+        help="If specified, PVGIS data is used. Otherwise, the data extracted from "
+        "Maria's paper is used.",
     )
     parser.add_argument(
         "--unglazed",
@@ -815,22 +825,31 @@ def main(args) -> None:  # pylint: disable=too-many-locals
         os.rename(parsed_args.output, f"{parsed_args.output}.1")
 
     # Set-up the weather and load modules with the weather and load probabilities.
-    solar_irradiance_filenames = [
+    solar_irradiance_filenames = {
         os.path.join(parsed_args.location, SOLAR_IRRADIANCE_FOLDERNAME, filename)
         for filename in os.listdir(
             os.path.join(parsed_args.location, SOLAR_IRRADIANCE_FOLDERNAME)
         )
-    ]
+    }
+    temperature_filenames = {
+        os.path.join(parsed_args.location, TEMPERATURE_FOLDERNAME, filename)
+        for filename in os.listdir(
+            os.path.join(parsed_args.location, TEMPERATURE_FOLDERNAME)
+        )
+    }
+
     weather_forecaster = weather.WeatherForecaster.from_data(
         parsed_args.average_irradiance,
         os.path.join(parsed_args.location, WEATHER_DATA_FILENAME),
         solar_irradiance_filenames,
+        temperature_filenames,
+        parsed_args.use_pvgis,
     )
 
     load_profiles = {
         os.path.join(parsed_args.location, "load_profiles", filename)
         for filename in os.listdir(os.path.join(parsed_args.location, "load_profiles"))
-    }.union({os.path.join(parsed_args.location, LOAD_DATA_FILENAME)})
+    }
     load_system = load.LoadSystem.from_data(load_profiles)
     logger.info(
         "Weather forecaster and load system successfully instantiated:\n  %s\n  %s",
@@ -970,7 +989,7 @@ def main(args) -> None:  # pylint: disable=too-many-locals
             parsed_args.internal_resolution,  # [minutes]
             current_hot_water_load,  # [litres/time step]
             weather_forecaster.mains_water_temp,  # [K]
-            current_weather.ambient_temperature,  # [K]
+            INTERNAL_HOUSEHOLD_AMBIENT_TEMPERATURE,  # [K]
         )
 
         # Determine various efficiency factors

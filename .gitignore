@@ -9,8 +9,9 @@
 **/__pycache__
 **/pyyaml
 # Ignore data files
-*.json*
-*data_*.yaml*
-*output_*.yaml
+data_*
+output_*
 # Additional files
 foo.txt
+# Private scripts
+*data_processor.py

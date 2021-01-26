@@ -19,6 +19,8 @@ import csv
 import datetime
 import enum
 
+import json
+
 from dataclasses import dataclass
 from typing import Any, Dict, Set, Tuple
 
@@ -177,7 +179,9 @@ class LoadProfile(BaseDailyProfile):
     #
 
     def __init__(
-        self, resolution=1, profile: Dict[datetime.time, float] = None
+        self,
+        profile: Dict[datetime.time, float] = None,
+        resolution=1,
     ) -> None:
         """
         Instantiate a load profile.
@@ -313,33 +317,77 @@ def _process_csv(
     return profile_type, electrical_load_profile
 
 
-def _process_yaml(
-    yaml_file_path: str,
+def _process_json(
+    json_file_path: str,
 ) -> Tuple[ProfileType, Dict[_MonthAndDayType, LoadProfile]]:
     """
-    Process a YAML file and return a tuple containing the profile type and profile map.
+    Processs a JSON data file and return a mapping of month and day to profile.
 
-    :param yaml_file_path:
-        The path to the yaml data file.
+    :param json_file_path:
+        The path to the json data file.
 
     :return:
-        A `tuple` containing the profile type, stored as a :class:`ProfileType`, and a
-        mapping between the month and day and the profile.
+        A `tuple` containing the profile type and a  mapping between the
+        :class:`_MonthAndDayType` and the load profile as a dict.
 
     """
 
-    yaml_data = read_yaml(yaml_file_path)
+    if "thermal" in json_file_path:
+        profile_type = ProfileType.HOT_WATER
+    elif "electrical" in json_file_path:
+        profile_type = ProfileType.ELECTRICITY
+    else:
+        raise ProgrammerJudgementFault(
+            "The profle type supplied is not electrical or thermal. See load module."
+        )
 
-    # @@@ For now, the YAML data only concerns the hot-water demand.
-    profile_type = ProfileType.HOT_WATER
-    load_profile = LoadProfile(
-        3600,
-        {
-            datetime.datetime.strptime(key, "%H:%M").time(): float(value)
-            for key, value in yaml_data["hot_water"]["seasonless"]["dayless"].items()
-        },
+    # @@@
+    # FIXME: For now, the data is stored irrespective of month and day. This is in order
+    # to match as closely as possible to Maria's data set for July.
+    load_profile: Dict[_MonthAndDayType, LoadProfile] = collections.defaultdict(
+        LoadProfile
     )
-    return profile_type, {_MonthAndDayType(0, _DayType(0)): load_profile}
+
+    with open(json_file_path, "r") as f:
+        json_data = json.load(f)
+
+    # Process the data.
+    try:
+        load_profile[_MonthAndDayType(0, _DayType(0))] = LoadProfile(
+            {
+                datetime.datetime.strptime(key, "%H:%M:%S.%f").time(): float(value)
+                for key, value in json_data.items()
+            }
+        )
+        return profile_type, load_profile
+    except ValueError:
+        pass
+
+    # Attempt using a different time format.
+    try:
+        load_profile[_MonthAndDayType(0, _DayType(0))] = LoadProfile(
+            {
+                datetime.datetime.strptime(key, "%H:%M:%S").time(): float(value)
+                for key, value in json_data.items()
+            }
+        )
+        return profile_type, load_profile
+    except ValueError:
+        pass
+
+    # Attempt using a different time format.
+    try:
+        load_profile[_MonthAndDayType(0, _DayType(0))] = LoadProfile(
+            {
+                datetime.datetime.strptime(key, "%H:%M").time(): float(value)
+                for key, value in json_data.items()
+            }
+        )
+        return profile_type, load_profile
+    except ValueError as e:
+        raise ProgrammerJudgementFault(
+            f"The load profile data is of an incompatible time format: {str(e)}"
+        ) from None
 
 
 #########################
@@ -443,11 +491,12 @@ class LoadSystem:
         for data_file_name in data_file_paths:
             if data_file_name.endswith(".csv"):
                 profile_type, profile_data = _process_csv(data_file_name)
-            elif data_file_name.endswith(".yaml"):
-                profile_type, profile_data = _process_yaml(data_file_name)
+            elif data_file_name.endswith(".json"):
+                profile_type, profile_data = _process_json(data_file_name)
             else:
                 raise ProgrammerJudgementFault(
-                    "Only .csv and .yaml files supported for load profiles."
+                    "Only .csv and .json files supported for load profiles. "
+                    f"Filename attempted: {data_file_name}"
                 )
             seasonal_load_profiles[profile_type].update(profile_data)
 
