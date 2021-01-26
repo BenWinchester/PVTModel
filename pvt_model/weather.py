@@ -434,6 +434,10 @@ class WeatherForecaster:
                 for date, profile in monthly_irradiance_profiles.items()
                 if date.month == month
             }
+            if len(weather_data.solar_irradiance_profiles) == 1:
+                weather_data.override_irradiance_profile = list(
+                    weather_data.solar_irradiance_profiles.values()
+                )[0]
             weather_data.average_temperature_profile = monthly_temperature_profiles[
                 Date(1, month)
             ]
@@ -622,8 +626,7 @@ class WeatherForecaster:
         temperature_profiles[Date(1, 2)] = temperature_profiles[Date(1, 1)]
         temperature_profiles[Date(1, 3)] = temperature_profiles[Date(1, 4)]
         temperature_profiles[Date(1, 5)] = temperature_profiles[Date(1, 4)]
-        temperature_profiles[Date(1, 6)] = temperature_profiles[Date(1, 8)]
-        temperature_profiles[Date(1, 7)] = temperature_profiles[Date(1, 8)]
+        temperature_profiles[Date(1, 6)] = temperature_profiles[Date(1, 7)]
         temperature_profiles[Date(1, 9)] = temperature_profiles[Date(1, 4)]
         temperature_profiles[Date(1, 10)] = temperature_profiles[Date(1, 4)]
         temperature_profiles[Date(1, 11)] = temperature_profiles[Date(1, 1)]
