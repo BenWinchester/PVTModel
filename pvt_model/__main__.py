@@ -23,7 +23,7 @@ import os
 import pdb
 import sys
 
-from typing import Any, Dict, Generator, Optional
+from typing import Any, Dict, Generator, Optional, Union
 
 import json
 import yaml
@@ -54,15 +54,18 @@ from .__utils__ import (
 WEATHER_DATA_FILENAME = "weather.yaml"
 # Folder containing the solar irradiance profiles
 SOLAR_IRRADIANCE_FOLDERNAME = "solar_irradiance_profiles"
-# Name of the load data file.
-LOAD_DATA_FILENAME = "loads_watts.yaml"
+# Folder containing the temperature profiles
+TEMPERATURE_FOLDERNAME = "temperature_profiles"
 # The initial date and time for the simultion to run from.
 INITIAL_DATE_AND_TIME = datetime.datetime(2005, 1, 1, 0, 0)
 # The initial temperature for the system to be instantiated at, measured in Kelvin.
 INITIAL_SYSTEM_TEMPERATURE = 283  # [K]
-# THe initial temperature of the hot-water tank, at which it should be instantiated,
+# The initial temperature of the hot-water tank, at which it should be instantiated,
 # measured in Kelvin.
 INITIAL_TANK_TEMPERATURE = ZERO_CELCIUS_OFFSET + 34.75  # [K]
+# The average temperature of the air surrounding the tank, which is internal to the
+# household, measured in Kelvin.
+INTERNAL_HOUSEHOLD_AMBIENT_TEMPERATURE = ZERO_CELCIUS_OFFSET + 20  # [K]
 # The temperature of hot-water required by the end-user, measured in Kelvin.
 HOT_WATER_DEMAND_TEMP = 60 + ZERO_CELCIUS_OFFSET
 
@@ -371,6 +374,13 @@ def _parse_args(args) -> argparse.Namespace:
         "--tank-data-file",
         "-t",
         help="The location of the Hot-Water Tank system YAML data file.",
+    )
+    parser.add_argument(
+        "--use-pvgis",
+        default=False,
+        action="store_true",
+        help="If specified, PVGIS data is used. Otherwise, the data extracted from "
+        "Maria's paper is used.",
     )
     parser.add_argument(
         "--unglazed",
@@ -724,7 +734,7 @@ def hot_water_tank_from_path(tank_data_file: str, mains_water_temp: float) -> ta
 
 
 def _save_data(
-    system_data: Dict[int, SystemData],
+    system_data: Dict[Union[int, str], SystemData],
     output_file_name: str,
     file_type: FileType,
     total_power_data: Optional[TotalPowerData] = None,
@@ -751,13 +761,15 @@ def _save_data(
     """
 
     # Convert the system data entry to JSON-readable format
-    system_data = {key: dataclasses.asdict(value) for key, value in system_data.items()}
+    system_data_dict = {
+        key: dataclasses.asdict(value) for key, value in system_data.items()
+    }
 
     # If we're saving YAML data part-way through, then append to the file.
     if file_type == FileType.YAML:
         with open("{}.{}".format(output_file_name, "yaml"), "a") as f:
             yaml.dump(
-                system_data,
+                system_data_dict,
                 f,
             )
 
@@ -769,13 +781,13 @@ def _save_data(
                 "{}.{}.1".format(output_file_name, "json"),
             )
         # Append the total power and emissions data for the run.
-        system_data.update(dataclasses.asdict(total_power_data))
-        system_data.update(dataclasses.asdict(carbon_emissions))
+        system_data_dict.update(dataclasses.asdict(total_power_data))
+        system_data_dict.update(dataclasses.asdict(carbon_emissions))
 
         # Save the data
         with open("{}.{}".format(output_file_name, "json"), "w") as f:
             json.dump(
-                system_data,
+                system_data_dict,
                 f,
                 indent=4,
             )
@@ -813,22 +825,31 @@ def main(args) -> None:  # pylint: disable=too-many-locals
         os.rename(parsed_args.output, f"{parsed_args.output}.1")
 
     # Set-up the weather and load modules with the weather and load probabilities.
-    solar_irradiance_filenames = [
+    solar_irradiance_filenames = {
         os.path.join(parsed_args.location, SOLAR_IRRADIANCE_FOLDERNAME, filename)
         for filename in os.listdir(
             os.path.join(parsed_args.location, SOLAR_IRRADIANCE_FOLDERNAME)
         )
-    ]
+    }
+    temperature_filenames = {
+        os.path.join(parsed_args.location, TEMPERATURE_FOLDERNAME, filename)
+        for filename in os.listdir(
+            os.path.join(parsed_args.location, TEMPERATURE_FOLDERNAME)
+        )
+    }
+
     weather_forecaster = weather.WeatherForecaster.from_data(
         parsed_args.average_irradiance,
         os.path.join(parsed_args.location, WEATHER_DATA_FILENAME),
         solar_irradiance_filenames,
+        temperature_filenames,
+        parsed_args.use_pvgis,
     )
 
     load_profiles = {
         os.path.join(parsed_args.location, "load_profiles", filename)
         for filename in os.listdir(os.path.join(parsed_args.location, "load_profiles"))
-    }.union({os.path.join(parsed_args.location, LOAD_DATA_FILENAME)})
+    }
     load_system = load.LoadSystem.from_data(load_profiles)
     logger.info(
         "Weather forecaster and load system successfully instantiated:\n  %s\n  %s",
@@ -886,7 +907,9 @@ def main(args) -> None:  # pylint: disable=too-many-locals
         final_date_and_time = first_date_and_time + relativedelta(days=parsed_args.days)
 
     # Set up a dictionary for storing the system data.
-    system_data: Dict[int:SystemData] = dict()
+    system_data: Dict[Union[int, str], SystemData] = dict.fromkeys(
+        set(range((final_date_and_time - first_date_and_time).seconds))
+    )
 
     # Set up a holder for the information.
     total_power_data = TotalPowerData()
@@ -966,7 +989,7 @@ def main(args) -> None:  # pylint: disable=too-many-locals
             parsed_args.internal_resolution,  # [minutes]
             current_hot_water_load,  # [litres/time step]
             weather_forecaster.mains_water_temp,  # [K]
-            current_weather.ambient_temperature,  # [K]
+            INTERNAL_HOUSEHOLD_AMBIENT_TEMPERATURE,  # [K]
         )
 
         # Determine various efficiency factors
@@ -1025,8 +1048,8 @@ def main(args) -> None:  # pylint: disable=too-many-locals
                 dc_electrical=dc_electrical,
                 dc_thermal=dc_thermal,
                 electrical_load=current_electrical_load,
-                exchanger_temperature_drop=updated_input_water_temperature
-                - pvt_panel.collector_output_temperature,
+                exchanger_temperature_drop=pvt_panel.collector_output_temperature
+                - updated_input_water_temperature,
                 glass_temperature=pvt_panel.glass_temperature - ZERO_CELCIUS_OFFSET,  # type: ignore
                 gross_electrical_output=pvt_panel.electrical_output(current_weather),
                 net_electrical_output=pvt_panel.electrical_output(current_weather)

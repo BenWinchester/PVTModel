@@ -999,14 +999,12 @@ class Collector(_OpticalLayer):
         """
 
         if self.temperature > 1000:
-            # * If the panel temperature is over 1000K, then the panel is melting and
-            # * the debugger should help.
             pdb.set_trace(
                 header="Thermal collector melting - temperature greater than 1000K."
             )
 
-        # * From the excess heat, compute what is not lost to the environment, and,
-        # * from there, what is transferred to the HTF.
+        # From the excess heat, compute what is not lost to the environment, and, from
+        # there, what is transferred to the HTF.
         back_plate_heat_loss = (
             back_plate.conductance  # [W/m^2*K]
             * self.area  # [m^2]
@@ -1016,13 +1014,18 @@ class Collector(_OpticalLayer):
         # If there are no glass or PV layers, then we lose heat from the collector
         # layer directly.
         if not glass_layer_included and (not pv_layer_included or portion_covered != 1):
-            upward_heat_losses: float = self._layer_to_air_convective_transfer(
-                weather_conditions.ambient_temperature,
-                (1 - portion_covered),
-                weather_conditions.wind_heat_transfer_coefficient,
-            ) + self._layer_to_sky_radiative_transfer(
-                (1 - portion_covered), weather_conditions.sky_temperature
-            )  # [W]
+            upward_heat_losses: float = (
+                self._layer_to_air_convective_transfer(
+                    weather_conditions.ambient_temperature,
+                    (1 - portion_covered),
+                    weather_conditions.wind_heat_transfer_coefficient,
+                )
+                * internal_resolution
+                + self._layer_to_sky_radiative_transfer(
+                    (1 - portion_covered), weather_conditions.sky_temperature
+                )
+                * internal_resolution
+            )  # [J]
         # If there is a glass layer, and a PV layer that does not fully cover the panel,
         # then we need to compute the energy transferred to the glass layer.
         elif glass_layer_included and (not pv_layer_included or portion_covered != 1):
@@ -1031,30 +1034,27 @@ class Collector(_OpticalLayer):
                     "The system attempted to compute a radiative and/or conductive "
                     "transfer to a non-existant glass layer."
                 )
-            upward_heat_losses = layer_to_glass_radiative_transfer(
-                glass_temperature,
-                glass_emissivity,
-                self.area * (1 - portion_covered),
-                self.temperature,
-                self.emissivity,
-            ) + layer_to_glass_conductive_transfer(
-                air_gap_thickness,
-                glass_temperature,
-                self.area * (1 - portion_covered),
-                self.temperature,
-            )
+            upward_heat_losses = (
+                layer_to_glass_radiative_transfer(
+                    glass_temperature,
+                    glass_emissivity,
+                    self.area * (1 - portion_covered),
+                    self.temperature,
+                    self.emissivity,
+                )
+                * internal_resolution
+                + layer_to_glass_conductive_transfer(
+                    air_gap_thickness,
+                    glass_temperature,
+                    self.area * (1 - portion_covered),
+                    self.temperature,
+                )
+                * internal_resolution
+            )  # [J]
         else:
-            upward_heat_losses = 0
+            upward_heat_losses = 0  # [J]
 
-        # * Compute the heat lost in raising the absorber to the panel temperature.
-        # This heat is now converted into Joules.
-        remaining_heat = collector_heat_input - (  # [J]
-            back_plate_heat_loss  # [J]
-            + upward_heat_losses * internal_resolution  # [W] * [seconds]
-        )
-        self.temperature += remaining_heat / (self._mass * self._heat_capacity)
-
-        # * The bulk-water gains this heat.
+        # Compute the output water temperature
         self.output_water_temperature = (
             self.convective_heat_transfer_coefficient_of_water  # [W/m^2*K]
             * self.temperature  # [K]
@@ -1073,18 +1073,21 @@ class Collector(_OpticalLayer):
             * self.htf_surface_area  # [m^2]
         )  # [W/K]
 
-        # @@@
-        # @ I'm not sure that this makes sense - transferring the heat to the HTF seems
-        # @ to be happening above as well...
-        # * The bulk water gains this heat.
-        self.temperature -= (
+        # Compute the heat loss to the bulk water
+        bulk_water_heat_loss = (
             self.mass_flow_rate  # [kg/s]
             * internal_resolution  # [seconds]
             * self.htf_heat_capacity  # [J/kg*K]
             * (self.output_water_temperature - input_water_temperature)  # [K] - [K]
-        ) / (
-            self._mass * self._heat_capacity  # [kg] * [J/kg*K]
+        )  # [J]
+
+        # This heat is now converted into Joules.
+        net_heat_gain = collector_heat_input - (  # [J]
+            back_plate_heat_loss  # [J]
+            + upward_heat_losses  # [J]
+            + bulk_water_heat_loss  # [J]
         )
+        self.temperature += net_heat_gain / (self._mass * self._heat_capacity)
 
         return (
             self.output_water_temperature,  # [K]
@@ -1371,7 +1374,7 @@ class PVT:
 
         # Call the pv panel to update its temperature.
         pv_to_glass_heat_input: Optional[float] = None
-        if self._pv is not None or self._portion_covered != 0:
+        if self._pv is not None:
             # The excese PV heat generated is in units of Watts.
             collector_heat_input, pv_to_glass_heat_input = self._pv.update(
                 self.glazed,
@@ -1584,6 +1587,10 @@ class PVT:
         """
         Returns the electrical output of the PV-T panel in Watts.
 
+        NOTE: We here need to include the portion of the panel that is covered s.t. the
+        correct electricitiy-generating area is accounted for, rather than accidentailly
+        inculding areas which do not generated electricity.
+
         :param weather_conditions:
             The current weather conditions at the time step being incremented to.
 
@@ -1595,7 +1602,8 @@ class PVT:
         return (
             self.electrical_efficiency
             * self.get_solar_irradiance(weather_conditions)
-            * self._pv.area
+            * self.area
+            * self._portion_covered
             if self.electrical_efficiency is not None
             else 0
         )

@@ -23,10 +23,11 @@ import collections
 import datetime
 import logging
 import math
+import os
 import random
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 import json
 import pysolar
@@ -54,7 +55,7 @@ RAND_RESOLUTION = 100
 logger = logging.getLogger(LOGGER_NAME)
 
 
-class _DailySolarIrradianceProfile(BaseDailyProfile):
+class _DailyProfile(BaseDailyProfile):
     """
     Represents a day's solar irradiance profile.
 
@@ -71,6 +72,44 @@ class _DailySolarIrradianceProfile(BaseDailyProfile):
         """
 
         return self._profile
+
+    def __add__(self, other) -> Any:
+        """
+        Adds two profiles together and returns the result.
+
+        :param other:
+            The other instance of a :class:`_DailySolarIrradianceProilfe` to which this
+            one should be add, then the two returned.
+
+        :return:
+            A new :class:`_DailyProfile` instance, instantiated with the
+            profile made by combining the two profiles.
+
+        """
+
+        profile = {
+            key: self_value + other.profile[key]
+            for key, self_value in self.profile.items()
+        }
+
+        return _DailyProfile(profile)
+
+    def __truediv__(self, divisor: float) -> Any:
+        """
+        Divides every value in the profile by the divisor.
+
+        :param divisor:
+            The number by which every value in the profile should be divided.
+
+        :return:
+            A new :class:`_DailyProfile` instance, instantiated with the
+            profile made by dividing the current profile by the divisor.
+
+        """
+
+        profile = {key: value / divisor for key, value in self.profile.items()}
+
+        return _DailyProfile(profile)
 
 
 @dataclass
@@ -97,6 +136,14 @@ class _MonthlyWeatherData:
         A mapping between the day in the month and the solar irradiance profile for
         that day.
 
+    .. attribute:: override_irradiance_profile
+        If set, this will override the default behaviour of searching for the internal
+        profile for the given day, or computing the average irradiance profile, and will
+        simply return the profile set on this attribute when called.
+
+    .. attribute:: average_temperature_profile
+        The average temperature profile for the month.
+
     .. attribute:: sunrise
         The sunrise time. Can be set later.
 
@@ -105,14 +152,22 @@ class _MonthlyWeatherData:
 
     """
 
+    # Private Attributes:
+    #
+    # .. attribute:: _average_irradiance_profile
+    #   Used to store the average solar irradiance profile for the month.
+    #
+
     month_name: str
     num_days: float
     cloud_cover: float
     rainy_days: float
     day_temp: float
     night_temp: float
-    solar_irradiance_profile: Optional[Dict[int, _DailySolarIrradianceProfile]] = None
-    _average_irradiance_profile: Optional[_DailySolarIrradianceProfile] = None
+    solar_irradiance_profiles: Optional[Dict[int, _DailyProfile]] = None
+    _average_irradiance_profile: Optional[_DailyProfile] = None
+    override_irradiance_profile: Optional[_DailyProfile] = None
+    average_temperature_profile: Optional[_DailyProfile] = None
     sunrise: Optional[datetime.time] = None
     sunset: Optional[datetime.time] = None
 
@@ -137,7 +192,7 @@ class _MonthlyWeatherData:
                 self.night_temp,
             )
             + "solar_profiles_set: [{}])".format(
-                "X" if self.solar_irradiance_profile is not None else " "
+                "X" if self.solar_irradiance_profiles is not None else " "
             )
         )
 
@@ -176,30 +231,38 @@ class _MonthlyWeatherData:
             ) from None
 
     @property
-    def average_irradiance_profile(self) -> _DailySolarIrradianceProfile:
+    def average_irradiance_profile(self) -> _DailyProfile:
         """
         Returns the average daily solar irradiance profile for the month.
 
         :return:
             The average solar irradiance profile for the month as a
-            :class:`_DailySolarIrradianceProfile` instance.
+            :class:`_DailyProfile` instance.
 
         """
+
+        if self.override_irradiance_profile is not None:
+            return self.override_irradiance_profile
 
         if self._average_irradiance_profile is not None:
             return self._average_irradiance_profile
 
-        average_irradiance_profile_counter = collections.Counter(dict())
+        # Instantiate a counter.
+        counter: collections.Counter = collections.Counter()
 
-        for profile in self.solar_irradiance_profile.values():
-            average_irradiance_profile_counter += collections.Counter(profile.profile)
+        if self.solar_irradiance_profiles is None:
+            raise ProgrammerJudgementFault(
+                "The irradiance profile in the weather module should not be None."
+            )
 
-        self._average_irradiance_profile = _DailySolarIrradianceProfile(
-            {
-                key: value / len(average_irradiance_profile_counter)
-                for key, value in dict(average_irradiance_profile_counter).items()
-            }
-        )
+        # Loop through all internally-held profiles, and sum up the values at each given
+        # time, dividing by the number of days in the month.
+        for profile in self.solar_irradiance_profiles.values():
+            for time, value in profile.profile.items():
+                counter[time] += value / self.num_days
+
+        # Store this as a profile on the class for future use, and return this profile.
+        self._average_irradiance_profile = _DailyProfile(counter)
 
         return self._average_irradiance_profile
 
@@ -332,7 +395,8 @@ class WeatherForecaster:
         average_irradiance: bool,
         mains_water_temp: float,
         monthly_weather_data: Dict[str, Dict[str, Union[str, float]]],
-        solar_irradiance_data: Dict[int, Dict[int, Dict[datetime.time, float]]],
+        monthly_irradiance_profiles: Dict[Date, _DailyProfile],
+        monthly_temperature_profiles: Dict[Date, _DailyProfile],
     ) -> None:
         """
         Instantiate a weather forecaster class.
@@ -347,8 +411,9 @@ class WeatherForecaster:
         :param monthly_weather_data:
             The monthly weather data, extracted raw from the weather data YAML file.
 
-        :param solar_irradiance_data:
-            A mapping between :class:`__utils__.Date` instances and irradiance profiles.
+        :param monthly_irradiance_profiles:
+            A mapping between :class:`__utils__.Date` instances and solar irradiance
+            profiles stored as :class:`_DailyProfile` instances.
 
         """
 
@@ -356,7 +421,7 @@ class WeatherForecaster:
 
         self.mains_water_temp = mains_water_temp + ZERO_CELCIUS_OFFSET
 
-        self._monthly_weather_data = {
+        self._monthly_weather_data: Dict[int, _MonthlyWeatherData] = {
             self._month_abbr_to_num[month]: _MonthlyWeatherData.from_yaml(
                 month, month_data  # type: ignore
             )
@@ -364,11 +429,14 @@ class WeatherForecaster:
         }
 
         for month, weather_data in self._monthly_weather_data.items():
-            weather_data.solar_irradiance_profile = {
+            weather_data.solar_irradiance_profiles = {
                 date.day: profile
-                for date, profile in solar_irradiance_data.items()
+                for date, profile in monthly_irradiance_profiles.items()
                 if date.month == month
             }
+            weather_data.average_temperature_profile = monthly_temperature_profiles[
+                Date(1, month)
+            ]
 
     def __repr__(self) -> str:
         """
@@ -388,7 +456,9 @@ class WeatherForecaster:
         cls,
         average_irradiance: bool,
         weather_data_path: str,
-        solar_irradiance_filenames: List[str],
+        solar_irradiance_filenames: Set[str],
+        temperature_filenames: Set[str],
+        use_pvgis: bool = False,
     ) -> Any:
         """
         Instantiate a :class:`WeatherForecaster` from paths to various data files.
@@ -402,19 +472,20 @@ class WeatherForecaster:
             location that is weather-related.
 
         :param solar_irradiance_filenames:
-            A `list` of paths to files containing solar irradiance profiles. The format
+            A `set` of paths to files containing solar irradiance profiles. The format
             of these files is in the form as given by the PVGIS (Photovoltaic,
             Geographic Information Service). Processing of these files occurs here.
+
+        :param temperature_filenames:
+            A `set` of paths to files containing temperature profiles.
 
         :return:
             A :class:`WeatherForecaster` instance.
 
         """
 
-        # Call out to the __utils__ module to read the yaml data.
         data = read_yaml(weather_data_path)
 
-        # * Check that all months are specified.
         try:
             data.pop("solar_insolation")
         except KeyError:
@@ -443,33 +514,129 @@ class WeatherForecaster:
                 ),
             ) from None
 
-        # Extract the solar irradiance data from the files.
-        solar_irradiance_data: Dict[
-            Date : Dict[datetime.time, float]
-        ] = collections.defaultdict(_DailySolarIrradianceProfile)
-        # Extract and open each file in series.
-        for filename in solar_irradiance_filenames:
-            with open(filename) as f:
-                filedata = json.load(f)
-                # Compile a dictionary consisting of the combined data from all files.
-            processed_filedata = {
-                datetime.datetime.strptime(entry["time"], "%Y%m%d:%H%M"): entry["G(i)"]
-                for entry in filedata["outputs"]["hourly"]
-            }
+        # NOTE:
+        # > Here, PVGIS code exists in a block s.t. the override profiles obtained from
+        # > Maria's paper using a highly scientific method :p can be used instead.
 
-            # Create a temporary mapping of date to daily profile.
-            date_to_profile_mapping: Dict[Date:Dict] = collections.defaultdict(dict)
-            for date_and_time, irradiance in processed_filedata.items():
-                date_to_profile_mapping[Date.from_date(date_and_time.date())].update(
-                    {date_and_time.time(): irradiance}
+        # Loop through all data files, reading in the data, and adding to a profile
+        # keyed only by month and day.
+        if use_pvgis:
+            monthly_irradiance_profiles: Dict[Date, dict] = collections.defaultdict(
+                dict
+            )
+
+            for filename in solar_irradiance_filenames:
+                with open(filename) as f:
+                    filedata = json.load(f)
+                processed_filedata: Dict[datetime.datetime, float] = {
+                    datetime.datetime.strptime(entry["time"], "%Y%m%d:%H%M"): entry[
+                        "G(i)"
+                    ]
+                    for entry in filedata["outputs"]["hourly"]
+                }
+
+                num_years = len({date.year for date in processed_filedata})
+
+                for key, value in processed_filedata.items():
+                    # This is being wrapped in a try-except block to allow for assigning of
+                    # both items that are already present, and those which aren't.
+                    try:
+                        monthly_irradiance_profiles[Date.from_date(key.date())][
+                            key.time()
+                        ] += (value / num_years)
+                    except KeyError:
+                        monthly_irradiance_profiles[Date.from_date(key.date())][
+                            key.time()
+                        ] = (value / num_years)
+
+            # These profiles now need to be cast to _DailyProfiles
+            monthly_irradiance_profiles: Dict[Date, _DailyProfile] = {
+                date: _DailyProfile(profile)
+                for date, profile in monthly_irradiance_profiles.items()
+            }
+        else:
+            # Cycle through the various profile files, opening the profiles and storing as a
+            # mapping.
+            monthly_irradiance_profiles: Dict[Date, _DailyProfile] = dict()
+            for filename in solar_irradiance_filenames:
+                with open(filename, "r") as f:
+                    filedata = json.load(f)
+
+                # Process the profile and store it.
+                monthly_irradiance_profiles[
+                    Date(1, cls._month_abbr_to_num[os.path.basename(filename)[:3]])
+                ] = _DailyProfile(
+                    {
+                        datetime.datetime.strptime(key, "%H:%M").time(): value
+                        for key, value in filedata.items()
+                    }
                 )
 
-            # Update the running dictionary.
-            for date, profile in date_to_profile_mapping.items():
-                solar_irradiance_data[date].update(profile)
+        temperature_profiles: Dict[int, _DailyProfile] = dict()
+        for filename in temperature_filenames:
+            with open(filename, "r") as f:
+                filedata = json.load(f)
+
+            # Process the profile and store it.
+            temperature_profiles[
+                Date(1, cls._month_abbr_to_num[os.path.basename(filename)[:3]])
+            ] = _DailyProfile(
+                {
+                    datetime.datetime.strptime(key, "%H:%M").time(): value
+                    + ZERO_CELCIUS_OFFSET
+                    for key, value in filedata.items()
+                }
+            )
+
+        # @@@
+        # FIXME: For now, the solar irradiance profiles and temperature profiles for the
+        # missing months are filled in here.
+        monthly_irradiance_profiles[Date(1, 2)] = monthly_irradiance_profiles[
+            Date(1, 1)
+        ]
+        monthly_irradiance_profiles[Date(1, 3)] = monthly_irradiance_profiles[
+            Date(1, 4)
+        ]
+        monthly_irradiance_profiles[Date(1, 5)] = monthly_irradiance_profiles[
+            Date(1, 4)
+        ]
+        monthly_irradiance_profiles[Date(1, 6)] = monthly_irradiance_profiles[
+            Date(1, 8)
+        ]
+        monthly_irradiance_profiles[Date(1, 7)] = monthly_irradiance_profiles[
+            Date(1, 8)
+        ]
+        monthly_irradiance_profiles[Date(1, 9)] = monthly_irradiance_profiles[
+            Date(1, 4)
+        ]
+        monthly_irradiance_profiles[Date(1, 10)] = monthly_irradiance_profiles[
+            Date(1, 4)
+        ]
+        monthly_irradiance_profiles[Date(1, 11)] = monthly_irradiance_profiles[
+            Date(1, 1)
+        ]
+        monthly_irradiance_profiles[Date(1, 12)] = monthly_irradiance_profiles[
+            Date(1, 1)
+        ]
+
+        temperature_profiles[Date(1, 2)] = temperature_profiles[Date(1, 1)]
+        temperature_profiles[Date(1, 3)] = temperature_profiles[Date(1, 4)]
+        temperature_profiles[Date(1, 5)] = temperature_profiles[Date(1, 4)]
+        temperature_profiles[Date(1, 6)] = temperature_profiles[Date(1, 8)]
+        temperature_profiles[Date(1, 7)] = temperature_profiles[Date(1, 8)]
+        temperature_profiles[Date(1, 9)] = temperature_profiles[Date(1, 4)]
+        temperature_profiles[Date(1, 10)] = temperature_profiles[Date(1, 4)]
+        temperature_profiles[Date(1, 11)] = temperature_profiles[Date(1, 1)]
+        temperature_profiles[Date(1, 12)] = temperature_profiles[Date(1, 1)]
 
         # Instantiate and return a Weather Forecaster based off of this weather data.
-        return cls(average_irradiance, mains_water_temp, data, solar_irradiance_data)
+        return cls(
+            average_irradiance,
+            mains_water_temp,
+            data,
+            monthly_irradiance_profiles,
+            temperature_profiles,
+        )
 
     def _cloud_cover(
         self, cloud_efficacy_factor: float, date_and_time: datetime.datetime
@@ -520,9 +687,9 @@ class WeatherForecaster:
                 date_and_time.month
             ].average_irradiance_profile[date_and_time.time()]
 
-        return self._monthly_weather_data[date_and_time.month].solar_irradiance_profile[
-            date_and_time.day
-        ][date_and_time.time()]
+        return self._monthly_weather_data[
+            date_and_time.month
+        ].solar_irradiance_profiles[date_and_time.day][date_and_time.time()]
 
     def _ambient_temperature(
         self, latitude: float, longitude: float, date_and_time: datetime.datetime
@@ -612,17 +779,22 @@ class WeatherForecaster:
 
         # Factor in the weather conditions and cloud cover to compute the current solar
         # irradiance.
-        irradiance: float = self._irradiance(date_and_time) * (
-            1 - self._cloud_cover(cloud_efficacy_factor, date_and_time)
-        )
+        irradiance: float = self._irradiance(date_and_time)  # * (
+        # 1 - self._cloud_cover(cloud_efficacy_factor, date_and_time)
+        # )
 
         # * Compute the wind speed
         wind_speed: float = 5  # [m/s]
 
-        # Compute the ambient temperature.
-        ambient_temperature = self._ambient_temperature(
-            latitude, longitude, date_and_time
-        )
+        ambient_temperature = self._monthly_weather_data[
+            date_and_time.month
+        ].average_temperature_profile[date_and_time.time()]
+
+        # >>> The ambient temperature is now determined from a temperature profile.
+        # # Compute the ambient temperature.
+        # ambient_temperature = self._ambient_temperature(
+        #     latitude, longitude, date_and_time
+        # )
 
         # Return all of these in a WeatherConditions variable.
         return WeatherConditions(
