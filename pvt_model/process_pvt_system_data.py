@@ -22,7 +22,8 @@ import datetime
 
 from typing import Any, Dict
 
-from . import exchanger, tank, pvt
+from .pvt_panel import pvt
+from . import exchanger, tank
 from .__utils__ import (
     BackLayerParameters,
     CollectorParameters,
@@ -99,11 +100,11 @@ def hot_water_tank_from_path(tank_data_file: str) -> tank.Tank:
     tank_data = read_yaml(tank_data_file)
     try:
         return tank.Tank(
-            INITIAL_TANK_TEMPERATURE,  # [K]
-            float(tank_data["mass"]),  # [kg]
-            HEAT_CAPACITY_OF_WATER,  # [J/kg*K]
             float(tank_data["area"]),  # [m^2]
+            HEAT_CAPACITY_OF_WATER,  # [J/kg*K]
             float(tank_data["heat_loss_coefficient"]),  # [W/m^2*K]
+            float(tank_data["mass"]),  # [kg]
+            INITIAL_TANK_TEMPERATURE,  # [K]
         )
     except KeyError as e:
         raise MissingDataError(
@@ -357,24 +358,22 @@ def pvt_panel_from_path(
 
     try:
         pvt_panel = pvt.PVT(
-            pvt_data["pvt_system"]["latitude"],  # [deg]
-            pvt_data["pvt_system"]["longitude"],  # [deg]
-            pvt_data["pvt_system"]["area"],  # [m^2]
-            not unglazed,
-            glass_parameters,
-            collector_parameters,
-            back_parameters,
-            pvt_data["pvt_system"]["air_gap_thickness"],  # [m]
-            portion_covered,  # [unitless]
-            pvt_data["pvt_system"]["pv_to_collector_conductance"],  # [W/m^2*K]
-            datetime.timezone(
+            air_gap_thickness=pvt_data["pvt_system"]["air_gap_thickness"],  # [m]
+            area=pvt_data["pvt_system"]["area"],  # [m^2]
+            back_params=back_parameters,
+            collector_parameters=collector_parameters,
+            glass_parameters=glass_parameters,
+            glazed=not unglazed,
+            latitude=pvt_data["pvt_system"]["latitude"],  # [deg]
+            longitude=pvt_data["pvt_system"]["longitude"],  # [deg]
+            portion_covered=portion_covered,  # [unitless]
+            pv_parameters=pv_parameters if portion_covered != 0 else None,
+            pv_to_collector_thermal_conductance=pvt_data["pvt_system"][
+                "pv_to_collector_conductance"
+            ],  # [W/m^2*K]
+            timezone=datetime.timezone(
                 datetime.timedelta(hours=int(pvt_data["pvt_system"]["timezone"]))
             ),
-            pv_layer_included="pv" in pvt_data and portion_covered != 0,
-            pv_parameters=pv_parameters if portion_covered != 0 else None,
-            tilt=pvt_data["pvt_system"]["tilt"]  # [deg]
-            if "tilt" in pvt_data["pvt_system"]
-            else None,
             azimuthal_orientation=pvt_data["pvt_system"][
                 "azimuthal_orientation"
             ]  # [deg]
@@ -382,6 +381,9 @@ def pvt_panel_from_path(
             else None,
             horizontal_tracking=pvt_data["pvt_system"]["horizontal_tracking"],
             vertical_tracking=pvt_data["pvt_system"]["vertical_tracking"],
+            tilt=pvt_data["pvt_system"]["tilt"]  # [deg]
+            if "tilt" in pvt_data["pvt_system"]
+            else None,
         )
     except KeyError as e:
         raise MissingParametersError(

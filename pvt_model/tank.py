@@ -22,58 +22,77 @@ class Tank:
     """
     Represents a hot-water tank.
 
-    .. attribute:: temperature
-        The temperature of the hot-water tank, measured in Kelvin.
-
-    .. attribute:: mass
-        The mass of water in the hot-water tank, measured in kilograms.
+    .. attribute:: area
+        The surface area of the tank, measured in meters squared.
 
     .. attribute:: heat_capacity
         The heat capacity of the water, measured in Joules per kilogram Kelvin.
 
-    .. attribute:: area
-        The surface area of the tank, measured in meters squared.
-
     .. attribute:: heat_loss_coefficient
         The heat lost from the tank, measured in Watts per meter squared Kelvin.
+
+    .. attribute:: mass
+        The mass of water in the hot-water tank, measured in kilograms.
+
+    .. attribute:: temperature
+        The temperature of the hot-water tank, measured in Kelvin.
 
     """
 
     def __init__(
         self,
-        temperature: float,
-        mass: float,
-        heat_capacity: float,
         area: float,
+        heat_capacity: float,
         heat_loss_coefficient: float,
+        mass: float,
+        temperature: float,
     ) -> None:
         """
         Instantiate a hot-water tank.
 
-        :param temperature:
-            The temperature of the water within the tank when initilialsed, measured in
-            Kelvin.
-
-        :param mass:
-            The mass of water that can be held within the tank, measured in kilograms.
+        :param area:
+            The surface area of the tank, measured in meters squared.
 
         :param heat_capacity:
             The heat capacity of water within the tank, measured in Joules per kilogram
             Kelvin.
 
-        :param area:
-            The surface area of the tank, measured in meters squared.
-
         :param heat_loss_coefficient:
             The heat lost from the tank, measured in Watts per meter squared Kelvin.
 
+        :param mass:
+            The mass of water that can be held within the tank, measured in kilograms.
+
+        :param temperature:
+            The temperature of the water within the tank when initilialsed, measured in
+            Kelvin.
+
         """
 
-        self.temperature = temperature
-        self.mass = mass
-        self.heat_capacity = heat_capacity
         self.area = area
+        self.heat_capacity = heat_capacity
         self.heat_loss_coefficient = heat_loss_coefficient
+        self.mass = mass
+        self.temperature = temperature
+
+    def __repr__(self) -> str:
+        """
+        Returns a nice representation of the hot-water tank.
+
+        :return:
+            A `str` giving a nice representation of the hot-water tank.
+
+        """
+
+        return (
+            "PV("
+            f"area: {self.area}m^2, "
+            f"heat_capacity: {self.heat_capacity}J/kg*K, "
+            f"heat_loss_coefficient: {self.heat_loss_coefficient}W/m^2*K, "
+            f"mass: {self.mass}kg, "
+            f"temperature: {self.temperature}K"
+            ")"
+        )
 
     def update(
         self,

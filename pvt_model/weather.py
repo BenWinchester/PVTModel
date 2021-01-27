@@ -27,7 +27,7 @@ import os
 import random
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, Optional, Set, Tuple, Union
 
 import json
 import pysolar
@@ -451,9 +451,12 @@ class WeatherForecaster:
 
         """
 
-        return "WeatherForecaster( mains_water_temp: {}, ".format(
-            self.mains_water_temp
-        ) + "num_months: {})".format(len(self._monthly_weather_data.keys()))
+        return (
+            "WeatherForecaster("
+            f"mains_water_temp: {self.mains_water_temp}, "
+            f"num_months: {len(self._monthly_weather_data.keys())}"
+            ")"
+        )
 
     @classmethod
     def from_data(

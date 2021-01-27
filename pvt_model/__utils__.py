@@ -35,6 +35,7 @@ __all__ = (
     "FileType",
     "FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR",
     "HEAT_CAPACITY_OF_WATER",
+    "get_logger",
     "GraphDetail",
     "INITIAL_SYSTEM_TEMPERATURE",
     "INITIAL_TANK_TEMPERATURE",
@@ -49,6 +50,7 @@ __all__ = (
     "OpticalLayerParameters",
     "ProgrammerJudgementFault",
     "PVParameters",
+    "read_yaml",
     "STEFAN_BOLTZMAN_CONSTANT",
     "THERMAL_CONDUCTIVITY_OF_AIR",
     "THERMAL_CONDUCTIVITY_OF_WATER",
@@ -56,8 +58,6 @@ __all__ = (
     "TotalPowerData",
     "UtilityType",
     "WeatherConditions",
-    "get_logger",
-    "read_yaml",
     "ZERO_CELCIUS_OFFSET",
 )
 
@@ -66,6 +66,9 @@ __all__ = (
 # Constants #
 #############
 
+# The temperature of absolute zero in Kelvin, used for converting Celcius to Kelvin and
+# vice-a-versa.
+ZERO_CELCIUS_OFFSET: float = 273.15
 
 # The free convective, heat-transfer coefficient of air. This varies, and potentially
 # could be extended to the weather module and calculated on the fly depending on various
@@ -99,9 +102,6 @@ THERMAL_CONDUCTIVITY_OF_AIR: float = 0.024
 # The thermal conductivity of water is obtained from
 # http://hyperphysics.phy-astr.gsu.edu/hbase/Tables/thrcn.html
 THERMAL_CONDUCTIVITY_OF_WATER: float = 0.6  # [W/m*K]
-# The temperature of absolute zero in Kelvin, used for converting Celcius to Kelvin and
-# vice-a-versa.
-ZERO_CELCIUS_OFFSET: float = 273.15
 
 
 ##############
@@ -629,7 +629,7 @@ class LayerParameters:
     heat_capacity: float
     area: float
     thickness: float
-    temperature: Optional[float]
+    temperature: float
 
 
 @dataclass

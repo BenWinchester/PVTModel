@@ -343,7 +343,7 @@ def main(args) -> None:  # pylint: disable=too-many-locals
 
     """
 
-    logger.info("Beginning run of PVT model.\nCommand: %s", str(args))
+    logger.info("Beginning run of PVT model.\nCommand: %s", " ".join(args))
 
     # Parse the system arguments from the commandline.
     parsed_args = argparser.parse_args(args)
@@ -373,7 +373,7 @@ def main(args) -> None:  # pylint: disable=too-many-locals
     logger.info("Weather forecaster successfully instantiated: %s", weather_forecaster)
 
     # Set up the load module.
-    load_system = _get_load_system(parsed_args.locaton)
+    load_system = _get_load_system(parsed_args.location)
     logger.info(
         "Load system successfully instantiated: %s",
         load_system,
@@ -382,8 +382,8 @@ def main(args) -> None:  # pylint: disable=too-many-locals
     # Initialise the PV-T panel.
     pvt_panel = process_pvt_system_data.pvt_panel_from_path(
         INITIAL_SYSTEM_TEMPERATURE,
-        parsed_args.pvt_data_file,
         parsed_args.portion_covered,
+        parsed_args.pvt_data_file,
         parsed_args.unglazed,
     )
     logger.info("PV-T panel successfully instantiated: %s", pvt_panel)
@@ -480,10 +480,11 @@ def main(args) -> None:  # pylint: disable=too-many-locals
             updated_input_water_temperature,
             tank_heat_gain,
         ) = heat_exchanger.update(  # [K], [J]
-            hot_water_tank,
-            output_water_temperature,  # [K]
-            pvt_panel.mass_flow_rate * parsed_args.internal_resolution,  # [kg]
-            pvt_panel.htf_heat_capacity,  # [J/kg*K]
+            input_water_heat_capacity=pvt_panel.htf_heat_capacity,  # [J/kg*K]
+            input_water_mass=pvt_panel.mass_flow_rate
+            * parsed_args.internal_resolution,  # [kg]
+            input_water_temperature=output_water_temperature,  # [K]
+            water_tank=hot_water_tank,
         )
 
         # Compute the new tank temperature after supplying this demand
