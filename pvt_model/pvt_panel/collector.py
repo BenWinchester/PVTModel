@@ -134,7 +134,7 @@ class Collector(OpticalLayer):
         # @@@ Maria here used a value of 259, irrespective of these properties.
         # @@@ For temporary consistency, this value is used.
 
-        return 259
+        return 259 * 10
 
         # return NUSSELT_NUMBER * THERMAL_CONDUCTIVITY_OF_WATER / self._pipe_diameter
 
@@ -293,6 +293,7 @@ class Collector(OpticalLayer):
         else:
             upward_heat_losses = 0  # [J]
 
+        # >>> FIXME
         # Compute the output water temperature
         self.output_water_temperature = (
             self.convective_heat_transfer_coefficient_of_water  # [W/m^2*K]
@@ -311,6 +312,7 @@ class Collector(OpticalLayer):
             * self.convective_heat_transfer_coefficient_of_water  # [W/m^2/K]
             * self.htf_surface_area  # [m^2]
         )  # [W/K]
+        # <<< E.O. FIXME
 
         # Compute the heat loss to the bulk water
         bulk_water_heat_loss = (

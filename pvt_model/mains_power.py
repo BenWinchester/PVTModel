@@ -43,6 +43,22 @@ class _Utility:
     utility_type: UtilityType
     emissions_per_joule: float
 
+    def __repr__(self) -> str:
+        """
+        Returns a nice-looking representation of the :class:`Utility` instance.
+
+        :return:
+            A `str` giving a nice-looking representation of the utility.
+
+        """
+
+        return (
+            "Utility("
+            f"emissions_per_joule={self.emissions_per_joule}, "
+            f"utility_type={self.utility_type}"
+            ")"
+        )
+
 
 class MainsSupply:
     """
@@ -63,6 +79,17 @@ class MainsSupply:
         """
 
         self._utilities = utilities
+
+    def __repr__(self) -> str:
+        """
+        Returns a nice-looking representation of the mains-power instance.
+
+        :return:
+            A `str` giving a representation of the class.
+
+        """
+
+        return f"MainsSupply(utilities={list(self._utilities.values())})"
 
     @classmethod
     def from_yaml(cls, yaml_data_path: str) -> Any:

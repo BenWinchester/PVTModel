@@ -78,7 +78,7 @@ FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR: int = 25
 # The heat capacity of water, measured in Joules per kilogram Kelvin.
 HEAT_CAPACITY_OF_WATER: int = 4182
 # The initial temperature for the system to be instantiated at, measured in Kelvin.
-INITIAL_SYSTEM_TEMPERATURE = 283  # [K]
+INITIAL_SYSTEM_TEMPERATURE = 303  # [K]
 # The initial temperature of the hot-water tank, at which it should be instantiated,
 # measured in Kelvin.
 INITIAL_TANK_TEMPERATURE = ZERO_CELCIUS_OFFSET + 34.75  # [K]
