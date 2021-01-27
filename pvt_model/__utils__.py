@@ -20,7 +20,9 @@ import logging
 import os
 
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Generator, Optional
+
+from dateutil.relativedelta import relativedelta
 
 import yaml
 
@@ -34,6 +36,8 @@ __all__ = (
     "FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR",
     "HEAT_CAPACITY_OF_WATER",
     "GraphDetail",
+    "INITIAL_SYSTEM_TEMPERATURE",
+    "INITIAL_TANK_TEMPERATURE",
     "InternalError",
     "InvalidDataError",
     "LOGGER_NAME",
@@ -48,6 +52,7 @@ __all__ = (
     "STEFAN_BOLTZMAN_CONSTANT",
     "THERMAL_CONDUCTIVITY_OF_AIR",
     "THERMAL_CONDUCTIVITY_OF_WATER",
+    "time_iterator",
     "TotalPowerData",
     "UtilityType",
     "WeatherConditions",
@@ -69,6 +74,11 @@ __all__ = (
 FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR: int = 25
 # The heat capacity of water, measured in Joules per kilogram Kelvin.
 HEAT_CAPACITY_OF_WATER: int = 4182
+# The initial temperature for the system to be instantiated at, measured in Kelvin.
+INITIAL_SYSTEM_TEMPERATURE = 283  # [K]
+# The initial temperature of the hot-water tank, at which it should be instantiated,
+# measured in Kelvin.
+INITIAL_TANK_TEMPERATURE = ZERO_CELCIUS_OFFSET + 34.75  # [K]
 # The name used for the internal logger.
 LOGGER_NAME = "my_first_pvt_model"
 # The Nusselt number of the flow is given as 6 in Maria's paper.
@@ -799,3 +809,41 @@ def read_yaml(yaml_file_path: str) -> Dict[Any, Any]:
 
     logger.info("Data successfully read from '%s'.", yaml_file_path)
     return data
+
+
+def time_iterator(
+    *,
+    first_time: datetime.datetime,
+    last_time: datetime.datetime,
+    internal_resolution: int,
+    timezone: datetime.timezone,
+) -> Generator[datetime.datetime, None, None]:
+    """
+    A generator function for looping through various times.
+
+    :param first_time:
+        The first time to be returned from the function.
+
+    :param last_time:
+        The last time, which, when reached, should cause the generator to stop.
+
+    :param internal_resolution:
+        The time step, in seconds, for which the simulation should be run before saving.
+
+    :param timezone:
+        The timezone of the PV-T set-up.
+
+    :return:
+        A :class:`datetime.datetime` corresponding to the date and time at each point
+        being itterated through.
+
+    """
+
+    current_time = first_time
+    while current_time < last_time:
+        yield current_time.replace(tzinfo=timezone)
+        current_time += relativedelta(
+            hours=internal_resolution // 3600,
+            minutes=internal_resolution // 60,
+            seconds=internal_resolution % 60,
+        )
