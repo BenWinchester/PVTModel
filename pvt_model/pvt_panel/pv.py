@@ -15,13 +15,19 @@ This module represents a thermal collector within a PV-T panel.
 
 from typing import Optional, Tuple
 
-from ..__utils__ import OpticalLayerParameters, PVParameters, WeatherConditions
+from ..__utils__ import (
+    OpticalLayerParameters,
+    ProgrammerJudgementFault,
+    PVParameters,
+    WeatherConditions,
+)
 from .__utils__ import (
     conductive_heat_transfer_no_gap,
     conductive_heat_transfer_with_gap,
     OpticalLayer,
     radiative_heat_transfer,
     solar_heat_input,
+    wind_heat_transfer,
 )
 
 __all__ = ("PV",)
@@ -182,7 +188,7 @@ class PV(OpticalLayer):
         )  # [J] or [J/time_step]
 
         # >>> If the layer is glazed, compute radiative and conductive heat to the glass
-        if glazed:
+        if glazed and glass_emissivity is not None and glass_temperature is not None:
             radiative_loss_upwards = (
                 radiative_heat_transfer(
                     destination_emissivity=glass_emissivity,
@@ -202,21 +208,30 @@ class PV(OpticalLayer):
                 )  # [W]
                 * internal_resolution  # [seconds]
             )  # [J]
+        elif glazed and (glass_temperature is None or glass_temperature is None):
+            raise ProgrammerJudgementFault(
+                "If the panel is glazed, a glass temperature and emissivity should be "
+                "defined and passed to the PV module."
+            )
         # <<< If the layer is unglazed, compute losses to the sky and air.
         else:
             radiative_loss_upwards = (
-                self._layer_to_sky_radiative_transfer(
-                    1,
-                    weather_conditions.sky_temperature,
+                radiative_heat_transfer(
+                    destination_temperature=weather_conditions.sky_temperature,
+                    radiating_to_sky=True,
+                    radiative_contact_area=self.area,
+                    source_emissivity=self.emissivity,
+                    source_temperature=self.temperature,
                 )  # [W]
                 * internal_resolution  # [seconds]
             )  # [J]
 
             convective_loss_upwards = (
-                self._layer_to_air_convective_transfer(
-                    weather_conditions.ambient_temperature,
-                    1,
-                    weather_conditions.wind_heat_transfer_coefficient,
+                wind_heat_transfer(
+                    contact_area=self.area,
+                    destination_temperature=weather_conditions.ambient_temperature,
+                    source_temperature=self.temperature,
+                    wind_heat_transfer_coefficient=weather_conditions.wind_heat_transfer_coefficient,  # pylint: disable=line-too-long
                 )  # [W]
                 * internal_resolution  # [seconds]
             )  # [J]
@@ -253,5 +268,6 @@ class PV(OpticalLayer):
                     / (internal_resolution)  # [seconds]
                 ),  # [W]
             )
-        # <<< Otherwise, return None.
+        # <<< >>> Otherwise, return None.
         return (pv_to_collector, None)  # [J] [W]
+        # <<< End of conditional block.

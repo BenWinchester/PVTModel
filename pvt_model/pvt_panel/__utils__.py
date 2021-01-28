@@ -19,6 +19,7 @@ from typing import Optional
 from ..__utils__ import (
     LayerParameters,
     OpticalLayerParameters,
+    ProgrammerJudgementFault,
     STEFAN_BOLTZMAN_CONSTANT,
     THERMAL_CONDUCTIVITY_OF_AIR,
 )
@@ -30,6 +31,7 @@ __all__ = (
     "OpticalLayer",
     "radiative_heat_transfer",
     "solar_heat_input",
+    "wind_heat_transfer",
 )
 
 
@@ -139,62 +141,6 @@ class OpticalLayer(Layer):
             ")"
         )
 
-    def _layer_to_sky_radiative_transfer(
-        self, fraction_emitting: float, sky_temperature: float
-    ) -> float:
-        """
-        Calculates the heat loss to the sky radiatively from the layer in Watts.
-
-        :param fraction_emitting:
-            The fraction of the layer which is emitting to the sky.
-
-        :param sky_temperature:
-            The radiative temperature of the sky, measured in Kelvin.
-
-        :return:
-            The heat transfer, in Watts, radiatively to the sky.
-
-        """
-
-        return (
-            self.emissivity
-            * STEFAN_BOLTZMAN_CONSTANT
-            * self.area
-            * fraction_emitting
-            * (self.temperature ** 4 - sky_temperature ** 4)
-        )
-
-    def _layer_to_air_convective_transfer(
-        self,
-        ambient_temperature: float,
-        fraction_emitting: float,
-        wind_heat_transfer_coefficient: float,
-    ) -> float:
-        """
-        Calculates the heat loss to the surrounding air by conduction and convection in
-        Watts.
-
-        :param ambient_temperature:
-            The ambient temperature of the air, measured in Kelvin.
-
-        :param fraction_emitting:
-            The fraction of the layer which is emitting to the air.
-
-        :param wind_heat_transfer_coefficient:
-            The convective heat transfer coefficient due to the wind, measured in W/K.
-
-        :return:
-            The heat transfer, in Watts, conductively to the surrounding air.
-
-        """
-
-        return (
-            wind_heat_transfer_coefficient  # [W/m^2*K]
-            * self.area  # [m^2]
-            * fraction_emitting
-            * (self.temperature - ambient_temperature)  # [K]
-        )
-
 
 def conductive_heat_transfer_no_gap(
     *,
@@ -281,8 +227,10 @@ def conductive_heat_transfer_with_gap(
 
 
 def radiative_heat_transfer(
-    destination_emissivity: float,
+    *,
+    destination_emissivity: Optional[float] = None,
     destination_temperature: float,
+    radiating_to_sky: Optional[bool] = False,
     radiative_contact_area: float,
     source_emissivity: float,
     source_temperature: float,
@@ -298,10 +246,14 @@ def radiative_heat_transfer(
 
     :param destination_emissivity:
         The emissivity of the layer that is receiving the radiation, defined between 0
-        and 1.
+        and 1. This parameter can be set to `None` in instances where the destination
+        has no well-defined emissivity, such as when radiating to the sky.
 
     :param destination_temperature:
         The temperature of the destination layer/material, measured in Kelvin.
+
+    :param radiating_to_sky:
+        Specifies whether the source of the radiation is the sky (True).
 
     :param radiative_contact_area:
         The area of contact between the two layers over which radiation can occur,
@@ -318,6 +270,20 @@ def radiative_heat_transfer(
         place by radiative transfer.
 
     """
+
+    if radiating_to_sky:
+        return (
+            STEFAN_BOLTZMAN_CONSTANT  # [W/m^2*K^4]
+            * radiative_contact_area  # [m^2]
+            * (source_temperature ** 4 - destination_temperature ** 4)  # [K^4]
+            * source_emissivity
+        )
+
+    if destination_emissivity is None:
+        raise ProgrammerJudgementFault(
+            "If radiating to an object that is not the sky, a destination emissivity "
+            "must be specified."
+        )
 
     return (
         STEFAN_BOLTZMAN_CONSTANT  # [W/m^2*K^4]
@@ -378,4 +344,41 @@ def solar_heat_input(
         * solar_energy_input  # [J/time_step*m^2]
         * area  # [m^2]
         * (1 - electrical_efficiency)
+    )
+
+
+def wind_heat_transfer(
+    *,
+    contact_area: float,
+    destination_temperature: float,
+    source_temperature: float,
+    wind_heat_transfer_coefficient: float,
+) -> float:
+    """
+    Calculates the heat loss to the surrounding air by conduction and convection in
+    Watts.
+
+    :param destination_temperature:
+        The temperature of the destination air, measured in Kelvin.
+
+    :param contact_area:
+        The area of contact between the two layers over which conductive heat losses can
+        occur, measured in meters squared.
+
+    :param source_temperature:
+        The temperature of the source layer/material, measured in Kelvin.
+
+    :param wind_heat_transfer_coefficient:
+        The heat transfer coefficient from the wind, measured in Watts per meter squared
+        Kelvin.
+
+    :return:
+        The heat transfer, in Watts, conductively to the surrounding air.
+
+    """
+
+    return (
+        wind_heat_transfer_coefficient  # [W/m^2*K]
+        * contact_area  # [m^2]
+        * (source_temperature - destination_temperature)  # [K]
     )

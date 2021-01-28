@@ -17,11 +17,10 @@ processing the command-line arguments that define the scope of the model run.
 
 import dataclasses
 import datetime
-import logging
 import os
 import sys
 
-from typing import Dict, Optional, Union
+from typing import Dict, Optional
 
 import json
 import yaml
@@ -51,7 +50,7 @@ INITIAL_DATE_AND_TIME = datetime.datetime(2005, 1, 1, 0, 0)
 # household, measured in Kelvin.
 INTERNAL_HOUSEHOLD_AMBIENT_TEMPERATURE = ZERO_CELCIUS_OFFSET + 20  # [K]
 # Get the logger for the component.
-logger = logging.getLogger(LOGGER_NAME)
+logger = get_logger(LOGGER_NAME)
 # Folder containing the solar irradiance profiles
 SOLAR_IRRADIANCE_FOLDERNAME = "solar_irradiance_profiles"
 # Folder containing the temperature profiles
@@ -277,7 +276,7 @@ def _get_weather_forecaster(
 def _save_data(
     file_type: FileType,
     output_file_name: str,
-    system_data: Dict[Union[int, str], SystemData],
+    system_data: Dict[int, SystemData],
     carbon_emissions: Optional[CarbonEmissions] = None,
     total_power_data: Optional[TotalPowerData] = None,
 ) -> None:
@@ -322,8 +321,8 @@ def _save_data(
                 "{}.{}.1".format(output_file_name, "json"),
             )
         # Append the total power and emissions data for the run.
-        system_data_dict.update(dataclasses.asdict(total_power_data))
-        system_data_dict.update(dataclasses.asdict(carbon_emissions))
+        system_data_dict.update(dataclasses.asdict(total_power_data))  # type: ignore
+        system_data_dict.update(dataclasses.asdict(carbon_emissions))  # type: ignore
 
         # Save the data
         with open("{}.{}".format(output_file_name, "json"), "w") as f:
@@ -431,7 +430,7 @@ def main(args) -> None:  # pylint: disable=too-many-locals
         final_date_and_time = first_date_and_time + relativedelta(days=parsed_args.days)
 
     # Set up a dictionary for storing the system data.
-    system_data: Dict[Union[int, str], SystemData] = dict.fromkeys(
+    system_data: Dict[int, SystemData] = dict.fromkeys(
         set(range((final_date_and_time - first_date_and_time).seconds))
     )
 
@@ -572,9 +571,7 @@ def main(args) -> None:  # pylint: disable=too-many-locals
                 if not parsed_args.no_pv
                 else None,
                 sky_temperature=current_weather.sky_temperature - ZERO_CELCIUS_OFFSET,
-                solar_irradiance=current_weather.irradiance
-                if pvt_panel.glazed
-                else None,
+                solar_irradiance=current_weather.irradiance,
                 tank_temperature=hot_water_tank.temperature - ZERO_CELCIUS_OFFSET,
                 tank_heat_addition=tank_heat_gain / (parsed_args.internal_resolution),
                 tank_output_temperature=tank_output_water_temp - ZERO_CELCIUS_OFFSET,

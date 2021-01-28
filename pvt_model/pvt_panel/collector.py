@@ -32,6 +32,7 @@ from .__utils__ import (
     conductive_heat_transfer_with_gap,
     OpticalLayer,
     radiative_heat_transfer,
+    wind_heat_transfer,
 )
 
 __all__ = ("Collector",)
@@ -251,17 +252,21 @@ class Collector(OpticalLayer):
         # layer directly.
         if not glass_layer_included and portion_covered != 1:
             upward_heat_losses: float = (
-                self._layer_to_air_convective_transfer(
-                    weather_conditions.ambient_temperature,
-                    (1 - portion_covered),
-                    weather_conditions.wind_heat_transfer_coefficient,
-                )
+                wind_heat_transfer(
+                    contact_area=self.area * (1 - portion_covered),
+                    destination_temperature=weather_conditions.ambient_temperature,
+                    source_temperature=self.temperature,
+                    wind_heat_transfer_coefficient=weather_conditions.wind_heat_transfer_coefficient,  # pylint: disable=line-too-long
+                )  # [W]
+                + radiative_heat_transfer(
+                    destination_temperature=weather_conditions.sky_temperature,
+                    radiating_to_sky=True,
+                    radiative_contact_area=self.area * (1 - portion_covered),
+                    source_emissivity=self.emissivity,
+                    source_temperature=self.temperature,
+                )  # [W]
                 * internal_resolution
-                + self._layer_to_sky_radiative_transfer(
-                    (1 - portion_covered), weather_conditions.sky_temperature
-                )
-                * internal_resolution
-            )  # [J]
+            )
         # If there is a glass layer, and a PV layer that does not fully cover the panel,
         # then we need to compute the energy transferred to the glass layer.
         elif glass_layer_included and portion_covered != 1:
@@ -278,15 +283,13 @@ class Collector(OpticalLayer):
                     source_emissivity=self.emissivity,
                     source_temperature=self.temperature,
                 )  # [W]
-                * internal_resolution  # [s]
                 + conductive_heat_transfer_with_gap(
                     air_gap_thickness=air_gap_thickness,
                     destination_temperature=glass_temperature,
                     contact_area=self.area * (1 - portion_covered),
                     source_temperature=self.temperature,
                 )  # [W]
-                * internal_resolution  # [s]
-            )  # [J]
+            ) * internal_resolution  # [J]
         # Otherwise, if the collector is completely covered by a PV layer, then there
         # are no upward heat losses as these are encapsulated in the PV layer heat
         # transfer variable.

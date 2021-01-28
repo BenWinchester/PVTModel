@@ -26,17 +26,13 @@ from . import back_plate, collector, glass, pv
 from ..__utils__ import (
     MissingParametersError,
     ProgrammerJudgementFault,
-    LayerParameters,
     BackLayerParameters,
     CollectorParameters,
     OpticalLayerParameters,
     PVParameters,
     WeatherConditions,
-    FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR,
-    STEFAN_BOLTZMAN_CONSTANT,
-    THERMAL_CONDUCTIVITY_OF_AIR,
 )
-from .__utils__ import *
+from .__utils__ import solar_heat_input
 
 __all__ = ("PVT",)
 

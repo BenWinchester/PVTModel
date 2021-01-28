@@ -14,7 +14,7 @@ This module represents a glass layer within a PV-T panel.
 """
 
 from ..__utils__ import WeatherConditions
-from .__utils__ import OpticalLayer
+from .__utils__ import OpticalLayer, radiative_heat_transfer, wind_heat_transfer
 
 __all__ = ("Glass",)
 
@@ -45,12 +45,17 @@ class Glass(OpticalLayer):
 
         """
 
-        upward_heat_losses = self._layer_to_air_convective_transfer(
-            weather_conditions.ambient_temperature,
-            fraction_emitting=1,
+        upward_heat_losses = wind_heat_transfer(
+            contact_area=self.area,
+            destination_temperature=weather_conditions.ambient_temperature,
+            source_temperature=self.temperature,
             wind_heat_transfer_coefficient=weather_conditions.wind_heat_transfer_coefficient,
-        ) + self._layer_to_sky_radiative_transfer(
-            fraction_emitting=1, sky_temperature=weather_conditions.sky_temperature
+        ) + radiative_heat_transfer(
+            destination_temperature=weather_conditions.sky_temperature,
+            radiating_to_sky=True,
+            radiative_contact_area=self.area,
+            source_emissivity=self.emissivity,
+            source_temperature=self.temperature,
         )  # [W]
 
         # This heat input, in Watts, is supplied throughout the duration, and so does
