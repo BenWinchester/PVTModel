@@ -17,6 +17,7 @@ processing the command-line arguments that define the scope of the model run.
 
 import dataclasses
 import datetime
+import math
 import os
 import sys
 
@@ -307,30 +308,39 @@ def _save_data(
 
     # If we're saving YAML data part-way through, then append to the file.
     if file_type == FileType.YAML:
-        with open("{}.{}".format(output_file_name, "yaml"), "a") as f:
+        with open("{output_file_name}.yaml", "a") as f:
             yaml.dump(
                 system_data_dict,
                 f,
             )
 
+    # If we're dumping JSON, open the file, and append to it.
     if file_type == FileType.JSON:
-        # Shift existing data if it exists.
-        if os.path.isfile("{}.{}".format(output_file_name, "json")):
-            os.rename(
-                "{}.{}".format(output_file_name, "json"),
-                "{}.{}.1".format(output_file_name, "json"),
-            )
         # Append the total power and emissions data for the run.
         system_data_dict.update(dataclasses.asdict(total_power_data))  # type: ignore
         system_data_dict.update(dataclasses.asdict(carbon_emissions))  # type: ignore
 
         # Save the data
-        with open("{}.{}".format(output_file_name, "json"), "w") as f:
-            json.dump(
-                system_data_dict,
-                f,
-                indent=4,
-            )
+        # If this is the initial dump, then create the file.
+        if not os.path.isfile(f"{output_file_name}.json"):
+            with open(f"{output_file_name}.json", "w") as f:
+                json.dump(
+                    system_data_dict,
+                    f,
+                    indent=4,
+                )
+        else:
+            with open(f"{output_file_name}.json", "r+") as f:
+                # Read the data and append the current update.
+                filedata = json.load(f)
+                filedata.update(system_data_dict)
+                # Overwrite the file with the updated data.
+                f.seek(0)
+                json.dump(
+                    filedata,
+                    f,
+                    indent=4,
+                )
 
 
 def main(args) -> None:  # pylint: disable=too-many-locals
@@ -606,17 +616,22 @@ def main(args) -> None:  # pylint: disable=too-many-locals
         # Cycle around the water.
         input_water_temperature = updated_input_water_temperature
 
-    # Compute the carbon emissions and savings
-    carbon_emissions = mains_supply.get_carbon_emissions(total_power_data)
-
-    # Dump the data generated to the output JSON file.
-    _save_data(
-        FileType.JSON,
-        parsed_args.output,
-        system_data,
-        carbon_emissions,
-        total_power_data,
-    )
+        # If at the end of an hour, dump the data.
+        if date_and_time.minute == (
+            60 - math.ceil(parsed_args.internal_resolution / 60)
+        ) and date_and_time.second == (60 - parsed_args.internal_resolution):
+            # Compute the carbon emissions and savings.
+            carbon_emissions = mains_supply.get_carbon_emissions(total_power_data)
+            # Append the data dump to the file.
+            _save_data(
+                FileType.JSON,
+                parsed_args.output,
+                system_data,
+                carbon_emissions,
+                total_power_data,
+            )
+            # Clear the current system data store.
+            system_data = dict()
 
 
 if __name__ == "__main__":

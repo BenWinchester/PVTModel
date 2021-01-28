@@ -26,7 +26,7 @@ import math
 import os
 import random
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Dict, Optional, Set, Tuple, Union
 
 import json
@@ -164,7 +164,7 @@ class _MonthlyWeatherData:
     rainy_days: float
     day_temp: float
     night_temp: float
-    solar_irradiance_profiles: Dict[int, _DailyProfile] = dict()
+    solar_irradiance_profiles: Dict[int, _DailyProfile] = field(default_factory=dict)
     _average_irradiance_profile: _DailyProfile = _DailyProfile(dict())
     override_irradiance_profile: _DailyProfile = _DailyProfile(dict())
     average_temperature_profile: _DailyProfile = _DailyProfile(dict())

@@ -85,7 +85,7 @@ class Tank:
         """
 
         return (
-            "PV("
+            "Tank("
             f"area: {self.area}m^2, "
             f"heat_capacity: {self.heat_capacity}J/kg*K, "
             f"heat_loss_coefficient: {self.heat_loss_coefficient}W/m^2*K, "
