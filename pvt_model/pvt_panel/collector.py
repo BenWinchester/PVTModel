@@ -29,6 +29,7 @@ from ..__utils__ import (
     WeatherConditions,
 )
 from .__utils__ import (
+    conductive_heat_transfer_no_gap,
     conductive_heat_transfer_with_gap,
     OpticalLayer,
     radiative_heat_transfer,
@@ -243,10 +244,14 @@ class Collector(OpticalLayer):
         # From the excess heat, compute what is not lost to the environment, and, from
         # there, what is transferred to the HTF.
         back_plate_heat_loss = (
-            back_plate_instance.conductance  # [W/m^2*K]
-            * self.area  # [m^2]
-            * (self.temperature - weather_conditions.ambient_temperature)  # [K]
-        ) * internal_resolution  # [seconds]  # [J]
+            conductive_heat_transfer_no_gap(
+                contact_area=self.area,
+                destination_temperature=weather_conditions.ambient_temperature,
+                source_temperature=back_plate_instance.temperature,
+                thermal_conductance=back_plate_instance.conductance,
+            )
+            * internal_resolution
+        )  # [seconds]  # [J]
 
         # If there are no glass or PV layers, then we lose heat from the collector
         # layer directly.
