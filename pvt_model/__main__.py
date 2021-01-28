@@ -444,6 +444,14 @@ def main(args) -> None:  # pylint: disable=too-many-locals
         str(final_date_and_time),
     )
 
+    logger.info(
+        "System state before beginning run:\n%s\n%s\n%s\n%s",
+        heat_exchanger,
+        hot_water_tank,
+        pvt_panel,
+        weather_forecaster,
+    )
+
     for run_number, date_and_time in enumerate(
         time_iterator(
             first_time=first_date_and_time,
@@ -576,7 +584,11 @@ def main(args) -> None:  # pylint: disable=too-many-locals
                 / (parsed_args.internal_resolution),
                 thermal_output=current_hot_water_load
                 * HEAT_CAPACITY_OF_WATER
-                * (tank_output_water_temp - 10 - ZERO_CELCIUS_OFFSET)
+                * (
+                    tank_output_water_temp
+                    - weather_forecaster.mains_water_temp
+                    - ZERO_CELCIUS_OFFSET
+                )
                 / (parsed_args.internal_resolution),
                 time=datetime.date.strftime(date_and_time, "%H:%M:%S"),
             )
