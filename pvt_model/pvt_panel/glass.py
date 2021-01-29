@@ -30,7 +30,7 @@ class Glass(OpticalLayer):
         heat_input: float,
         internal_resolution: float,
         weather_conditions: WeatherConditions,
-    ) -> None:
+    ) -> float:
         """
         Update the internal properties of the PV layer based on external factors.
 
@@ -42,6 +42,9 @@ class Glass(OpticalLayer):
 
         :param weather_conditions:
             The weather conditions at the current time step.
+
+        :return:
+            The heat lost upwards from the glass layer, measured in Joules.
 
         """
 
@@ -65,3 +68,5 @@ class Glass(OpticalLayer):
         ) * internal_resolution / (  # [W] * [seconds]
             self._mass * self._heat_capacity
         )  # [kg] * [J/kg*K]
+
+        return upward_heat_losses * internal_resolution  # [J]

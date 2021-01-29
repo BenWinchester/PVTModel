@@ -22,6 +22,8 @@ from . import back_plate
 
 from ..__utils__ import (
     CollectorParameters,
+    DENSITY_OF_WATER,
+    HEAT_CAPACITY_OF_WATER,
     get_logger,
     LOGGER_NAME,
     OpticalLayerParameters,
@@ -31,6 +33,7 @@ from ..__utils__ import (
 from .__utils__ import (
     conductive_heat_transfer_no_gap,
     conductive_heat_transfer_with_gap,
+    convective_heat_transfer_to_fluid,
     OpticalLayer,
     radiative_heat_transfer,
     wind_heat_transfer,
@@ -95,6 +98,7 @@ class Collector(OpticalLayer):
         self._mass_flow_rate = collector_params.mass_flow_rate
         self._number_of_pipes = collector_params.number_of_pipes
         self._pipe_diameter = collector_params.pipe_diameter
+        self.bulk_water_temperature = collector_params.bulk_water_temperature
         self.htf_heat_capacity = collector_params.htf_heat_capacity
         self.output_water_temperature = collector_params.output_water_temperature
         self.pump_power = collector_params.pump_power
@@ -112,12 +116,13 @@ class Collector(OpticalLayer):
             "Collector("
             f"_heat_capacity: {self._heat_capacity}J/kg*K, "
             f"_mass: {self._mass}kg, "
-            f"area: {self.area}/m^2, "
-            f"htf_heat_capacity: {self.htf_heat_capacity}/J/kg*K)"
-            f"mass_flow_rate: {self.mass_flow_rate}/kg/s, "
-            f"output_temperature: {self.output_water_temperature}/K, "
-            f"temperature: {self.temperature}/K, "
-            f"thickness: {self.thickness}/m, "
+            f"area: {self.area}m^2, "
+            f"bulk_water_temperature: {self.bulk_water_temperature}, "
+            f"htf_heat_capacity: {self.htf_heat_capacity}J/kg*K)"
+            f"mass_flow_rate: {self.mass_flow_rate}kg/s, "
+            f"output_temperature: {self.output_water_temperature}K, "
+            f"temperature: {self.temperature}K, "
+            f"thickness: {self.thickness}m, "
             ")"
         )
 
@@ -136,7 +141,7 @@ class Collector(OpticalLayer):
         # @@@ Maria here used a value of 259, irrespective of these properties.
         # @@@ For temporary consistency, this value is used.
 
-        return 259 * 10
+        return 259
 
         # return NUSSELT_NUMBER * THERMAL_CONDUCTIVITY_OF_WATER / self._pipe_diameter
 
@@ -158,6 +163,23 @@ class Collector(OpticalLayer):
             * math.pi
             * self._pipe_diameter  # [m]
             * self._length  # [m]
+        )
+
+    @property
+    def htf_volume(self) -> float:
+        """
+        Returns the volume of HTF that can be held within the collector, measured in m^3
+
+        :return:
+            The volume of the HTF within the collector, measured in meters cubed.
+
+        """
+
+        return (
+            self._number_of_pipes  # [pipes]
+            * math.pi
+            * (self._pipe_diameter) ** 2  # [m^2]
+            * self._length
         )
 
     @property
@@ -185,7 +207,7 @@ class Collector(OpticalLayer):
         internal_resolution: float,
         portion_covered: float,
         weather_conditions: WeatherConditions,
-    ) -> Tuple[float, Optional[float]]:
+    ) -> Tuple[float, Optional[float], float, float, float]:
         """
         Update the internal properties of the PV layer based on external factors.
 
@@ -227,7 +249,12 @@ class Collector(OpticalLayer):
             The current weather conditions.
 
         :return:
-            The output water temperature from the collector.
+            A `tuple` containing:
+            - the heat loss through the back plate, measured in Joules;
+            - the heat transferred to the HTF, measured in Joules;
+            - the output water temperature from the collector;
+            - the heat transferred to the glass layer, measured in Joules;
+            - the upward heat loss, measured in Joules.
 
         """
 
@@ -301,48 +328,59 @@ class Collector(OpticalLayer):
         else:
             upward_heat_losses = 0  # [J]
 
-        # >>> FIXME
-        # Compute the output water temperature
-        self.output_water_temperature = (
-            self.convective_heat_transfer_coefficient_of_water  # [W/m^2*K]
-            * self.temperature  # [K]
-            * self.htf_surface_area  # [m^2]
-            + (
-                self.mass_flow_rate * self.htf_heat_capacity  # [kg/s]  # [J/kg*K]
-                - 0.5
-                * self.convective_heat_transfer_coefficient_of_water  # [W/m^2/K]
-                * self.htf_surface_area  # [m^2]
-            )
-            * input_water_temperature  # [K]
-        ) / (  # [W]
-            self.mass_flow_rate * self.htf_heat_capacity  # [kg/s]  # [J/kg*K]
-            + 0.5
-            * self.convective_heat_transfer_coefficient_of_water  # [W/m^2/K]
-            * self.htf_surface_area  # [m^2]
-        )  # [W/K]
-        # <<< E.O. FIXME
+        # @@@
+        # Check: The bulk-water temperature is computed via an average, see Hil '21 p.31
+        htf_mass_affected = (
+            DENSITY_OF_WATER * self.htf_volume
+            + self.mass_flow_rate * internal_resolution
+        )  # [kg]
 
-        # Compute the heat loss to the bulk water
-        bulk_water_heat_loss = (
-            self.mass_flow_rate  # [kg/s]
-            * internal_resolution  # [seconds]
-            * self.htf_heat_capacity  # [J/kg*K]
-            * (self.output_water_temperature - input_water_temperature)  # [K] - [K]
+        self.bulk_water_temperature = (
+            DENSITY_OF_WATER * self.htf_volume * self.bulk_water_temperature  # [kg*K]
+            + self.mass_flow_rate
+            * internal_resolution
+            * input_water_temperature  # [kg*K]
+        ) / htf_mass_affected  # [kg]  # [K]
+
+        # Compute the heat flow to the bulk water and the output water temperature.
+        bulk_water_heat_gain = (
+            convective_heat_transfer_to_fluid(
+                contact_area=self.htf_surface_area,
+                convective_heat_transfer_coefficient=self.convective_heat_transfer_coefficient_of_water,  # pylint: disable=line-too-long
+                fluid_temperature=self.bulk_water_temperature,
+                wall_temperature=self.temperature,
+            )
+            * internal_resolution
         )  # [J]
+        self.bulk_water_temperature += bulk_water_heat_gain / (  # [J[
+            htf_mass_affected * self.htf_heat_capacity  # [kg] * [J/kg*K]
+        )
+        self.output_water_temperature = (
+            2 * self.bulk_water_temperature - input_water_temperature
+        )
 
         # This heat is now converted into Joules.
         net_heat_gain = collector_heat_input - (  # [J]
             back_plate_heat_loss  # [J]
             + upward_heat_losses  # [J]
-            + bulk_water_heat_loss  # [J]
+            + bulk_water_heat_gain  # [J]
         )
         self.temperature += net_heat_gain / (self._mass * self._heat_capacity)
 
         # >>> If there is a glass layer present, return the heat flow to it.
         if glass_layer_included:
             return (
+                back_plate_heat_loss,  # [J]
+                bulk_water_heat_gain,  # [J]
                 self.output_water_temperature,  # [K]
-                upward_heat_losses,  # [W]
+                upward_heat_losses,  # [J]
+                upward_heat_losses,  # [J]
             )
         # <<< Otherwise, return None
-        return (self.output_water_temperature, None)
+        return (
+            back_plate_heat_loss,  # [J]
+            bulk_water_heat_gain,  # [J]
+            self.output_water_temperature,  # [K]
+            None,
+            upward_heat_losses,  # [J]
+        )

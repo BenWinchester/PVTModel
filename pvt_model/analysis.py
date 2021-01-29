@@ -181,10 +181,6 @@ def _post_process_data(
 
     # * Cycle through all the data points and compute the new values as needed.
     for data_entry in data_to_post_process.values():
-        data_entry["bulk_water_temperature"] = (
-            data_entry["collector_input_temperature"]
-            + data_entry["collector_output_temperature"]
-        ) / 2
         # Conversion needed from Wh to Joules.
         data_entry["litres_consumed"] = (
             data_entry["thermal_load"] / (HEAT_CAPACITY_OF_WATER * 50) * 3600

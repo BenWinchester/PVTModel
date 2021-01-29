@@ -284,6 +284,18 @@ class PVT:
         )
 
     @property
+    def bulk_water_temperature(self) -> float:
+        """
+        Returns the temperature, in Kelvin, of the "bulk water" HTF within the collector
+
+        :return:
+            The HTF temperature within the collector, measured in Kelvin.
+
+        """
+
+        return self._collector.bulk_water_temperature
+
+    @property
     def collector_output_temperature(self) -> float:
         """
         Returns the output temperature, in Kelvin, of HTF from the collector.
@@ -489,7 +501,7 @@ class PVT:
         input_water_temperature: float,
         internal_resolution: float,
         weather_conditions: WeatherConditions,
-    ) -> float:
+    ) -> Tuple[float, float, float, float, Optional[float]]:
         """
         Updates the properties of the PV-T collector based on a changed input temp..
 
@@ -503,11 +515,15 @@ class PVT:
             The weather conditions at the time of day being incremented to.
 
         :return:
-            The output water temperature from the PV-T panel.
+            A `tuple` containing:
+            - the heat lost through the back plate, measured in Joules;
+            - the heat gain by the bulk water, measured in Joules;
+            - the output water temperature from the thermal collector, measured in
+              Kelvin;
+            - the upward heat lost from the collector layer, measured in Joules;
+            - the upward heat lost from the glass layer, measured in Joules.
 
         """
-
-        # pdb.set_trace(header="Debug PVT Module.")
 
         # Compute the solar energy inputted to the system in Joules per meter squared.
         solar_energy_input = (
@@ -553,8 +569,11 @@ class PVT:
         # no PV layer present, or whether the PV layer does not fully cover the panel),
         # and from the heat transfered in from the PV layer.
         (
+            back_plate_heat_loss,  # [J]
+            bulk_water_heat_gain,  # [J]
             output_water_temperature,  # [K]
-            collector_to_glass_heat_input,  # [W]
+            collector_to_glass_heat_input,  # [J]
+            upward_collector_heat_loss,  # [J]
         ) = self._collector.update(
             air_gap_thickness=self._air_gap_thickness,
             back_plate_instance=self._back_plate,
@@ -585,12 +604,28 @@ class PVT:
         if pv_to_glass_heat_input is not None:
             glass_heat_input += pv_to_glass_heat_input
         if collector_to_glass_heat_input is not None:
-            glass_heat_input += collector_to_glass_heat_input
+            glass_heat_input += (
+                collector_to_glass_heat_input / internal_resolution
+            )  # [J]
 
         # Pass this new temperature through to the glass instance to update it.
         if self._glass is not None:
-            self._glass.update(
+            upward_glass_heat_loss = self._glass.update(
                 glass_heat_input, internal_resolution, weather_conditions
             )
 
-        return output_water_temperature
+            return (
+                back_plate_heat_loss,  # [J]
+                bulk_water_heat_gain,  # [J]
+                output_water_temperature,  # [K]
+                upward_collector_heat_loss,  # [J]
+                upward_glass_heat_loss,  # [J]
+            )
+
+        return (
+            back_plate_heat_loss,  # [J]
+            bulk_water_heat_gain,  # [J]
+            output_water_temperature,  # [K]
+            upward_collector_heat_loss,  # [J]
+            None,  # [J]
+        )

@@ -27,6 +27,7 @@ from ..__utils__ import (
 __all__ = (
     "conductive_heat_transfer_no_gap",
     "conductive_heat_transfer_with_gap",
+    "convective_heat_transfer_to_fluid",
     "Layer",
     "OpticalLayer",
     "radiative_heat_transfer",
@@ -226,6 +227,44 @@ def conductive_heat_transfer_with_gap(
     )  # [W]
 
 
+def convective_heat_transfer_to_fluid(
+    contact_area: float,
+    convective_heat_transfer_coefficient: float,
+    fluid_temperature: float,
+    wall_temperature: float,
+) -> float:
+    """
+    Computes the convective heat transfer to a fluid in Watts.
+
+    :param contact_area:
+        The surface area that the fluid and solid have in common, i.e., for which they
+        are in thermal contact, measured in meters squared.
+
+    :param convective_heat_transfer_coefficient:
+        The convective heat transfer coefficient of the fluid, measured in Watts per
+        meter squared Kelvin.
+
+    :param fluid_temperature:
+        The temperature of the fluid, measured in Kelvin.
+
+    :param wall_temperature:
+        The temperature of the walls of the container or pipe surrounding the fluid.
+
+    :return:
+        The convective heat transfer to the fluid, measured in Watts. If the value is
+        positive, then the heat flow is from the container walls to the fluid. If the
+        value returned is negative, then the flow is from the fluid to the container
+        walls.
+
+    """
+
+    return (
+        convective_heat_transfer_coefficient  # [W/m^2*K]
+        * contact_area  # [m^2]
+        * (wall_temperature - fluid_temperature)  # [K]
+    )
+
+
 def radiative_heat_transfer(
     *,
     destination_emissivity: Optional[float] = None,
@@ -272,6 +311,13 @@ def radiative_heat_transfer(
     """
 
     if radiating_to_sky:
+        # return (
+        #     STEFAN_BOLTZMAN_CONSTANT  # [W/m^2*K^4]
+        #     * radiative_contact_area  # [m^2]
+        #     * (source_temperature ** 2 - destination_temperature ** 2)  # [K^2]
+        #     * (source_temperature - destination_temperature)  # [K]
+        #     * (source_temperature + destination_temperature)  # [K]
+        # )
         return (
             STEFAN_BOLTZMAN_CONSTANT  # [W/m^2*K^4]
             * radiative_contact_area  # [m^2]
@@ -285,6 +331,13 @@ def radiative_heat_transfer(
             "must be specified."
         )
 
+    # return (
+    #     STEFAN_BOLTZMAN_CONSTANT
+    #     * radiative_contact_area
+    #     * (source_temperature ** 2 - destination_temperature ** 2)  # [K^2]
+    #     * (source_temperature - destination_temperature)  # [K]
+    #     * (source_temperature + destination_temperature)  # [K]
+    # ) / ((1 / source_emissivity) + (1 / destination_emissivity) - 1)
     return (
         STEFAN_BOLTZMAN_CONSTANT  # [W/m^2*K^4]
         * radiative_contact_area  # [m^2]

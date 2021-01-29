@@ -32,6 +32,7 @@ __all__ = (
     "CarbonEmissions",
     "CollectorParameters",
     "Date",
+    "DENSITY_OF_WATER",
     "FileType",
     "FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR",
     "HEAT_CAPACITY_OF_WATER",
@@ -70,6 +71,8 @@ __all__ = (
 # vice-a-versa.
 ZERO_CELCIUS_OFFSET: float = 273.15
 
+# The density of water, measured in kilograms per meter cubed.
+DENSITY_OF_WATER: int = 1000
 # The free convective, heat-transfer coefficient of air. This varies, and potentially
 # could be extended to the weather module and calculated on the fly depending on various
 # environmental conditions etc.. This is measured in Watts per meter squared
@@ -675,8 +678,20 @@ class CollectorParameters(OpticalLayerParameters):
     """
     Contains parameters needed to instantiate a collector layer within the PV-T panel.
 
+    .. attribute:: bulk_water_temperature
+        The temperature of the bulk water within the collector, I.E., the temperature of
+        the heat-transfer fluid within the collector. This is measured in Kelvin.
+
+    .. attribute:: htf_heat_capacity
+        The heat capacity of the heat-transfer fluid through the collector, measured in
+        Joules per kilogram Kelvin.
+
     .. attribute:: length
         The legnth of the collector, measured in meters.
+
+    .. attribute:: mass_flow_rate
+        The mass flow rate of heat-transfer fluid through the collector. Measured in
+        litres per hour.
 
     .. attribute:: number_of_pipes
         The number of pipes attached to the back of the thermal collector.
@@ -691,25 +706,18 @@ class CollectorParameters(OpticalLayerParameters):
     .. attribute:: pipe_diameter
         The diameter of the pipe, in meters.
 
-    .. attribute:: mass_flow_rate
-        The mass flow rate of heat-transfer fluid through the collector. Measured in
-        litres per hour.
-
-    .. attribute:: htf_heat_capacity
-        The heat capacity of the heat-transfer fluid through the collector, measured in
-        Joules per kilogram Kelvin.
-
     .. attribute:: pump_power
         The electrical power, in Watts, consumed by the water pump in the collector.
 
     """
 
+    bulk_water_temperature: float
+    htf_heat_capacity: float
     length: float
+    mass_flow_rate: float
     number_of_pipes: float
     output_water_temperature: float
     pipe_diameter: float
-    mass_flow_rate: float
-    htf_heat_capacity: float
     pump_power: float
 
 

@@ -73,6 +73,15 @@ class SystemData:
         heater when the tank temperature is below the required thermal output
         temperature, measured in Watts.
 
+    .. attribute:: back_plate_heat_loss
+        The heat lost from the back plate, measured in Watts.
+
+    .. attribute:: bulk_water_heat_gain
+        The heat gained by the bulk water, measured in Watts.
+
+    .. attribute:: bulk_water_temperature
+        The temperature of the bulk water within the collector, measured in Celcius.
+
     .. attribute:: collector_input_temperature
         The temperature of water flowing into the collector, measured in Celcius.
 
@@ -149,10 +158,19 @@ class SystemData:
         The thermal output from the PV-T system supplied - this is really a combnination
         of the demand required and the temperature of the system, measured in Watts.
 
+    .. attribute:: upward_collector_heat_loss
+        The heat lost, upward, from the thermal collector, measured in Watts.
+
+    .. attribute:: upward_glass_heat_loss
+        The heat lost, upawrds, from the glass layer, measured in Watts.
+
     """
 
     ambient_temperature: float
     auxiliary_heating: float
+    back_plate_heat_loss: float
+    bulk_water_heat_gain: float
+    bulk_water_temperature: float
     collector_input_temperature: float
     collector_output_temperature: float
     collector_temperature: float
@@ -176,6 +194,8 @@ class SystemData:
     thermal_load: float
     thermal_output: float
     time: str
+    upward_collector_heat_loss: float
+    upward_glass_heat_loss: Optional[float]
 
     def __str__(self) -> str:
         """
@@ -187,29 +207,38 @@ class SystemData:
         """
 
         return (
-            f"System Data[{self.date}::{self.time}]("
-            + "T_g/degC {}, T_pv/degC {}, T_c/degC {:.2f}K, T_t/degC {:.2f}K,".format(
-                round(self.glass_temperature, 2)
-                if self.glass_temperature is not None
-                else None,
-                round(self.pv_temperature, 2)
-                if self.pv_temperature is not None
-                else None,
-                self.collector_temperature,
-                self.tank_temperature,
-            )
-            + " pv_eff {}, aux {}W, dc_e {}%, dc_therm {}%)".format(
-                round(self.pv_efficiency, 2)
-                if self.pv_efficiency is not None
-                else None,
-                round(self.auxiliary_heating, 2)
-                if self.auxiliary_heating is not None
-                else None,
-                round(self.dc_electrical, 2)
-                if self.dc_electrical is not None
-                else None,
-                round(self.dc_thermal, 2) if self.dc_thermal is not None else None,
-            )
+            "SystenData("
+            f"ambient_temperature: {self.ambient_temperature}K, "
+            f"auxiliary_heating: {self.auxiliary_heating}W, "
+            f"back_plate_heat_loss: {self.back_plate_heat_loss}W, "
+            f"bulk_water_heat_gain: {self.bulk_water_heat_gain}W, "
+            f"bulk_water_temperature: {self.bulk_water_temperature}K, "
+            f"collector_input_temperature: {self.collector_input_temperature}K, "
+            f"collector_output_temperature: {self.collector_output_temperature}K, "
+            f"collector_temperature: {self.collector_temperature}K, "
+            f"collector_temperature_gain: {self.collector_temperature_gain}K, "
+            f"date: {self.date}, "
+            f"dc_electrical: {self.dc_electrical}, "
+            f"dc_thermal: {self.dc_thermal}, "
+            f"electrical_load: {self.electrical_load}W, "
+            f"exchanger_temperature_drop: {self.exchanger_temperature_drop}K, "
+            f"glass_temperature: {self.glass_temperature}K, "
+            f"gross_electrical_output: {self.gross_electrical_output}W, "
+            f"net_electrical_output:{net_electrical_output}W, "
+            f"normal_irradiance:{normal_irradiance}W/m^2, "
+            f"pv_temperature:{pv_temperature}K, "
+            f"pv_efficiency:{pv_efficiency}, "
+            f"sky_temperature:{sky_temperature}K, "
+            f"solar_irradiance:{solar_irradiance}W/m^2,"
+            f"tank_heat_addition:{tank_heat_addition}W, "
+            f"tank_temperature:{tank_temperature}K, "
+            f"tank_output_temperature:{tank_output_temperature}K, "
+            f"thermal_load:{thermal_load}W, "
+            f"thermal_output:{thermal_output}W, "
+            f"time:{time}, "
+            f"upward_collector_heat_loss:{upward_collector_heat_loss}W, "
+            f"upward_glass_heat_loss:{upward_glass_heat_loss}W"
+            ")"
         )
 
 
@@ -308,7 +337,7 @@ def _save_data(
 
     # If we're saving YAML data part-way through, then append to the file.
     if file_type == FileType.YAML:
-        with open("{output_file_name}.yaml", "a") as f:
+        with open(f"{output_file_name}.yaml", "a") as f:
             yaml.dump(
                 system_data_dict,
                 f,
@@ -370,9 +399,13 @@ def main(args) -> None:  # pylint: disable=too-many-locals
         raise Exception(
             "The output file must be irrespecitve of file extension/data type."
         )
-    if os.path.isfile(parsed_args.output):
-        logger.info("The output file specified already exists. Moving...")
-        os.rename(parsed_args.output, f"{parsed_args.output}.1")
+    if os.path.isfile(f"{parsed_args.output}.yaml"):
+        logger.info("The output YAML file specified already exists. Moving...")
+        os.rename(f"{parsed_args.output}.yaml", f"{parsed_args.output}.yaml.1")
+        logger.info("Output file successfully moved.")
+    if os.path.isfile(f"{parsed_args.output}.json"):
+        logger.info("The output YAML file specified already exists. Moving...")
+        os.rename(f"{parsed_args.output}.json", f"{parsed_args.output}.json.1")
         logger.info("Output file successfully moved.")
 
     # Set up the weather module.
@@ -484,7 +517,13 @@ def main(args) -> None:  # pylint: disable=too-many-locals
         )  # [litres/time step]
 
         # Call the pvt module to generate the new temperatures at this time step.
-        output_water_temperature = pvt_panel.update(
+        (
+            back_plate_heat_loss,  # [J]
+            bulk_water_heat_gain,  # [J]
+            output_water_temperature,  # [K]
+            upward_collector_heat_loss,  # [J]
+            upward_glass_heat_loss,  # [J]
+        ) = pvt_panel.update(
             input_water_temperature,
             parsed_args.internal_resolution,
             current_weather,
@@ -557,6 +596,10 @@ def main(args) -> None:  # pylint: disable=too-many-locals
                 ambient_temperature=current_weather.ambient_temperature
                 - ZERO_CELCIUS_OFFSET,
                 auxiliary_heating=auxiliary_heating,
+                back_plate_heat_loss=back_plate_heat_loss,
+                bulk_water_heat_gain=bulk_water_heat_gain,
+                bulk_water_temperature=pvt_panel.bulk_water_temperature
+                - ZERO_CELCIUS_OFFSET,
                 collector_input_temperature=input_water_temperature
                 - ZERO_CELCIUS_OFFSET,
                 collector_output_temperature=pvt_panel.collector_output_temperature
@@ -598,6 +641,8 @@ def main(args) -> None:  # pylint: disable=too-many-locals
                 )
                 / (parsed_args.internal_resolution),
                 time=datetime.date.strftime(date_and_time, "%H:%M:%S"),
+                upward_collector_heat_loss=upward_collector_heat_loss,
+                upward_glass_heat_loss=upward_glass_heat_loss,
             )
         }
 

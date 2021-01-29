@@ -194,27 +194,28 @@ def _collector_params_from_data(
 
     try:
         return CollectorParameters(
-            collector_data["mass"]  # [kg]
+            mass=collector_data["mass"]  # [kg]
             if "mass" in collector_data
             else area  # [m^2]
             * collector_data["density"]  # [kg/m^3]
             * collector_data["thickness"],  # [m]
-            collector_data["heat_capacity"],  # [J/kg*K]
-            area,  # [m^2]
-            collector_data["thickness"],  # [m]
-            INITIAL_SYSTEM_TEMPERATURE,  # [K]
-            collector_data["transmissivity"],  # [unitless]
-            collector_data["absorptivity"],  # [unitless]
-            collector_data["emissivity"],  # [unitless]
-            length,  # [m]
-            collector_data["number_of_pipes"],  # [pipes]
-            initial_collector_htf_tempertaure,  # [K]
-            collector_data["pipe_diameter"],  # [m]
-            collector_data["mass_flow_rate"],  # [Litres/hour]
-            collector_data["htf_heat_capacity"]  # [J/kg*K]
+            heat_capacity=collector_data["heat_capacity"],  # [J/kg*K]
+            area=area,  # [m^2]
+            thickness=collector_data["thickness"],  # [m]
+            temperature=INITIAL_SYSTEM_TEMPERATURE,  # [K]
+            transmissivity=collector_data["transmissivity"],  # [unitless]
+            absorptivity=collector_data["absorptivity"],  # [unitless]
+            emissivity=collector_data["emissivity"],  # [unitless]
+            bulk_water_temperature=initial_collector_htf_tempertaure,  # [K]
+            htf_heat_capacity=collector_data["htf_heat_capacity"]  # [J/kg*K]
             if "htf_heat_capacity" in collector_data
             else HEAT_CAPACITY_OF_WATER,  # [J/kg*K]
-            collector_data["pump_power"],  # [W]
+            length=length,  # [m]
+            mass_flow_rate=collector_data["mass_flow_rate"],  # [Litres/hour]
+            number_of_pipes=collector_data["number_of_pipes"],  # [pipes]
+            output_water_temperature=initial_collector_htf_tempertaure,  # [K]
+            pipe_diameter=collector_data["pipe_diameter"],  # [m]
+            pump_power=collector_data["pump_power"],  # [W]
         )
     except KeyError as e:
         raise MissingDataError(
