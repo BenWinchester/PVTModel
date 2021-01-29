@@ -365,7 +365,10 @@ class Collector(OpticalLayer):
             + upward_heat_losses  # [J]
             + bulk_water_heat_gain  # [J]
         )
-        self.temperature += net_heat_gain / (self._mass * self._heat_capacity)
+        self.temperature += net_heat_gain / (
+            (self._mass + back_plate_instance.mass) * self._heat_capacity
+        )
+        back_plate_instance.temperature = self.temperature
 
         # >>> If there is a glass layer present, return the heat flow to it.
         if glass_layer_included:
