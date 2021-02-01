@@ -86,3 +86,28 @@ class BackPlate(Layer):
             self.thickness / self.conductivity  # [m] / [W/m*K]
             + 1 / FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR  # [W/m^2*K]^-1
         )
+
+    @property
+    def heat_capacity(self) -> float:
+        """
+        Return the heat capacity of the back plate.
+
+        :return:
+            The heat capacity of the back plate layer, measured in Joules per kilogram
+            Kelvin.
+
+        """
+
+        return self._heat_capacity
+
+    @property
+    def mass(self) -> float:
+        """
+        Return the mass of the back plate.
+
+        :return:
+            The mass of the back plate layer, measured in kilograms.
+
+        """
+
+        return self._mass

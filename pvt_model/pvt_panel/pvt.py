@@ -17,7 +17,6 @@ increasing time steps, and the code here aims to emaulate this.
 
 import datetime
 import math
-import pdb
 
 from typing import Optional, Tuple
 
@@ -518,6 +517,7 @@ class PVT:
             A `tuple` containing:
             - the heat lost through the back plate, measured in Joules;
             - the heat gain by the bulk water, measured in Joules;
+            - the heat inputted to the collector, measured in Joules;
             - the output water temperature from the thermal collector, measured in
               Kelvin;
             - the upward heat lost from the collector layer, measured in Joules;
@@ -617,6 +617,7 @@ class PVT:
             return (
                 back_plate_heat_loss,  # [J]
                 bulk_water_heat_gain,  # [J]
+                collector_heat_input,  # [J]
                 output_water_temperature,  # [K]
                 upward_collector_heat_loss,  # [J]
                 upward_glass_heat_loss,  # [J]
@@ -625,6 +626,7 @@ class PVT:
         return (
             back_plate_heat_loss,  # [J]
             bulk_water_heat_gain,  # [J]
+            collector_heat_input,  # [J]
             output_water_temperature,  # [K]
             upward_collector_heat_loss,  # [J]
             None,  # [J]

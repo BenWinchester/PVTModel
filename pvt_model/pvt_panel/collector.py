@@ -256,6 +256,10 @@ class Collector(OpticalLayer):
             - the heat transferred to the glass layer, measured in Joules;
             - the upward heat loss, measured in Joules.
 
+        :raises: ProgrammerJudgementFault
+            A :class:`..__utils__.ProgrammerJudgementFault` is raised if an attempt is
+            made to access glass-laye rproperties that weren't supplied to the function.
+
         """
 
         if self.temperature > 1000:
@@ -335,12 +339,29 @@ class Collector(OpticalLayer):
             + self.mass_flow_rate * internal_resolution
         )  # [kg]
 
+        # pdb.set_trace(
+        #     header=f"Line 338:\nT_bw: {self.bulk_water_temperature}K\n"
+        #     f"T_in: {input_water_temperature}K\n"
+        #     f"T_out: {self.output_water_temperature}K"
+        # )
+
         self.bulk_water_temperature = (
             DENSITY_OF_WATER * self.htf_volume * self.bulk_water_temperature  # [kg*K]
-            + self.mass_flow_rate
-            * internal_resolution
-            * input_water_temperature  # [kg*K]
-        ) / htf_mass_affected  # [kg]  # [K]
+            + self.mass_flow_rate  # [kg/s]
+            * internal_resolution  # [s]
+            * input_water_temperature  # [K]
+            - self.output_water_temperature  # [K]
+            * self.mass_flow_rate  # [kg/s]
+            * internal_resolution  # [s]
+        ) / (
+            self.htf_volume * DENSITY_OF_WATER
+        )  # [kg]  # [K]
+
+        # pdb.set_trace(
+        #     header=f"Line 354:\nT_bw: {self.bulk_water_temperature}K\n"
+        #     f"T_in: {input_water_temperature}K\n"
+        #     f"T_out: {self.output_water_temperature}K\n"
+        # )
 
         # Compute the heat flow to the bulk water and the output water temperature.
         bulk_water_heat_gain = (
@@ -352,6 +373,13 @@ class Collector(OpticalLayer):
             )
             * internal_resolution
         )  # [J]
+        # pdb.set_trace(
+        #     header=f"Line 354:\nT_bw: {self.bulk_water_temperature}K\n"
+        #     f"T_in: {input_water_temperature}K\n"
+        #     f"T_out: {self.output_water_temperature}K\n"
+        #     f"q_bw: {bulk_water_heat_gain}K"
+        # )
+
         self.bulk_water_temperature += bulk_water_heat_gain / (  # [J[
             htf_mass_affected * self.htf_heat_capacity  # [kg] * [J/kg*K]
         )
@@ -359,6 +387,11 @@ class Collector(OpticalLayer):
             2 * self.bulk_water_temperature - input_water_temperature
         )
 
+        # pdb.set_trace(
+        #     header=f"Line 384:\nT_bw: {self.bulk_water_temperature}K\n"
+        #     f"T_in: {input_water_temperature}K\n"
+        #     f"T_out: {self.output_water_temperature}K\n"
+        # )
         # This heat is now converted into Joules.
         net_heat_gain = collector_heat_input - (  # [J]
             back_plate_heat_loss  # [J]
@@ -366,7 +399,8 @@ class Collector(OpticalLayer):
             + bulk_water_heat_gain  # [J]
         )
         self.temperature += net_heat_gain / (
-            (self._mass + back_plate_instance.mass) * self._heat_capacity
+            self._mass * self._heat_capacity
+            + back_plate_instance.mass * back_plate_instance.heat_capacity
         )
         back_plate_instance.temperature = self.temperature
 

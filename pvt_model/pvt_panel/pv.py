@@ -175,6 +175,10 @@ class PV(OpticalLayer):
             If there is no glass layer present, then `None` is returned as the value of
             the heat transfered to the glass layer.
 
+        :raises: ProgrammerJudgementFault
+            A :class:`..__utils__.ProgrammerJudgementFault` error is raised if the panel
+            is marked as being glazed but there is no glass layer present.
+
         """
 
         # Determine the excess heat that has been inputted into the panel during this

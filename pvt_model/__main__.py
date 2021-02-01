@@ -82,6 +82,10 @@ class SystemData:
     .. attribute:: bulk_water_temperature
         The temperature of the bulk water within the collector, measured in Celcius.
 
+    .. attribute:: collector_heat_input
+        The heat inputted to the collector, from both the sun and upper PV layer if
+        present, measured in Watts.
+
     .. attribute:: collector_input_temperature
         The temperature of water flowing into the collector, measured in Celcius.
 
@@ -171,6 +175,7 @@ class SystemData:
     back_plate_heat_loss: float
     bulk_water_heat_gain: float
     bulk_water_temperature: float
+    collector_heat_input: float
     collector_input_temperature: float
     collector_output_temperature: float
     collector_temperature: float
@@ -224,20 +229,20 @@ class SystemData:
             f"exchanger_temperature_drop: {self.exchanger_temperature_drop}K, "
             f"glass_temperature: {self.glass_temperature}K, "
             f"gross_electrical_output: {self.gross_electrical_output}W, "
-            f"net_electrical_output:{net_electrical_output}W, "
-            f"normal_irradiance:{normal_irradiance}W/m^2, "
-            f"pv_temperature:{pv_temperature}K, "
-            f"pv_efficiency:{pv_efficiency}, "
-            f"sky_temperature:{sky_temperature}K, "
-            f"solar_irradiance:{solar_irradiance}W/m^2,"
-            f"tank_heat_addition:{tank_heat_addition}W, "
-            f"tank_temperature:{tank_temperature}K, "
-            f"tank_output_temperature:{tank_output_temperature}K, "
-            f"thermal_load:{thermal_load}W, "
-            f"thermal_output:{thermal_output}W, "
-            f"time:{time}, "
-            f"upward_collector_heat_loss:{upward_collector_heat_loss}W, "
-            f"upward_glass_heat_loss:{upward_glass_heat_loss}W"
+            f"net_electrical_output:{self.net_electrical_output}W, "
+            f"normal_irradiance:{self.normal_irradiance}W/m^2, "
+            f"pv_temperature:{self.pv_temperature}K, "
+            f"pv_efficiency:{self.pv_efficiency}, "
+            f"sky_temperature:{self.sky_temperature}K, "
+            f"solar_irradiance:{self.solar_irradiance}W/m^2,"
+            f"tank_heat_addition:{self.tank_heat_addition}W, "
+            f"tank_temperature:{self.tank_temperature}K, "
+            f"tank_output_temperature:{self.tank_output_temperature}K, "
+            f"thermal_load:{self.thermal_load}W, "
+            f"thermal_output:{self.thermal_output}W, "
+            f"time:{self.time}, "
+            f"upward_collector_heat_loss:{self.upward_collector_heat_loss}W, "
+            f"upward_glass_heat_loss:{self.upward_glass_heat_loss}W"
             ")"
         )
 
@@ -520,6 +525,7 @@ def main(args) -> None:  # pylint: disable=too-many-locals
         (
             back_plate_heat_loss,  # [J]
             bulk_water_heat_gain,  # [J]
+            collector_heat_input,  # [J]
             output_water_temperature,  # [K]
             upward_collector_heat_loss,  # [J]
             upward_glass_heat_loss,  # [J]
@@ -533,9 +539,9 @@ def main(args) -> None:  # pylint: disable=too-many-locals
         # tank s.t. it updates the tank correctly as well.
         # The tank heat gain here is measured in Joules.
         (
-            updated_input_water_temperature,
-            tank_heat_gain,
-        ) = heat_exchanger.update(  # [K], [J]
+            updated_input_water_temperature,  # [K]
+            tank_heat_gain,  # [J]
+        ) = heat_exchanger.update(
             input_water_heat_capacity=pvt_panel.htf_heat_capacity,  # [J/kg*K]
             input_water_mass=pvt_panel.mass_flow_rate
             * parsed_args.internal_resolution,  # [kg]
@@ -596,10 +602,14 @@ def main(args) -> None:  # pylint: disable=too-many-locals
                 ambient_temperature=current_weather.ambient_temperature
                 - ZERO_CELCIUS_OFFSET,
                 auxiliary_heating=auxiliary_heating,
-                back_plate_heat_loss=back_plate_heat_loss,
-                bulk_water_heat_gain=bulk_water_heat_gain,
+                back_plate_heat_loss=back_plate_heat_loss
+                / parsed_args.internal_resolution,
+                bulk_water_heat_gain=bulk_water_heat_gain
+                / parsed_args.internal_resolution,
                 bulk_water_temperature=pvt_panel.bulk_water_temperature
                 - ZERO_CELCIUS_OFFSET,
+                collector_heat_input=collector_heat_input
+                / parsed_args.internal_resolution,
                 collector_input_temperature=input_water_temperature
                 - ZERO_CELCIUS_OFFSET,
                 collector_output_temperature=pvt_panel.collector_output_temperature
@@ -641,8 +651,10 @@ def main(args) -> None:  # pylint: disable=too-many-locals
                 )
                 / (parsed_args.internal_resolution),
                 time=datetime.date.strftime(date_and_time, "%H:%M:%S"),
-                upward_collector_heat_loss=upward_collector_heat_loss,
-                upward_glass_heat_loss=upward_glass_heat_loss,
+                upward_collector_heat_loss=upward_collector_heat_loss
+                / parsed_args.internal_resolution,
+                upward_glass_heat_loss=upward_glass_heat_loss
+                / parsed_args.internal_resolution,
             )
         }
 
