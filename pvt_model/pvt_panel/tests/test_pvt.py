@@ -78,3 +78,88 @@ class TestProperties:
     Tests the various publicised internal properties of the :class:`pvt.PVT` class.
 
     """
+
+    def test_bulk_water_temperature(self) -> None:
+        """
+        Tests that the bulk water temperature is correctly publicised.
+
+        """
+
+    def test_collector_output_temperature(self) -> None:
+        """
+        Tests that the collector output temperature is correctly publicised.
+
+        """
+
+    def test_collector_temperature(self) -> None:
+        """
+        Tests that the collector temperature is correctly publicised.
+
+        """
+
+    def test_coordinates(self) -> None:
+        """
+        Tests that the coordinates of the PVT panel are correctly publicised.
+
+        """
+
+    def test_electrical_efficiency(self) -> None:
+        """
+        Tests that the electrical efficiency of the PVT panel is correctly publicised.
+
+        """
+
+    def test_electrical_output(self) -> None:
+        """
+        Tests that the electrical output of the panel is correctly computed and returned
+
+        """
+
+    def test_glass_temperature(self) -> None:
+        """
+        Tests that the glass temperature is correctly publicised.
+
+        """
+
+    def test_glazed(self) -> None:
+        """
+        Tests whether the glazed property is computed correctly.
+
+        """
+
+    def test_htf_heat_capacity(self) -> None:
+        """
+        Tests that the heat capacity of the HTF in the collector layer is publicised.
+
+        """
+
+    def test_mass_flow_rate(self) -> None:
+        """
+        Tests that the mass flow rate of HTF through the collector is publicised.
+
+        """
+
+    def test_output_water_temperature(self) -> None:
+        """
+        Tests that the output water temperature of the collector is publicised.
+
+        """
+
+    def test_pump_power(self) -> None:
+        """
+        Tests that the power usage of the pump is correctly publicised.
+
+        """
+
+    def test_pv_temperature(self) -> None:
+        """
+        Tests that the temperature of the PV layer is correctly publicised.
+
+        """
+
+
+class TestUpdate:
+    """
+    Tests various flows through the :class:`pvt.PVT` instance's update method.
+
+    """
