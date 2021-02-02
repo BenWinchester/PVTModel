@@ -18,7 +18,7 @@ import unittest
 
 from unittest import mock
 
-from . import collector
+from .. import collector
 
 
 def test_instantiate() -> None:

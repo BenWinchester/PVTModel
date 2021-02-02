@@ -17,7 +17,7 @@ import unittest
 
 from unittest import mock
 
-from . import pv
+from .. import pv
 
 
 def test_instantiate() -> None:

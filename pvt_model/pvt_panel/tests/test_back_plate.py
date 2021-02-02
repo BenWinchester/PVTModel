@@ -18,7 +18,7 @@ import unittest
 
 from unittest import mock
 
-from . import back_plate
+from .. import back_plate
 
 
 def test_instantiate() -> None:
