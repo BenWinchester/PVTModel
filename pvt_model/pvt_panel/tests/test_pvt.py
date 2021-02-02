@@ -163,3 +163,39 @@ class TestUpdate:
     Tests various flows through the :class:`pvt.PVT` instance's update method.
 
     """
+
+    def test_pv_unglazed(self) -> None:
+        """
+        Tests the flow where there is a PV layer present but the panel is unglazed.
+
+        """
+
+    def test_pv_glazed(self) -> None:
+        """
+        Tests the flow where there is a PV layer present and the panel is glazed.
+
+        """
+
+    def test_pv_exception(self) -> None:
+        """
+        Tests the flow where there is a PV layer present and an error is thrown.
+
+        """
+
+    def test_no_pv_unglazed(self) -> None:
+        """
+        Tests the flow where there is neither a PV nor glass layer.
+
+        """
+
+    def test_no_pv_glazed(self) -> None:
+        """
+        Tests the flow where there is no PV layer present and the collector is glazed.
+
+        """
+
+    def test_no_pv_exception(self) -> None:
+        """
+        Tests the flow where there is no PV layer present and an exception is thrown.
+
+        """
