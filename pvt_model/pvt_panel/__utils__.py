@@ -321,8 +321,8 @@ def radiative_heat_transfer(
         return (
             STEFAN_BOLTZMAN_CONSTANT  # [W/m^2*K^4]
             * radiative_contact_area  # [m^2]
-            * (source_temperature ** 4 - destination_temperature ** 4)  # [K^4]
             * source_emissivity
+            * (source_temperature ** 4 - destination_temperature ** 4)  # [K^4]
         )
 
     if destination_emissivity is None:
