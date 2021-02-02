@@ -611,7 +611,8 @@ if __name__ == "__main__":
         "Electrical Energy Supplied / Wh",
     )
 
-    """# * Plotting all tank-related temperatures
+    """  # pylint: disable=pointless-string-statement
+    # * Plotting all tank-related temperatures
     plot_figure(
         "tank_temperature",
         data,
