@@ -49,21 +49,30 @@ def test_electrical_efficiency() -> None:
     """
 
 
-def test_update_with_glass_layer() -> None:
+class TestUpdate:
     """
-    Tests the update method with a glass layer being present.
+    Tests the internal update method of :class:`pv.PV` instances.
 
-    Depending on whether a glass layer is present, the updating behaviour of the PV
-    layer will be different, and the calls to various utility modules will be different.
-
-    """
-
-
-def test_update_no_glass_layer() -> None:
-    """
-    Tests the update method with a glass layer being present.
-
-    Depending on whether a glass layer is present, the updating behaviour of the PV
-    layer will be different, and the calls to various utility modules will be different.
+    The update method has several different flows depending on the other layers. This
+    class contains methods that probe all of these paths, as well as exceptions that
+    may occur.
 
     """
+
+    def test_update_with_glass_layer(self) -> None:
+        """
+        Tests the update method with a glass layer being present.
+
+        Depending on whether a glass layer is present, the updating behaviour of the PV
+        layer will be different, and the calls to various utility modules will be different.
+
+        """
+
+    def test_update_no_glass_layer(self) -> None:
+        """
+        Tests the update method with a glass layer being present.
+
+        Depending on whether a glass layer is present, the updating behaviour of the PV
+        layer will be different, and the calls to various utility modules will be different.
+
+        """

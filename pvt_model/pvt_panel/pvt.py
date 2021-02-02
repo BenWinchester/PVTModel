@@ -167,6 +167,9 @@ class PVT:
         :param vertical_tracking:
             Whether or not the PV-T system tracks the sun vertically.
 
+        :raises: MissingParametesrError
+            Raised if not all the parameters needed are supplied.
+
         """
 
         self._air_gap_thickness = air_gap_thickness
@@ -522,6 +525,10 @@ class PVT:
               Kelvin;
             - the upward heat lost from the collector layer, measured in Joules;
             - the upward heat lost from the glass layer, measured in Joules.
+
+        :raises: ProgrammerJudgementFault
+            Raised if the panel does not have a glass layer but is marked as being
+            glazed.
 
         """
 
