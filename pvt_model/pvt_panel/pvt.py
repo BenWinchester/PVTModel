@@ -503,7 +503,7 @@ class PVT:
         input_water_temperature: float,
         internal_resolution: float,
         weather_conditions: WeatherConditions,
-    ) -> Tuple[float, float, float, float, Optional[float]]:
+    ) -> Tuple[float, Optional[float], float, float, float, Optional[float]]:
         """
         Updates the properties of the PV-T collector based on a changed input temp..
 

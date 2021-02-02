@@ -464,7 +464,7 @@ class LoadSystem:
             ) from None
 
     @classmethod
-    def from_data(cls, data_file_paths: Set[str]) -> Any:
+    def from_data(cls, data_file_paths: Set[str]) -> Any:  # type: ignore
         """
         Returns a :class:`LoadSystem` based on the paths to various data files.
 

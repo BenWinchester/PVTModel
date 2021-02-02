@@ -73,7 +73,7 @@ class _DailyProfile(BaseDailyProfile):
 
         return self._profile
 
-    def __add__(self, other) -> Any:
+    def __add__(self, other) -> Any:  # type: ignore
         """
         Adds two profiles together and returns the result.
 
@@ -94,7 +94,7 @@ class _DailyProfile(BaseDailyProfile):
 
         return _DailyProfile(profile)
 
-    def __truediv__(self, divisor: float) -> Any:
+    def __truediv__(self, divisor: float) -> Any:  # type: ignore
         """
         Divides every value in the profile by the divisor.
 
@@ -199,7 +199,7 @@ class _MonthlyWeatherData:
     @classmethod
     def from_yaml(
         cls, month_name: str, monthly_weather_data: Dict[str, Union[str, float]]
-    ) -> Any:
+    ) -> Any:  # type: ignore
         """
         Checks for present fields and instantiates from YAML data.
 
@@ -466,7 +466,7 @@ class WeatherForecaster:
         solar_irradiance_filenames: Set[str],
         temperature_filenames: Set[str],
         use_pvgis: bool = False,
-    ) -> Any:
+    ) -> Any:  # type: ignore
         """
         Instantiate a :class:`WeatherForecaster` from paths to various data files.
 

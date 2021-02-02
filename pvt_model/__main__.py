@@ -263,7 +263,8 @@ def _get_load_system(location: str) -> load.LoadSystem:
         os.path.join(location, "load_profiles", filename)
         for filename in os.listdir(os.path.join(location, "load_profiles"))
     }
-    return load.LoadSystem.from_data(load_profiles)
+    load_system: load.LoadSystem = load.LoadSystem.from_data(load_profiles)
+    return load_system
 
 
 def _get_weather_forecaster(
@@ -299,13 +300,14 @@ def _get_weather_forecaster(
         for filename in os.listdir(os.path.join(location, TEMPERATURE_FOLDERNAME))
     }
 
-    return weather.WeatherForecaster.from_data(
+    weather_forecaster: weather.WeatherForecaster = weather.WeatherForecaster.from_data(
         average_irradiance,
         os.path.join(location, WEATHER_DATA_FILENAME),
         solar_irradiance_filenames,
         temperature_filenames,
         use_pvgis,
     )
+    return weather_forecaster
 
 
 def _save_data(

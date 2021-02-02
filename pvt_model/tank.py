@@ -1,6 +1,6 @@
 #!/usr/bin/python3.7
 ########################################################################################
-# tankg.py - The tankg module for this, my first, PV-T model! :O
+# tank.py - The tank module for this, my first, PV-T model! :O
 #
 # Author: Ben Winchester
 # Copyright: Ben Winchester, 2020

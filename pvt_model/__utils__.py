@@ -809,7 +809,7 @@ def read_yaml(yaml_file_path: str) -> Dict[Any, Any]:
         raise FileNotFoundError(yaml_file_path)
     with open(yaml_file_path) as f:
         try:
-            data = yaml.safe_load(f)
+            data: Dict[Any, Any] = yaml.safe_load(f)
         except yaml.parser.ParserError as e:
             logger.error("Failed to read YAML file '%s'.", yaml_file_path)
             print(f"Failed to parse YAML. Internal error: {str(e)}")

@@ -206,7 +206,7 @@ class Collector(OpticalLayer):
         internal_resolution: float,
         portion_covered: float,
         weather_conditions: WeatherConditions,
-    ) -> Tuple[float, Optional[float], float, float, float]:
+    ) -> Tuple[float, float, float, Optional[float], float]:
         """
         Update the internal properties of the PV layer based on external factors.
 

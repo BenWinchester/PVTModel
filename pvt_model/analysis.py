@@ -1,19 +1,30 @@
-#!/usr/bin/python3
+#!/usr/bin/python3.7
+# type: ignore
+########################################################################################
+# analysis.py - The analysis module for the model.
+#
+# Author: Ben Winchester
+# Copyright: Ben Winchester, 2021
+########################################################################################
 """
-Does some analysis.
+Used for analysis of the output of the model runs.
+
+NOTE: The mypy type checker is instructed to ignore this module. This is done due to the
+lower standards applied to the analysis code, and the failure of mypy to correctly type-
+check the external matplotlib.pyplot module.
 
 """
 
 import os
 
-from typing import Any, List, Dict, Optional, Tuple
+from typing import Any, List, Dict, Optional, Tuple, Union
 
 import json
 import re
 
 from matplotlib import pyplot as plt
 
-from __utils__ import GraphDetail, get_logger, HEAT_CAPACITY_OF_WATER
+from .__utils__ import GraphDetail, get_logger, HEAT_CAPACITY_OF_WATER
 
 # The directory in which old figures are saved
 OLD_FIGURES_DIRECTORY: str = "old_figures"
@@ -57,7 +68,7 @@ def _resolution_from_graph_detail(
 
 def _reduce_data(
     data_to_reduce: Dict[str, Dict[Any, Any]], graph_detail: GraphDetail
-) -> Dict[str, Dict[Any, Any]]:
+) -> Dict[Union[int, str], Dict[Any, Any]]:
     """
     This processes the data, using sums to reduce the resolution so it can be plotted.
 
@@ -85,7 +96,7 @@ def _reduce_data(
         graph_detail, len(data_to_reduce)
     )
 
-    reduced_data: Dict[str, Dict[Any, Any]] = {
+    reduced_data: Dict[Union[int, str], Dict[Any, Any]] = {
         index: dict()
         for index in range(int(len(data_to_reduce) / data_points_per_graph_point))
     }
@@ -199,7 +210,9 @@ def load_model_data(filename: str) -> Dict[Any, Any]:
     """
 
     with open(filename, "r") as f:
-        return json.load(f)
+        json_data: Dict[Any, Any] = json.load(f)
+
+    return json_data
 
 
 def _annotate_maximum(
