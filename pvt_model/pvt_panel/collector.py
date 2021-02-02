@@ -23,7 +23,6 @@ from . import back_plate
 from ..__utils__ import (
     CollectorParameters,
     DENSITY_OF_WATER,
-    HEAT_CAPACITY_OF_WATER,
     get_logger,
     LOGGER_NAME,
     OpticalLayerParameters,

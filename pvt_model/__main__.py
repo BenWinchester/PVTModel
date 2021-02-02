@@ -342,10 +342,10 @@ def _save_data(
 
     # If we're saving YAML data part-way through, then append to the file.
     if file_type == FileType.YAML:
-        with open(f"{output_file_name}.yaml", "a") as f:
+        with open(f"{output_file_name}.yaml", "a") as output_yaml_file:
             yaml.dump(
                 system_data_dict,
-                f,
+                output_yaml_file,
             )
 
     # If we're dumping JSON, open the file, and append to it.
@@ -357,27 +357,27 @@ def _save_data(
         # Save the data
         # If this is the initial dump, then create the file.
         if not os.path.isfile(f"{output_file_name}.json"):
-            with open(f"{output_file_name}.json", "w") as f:
+            with open(f"{output_file_name}.json", "w") as output_json_file:
                 json.dump(
                     system_data_dict,
-                    f,
+                    output_json_file,
                     indent=4,
                 )
         else:
-            with open(f"{output_file_name}.json", "r+") as f:
+            with open(f"{output_file_name}.json", "r+") as output_json_file:
                 # Read the data and append the current update.
-                filedata = json.load(f)
+                filedata = json.load(output_json_file)
                 filedata.update(system_data_dict)
                 # Overwrite the file with the updated data.
-                f.seek(0)
+                output_json_file.seek(0)
                 json.dump(
                     filedata,
-                    f,
+                    output_json_file,
                     indent=4,
                 )
 
 
-def main(args) -> None:  # pylint: disable=too-many-locals
+def main(args) -> None:
     """
     The main module for the code.
 

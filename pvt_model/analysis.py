@@ -5,7 +5,6 @@ Does some analysis.
 """
 
 import os
-import pdb
 
 from typing import Any, List, Dict, Optional, Tuple
 
@@ -133,7 +132,6 @@ def _reduce_data(
         # * If the data entry is a load, then take a sum
         elif any([key in data_entry_name for key in ["load", "output"]]):
             # @@@
-            # FIXME
             # * Here, the data is divided by 3600 to convert from Joules to Watt Hours.
             # * This only works provided that we are dealing with values in Joules...
             for outer_index, _ in enumerate(reduced_data):
@@ -205,7 +203,7 @@ def load_model_data(filename: str) -> Dict[Any, Any]:
 
 
 def _annotate_maximum(
-    model_data: Dict[Any, Any], x_lab: str, y_axis_labels: List[str], axis
+    model_data: Dict[Any, Any], y_axis_labels: List[str], axis
 ) -> None:
     """
     Annotates the maximum value on a plot.
@@ -215,9 +213,6 @@ def _annotate_maximum(
 
     :param data:
         The model data to find the maxima from.
-
-    :param x_lab:
-        The x-axis label to display.
 
     :param y_axis_labels:
         Labels for the y axis to process.
@@ -444,7 +439,6 @@ def plot_figure(
     if annotate_maximum:
         _annotate_maximum(
             model_data,
-            "Time",
             first_axis_things_to_plot,
             ax1,
         )
@@ -484,7 +478,6 @@ def plot_figure(
     if annotate_maximum:
         _annotate_maximum(
             model_data,
-            "Time",
             second_axis_things_to_plot,
             ax2,
         )
@@ -729,4 +722,4 @@ if __name__ == "__main__":
 
     # * Plotting the tank temperature, collector temperature, and heat inputted into the
     # * tank.
-"""
+    """  # pylint: disable=pointless-string-statement

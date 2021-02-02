@@ -38,7 +38,7 @@ jobs:
           black pvt_model
       - name: Run pylint
         run: |
-          pylint pvt_model
+          pylint --rcfile=.pylintrc pvt_model/
       - name: Run mypy
         run: |
           mypy pvt_model

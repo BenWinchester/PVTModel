@@ -14,11 +14,11 @@ layer.
 
 """
 
-import unittest
+import unittest  # pylint: disable=unused-import
 
-from unittest import mock
+from unittest import mock  # pylint: disable=unused-import
 
-from .. import collector
+from .. import collector  # pylint: disable=unused-import
 
 
 def test_instantiate() -> None:

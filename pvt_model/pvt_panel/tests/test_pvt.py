@@ -13,11 +13,11 @@ This module tests the various internal and external methods provided by the PVT 
 
 """
 
-import unittest
+import unittest  # pylint: disable=unused-import
 
-from unittest import mock
+from unittest import mock  # pylint: disable=unused-import
 
-from .. import pvt
+from .. import pvt  # pylint: disable=unused-import
 
 
 class TestInstantiate:

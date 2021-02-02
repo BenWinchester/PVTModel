@@ -20,7 +20,7 @@ import logging
 import os
 
 from dataclasses import dataclass
-from typing import Any, Dict, Generator, Optional
+from typing import Any, Dict, Generator
 
 from dateutil.relativedelta import relativedelta
 
@@ -97,7 +97,7 @@ STEFAN_BOLTZMAN_CONSTANT: float = 5.670374419 * (10 ** (-8))
 #   Nu = h_w * D / k_w
 # where D is the diameter of the pipe, in meters, and k_w is the thermal conductivity of
 # water.
-# FIXME - I think a constant should be inserted here.
+# @@@ I think a constant should be inserted here.
 
 # The thermal conductivity of air is measured in Watts per meter Kelvin.
 # ! This is defined at 273 Kelvin.
@@ -589,15 +589,15 @@ class WeatherConditions:
         """
 
         return (
-            "WeatherConditions(irradiance: {}, declination: {}, ".format(
-                self.irradiance, self.declination
-            )
-            + "azimuthal_angle: {}, wind_speed: {}, ambient_temperature: {}, ".format(
-                self.azimuthal_angle, self.wind_speed, self.ambient_temperature
-            )
-            + "sky_temperature: {}, wind_heat_transfer_coefficient: {0:2f})".format(
-                self.sky_temperature, self.wind_heat_transfer_coefficient
-            )
+            "WeatherConditions("
+            f"irradiance: {self.irradiance}, "
+            f"declination: {self.declination}, "
+            f"azimuthal_angle: {self.azimuthal_angle}, "
+            f"wind_speed: {self.wind_speed}, "
+            f"ambient_temperature: {self.ambient_temperature}, "
+            f"sky_temperature: {self.sky_temperature}, "
+            f"wind_heat_transfer_coefficient: {self.wind_heat_transfer_coefficient:2f}"
+            ")"
         )
 
 

@@ -593,9 +593,8 @@ class WeatherForecaster:
                 }
             )
 
-        # @@@
-        # FIXME: For now, the solar irradiance profiles and temperature profiles for the
-        # missing months are filled in here.
+        # @@@ For now, the solar irradiance profiles and temperature profiles for the
+        # @@@ missing months are filled in here.
         monthly_irradiance_profiles[Date(1, 2)] = monthly_irradiance_profiles[
             Date(1, 1)
         ]
@@ -748,7 +747,7 @@ class WeatherForecaster:
         self,
         latitude: float,
         longitude: float,
-        cloud_efficacy_factor: float,
+        cloud_efficacy_factor: float,  # pylint: disable=unused-argument
         date_and_time: datetime.datetime,
     ) -> WeatherConditions:
         """

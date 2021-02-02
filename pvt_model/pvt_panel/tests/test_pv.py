@@ -13,11 +13,11 @@ This module tests the various internal and external methods provided by the PV p
 
 """
 
-import unittest
+import unittest  # pylint: disable=unused-import
 
-from unittest import mock
+from unittest import mock  # pylint: disable=unused-import
 
-from .. import pv
+from .. import pv  # pylint: disable=unused-import
 
 
 def test_instantiate() -> None:

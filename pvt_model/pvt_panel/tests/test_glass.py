@@ -14,8 +14,8 @@ of the panel.
 
 """
 
-import unittest
+import unittest  # pylint: disable=unused-import
 
-from unittest import mock
+from unittest import mock  # pylint: disable=unused-import
 
-from .. import glass
+from .. import glass  # pylint: disable=unused-import

@@ -337,9 +337,8 @@ def _process_json(
             "The profle type supplied is not electrical or thermal. See load module."
         )
 
-    # @@@
-    # FIXME: For now, the data is stored irrespective of month and day. This is in order
-    # to match as closely as possible to Maria's data set for July.
+    # @@@ For now, the data is stored irrespective of month and day. This is in order to
+    # @@@ match as closely as possible to Maria's data set for July.
     load_profile: Dict[_MonthAndDayType, LoadProfile] = collections.defaultdict(
         LoadProfile
     )
