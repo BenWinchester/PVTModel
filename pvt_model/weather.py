@@ -26,8 +26,8 @@ import math
 import os
 import random
 
-from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from dataclasses import dataclass, field
+from typing import Any, Dict, Optional, Set, Tuple, Union
 
 import json
 import pysolar
@@ -73,7 +73,7 @@ class _DailyProfile(BaseDailyProfile):
 
         return self._profile
 
-    def __add__(self, other) -> Any:
+    def __add__(self, other) -> Any:  # type: ignore
         """
         Adds two profiles together and returns the result.
 
@@ -94,7 +94,7 @@ class _DailyProfile(BaseDailyProfile):
 
         return _DailyProfile(profile)
 
-    def __truediv__(self, divisor: float) -> Any:
+    def __truediv__(self, divisor: float) -> Any:  # type: ignore
         """
         Divides every value in the profile by the divisor.
 
@@ -164,10 +164,10 @@ class _MonthlyWeatherData:
     rainy_days: float
     day_temp: float
     night_temp: float
-    solar_irradiance_profiles: Optional[Dict[int, _DailyProfile]] = None
-    _average_irradiance_profile: Optional[_DailyProfile] = None
-    override_irradiance_profile: Optional[_DailyProfile] = None
-    average_temperature_profile: Optional[_DailyProfile] = None
+    solar_irradiance_profiles: Dict[int, _DailyProfile] = field(default_factory=dict)
+    _average_irradiance_profile: _DailyProfile = _DailyProfile(dict())
+    override_irradiance_profile: _DailyProfile = _DailyProfile(dict())
+    average_temperature_profile: _DailyProfile = _DailyProfile(dict())
     sunrise: Optional[datetime.time] = None
     sunset: Optional[datetime.time] = None
 
@@ -199,7 +199,7 @@ class _MonthlyWeatherData:
     @classmethod
     def from_yaml(
         cls, month_name: str, monthly_weather_data: Dict[str, Union[str, float]]
-    ) -> Any:
+    ) -> Any:  # type: ignore
         """
         Checks for present fields and instantiates from YAML data.
 
@@ -248,7 +248,7 @@ class _MonthlyWeatherData:
             return self._average_irradiance_profile
 
         # Instantiate a counter.
-        counter: collections.Counter = collections.Counter()
+        counter: Dict[datetime.time, float] = collections.defaultdict(float)
 
         if self.solar_irradiance_profiles is None:
             raise ProgrammerJudgementFault(
@@ -451,9 +451,12 @@ class WeatherForecaster:
 
         """
 
-        return "WeatherForecaster( mains_water_temp: {}, ".format(
-            self.mains_water_temp
-        ) + "num_months: {})".format(len(self._monthly_weather_data.keys()))
+        return (
+            "WeatherForecaster("
+            f"mains_water_temp: {self.mains_water_temp}, "
+            f"num_months: {len(self._monthly_weather_data.keys())}"
+            ")"
+        )
 
     @classmethod
     def from_data(
@@ -463,7 +466,7 @@ class WeatherForecaster:
         solar_irradiance_filenames: Set[str],
         temperature_filenames: Set[str],
         use_pvgis: bool = False,
-    ) -> Any:
+    ) -> Any:  # type: ignore
         """
         Instantiate a :class:`WeatherForecaster` from paths to various data files.
 
@@ -525,9 +528,7 @@ class WeatherForecaster:
         # Loop through all data files, reading in the data, and adding to a profile
         # keyed only by month and day.
         if use_pvgis:
-            monthly_irradiance_profiles: Dict[Date, dict] = collections.defaultdict(
-                dict
-            )
+            temp_irradiance_profiles: Dict[Date, dict] = collections.defaultdict(dict)
 
             for filename in solar_irradiance_filenames:
                 with open(filename) as f:
@@ -545,23 +546,23 @@ class WeatherForecaster:
                     # This is being wrapped in a try-except block to allow for assigning of
                     # both items that are already present, and those which aren't.
                     try:
-                        monthly_irradiance_profiles[Date.from_date(key.date())][
+                        temp_irradiance_profiles[Date.from_date(key.date())][
                             key.time()
                         ] += (value / num_years)
                     except KeyError:
-                        monthly_irradiance_profiles[Date.from_date(key.date())][
+                        temp_irradiance_profiles[Date.from_date(key.date())][
                             key.time()
                         ] = (value / num_years)
 
             # These profiles now need to be cast to _DailyProfiles
             monthly_irradiance_profiles: Dict[Date, _DailyProfile] = {
                 date: _DailyProfile(profile)
-                for date, profile in monthly_irradiance_profiles.items()
+                for date, profile in temp_irradiance_profiles.items()
             }
         else:
             # Cycle through the various profile files, opening the profiles and storing as a
             # mapping.
-            monthly_irradiance_profiles: Dict[Date, _DailyProfile] = dict()
+            monthly_irradiance_profiles = dict()
             for filename in solar_irradiance_filenames:
                 with open(filename, "r") as f:
                     filedata = json.load(f)
@@ -576,7 +577,7 @@ class WeatherForecaster:
                     }
                 )
 
-        temperature_profiles: Dict[int, _DailyProfile] = dict()
+        temperature_profiles: Dict[Date, _DailyProfile] = dict()
         for filename in temperature_filenames:
             with open(filename, "r") as f:
                 filedata = json.load(f)
@@ -592,9 +593,8 @@ class WeatherForecaster:
                 }
             )
 
-        # @@@
-        # FIXME: For now, the solar irradiance profiles and temperature profiles for the
-        # missing months are filled in here.
+        # @@@ For now, the solar irradiance profiles and temperature profiles for the
+        # @@@ missing months are filled in here.
         monthly_irradiance_profiles[Date(1, 2)] = monthly_irradiance_profiles[
             Date(1, 1)
         ]
@@ -747,7 +747,7 @@ class WeatherForecaster:
         self,
         latitude: float,
         longitude: float,
-        cloud_efficacy_factor: float,
+        cloud_efficacy_factor: float,  # pylint: disable=unused-argument
         date_and_time: datetime.datetime,
     ) -> WeatherConditions:
         """
@@ -789,15 +789,16 @@ class WeatherForecaster:
         # * Compute the wind speed
         wind_speed: float = 5  # [m/s]
 
-        ambient_temperature = self._monthly_weather_data[
-            date_and_time.month
-        ].average_temperature_profile[date_and_time.time()]
-
         # >>> The ambient temperature is now determined from a temperature profile.
         # # Compute the ambient temperature.
         # ambient_temperature = self._ambient_temperature(
         #     latitude, longitude, date_and_time
         # )
+        # <<< >>> Ambient temperature determination using temperature profile.
+        ambient_temperature = self._monthly_weather_data[
+            date_and_time.month
+        ].average_temperature_profile[date_and_time.time()]
+        # <<< E.O. code-alteration block
 
         # Return all of these in a WeatherConditions variable.
         return WeatherConditions(

@@ -1,20 +1,30 @@
-#!/usr/bin/python3
+#!/usr/bin/python3.7
+# type: ignore
+########################################################################################
+# analysis.py - The analysis module for the model.
+#
+# Author: Ben Winchester
+# Copyright: Ben Winchester, 2021
+########################################################################################
 """
-Does some analysis.
+Used for analysis of the output of the model runs.
+
+NOTE: The mypy type checker is instructed to ignore this module. This is done due to the
+lower standards applied to the analysis code, and the failure of mypy to correctly type-
+check the external matplotlib.pyplot module.
 
 """
 
 import os
-import pdb
 
-from typing import Any, List, Dict, Optional, Tuple
+from typing import Any, List, Dict, Optional, Tuple, Union
 
 import json
 import re
 
 from matplotlib import pyplot as plt
 
-from __utils__ import GraphDetail, get_logger, HEAT_CAPACITY_OF_WATER
+from .__utils__ import GraphDetail, get_logger, HEAT_CAPACITY_OF_WATER
 
 # The directory in which old figures are saved
 OLD_FIGURES_DIRECTORY: str = "old_figures"
@@ -58,7 +68,7 @@ def _resolution_from_graph_detail(
 
 def _reduce_data(
     data_to_reduce: Dict[str, Dict[Any, Any]], graph_detail: GraphDetail
-) -> Dict[str, Dict[Any, Any]]:
+) -> Dict[Union[int, str], Dict[Any, Any]]:
     """
     This processes the data, using sums to reduce the resolution so it can be plotted.
 
@@ -86,7 +96,7 @@ def _reduce_data(
         graph_detail, len(data_to_reduce)
     )
 
-    reduced_data: Dict[str, Dict[Any, Any]] = {
+    reduced_data: Dict[Union[int, str], Dict[Any, Any]] = {
         index: dict()
         for index in range(int(len(data_to_reduce) / data_points_per_graph_point))
     }
@@ -133,7 +143,6 @@ def _reduce_data(
         # * If the data entry is a load, then take a sum
         elif any([key in data_entry_name for key in ["load", "output"]]):
             # @@@
-            # FIXME
             # * Here, the data is divided by 3600 to convert from Joules to Watt Hours.
             # * This only works provided that we are dealing with values in Joules...
             for outer_index, _ in enumerate(reduced_data):
@@ -181,10 +190,6 @@ def _post_process_data(
 
     # * Cycle through all the data points and compute the new values as needed.
     for data_entry in data_to_post_process.values():
-        data_entry["bulk_water_temperature"] = (
-            data_entry["collector_input_temperature"]
-            + data_entry["collector_output_temperature"]
-        ) / 2
         # Conversion needed from Wh to Joules.
         data_entry["litres_consumed"] = (
             data_entry["thermal_load"] / (HEAT_CAPACITY_OF_WATER * 50) * 3600
@@ -205,11 +210,13 @@ def load_model_data(filename: str) -> Dict[Any, Any]:
     """
 
     with open(filename, "r") as f:
-        return json.load(f)
+        json_data: Dict[Any, Any] = json.load(f)
+
+    return json_data
 
 
 def _annotate_maximum(
-    model_data: Dict[Any, Any], x_lab: str, y_axis_labels: List[str], axis
+    model_data: Dict[Any, Any], y_axis_labels: List[str], axis
 ) -> None:
     """
     Annotates the maximum value on a plot.
@@ -219,9 +226,6 @@ def _annotate_maximum(
 
     :param data:
         The model data to find the maxima from.
-
-    :param x_lab:
-        The x-axis label to display.
 
     :param y_axis_labels:
         Labels for the y axis to process.
@@ -448,7 +452,6 @@ def plot_figure(
     if annotate_maximum:
         _annotate_maximum(
             model_data,
-            "Time",
             first_axis_things_to_plot,
             ax1,
         )
@@ -488,7 +491,6 @@ def plot_figure(
     if annotate_maximum:
         _annotate_maximum(
             model_data,
-            "Time",
             second_axis_things_to_plot,
             ax2,
         )
@@ -609,7 +611,8 @@ if __name__ == "__main__":
         "Electrical Energy Supplied / Wh",
     )
 
-    """# * Plotting all tank-related temperatures
+    """  # pylint: disable=pointless-string-statement
+    # * Plotting all tank-related temperatures
     plot_figure(
         "tank_temperature",
         data,
@@ -733,4 +736,4 @@ if __name__ == "__main__":
 
     # * Plotting the tank temperature, collector temperature, and heat inputted into the
     # * tank.
-"""
+    """  # pylint: disable=pointless-string-statement

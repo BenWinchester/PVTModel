@@ -25,13 +25,9 @@ from dataclasses import dataclass
 from typing import Any, Dict, Set, Tuple
 
 from .__utils__ import (
-    InternalError,
-    InvalidDataError,
     MissingDataError,
-    ResolutionMismatchError,
     ProgrammerJudgementFault,
     BaseDailyProfile,
-    read_yaml,
 )
 
 __all__ = (
@@ -135,7 +131,7 @@ class _MonthAndDayType:
     month: int
     day_type: _DayType
 
-    def __hash__(self) -> float:
+    def __hash__(self) -> int:
         """
         Generates a hash s.t. :class:`_MonthAndDayType` instances can be used as keys.
 
@@ -341,9 +337,8 @@ def _process_json(
             "The profle type supplied is not electrical or thermal. See load module."
         )
 
-    # @@@
-    # FIXME: For now, the data is stored irrespective of month and day. This is in order
-    # to match as closely as possible to Maria's data set for July.
+    # @@@ For now, the data is stored irrespective of month and day. This is in order to
+    # @@@ match as closely as possible to Maria's data set for July.
     load_profile: Dict[_MonthAndDayType, LoadProfile] = collections.defaultdict(
         LoadProfile
     )
@@ -469,7 +464,7 @@ class LoadSystem:
             ) from None
 
     @classmethod
-    def from_data(cls, data_file_paths: Set[str]) -> Any:
+    def from_data(cls, data_file_paths: Set[str]) -> Any:  # type: ignore
         """
         Returns a :class:`LoadSystem` based on the paths to various data files.
 
