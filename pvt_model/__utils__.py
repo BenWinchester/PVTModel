@@ -20,43 +20,45 @@ import logging
 import os
 
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Generator, Optional
+
+from dateutil.relativedelta import relativedelta
 
 import yaml
 
 __all__ = (
-    # Exceptions
-    "InternalError",
-    "InvalidDataError",
-    "MissingDataError",
-    "MissingParametersError",
-    "ResolutionMismatchError",
-    # Dataclasses, Enums and Named Tuples
     "BackLayerParameters",
     "BaseDailyProfile",
     "CarbonEmissions",
     "CollectorParameters",
     "Date",
+    "DENSITY_OF_WATER",
     "FileType",
+    "FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR",
+    "HEAT_CAPACITY_OF_WATER",
+    "get_logger",
     "GraphDetail",
+    "INITIAL_SYSTEM_TEMPERATURE",
+    "INITIAL_TANK_TEMPERATURE",
+    "InternalError",
+    "InvalidDataError",
+    "LOGGER_NAME",
+    "MissingDataError",
+    "MissingParametersError",
+    "NUSSELT_NUMBER",
+    "ResolutionMismatchError",
     "LayerParameters",
     "OpticalLayerParameters",
     "ProgrammerJudgementFault",
     "PVParameters",
-    "TotalPowerData",
-    "UtilityType",
-    "WeatherConditions",
-    # Helper functions
-    "get_logger",
     "read_yaml",
-    # Constants
-    "FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR",
-    "HEAT_CAPACITY_OF_WATER",
-    "LOGGER_NAME",
-    "NUSSELT_NUMBER",
     "STEFAN_BOLTZMAN_CONSTANT",
     "THERMAL_CONDUCTIVITY_OF_AIR",
     "THERMAL_CONDUCTIVITY_OF_WATER",
+    "time_iterator",
+    "TotalPowerData",
+    "UtilityType",
+    "WeatherConditions",
     "ZERO_CELCIUS_OFFSET",
 )
 
@@ -65,41 +67,44 @@ __all__ = (
 # Constants #
 #############
 
+# The temperature of absolute zero in Kelvin, used for converting Celcius to Kelvin and
+# vice-a-versa.
+ZERO_CELCIUS_OFFSET: float = 273.15
 
-LOGGER_NAME = "my_first_pvt_model"
-
-# The Stefan-Boltzman constant, given in Watts per meter squared Kelvin to the four.
-STEFAN_BOLTZMAN_CONSTANT: float = 5.670374419 * (10 ** (-8))
-
-# The heat capacity of water, measured in Joules per kilogram Kelvin.
-HEAT_CAPACITY_OF_WATER: int = 4182
-
+# The density of water, measured in kilograms per meter cubed.
+DENSITY_OF_WATER: int = 1000
 # The free convective, heat-transfer coefficient of air. This varies, and potentially
 # could be extended to the weather module and calculated on the fly depending on various
 # environmental conditions etc.. This is measured in Watts per meter squared
 # Kelvin.
 FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR: int = 25
-
+# The heat capacity of water, measured in Joules per kilogram Kelvin.
+HEAT_CAPACITY_OF_WATER: int = 4182
+# The initial temperature for the system to be instantiated at, measured in Kelvin.
+INITIAL_SYSTEM_TEMPERATURE = 303  # [K]
+# The initial temperature of the hot-water tank, at which it should be instantiated,
+# measured in Kelvin.
+INITIAL_TANK_TEMPERATURE = ZERO_CELCIUS_OFFSET + 34.75  # [K]
+# The name used for the internal logger.
+LOGGER_NAME = "my_first_pvt_model"
+# The Nusselt number of the flow is given as 6 in Maria's paper.
+NUSSELT_NUMBER: float = 6
+# The Stefan-Boltzman constant, given in Watts per meter squared Kelvin to the four.
+STEFAN_BOLTZMAN_CONSTANT: float = 5.670374419 * (10 ** (-8))
 # The convective, heat-transfer coefficienct of water. This varies (a LOT), and is
 # measured in units of Watts per meter squared Kelvin.
 # This is determined by the following formula:
 #   Nu = h_w * D / k_w
 # where D is the diameter of the pipe, in meters, and k_w is the thermal conductivity of
 # water.
-# The thermal conductivity of water is obtained from
-# http://hyperphysics.phy-astr.gsu.edu/hbase/Tables/thrcn.html
-THERMAL_CONDUCTIVITY_OF_WATER: float = 0.6  # [W/m*K]
+# FIXME - I think a constant should be inserted here.
 
 # The thermal conductivity of air is measured in Watts per meter Kelvin.
 # ! This is defined at 273 Kelvin.
 THERMAL_CONDUCTIVITY_OF_AIR: float = 0.024
-
-# The temperature of absolute zero in Kelvin, used for converting Celcius to Kelvin and
-# vice-a-versa.
-ZERO_CELCIUS_OFFSET: float = 273.15
-
-# The Nusselt number of the flow is given as 6 in Maria's paper.
-NUSSELT_NUMBER: float = 6
+# The thermal conductivity of water is obtained from
+# http://hyperphysics.phy-astr.gsu.edu/hbase/Tables/thrcn.html
+THERMAL_CONDUCTIVITY_OF_WATER: float = 0.6  # [W/m*K]
 
 
 ##############
@@ -183,6 +188,24 @@ class MissingParametersError(Exception):
         )
 
 
+class ProgrammerJudgementFault(Exception):
+    """
+    Raised when an error is hit due to poor programming.
+
+    """
+
+    def __init__(self, message: str) -> None:
+        """
+        Instantiate a programmer judgement fault error.
+
+        :param message:
+            A message to append when displaying the error to the user.
+
+        """
+
+        super().__init__(f"A programmer judgement fault has occurred: {message}")
+
+
 class ResolutionMismatchError(Exception):
     """
     Raised when an error occurs attempting to match up data and simulation resolutions.
@@ -207,190 +230,9 @@ class ResolutionMismatchError(Exception):
         )
 
 
-class ProgrammerJudgementFault(Exception):
-    """
-    Raised when an error is hit due to poor programming.
-
-    """
-
-    def __init__(self, message: str) -> None:
-        """
-        Instantiate a programmer judgement fault error.
-
-        :param message:
-            A message to append when displaying the error to the user.
-
-        """
-
-        super().__init__(f"A programmer judgement fault has occurred: {message}")
-
-
 ##############################
 # Functions and Data Classes #
 ##############################
-
-
-@dataclass
-class CarbonEmissions:
-    """
-    Contains information about the carbon emissions produced.
-
-    .. attribute:: electrical_carbon_produced
-        The amount of CO2 equivalent produced, measured in kilograms.
-
-    .. attribute:: electrical_carbon_saved
-        The amount of CO2 saved by using PV-T, measured in kilograms.
-
-    .. attribute:: heating_carbon_produced
-        The amount of CO2 equivalent produced, measured in kilograms.
-
-    .. attribute:: heating_carbon_saved
-        The amount of CO2 equivalent saved by using the PV-T, measured in kilograms.
-
-    """
-
-    electrical_carbon_produced: float
-    electrical_carbon_saved: float
-    heating_carbon_produced: float
-    heating_carbon_saved: float
-
-
-@dataclass
-class TotalPowerData:
-    """
-    Contains information about the total power generated by the system.
-
-    .. attribute:: electricity_supplied
-        The electricity supplied, measured in Joules.
-
-    .. attribute:: electricity_demand
-        The electricity demand, measured in Joules.
-
-    .. attribute:: heating_supplied
-        The heatimg supplied, measured in Joules.
-
-    .. attribute:: heating_demand
-        The heating demand, measured in Joules.
-
-    """
-
-    electricity_supplied: float = 0
-    electricity_demand: float = 0
-    heating_supplied: float = 0
-    heating_demand: float = 0
-
-    def increment(
-        self,
-        electricity_supplied_incriment,
-        electricity_demand_incriment,
-        heating_supplied_increment,
-        heating_demand_increment,
-    ) -> None:
-        """
-        Updates the values by incrementing with those supplied.
-
-        :param electricity_supplied_increment:
-            Electricity supplied to add, measured in Joules.
-        :param electricity_demand_increment:
-            Electricity demand to add, measured in Joules.
-        :param heating_supplied_increment:
-            Heating supplied to add, measured in Joules.
-        :param heating_demand_increment:
-            Heating demand to add, measured in Joules.
-
-        """
-
-        self.electricity_supplied += electricity_supplied_incriment
-        self.electricity_demand += electricity_demand_incriment
-        self.heating_supplied += heating_supplied_increment
-        self.heating_demand += heating_demand_increment
-
-
-class GraphDetail(enum.Enum):
-    """
-    The level of detail to go into when graphing.
-
-    .. attribute:: highest
-        The highest level of detail - all data points are plotted.
-
-    .. attribute:: high
-        A "high" level of detail, to be determined by the analysis script.
-
-    .. attribute:; medium
-        A "medium" level of detail, to be determined by the analysis script.
-
-    .. attribute:: low
-        A "low" level of detail, to be determined by the analysis script.
-
-    .. attribute:: lowest
-        The lowest level of detail, with points only every half an hour.
-
-    """
-
-    highest = 0
-    high = 2880
-    medium = 720
-    low = 144
-    lowest = 48
-
-
-class FileType(enum.Enum):
-    """
-    Tells what type of file is being used for the data.
-
-    .. attribute:: YAML
-        A YAML file is being used.
-
-    .. attribute:: JSON
-        A JSON file is being used.
-
-    """
-
-    YAML = 0
-    JSON = 1
-
-
-@dataclass
-class LayerParameters:
-    """
-    Contains parameters needed to instantiate a layer within the PV-T panel.
-
-    .. attribute:: mass
-        The mass of the layer, measured in Kelvin.
-
-    .. attribute:: heat_capacity
-        The heat capacity of the layer, measured in Joules per kilogram Kelvin.
-
-    .. attribute:: area
-        The area of the layer, measured in meters squared.
-
-    .. attribute:: thickness
-        The thickness of the layer, measured in meters.
-
-    .. attribute:: temperature
-        The temperature at which to initialise the layer, measured in Kelvin.
-
-    """
-
-    mass: float
-    heat_capacity: float
-    area: float
-    thickness: float
-    temperature: Optional[float]
-
-
-@dataclass
-class BackLayerParameters(LayerParameters):
-    """
-    Contains parameters needed to instantiate the back layer of the PV-T panel.
-
-    .. attribute:: conductance
-        The conductance of layer (to the environment/its surroundings), measured in
-        Watts per meter squared Kelvin.
-
-    """
-
-    conductivity: float
 
 
 class BaseDailyProfile:
@@ -487,6 +329,31 @@ class BaseDailyProfile:
 
 
 @dataclass
+class CarbonEmissions:
+    """
+    Contains information about the carbon emissions produced.
+
+    .. attribute:: electrical_carbon_produced
+        The amount of CO2 equivalent produced, measured in kilograms.
+
+    .. attribute:: electrical_carbon_saved
+        The amount of CO2 saved by using PV-T, measured in kilograms.
+
+    .. attribute:: heating_carbon_produced
+        The amount of CO2 equivalent produced, measured in kilograms.
+
+    .. attribute:: heating_carbon_saved
+        The amount of CO2 equivalent saved by using the PV-T, measured in kilograms.
+
+    """
+
+    electrical_carbon_produced: float
+    electrical_carbon_saved: float
+    heating_carbon_produced: float
+    heating_carbon_saved: float
+
+
+@dataclass
 class Date:
     """
     Represents a date, containing informaiton about the month and day.
@@ -532,95 +399,99 @@ class Date:
         return cls(date.day, date.month)
 
 
-@dataclass
-class OpticalLayerParameters(LayerParameters):
+class FileType(enum.Enum):
     """
-    Contains parameters needed to instantiate a layer with optical properties.
+    Tells what type of file is being used for the data.
 
-    .. attribute:: transmissivity
-        The transmissivity of the layer: a dimensionless number between 0 (nothing is
-        transmitted through the layer) and 1 (all light is transmitted).
+    .. attribute:: YAML
+        A YAML file is being used.
 
-    .. attribute:: absorptivity
-        The absorptivity of the layer: a dimensionless number between 0 (nothing is
-        absorbed by the layer) and 1 (all light is absorbed).
-
-    .. attribute:: emissivity
-        The emissivity of the layer; a dimensionless number between 0 (nothing is
-        emitted by the layer) and 1 (the layer re-emits all incident light).
+    .. attribute:: JSON
+        A JSON file is being used.
 
     """
 
-    transmissivity: float
-    absorptivity: float
-    emissivity: float
+    YAML = 0
+    JSON = 1
 
 
-@dataclass
-class CollectorParameters(OpticalLayerParameters):
+class GraphDetail(enum.Enum):
     """
-    Contains parameters needed to instantiate a collector layer within the PV-T panel.
+    The level of detail to go into when graphing.
 
-    .. attribute:: length
-        The legnth of the collector, measured in meters.
+    .. attribute:: highest
+        The highest level of detail - all data points are plotted.
 
-    .. attribute:: number_of_pipes
-        The number of pipes attached to the back of the thermal collector.
-        NOTE: This parameter is very geography/design-specific, and will only be
-        relevant/useful to the current design of collector being modeled. Namely, when
-        multiple pipes flow linearly down the length of the collector, with the HTF
-        taking a single pass through the collector.
+    .. attribute:: high
+        A "high" level of detail, to be determined by the analysis script.
 
-    .. attribute:: output_water_temperature
-        The temperature, in Kelvin, of water outputted by the layer.
+    .. attribute:; medium
+        A "medium" level of detail, to be determined by the analysis script.
 
-    .. attribute:: pipe_diameter
-        The diameter of the pipe, in meters.
+    .. attribute:: low
+        A "low" level of detail, to be determined by the analysis script.
 
-    .. attribute:: mass_flow_rate
-        The mass flow rate of heat-transfer fluid through the collector. Measured in
-        litres per hour.
-
-    .. attribute:: htf_heat_capacity
-        The heat capacity of the heat-transfer fluid through the collector, measured in
-        Joules per kilogram Kelvin.
-
-    .. attribute:: pump_power
-        The electrical power, in Watts, consumed by the water pump in the collector.
+    .. attribute:: lowest
+        The lowest level of detail, with points only every half an hour.
 
     """
 
-    length: float
-    number_of_pipes: float
-    output_water_temperature: float
-    pipe_diameter: float
-    mass_flow_rate: float
-    htf_heat_capacity: float
-    pump_power: float
+    highest = 0
+    high = 2880
+    medium = 720
+    low = 144
+    lowest = 48
 
 
 @dataclass
-class PVParameters(OpticalLayerParameters):
+class TotalPowerData:
     """
-    Contains parameters needed to instantiate a PV layer within the PV-T panel.
+    Contains information about the total power generated by the system.
 
-    .. attribute:: reference_efficiency
-        The efficiency of the PV layer at the reference temperature. Thie value varies
-        between 1 (corresponding to 100% efficiency), and 0 (corresponding to 0%
-        efficiency)
+    .. attribute:: electricity_supplied
+        The electricity supplied, measured in Joules.
 
-    .. attribute:: reference_temperature
-        The referencee temperature, in Kelvin, at which the reference efficiency is
-        defined.
+    .. attribute:: electricity_demand
+        The electricity demand, measured in Joules.
 
-    .. attribute:: thermal_coefficient
-        The thermal coefficient for the efficiency of the panel.
+    .. attribute:: heating_supplied
+        The heatimg supplied, measured in Joules.
+
+    .. attribute:: heating_demand
+        The heating demand, measured in Joules.
 
     """
 
-    reference_efficiency: float
-    reference_temperature: float
-    thermal_coefficient: float
+    electricity_supplied: float = 0
+    electricity_demand: float = 0
+    heating_supplied: float = 0
+    heating_demand: float = 0
+
+    def increment(
+        self,
+        electricity_supplied_incriment,
+        electricity_demand_incriment,
+        heating_supplied_increment,
+        heating_demand_increment,
+    ) -> None:
+        """
+        Updates the values by incrementing with those supplied.
+
+        :param electricity_supplied_increment:
+            Electricity supplied to add, measured in Joules.
+        :param electricity_demand_increment:
+            Electricity demand to add, measured in Joules.
+        :param heating_supplied_increment:
+            Heating supplied to add, measured in Joules.
+        :param heating_demand_increment:
+            Heating demand to add, measured in Joules.
+
+        """
+
+        self.electricity_supplied += electricity_supplied_incriment
+        self.electricity_demand += electricity_demand_incriment
+        self.heating_supplied += heating_supplied_increment
+        self.heating_demand += heating_demand_increment
 
 
 class UtilityType(enum.Enum):
@@ -730,36 +601,153 @@ class WeatherConditions:
         )
 
 
-def read_yaml(yaml_file_path: str) -> Dict[Any, Any]:
+###################################
+# PVT Layer Parameter Dataclasses #
+###################################
+
+
+@dataclass
+class LayerParameters:
     """
-    Read in some yaml data and return it.
+    Contains parameters needed to instantiate a layer within the PV-T panel.
 
-    :param yaml_file_path:
-        The path to the yaml data to read in.
+    .. attribute:: mass
+        The mass of the layer, measured in Kelvin.
 
-    :return:
-        A `dict` containing the data read in from the yaml file.
+    .. attribute:: heat_capacity
+        The heat capacity of the layer, measured in Joules per kilogram Kelvin.
+
+    .. attribute:: area
+        The area of the layer, measured in meters squared.
+
+    .. attribute:: thickness
+        The thickness of the layer, measured in meters.
+
+    .. attribute:: temperature
+        The temperature at which to initialise the layer, measured in Kelvin.
 
     """
 
-    logger = logging.getLogger(LOGGER_NAME)
+    mass: float
+    heat_capacity: float
+    area: float
+    thickness: float
+    temperature: float
 
-    # Open the yaml data and read it.
-    if not os.path.isfile(yaml_file_path):
-        logger.error(
-            "A YAML data file, '%s', could not be found. Exiting...", yaml_file_path
-        )
-        raise FileNotFoundError(yaml_file_path)
-    with open(yaml_file_path) as f:
-        try:
-            data = yaml.safe_load(f)
-        except yaml.parser.ParserError as e:
-            logger.error("Failed to read YAML file '%s'.", yaml_file_path)
-            print(f"Failed to parse YAML. Internal error: {str(e)}")
-            raise
 
-    logger.info("Data successfully read from '%s'.", yaml_file_path)
-    return data
+@dataclass
+class BackLayerParameters(LayerParameters):
+    """
+    Contains parameters needed to instantiate the back layer of the PV-T panel.
+
+    .. attribute:: conductance
+        The conductance of layer (to the environment/its surroundings), measured in
+        Watts per meter squared Kelvin.
+
+    """
+
+    conductivity: float
+
+
+@dataclass
+class OpticalLayerParameters(LayerParameters):
+    """
+    Contains parameters needed to instantiate a layer with optical properties.
+
+    .. attribute:: transmissivity
+        The transmissivity of the layer: a dimensionless number between 0 (nothing is
+        transmitted through the layer) and 1 (all light is transmitted).
+
+    .. attribute:: absorptivity
+        The absorptivity of the layer: a dimensionless number between 0 (nothing is
+        absorbed by the layer) and 1 (all light is absorbed).
+
+    .. attribute:: emissivity
+        The emissivity of the layer; a dimensionless number between 0 (nothing is
+        emitted by the layer) and 1 (the layer re-emits all incident light).
+
+    """
+
+    transmissivity: float
+    absorptivity: float
+    emissivity: float
+
+
+@dataclass
+class CollectorParameters(OpticalLayerParameters):
+    """
+    Contains parameters needed to instantiate a collector layer within the PV-T panel.
+
+    .. attribute:: bulk_water_temperature
+        The temperature of the bulk water within the collector, I.E., the temperature of
+        the heat-transfer fluid within the collector. This is measured in Kelvin.
+
+    .. attribute:: htf_heat_capacity
+        The heat capacity of the heat-transfer fluid through the collector, measured in
+        Joules per kilogram Kelvin.
+
+    .. attribute:: length
+        The legnth of the collector, measured in meters.
+
+    .. attribute:: mass_flow_rate
+        The mass flow rate of heat-transfer fluid through the collector. Measured in
+        litres per hour.
+
+    .. attribute:: number_of_pipes
+        The number of pipes attached to the back of the thermal collector.
+        NOTE: This parameter is very geography/design-specific, and will only be
+        relevant/useful to the current design of collector being modeled. Namely, when
+        multiple pipes flow linearly down the length of the collector, with the HTF
+        taking a single pass through the collector.
+
+    .. attribute:: output_water_temperature
+        The temperature, in Kelvin, of water outputted by the layer.
+
+    .. attribute:: pipe_diameter
+        The diameter of the pipe, in meters.
+
+    .. attribute:: pump_power
+        The electrical power, in Watts, consumed by the water pump in the collector.
+
+    """
+
+    bulk_water_temperature: float
+    htf_heat_capacity: float
+    length: float
+    mass_flow_rate: float
+    number_of_pipes: float
+    output_water_temperature: float
+    pipe_diameter: float
+    pump_power: float
+
+
+@dataclass
+class PVParameters(OpticalLayerParameters):
+    """
+    Contains parameters needed to instantiate a PV layer within the PV-T panel.
+
+    .. attribute:: reference_efficiency
+        The efficiency of the PV layer at the reference temperature. Thie value varies
+        between 1 (corresponding to 100% efficiency), and 0 (corresponding to 0%
+        efficiency)
+
+    .. attribute:: reference_temperature
+        The referencee temperature, in Kelvin, at which the reference efficiency is
+        defined.
+
+    .. attribute:: thermal_coefficient
+        The thermal coefficient for the efficiency of the panel.
+
+    """
+
+    reference_efficiency: float
+    reference_temperature: float
+    thermal_coefficient: float
+
+
+####################
+# Helper functions #
+####################
 
 
 def get_logger(logger_name: str) -> logging.Logger:
@@ -797,3 +785,73 @@ def get_logger(logger_name: str) -> logging.Logger:
     logger.addHandler(ch)
 
     return logger
+
+
+def read_yaml(yaml_file_path: str) -> Dict[Any, Any]:
+    """
+    Read in some yaml data and return it.
+
+    :param yaml_file_path:
+        The path to the yaml data to read in.
+
+    :return:
+        A `dict` containing the data read in from the yaml file.
+
+    """
+
+    logger = logging.getLogger(LOGGER_NAME)
+
+    # Open the yaml data and read it.
+    if not os.path.isfile(yaml_file_path):
+        logger.error(
+            "A YAML data file, '%s', could not be found. Exiting...", yaml_file_path
+        )
+        raise FileNotFoundError(yaml_file_path)
+    with open(yaml_file_path) as f:
+        try:
+            data = yaml.safe_load(f)
+        except yaml.parser.ParserError as e:
+            logger.error("Failed to read YAML file '%s'.", yaml_file_path)
+            print(f"Failed to parse YAML. Internal error: {str(e)}")
+            raise
+
+    logger.info("Data successfully read from '%s'.", yaml_file_path)
+    return data
+
+
+def time_iterator(
+    *,
+    first_time: datetime.datetime,
+    last_time: datetime.datetime,
+    internal_resolution: int,
+    timezone: datetime.timezone,
+) -> Generator[datetime.datetime, None, None]:
+    """
+    A generator function for looping through various times.
+
+    :param first_time:
+        The first time to be returned from the function.
+
+    :param last_time:
+        The last time, which, when reached, should cause the generator to stop.
+
+    :param internal_resolution:
+        The time step, in seconds, for which the simulation should be run before saving.
+
+    :param timezone:
+        The timezone of the PV-T set-up.
+
+    :return:
+        A :class:`datetime.datetime` corresponding to the date and time at each point
+        being itterated through.
+
+    """
+
+    current_time = first_time
+    while current_time < last_time:
+        yield current_time.replace(tzinfo=timezone)
+        current_time += relativedelta(
+            hours=internal_resolution // 3600,
+            minutes=internal_resolution // 60,
+            seconds=internal_resolution % 60,
+        )

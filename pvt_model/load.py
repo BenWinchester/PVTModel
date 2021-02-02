@@ -25,13 +25,9 @@ from dataclasses import dataclass
 from typing import Any, Dict, Set, Tuple
 
 from .__utils__ import (
-    InternalError,
-    InvalidDataError,
     MissingDataError,
-    ResolutionMismatchError,
     ProgrammerJudgementFault,
     BaseDailyProfile,
-    read_yaml,
 )
 
 __all__ = (
@@ -135,7 +131,7 @@ class _MonthAndDayType:
     month: int
     day_type: _DayType
 
-    def __hash__(self) -> float:
+    def __hash__(self) -> int:
         """
         Generates a hash s.t. :class:`_MonthAndDayType` instances can be used as keys.
 
