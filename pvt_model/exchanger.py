@@ -97,8 +97,12 @@ class Exchanger:
         # measured in kilograms per time step, this can be used as is as a total mass
         # flow param in kilograms.
         heat_added = (
-            self._efficiency * input_water_mass * input_water_heat_capacity
-        ) * (input_water_temperature - water_tank.temperature)
+            self._efficiency
+            * input_water_mass  # [kg]
+            * input_water_heat_capacity  # [J/kg*K]
+        ) * (
+            input_water_temperature - water_tank.temperature
+        )  # [K]
 
         # @@@
         # >>> Potential incorrect equation.

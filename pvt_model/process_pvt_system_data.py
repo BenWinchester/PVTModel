@@ -23,7 +23,7 @@ import datetime
 from typing import Any, Dict
 
 from .pvt_panel import pvt
-from . import exchanger, tank
+from . import exchanger, tank, pump
 from .__utils__ import (
     BackLayerParameters,
     CollectorParameters,
@@ -42,6 +42,7 @@ from .__utils__ import (
 __all__ = (
     "heat_exchanger_from_path",
     "hot_water_tank_from_path",
+    "pump_from_path",
     "pvt_panel_from_path",
 )
 
@@ -115,6 +116,40 @@ def hot_water_tank_from_path(tank_data_file: str) -> tank.Tank:
         raise InvalidDataError(
             tank_data_file,
             "Tank data variables provided must be floating point integers.",
+        ) from None
+
+
+#############
+# Pump code #
+#############
+
+
+def pump_from_path(pump_data_file: str) -> tank.Tank:
+    """
+    Generate a :class:`pump.Pump` instance based on the path to the data file.
+
+    :param pump)data_file:
+        The path to the pump data file.
+
+    :return:
+        A :class:`tank.Tank` instance representing the hot-water tank.
+
+    """
+
+    pump_data = read_yaml(pump_data_file)
+    try:
+        return pump.Pump(
+            float(pump_data["power"]),  # [W]
+        )
+    except KeyError as e:
+        raise MissingDataError(
+            "Not all data needed to instantiate the pump class was provided. "
+            f"File: {pump_data_file}. Error: {str(e)}"
+        ) from None
+    except ValueError as e:
+        raise InvalidDataError(
+            pump_data_file,
+            "Pump data variables provided must be floating point integers.",
         ) from None
 
 
@@ -215,7 +250,6 @@ def _collector_params_from_data(
             number_of_pipes=collector_data["number_of_pipes"],  # [pipes]
             output_water_temperature=initial_collector_htf_tempertaure,  # [K]
             pipe_diameter=collector_data["pipe_diameter"],  # [m]
-            pump_power=collector_data["pump_power"],  # [W]
         )
     except KeyError as e:
         raise MissingDataError(
@@ -253,7 +287,7 @@ def _glass_params_from_data(
             glass_data["heat_capacity"],  # [J/kg*K]
             area,  # [m^2]
             glass_data["thickness"],  # [m]
-            INITIAL_SYSTEM_TEMPERATURE,  # [K]
+            293,  # [K]
             glass_data["transmissivity"],  # [unitless]
             glass_data["absorptivity"],  # [unitless]
             glass_data["emissivity"],  # [unitless]

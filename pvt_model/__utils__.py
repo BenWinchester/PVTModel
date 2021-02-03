@@ -706,9 +706,6 @@ class CollectorParameters(OpticalLayerParameters):
     .. attribute:: pipe_diameter
         The diameter of the pipe, in meters.
 
-    .. attribute:: pump_power
-        The electrical power, in Watts, consumed by the water pump in the collector.
-
     """
 
     bulk_water_temperature: float
@@ -718,7 +715,6 @@ class CollectorParameters(OpticalLayerParameters):
     number_of_pipes: float
     output_water_temperature: float
     pipe_diameter: float
-    pump_power: float
 
 
 @dataclass

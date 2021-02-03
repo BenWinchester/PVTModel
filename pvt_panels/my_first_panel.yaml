@@ -102,8 +102,6 @@ collector:
   number_of_pipes: 11 # [pipes]
   # The spacing between adjacent tubes along the rear of the collector.
   pipe_spacing: 0.095 # [m]
-  # The power used in the water pump, measured in Watts.
-  pump_power: 60 # [W]
   absorptivity: 0.95 # [unitless]
   emissivity: 0.05 # [unitless]
   transmissivity: 0.9 # [unitless]

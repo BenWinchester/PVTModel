@@ -24,7 +24,7 @@ import re
 
 from matplotlib import pyplot as plt
 
-from .__utils__ import GraphDetail, get_logger, HEAT_CAPACITY_OF_WATER
+from __utils__ import GraphDetail, get_logger, HEAT_CAPACITY_OF_WATER
 
 # The directory in which old figures are saved
 OLD_FIGURES_DIRECTORY: str = "old_figures"
@@ -35,7 +35,7 @@ X_TICK_SEPARATION: int = int(8 * GRAPH_DETAIL.value / 48)
 # Which days of data to include
 DAYS_TO_INCLUDE: List[bool] = [False, True]
 # The name of the data file to use.
-DATA_FILE_NAME = "data_output_july_day_new_method_average_irradiance_4.json"
+DATA_FILE_NAME = "data_output_july_day_new_method_average_irradiance_7.json"
 
 
 def _resolution_from_graph_detail(
@@ -567,8 +567,8 @@ if __name__ == "__main__":
         "maria_6b_tank_temperature",
         data,
         first_axis_things_to_plot=[
-            "collector_input_temperature",
             "collector_output_temperature",
+            "tank_output_temperature",
             "tank_temperature",
         ],
         first_axis_label="Temperature / deg C",

@@ -26,7 +26,7 @@ from .__utils__ import (
     conductive_heat_transfer_with_gap,
     OpticalLayer,
     radiative_heat_transfer,
-    solar_heat_input,
+    transmissivity_absorptivity_product,
     wind_heat_transfer,
 )
 
@@ -131,7 +131,7 @@ class PV(OpticalLayer):
         glazed: bool,
         internal_resolution: float,
         pv_to_collector_thermal_conductance: float,
-        solar_energy_input: float,
+        solar_heat_input_from_sun_to_pv_layer: float,
         weather_conditions: WeatherConditions,
     ) -> Tuple[float, Optional[float]]:
         """
@@ -161,9 +161,9 @@ class PV(OpticalLayer):
             The thermal conductance between the PV and collector layers, measured in
             Watts per meter squared Kelvin.
 
-        :param solar_energy_input:
-            The solar irradiance, normal to the panel, measured in Joules per meter
-            sqaured per time interval.
+        :param solar_heat_input_from_sun_to_pv_layer:
+            The heat gain due to the solar irradiance striking the panel, measured in
+            Joules.
 
         :param weather_conditions:
             The current weather conditions, passed in as a :class:`WeatherConditions`
@@ -180,16 +180,6 @@ class PV(OpticalLayer):
             is marked as being glazed but there is no glass layer present.
 
         """
-
-        # Determine the excess heat that has been inputted into the panel during this
-        # time step, measured in Joules.
-        solar_heat_gain = solar_heat_input(
-            self.absorptivity,
-            self.area,
-            solar_energy_input,
-            self.transmissivity,
-            self.electrical_efficiency,
-        )  # [J] or [J/time_step]
 
         # >>> If the layer is glazed, compute radiative and conductive heat to the glass
         if glazed and glass_emissivity is not None and glass_temperature is not None:
@@ -258,8 +248,12 @@ class PV(OpticalLayer):
 
         # Use this to compute the rise in temperature of the PV layer and set the
         # temperature appropriately.
-        self.temperature += (solar_heat_gain - heat_lost) / (  # [J]
-            self._mass * self._heat_capacity  # [kg]  # [J/kg*K]
+        self.temperature += (
+            solar_heat_input_from_sun_to_pv_layer - heat_lost
+        ) / (  # [J]
+            self._mass  # [kg]
+            * internal_resolution  # [s]
+            * self._heat_capacity  # [J/kg*K]
         )  # [K]
 
         # Return the heat transfered to the glass and collector layers.

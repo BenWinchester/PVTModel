@@ -68,7 +68,7 @@ class Glass(OpticalLayer):
         self.temperature = self.temperature + (  # [K]
             heat_input - upward_heat_losses
         ) * internal_resolution / (  # [W] * [seconds]
-            self._mass * self._heat_capacity
-        )  # [kg] * [J/kg*K]
+            self._mass * self._heat_capacity * internal_resolution
+        )  # [kg] * [J/kg*K] * [s]
 
         return upward_heat_losses * internal_resolution  # [J]

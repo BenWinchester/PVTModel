@@ -1,0 +1,8 @@
+########################################################################################
+# my_first_pump.yaml - Data concerning the pump used in the PV-T system.
+#
+# Copyright 2021, Ben Winchester
+########################################################################################
+
+# The power used in the water pump, measured in Watts.
+power: 60 # [W]

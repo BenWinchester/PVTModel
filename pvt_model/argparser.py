@@ -114,6 +114,11 @@ def parse_args(args) -> argparse.Namespace:
         "from 1 (all) to 0 (none).",
     )
     parser.add_argument(
+        "--pump-data-file",
+        "-pm",
+        help="The location of the pump YAML data file for the PV-T system pump.",
+    )
+    parser.add_argument(
         "--pvt-data-file", "-p", help="The location of the PV-T system YAML data file."
     )
     parser.add_argument(

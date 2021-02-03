@@ -100,7 +100,6 @@ class Collector(OpticalLayer):
         self.bulk_water_temperature = collector_params.bulk_water_temperature
         self.htf_heat_capacity = collector_params.htf_heat_capacity
         self.output_water_temperature = collector_params.output_water_temperature
-        self.pump_power = collector_params.pump_power
 
     def __repr__(self) -> str:
         """
@@ -140,7 +139,7 @@ class Collector(OpticalLayer):
         # @@@ Maria here used a value of 259, irrespective of these properties.
         # @@@ For temporary consistency, this value is used.
 
-        return 259
+        return 259 * 100
 
         # return NUSSELT_NUMBER * THERMAL_CONDUCTIVITY_OF_WATER / self._pipe_diameter
 
@@ -233,6 +232,9 @@ class Collector(OpticalLayer):
         :param glass_temperature:
             The temperature of the glass layer, if present, measured in Kelvin. If there
             is no glass layer present, then this is None.
+
+        :param htf_pump_state:
+            Whether the HTF pump is on (True) or off (False).
 
         :param input_water_temperature:
             The temperature of the input water flow to the collector, measured in
@@ -344,31 +346,70 @@ class Collector(OpticalLayer):
             * internal_resolution  # [s]
         )  # [J]
 
-        # * Equation 11: Compute the output temperature based on this heat gain.
-        self.output_water_temperature = (
-            input_water_temperature  # [K]
-            + bulk_water_heat_gain
-            / (  # [J]
-                self.mass_flow_rate  # [kg/s]
-                * self.htf_heat_capacity  # [J/kg*K]
-                * internal_resolution  # [s]
-            )
+        # * Compute the temperature rise of the bulk water.
+        bulk_water_temperature_gain = bulk_water_heat_gain / (  # [J]
+            self.htf_volume  # [m^3]
+            * DENSITY_OF_WATER  # [kg/m^3]
+            * self.htf_heat_capacity  # [J/kg*K]
+            * internal_resolution  # [s]
         )
 
-        # * Compute the temperature rise of the bulk water.
-        self.bulk_water_temperature = (
-            input_water_temperature + self.output_water_temperature
-        ) / 2
+        # @@@ There is a piece of code here that deals with the unphysical case that the
+        # @@@ HTF temperature rises above the collector temperature.
+        # if bulk_water_temperature_gain > 0 and bulk_water_temperature_gain > (
+        #     self.temperature - self.bulk_water_temperature
+        # ):
+        #     actual_bulk_water_temperature_gain = (
+        #         self.temperature - self.bulk_water_temperature
+        #     )
+        #     self.bulk_water_temperature = self.temperature
+        #     returned_heat: float = (
+        #         bulk_water_heat_gain  # [J]
+        #         - self.htf_heat_capacity  # [J/kg*K]
+        #         * self.htf_volume  # [m^3]
+        #         * DENSITY_OF_WATER  # [kg/m^3]
+        #         * actual_bulk_water_temperature_gain  # [K]
+        #     )
+        # elif bulk_water_temperature_gain < 0 and bulk_water_temperature_gain < (
+        #     self.temperature - self.bulk_water_temperature
+        # ):
+        #     actual_bulk_water_temperature_gain = (
+        #         self.bulk_water_temperature - self.temperature
+        #     )
+        #     self.bulk_water_temperature = self.temperature
+        #     returned_heat = (
+        #         bulk_water_heat_gain  # [J]
+        #         - self.htf_heat_capacity  # [J/kg*K]
+        #         * self.htf_volume  # [m^3]
+        #         * DENSITY_OF_WATER  # [kg/m^3]
+        #         * actual_bulk_water_temperature_gain  # [K]
+        #     )
+        # else:
+        self.bulk_water_temperature += bulk_water_temperature_gain
+        returned_heat = 0
+
+        # * Compute the output water temperature
+        self.output_water_temperature = (
+            self.bulk_water_temperature * 2 - input_water_temperature
+        )
 
         # This heat is now converted into Joules.
-        net_heat_gain = collector_heat_input - (  # [J]
-            back_plate_heat_loss  # [J]
-            + upward_heat_losses  # [J]
-            + bulk_water_heat_gain  # [J]
+        net_heat_gain = (
+            collector_heat_input
+            + returned_heat
+            - (  # [J]
+                back_plate_heat_loss  # [J]
+                + upward_heat_losses  # [J]
+                + bulk_water_heat_gain  # [J]
+            )
         )
         self.temperature += net_heat_gain / (
-            self._mass * self._heat_capacity
-            + back_plate_instance.mass * back_plate_instance.heat_capacity
+            self._mass  # [kg]
+            * self._heat_capacity  # [J/kg*K]
+            * internal_resolution  # [s]
+            + back_plate_instance.mass  # [kg]
+            * back_plate_instance.heat_capacity  # [J/kg*K]
+            * internal_resolution  # [s]
         )
         back_plate_instance.temperature = self.temperature
 

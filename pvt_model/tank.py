@@ -126,7 +126,7 @@ class Tank:
         # We need to multiply by the internal_resolution in order to compute the total heat lost
         # from the tank during the time duration.
         heat_loss = (
-            self.area
+            self.area  # [m^2]
             * self.heat_loss_coefficient
             * (self.temperature - ambient_tank_temperature)
         ) * internal_resolution
@@ -134,9 +134,9 @@ class Tank:
         delivery_temp = self.temperature
 
         net_enthalpy_gain = (
-            water_demand_volume
-            * HEAT_CAPACITY_OF_WATER
-            * (mains_water_temp - delivery_temp)
+            water_demand_volume  # [kg]
+            * HEAT_CAPACITY_OF_WATER  # [J/kg*K]
+            * (mains_water_temp - delivery_temp)  # [K]
         )
 
         # We lose this heat, as we're considering things as 30min "block" inputs and

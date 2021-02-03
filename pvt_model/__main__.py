@@ -28,7 +28,15 @@ import yaml
 
 from dateutil.relativedelta import relativedelta
 
-from . import argparser, efficiency, load, mains_power, process_pvt_system_data, weather
+from . import (
+    argparser,
+    efficiency,
+    load,
+    mains_power,
+    process_pvt_system_data,
+    pump,
+    weather,
+)
 from .__utils__ import (
     CarbonEmissions,
     FileType,
@@ -120,6 +128,9 @@ class SystemData:
     .. attribute:: gross_electrical_output
         The electrical power produced by the panel, measured in Watts.
 
+    .. attribute:: htf_pump_on
+        Whether the HTF pump is on (True) or off (False).
+
     .. attribute:: net_electrical_output
         The electrical power produced by the panel which is in excess of the demand
         required by the household. IE: gross - demand. This is measured in Watts.
@@ -187,6 +198,7 @@ class SystemData:
     exchanger_temperature_drop: float
     glass_temperature: Optional[float]
     gross_electrical_output: float
+    htf_pump_on: bool
     net_electrical_output: float
     normal_irradiance: float
     pv_temperature: Optional[float]
@@ -229,6 +241,7 @@ class SystemData:
             f"exchanger_temperature_drop: {self.exchanger_temperature_drop}K, "
             f"glass_temperature: {self.glass_temperature}K, "
             f"gross_electrical_output: {self.gross_electrical_output}W, "
+            f"htf_pump_on: {self.htf_pump_on}, "
             f"net_electrical_output:{self.net_electrical_output}W, "
             f"normal_irradiance:{self.normal_irradiance}W/m^2, "
             f"pv_temperature:{self.pv_temperature}K, "
@@ -446,6 +459,7 @@ def main(args) -> None:
         parsed_args.tank_data_file
     )
     logger.info("Hot-water tank successfully instantiated: %s", hot_water_tank)
+    htf_pump = process_pvt_system_data.pump_from_path(parsed_args.pump_data_file)
 
     # Intiailise the mains supply system.
     mains_supply = mains_power.MainsSupply.from_yaml(
@@ -537,6 +551,12 @@ def main(args) -> None:
             current_weather,
         )  # [K]
 
+        # Turn off the hot-water pump if the HTF is losing heat to the panel.
+        # if bulk_water_heat_gain <= 0:
+        #     htf_pump.on = False
+        # else:
+        #     htf_pump.on = True
+
         # Propogate this information through to the heat exchanger and pass in the
         # tank s.t. it updates the tank correctly as well.
         # The tank heat gain here is measured in Joules.
@@ -545,8 +565,8 @@ def main(args) -> None:
             tank_heat_gain,  # [J]
         ) = heat_exchanger.update(
             input_water_heat_capacity=pvt_panel.htf_heat_capacity,  # [J/kg*K]
-            input_water_mass=pvt_panel.mass_flow_rate
-            * parsed_args.internal_resolution,  # [kg]
+            input_water_mass=pvt_panel.mass_flow_rate  # [kg/s]
+            * parsed_args.internal_resolution,  # [s]
             input_water_temperature=output_water_temperature,  # [K]
             water_tank=hot_water_tank,
         )
@@ -574,7 +594,7 @@ def main(args) -> None:
         dc_electrical = (
             efficiency.dc_electrical(
                 electrical_output=pvt_panel.electrical_output(current_weather),
-                electrical_losses=pvt_panel.pump_power,
+                electrical_losses=htf_pump.power if htf_pump.on else 0,
                 electrical_demand=current_electrical_load,
             )
             * 100
@@ -628,6 +648,7 @@ def main(args) -> None:
                 - updated_input_water_temperature,
                 glass_temperature=pvt_panel.glass_temperature - ZERO_CELCIUS_OFFSET,  # type: ignore
                 gross_electrical_output=pvt_panel.electrical_output(current_weather),
+                htf_pump_on=htf_pump.on,
                 net_electrical_output=pvt_panel.electrical_output(current_weather)
                 - current_electrical_load,
                 normal_irradiance=pvt_panel.get_solar_irradiance(current_weather),
@@ -646,11 +667,7 @@ def main(args) -> None:
                 / (parsed_args.internal_resolution),
                 thermal_output=current_hot_water_load
                 * HEAT_CAPACITY_OF_WATER
-                * (
-                    tank_output_water_temp
-                    - weather_forecaster.mains_water_temp
-                    - ZERO_CELCIUS_OFFSET
-                )
+                * (tank_output_water_temp - weather_forecaster.mains_water_temp)
                 / (parsed_args.internal_resolution),
                 time=datetime.date.strftime(date_and_time, "%H:%M:%S"),
                 upward_collector_heat_loss=upward_collector_heat_loss
@@ -672,8 +689,9 @@ def main(args) -> None:
         _save_data(FileType.YAML, parsed_args.output, system_data_entry)
         system_data[run_number] = system_data_entry[run_number]
 
-        # Cycle around the water.
-        input_water_temperature = updated_input_water_temperature
+        # Cycle around the water if the pump is on, otherwise there is no gain.
+        if htf_pump.on:
+            input_water_temperature = updated_input_water_temperature
 
         # If at the end of an hour, dump the data.
         if date_and_time.minute == (

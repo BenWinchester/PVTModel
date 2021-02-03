@@ -471,18 +471,6 @@ class PVT:
         return self._collector.output_water_temperature
 
     @property
-    def pump_power(self) -> float:
-        """
-        Returns the power, in Watts, consumed by the HTF pump.
-
-        :return:
-            The water-pump power consumption in Watts.
-
-        """
-
-        return self._collector.pump_power
-
-    @property
     def pv_temperature(self) -> Optional[float]:
         """
         Returns the temperature of the PV layer of the PV-T system.
@@ -542,6 +530,7 @@ class PVT:
         pv_to_glass_heat_input: Optional[float] = None
         if self._pv is not None:
             # The excese PV heat generated is in units of Watts.
+            # * PV covers 75%
             collector_heat_input, pv_to_glass_heat_input = self._pv.update(
                 air_gap_thickness=self._air_gap_thickness,
                 collector_temperature=self._collector.temperature,
@@ -554,9 +543,19 @@ class PVT:
                 glazed=self.glazed,
                 internal_resolution=internal_resolution,
                 pv_to_collector_thermal_conductance=self._pv_to_collector_thermal_conductance,
-                solar_energy_input=solar_energy_input,
+                solar_heat_input_from_sun_to_pv_layer=solar_heat_input(
+                    self._pv.area,
+                    solar_energy_input,
+                    transmissivity_absorptivity_product(
+                        diffuse_reflection_coefficient=self._glass.diffuse_reflection_coefficient,
+                        glass_transmissivity=self._glass.transmissivity,
+                        layer_absorptivity=self._pv.absorptivity,
+                    ),
+                    self._pv.electrical_efficiency,
+                ),
                 weather_conditions=weather_conditions,
             )  # [J], [W]
+            # * 25% of the collector is uncovered
             collector_heat_input += solar_heat_input(
                 self._collector.area * (1 - self._portion_covered),
                 solar_energy_input,
@@ -567,6 +566,7 @@ class PVT:
                 ),
             )  # [J]
         else:
+            # * No PV layer, so all the heat goes straight to the thermal collector
             collector_heat_input = solar_heat_input(
                 self._collector.area,
                 solar_energy_input,
