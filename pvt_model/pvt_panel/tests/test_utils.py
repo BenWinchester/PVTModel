@@ -321,15 +321,13 @@ class TestPhysics(unittest.TestCase):
             )
             W = W/m^2 * m^2
 
-            where the ta product is given by
-            ta_product = absorptivity * transmissivity
+            where the ta product is specific to the layer and calculated elsewhere.
 
         :values:
-            absorptivity = 0.8
             area = 15 m^2
             electrical_efficiency = 0.4
             solar_irradiance = 500 W / m^2
-            transmissivity = 0.9
+            ta_product = 0.72
 
         :result:
             solar_heat_input = 3240 W
@@ -339,11 +337,10 @@ class TestPhysics(unittest.TestCase):
         expected_solar_heat_input = 3240
 
         calculated_solar_heat_input = __utils__.solar_heat_input(
-            absorptivity=0.8,
             area=15,
             electrical_efficiency=0.4,
             solar_energy_input=500,
-            transmissivity=0.9,
+            ta_product=0.72,
         )
 
         self.assertEqual(
@@ -359,14 +356,12 @@ class TestPhysics(unittest.TestCase):
             solar_heat_input = solar_irradiance * area * ta_product
             W = W/m^2 * m^2
 
-            where the ta product is given by
-            ta_product = absorptivity * transmissivity
+            where the ta product is specific to the layer and calculated elsewhere.
 
         :values:
-            absorptivity = 0.8
             area = 15 m^2
             solar_irradiance = 500 W / m^2
-            transmissivity = 0.9
+            ta_product = 0.72
 
         :result:
             solar_heat_input = 3240 W
@@ -376,15 +371,47 @@ class TestPhysics(unittest.TestCase):
         expected_solar_heat_input = 5400
 
         calculated_solar_heat_input = __utils__.solar_heat_input(
-            absorptivity=0.8,
             area=15,
             solar_energy_input=500,
-            transmissivity=0.9,
+            ta_product=0.72,
         )
 
         self.assertEqual(
             pytest.approx(expected_solar_heat_input, PYTEST_PRECISION),
             pytest.approx(calculated_solar_heat_input, PYTEST_PRECISION),
+        )
+
+    def test_transmissivity_absorptivity_product(self) -> None:
+        """
+        Tests the publicised equation for the transmissivity absorptivity product.
+
+        :equation:
+            ta_product = (
+                (glass_transmissivity * layer_absorptivity)
+                / (1 - (1 - layer_absorptivity) * diffuse_reflectivity_coefficient)
+            )
+
+        :values:
+            glass_transmissivity = 0.9
+            diffuse_reflectivity_coefficient = 0.5
+            layer_absorptivity = 0.8
+
+        :result:
+            ta_product = 0.8
+
+        """
+
+        expected_ta_product = 0.8
+
+        calculated_ta_product = __utils__.transmissivity_absorptivity_product(
+            diffuse_reflection_coefficient=0.5,
+            glass_transmissivity=0.9,
+            layer_absorptivity=0.8,
+        )
+
+        self.assertEqual(
+            pytest.approx(expected_ta_product, PYTEST_PRECISION),
+            pytest.approx(calculated_ta_product, PYTEST_PRECISION),
         )
 
     def test_wind_heat_transfer(self) -> None:

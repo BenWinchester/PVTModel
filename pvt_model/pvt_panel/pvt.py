@@ -31,7 +31,7 @@ from ..__utils__ import (
     PVParameters,
     WeatherConditions,
 )
-from .__utils__ import solar_heat_input
+from .__utils__ import solar_heat_input, transmissivity_absorptivity_product
 
 __all__ = ("PVT",)
 
@@ -558,17 +558,23 @@ class PVT:
                 weather_conditions=weather_conditions,
             )  # [J], [W]
             collector_heat_input += solar_heat_input(
-                self._collector.absorptivity,
                 self._collector.area * (1 - self._portion_covered),
                 solar_energy_input,
-                self._collector.transmissivity,
+                transmissivity_absorptivity_product(
+                    diffuse_reflection_coefficient=self._glass.diffuse_reflection_coefficient,
+                    glass_transmissivity=self._glass.transmissivity,
+                    layer_absorptivity=self._collector.absorptivity,
+                ),
             )  # [J]
         else:
             collector_heat_input = solar_heat_input(
-                self._collector.absorptivity,
                 self._collector.area,
                 solar_energy_input,
-                self._collector.transmissivity,
+                transmissivity_absorptivity_product(
+                    diffuse_reflection_coefficient=self._glass.diffuse_reflection_coefficient,
+                    glass_transmissivity=self._glass.transmissivity,
+                    layer_absorptivity=self._collector.absorptivity,
+                ),
             )  # [J]
             pv_to_glass_heat_input = None  # [W]
 

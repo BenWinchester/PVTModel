@@ -25,6 +25,8 @@ class Glass(OpticalLayer):
 
     """
 
+    diffuse_reflection_coefficient = 0.16
+
     def update(
         self,
         heat_input: float,

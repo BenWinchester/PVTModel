@@ -32,6 +32,7 @@ __all__ = (
     "OpticalLayer",
     "radiative_heat_transfer",
     "solar_heat_input",
+    "transmissivity_absorptivity_product",
     "wind_heat_transfer",
 )
 
@@ -346,10 +347,9 @@ def radiative_heat_transfer(
 
 
 def solar_heat_input(
-    absorptivity: float,
     area: float,
     solar_energy_input: float,
-    transmissivity: float,
+    ta_product: float,
     electrical_efficiency: Optional[float] = None,
 ) -> float:
     """
@@ -360,10 +360,6 @@ def solar_heat_input(
     energy (the PV-covered section), and that, for some of the panel, all of the
     incident light that is absorbed by the panel is converted into heat.
 
-    :param absorptivity:
-        The absorptivity of the layer: this is a dimensionless number defined between
-        0 (no light is absorbed) and 1 (all incident light is absorbed).
-
     :param area:
         The area of the layer, measured in meters squared.
 
@@ -371,10 +367,9 @@ def solar_heat_input(
         The solar energy input, normal to the panel, measured in Energy per meter
         squared per resolution time interval.
 
-    :param transmissivity:
-        The transmissivity of the layer: this is a dimensionless number defined between
-        0 (no light is transmitted through the PV layer) and 1 (all incident light is
-        transmitted).
+    :param ta_product:
+        The transmissivity-absorptivity product for the light reaching the layer,
+        defined as a dimensionless number between 0 and 1.
 
     :param electrical_efficiency:
         The electrical conversion efficiency of the layer, defined between 0 and 1.
@@ -386,17 +381,47 @@ def solar_heat_input(
 
     # If the layer is not electrical, compute the input as a thermal-only layer.
     if electrical_efficiency is None:
-        return (
-            (transmissivity * absorptivity)
-            * solar_energy_input  # [J/time_step*m^2]
-            * area  # [m^2]
-        )
+        return ta_product * solar_energy_input * area  # [J/time_step*m^2]  # [m^2]
 
     return (
-        (transmissivity * absorptivity)
+        ta_product
         * solar_energy_input  # [J/time_step*m^2]
         * area  # [m^2]
         * (1 - electrical_efficiency)
+    )
+
+
+def transmissivity_absorptivity_product(
+    *,
+    diffuse_reflection_coefficient: float,
+    glass_transmissivity: float,
+    layer_absorptivity: float,
+) -> float:
+    """
+    Computes the transmissivity-absorptivity product for a layer.
+
+    Due to diffuse reflection at the upper (glass) layer of a PVT panel, along with the
+    effects of only partial transmission through the layer, the transmissivity-
+    absorptivity product for the layer depends on the transmissivity of the layer
+    above, as well as the absorptivity of the layer in questiopn, along nwith the
+    diffuse reflectivity coefficient.
+
+    :param diffuse_reflection_coefficient:
+        The diffuse reflectivity coefficient.
+
+    :param glass_transmissivity:
+        The transmissivity of the upper glass layer.
+
+    :param layer_absorptivity:
+        The absorptivity of the layer taking in the sunlight.
+
+    :return:
+        The transmissivity-absorptivity product for light being absorbed by the layer.
+
+    """
+
+    return (layer_absorptivity * glass_transmissivity) / (
+        1 - (1 - layer_absorptivity) * diffuse_reflection_coefficient
     )
 
 

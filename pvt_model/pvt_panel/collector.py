@@ -333,64 +333,33 @@ class Collector(OpticalLayer):
 
         # @@@
         # Check: The bulk-water temperature is computed via an average, see Hil '21 p.31
-        htf_mass_affected = (
-            DENSITY_OF_WATER * self.htf_volume
-            + self.mass_flow_rate * internal_resolution
-        )  # [kg]
-
-        # pdb.set_trace(
-        #     header=f"Line 338:\nT_bw: {self.bulk_water_temperature}K\n"
-        #     f"T_in: {input_water_temperature}K\n"
-        #     f"T_out: {self.output_water_temperature}K"
-        # )
-
-        self.bulk_water_temperature = (
-            DENSITY_OF_WATER * self.htf_volume * self.bulk_water_temperature  # [kg*K]
-            + self.mass_flow_rate  # [kg/s]
-            * internal_resolution  # [s]
-            * input_water_temperature  # [K]
-            - self.output_water_temperature  # [K]
-            * self.mass_flow_rate  # [kg/s]
-            * internal_resolution  # [s]
-        ) / (
-            self.htf_volume * DENSITY_OF_WATER
-        )  # [kg]  # [K]
-
-        # pdb.set_trace(
-        #     header=f"Line 354:\nT_bw: {self.bulk_water_temperature}K\n"
-        #     f"T_in: {input_water_temperature}K\n"
-        #     f"T_out: {self.output_water_temperature}K\n"
-        # )
-
-        # Compute the heat flow to the bulk water and the output water temperature.
+        # * Equation 10: Compute the heat transfer to the bulk water
         bulk_water_heat_gain = (
             convective_heat_transfer_to_fluid(
                 contact_area=self.htf_surface_area,
                 convective_heat_transfer_coefficient=self.convective_heat_transfer_coefficient_of_water,  # pylint: disable=line-too-long
                 fluid_temperature=self.bulk_water_temperature,
                 wall_temperature=self.temperature,
-            )
-            * internal_resolution
+            )  # [W]
+            * internal_resolution  # [s]
         )  # [J]
-        # pdb.set_trace(
-        #     header=f"Line 354:\nT_bw: {self.bulk_water_temperature}K\n"
-        #     f"T_in: {input_water_temperature}K\n"
-        #     f"T_out: {self.output_water_temperature}K\n"
-        #     f"q_bw: {bulk_water_heat_gain}K"
-        # )
 
-        self.bulk_water_temperature += bulk_water_heat_gain / (  # [J[
-            htf_mass_affected * self.htf_heat_capacity  # [kg] * [J/kg*K]
-        )
+        # * Equation 11: Compute the output temperature based on this heat gain.
         self.output_water_temperature = (
-            2 * self.bulk_water_temperature - input_water_temperature
+            input_water_temperature  # [K]
+            + bulk_water_heat_gain
+            / (  # [J]
+                self.mass_flow_rate  # [kg/s]
+                * self.htf_heat_capacity  # [J/kg*K]
+                * internal_resolution  # [s]
+            )
         )
 
-        # pdb.set_trace(
-        #     header=f"Line 384:\nT_bw: {self.bulk_water_temperature}K\n"
-        #     f"T_in: {input_water_temperature}K\n"
-        #     f"T_out: {self.output_water_temperature}K\n"
-        # )
+        # * Compute the temperature rise of the bulk water.
+        self.bulk_water_temperature = (
+            input_water_temperature + self.output_water_temperature
+        ) / 2
+
         # This heat is now converted into Joules.
         net_heat_gain = collector_heat_input - (  # [J]
             back_plate_heat_loss  # [J]
