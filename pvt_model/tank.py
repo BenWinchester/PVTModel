@@ -123,13 +123,13 @@ class Tank:
 
         """
 
-        # We need to multiply by the internal_resolution in order to compute the total heat lost
-        # from the tank during the time duration.
+        # We need to multiply by the internal_resolution in order to compute the total
+        # heat lost from the tank during the time duration.
         heat_loss = (
             self.area  # [m^2]
-            * self.heat_loss_coefficient
-            * (self.temperature - ambient_tank_temperature)
-        ) * internal_resolution
+            * self.heat_loss_coefficient  # [W/m^2*K]
+            * (self.temperature - ambient_tank_temperature)  # [K]
+        ) * internal_resolution  # [s]
 
         delivery_temp = self.temperature
 

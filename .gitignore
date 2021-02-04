@@ -11,6 +11,7 @@
 # Ignore data files
 data_*
 output_*
+**/output_files
 # Additional files
 foo.txt
 # Private scripts

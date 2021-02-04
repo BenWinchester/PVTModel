@@ -533,23 +533,38 @@ def main(args) -> None:
         ]  # [Watts]
         current_hot_water_load = (
             load_system[(load.ProfileType.HOT_WATER, date_and_time)]  # [litres/hour]
-            * parsed_args.internal_resolution
-            / 3600  # [hours/internal time step]
-        )  # [litres/time step]
+            * parsed_args.internal_resolution  # [s/time_step]
+            / 3600  # [s/hour]
+        )  # [litres/time_step] = [kg/time_step]
 
         # Call the pvt module to generate the new temperatures at this time step.
+        pvt_update_output = tuple()
+        for _ in range(parsed_args.internal_resolution):
+            if len(pvt_update_output) == 0:
+                pvt_update_output = pvt_panel.update(
+                    input_water_temperature,
+                    current_weather,
+                )  # [K]
+            else:
+                pvt_update_output = tuple(
+                    sum(entry)
+                    for entry in zip(
+                        pvt_update_output,
+                        pvt_panel.update(
+                            input_water_temperature,
+                            current_weather,
+                        ),
+                    )
+                )
+
         (
-            back_plate_heat_loss,  # [J]
-            bulk_water_heat_gain,  # [J]
-            collector_heat_input,  # [J]
+            back_plate_heat_loss,  # [W]
+            bulk_water_heat_gain,  # [W]
+            collector_heat_input,  # [W]
             output_water_temperature,  # [K]
-            upward_collector_heat_loss,  # [J]
-            upward_glass_heat_loss,  # [J]
-        ) = pvt_panel.update(
-            input_water_temperature,
-            parsed_args.internal_resolution,
-            current_weather,
-        )  # [K]
+            upward_collector_heat_loss,  # [W]
+            upward_glass_heat_loss,  # [W]
+        ) = pvt_update_output
 
         # Turn off the hot-water pump if the HTF is losing heat to the panel.
         # if bulk_water_heat_gain <= 0:
@@ -575,7 +590,7 @@ def main(args) -> None:
         tank_output_water_temp = hot_water_tank.update(  # [K]
             tank_heat_gain,  # [J]
             parsed_args.internal_resolution,  # [minutes]
-            current_hot_water_load,  # [litres/time step]
+            current_hot_water_load,  # [litres/time_step] = [kg/time_step]
             weather_forecaster.mains_water_temp,  # [K]
             INTERNAL_HOUSEHOLD_AMBIENT_TEMPERATURE,  # [K]
         )
@@ -583,13 +598,12 @@ def main(args) -> None:
         # Determine various efficiency factors
         # The auxiliary heating will be measured in Watts.
         auxiliary_heating = (
-            1  # [kg/litres]
-            * current_hot_water_load  # [litres/time step]
+            current_hot_water_load  # [litres/time_step] = [kg/time_step]
             * HEAT_CAPACITY_OF_WATER  # [J/kg*K]
             * (HOT_WATER_DEMAND_TEMP - tank_output_water_temp)  # [K]
-        ) / (
-            parsed_args.internal_resolution  # We need to convert from Joules to Watts
-        )  # [time step in seconds]
+        ) / (  # [J]
+            parsed_args.internal_resolution  # [s]
+        )  # [W]
 
         dc_electrical = (
             efficiency.dc_electrical(
@@ -694,9 +708,23 @@ def main(args) -> None:
             input_water_temperature = updated_input_water_temperature
 
         # If at the end of an hour, dump the data.
-        if date_and_time.minute == (
-            60 - math.ceil(parsed_args.internal_resolution / 60)
-        ) and date_and_time.second == (60 - parsed_args.internal_resolution):
+        if parsed_args.internal_resolution <= 60:
+            if date_and_time.minute == (
+                60 - math.ceil(parsed_args.internal_resolution / 60)
+            ) and date_and_time.second == (60 - parsed_args.internal_resolution):
+                # Compute the carbon emissions and savings.
+                carbon_emissions = mains_supply.get_carbon_emissions(total_power_data)
+                # Append the data dump to the file.
+                _save_data(
+                    FileType.JSON,
+                    parsed_args.output,
+                    system_data,
+                    carbon_emissions,
+                    total_power_data,
+                )
+                # Clear the current system data store.
+                system_data = dict()
+        else:
             # Compute the carbon emissions and savings.
             carbon_emissions = mains_supply.get_carbon_emissions(total_power_data)
             # Append the data dump to the file.

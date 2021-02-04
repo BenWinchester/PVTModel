@@ -489,7 +489,6 @@ class PVT:
     def update(
         self,
         input_water_temperature: float,
-        internal_resolution: float,
         weather_conditions: WeatherConditions,
     ) -> Tuple[float, Optional[float], float, float, float, Optional[float]]:
         """
@@ -497,9 +496,6 @@ class PVT:
 
         :param input_water_temperature:
             The water temperature going into the PV-T collector.
-
-        :param internal_resolution:
-            The resolution of the model being run, measured in seconds.
 
         :param weather_conditions:
             The weather conditions at the time of day being incremented to.
@@ -521,10 +517,12 @@ class PVT:
         """
 
         # Compute the solar energy inputted to the system in Joules per meter squared.
-        solar_energy_input = (
-            self.get_solar_irradiance(weather_conditions)  # [W/m^2]
-            * internal_resolution  # [seconds]
-        )  # [J/m^2]
+        solar_energy_input = self.get_solar_irradiance(weather_conditions)  # [W/m^2]
+
+        if self._glass is None:
+            raise ProgrammerJudgementFault(
+                "The glass layer needs to be specified for now."
+            )
 
         # Call the pv panel to update its temperature.
         pv_to_glass_heat_input: Optional[float] = None
@@ -541,7 +539,6 @@ class PVT:
                 if self._glass is not None
                 else None,
                 glazed=self.glazed,
-                internal_resolution=internal_resolution,
                 pv_to_collector_thermal_conductance=self._pv_to_collector_thermal_conductance,
                 solar_heat_input_from_sun_to_pv_layer=solar_heat_input(
                     self._pv.area,
@@ -554,7 +551,7 @@ class PVT:
                     self._pv.electrical_efficiency,
                 ),
                 weather_conditions=weather_conditions,
-            )  # [J], [W]
+            )  # [W], [W]
             # * 25% of the collector is uncovered
             collector_heat_input += solar_heat_input(
                 self._collector.area * (1 - self._portion_covered),
@@ -564,7 +561,7 @@ class PVT:
                     glass_transmissivity=self._glass.transmissivity,
                     layer_absorptivity=self._collector.absorptivity,
                 ),
-            )  # [J]
+            )  # [W]
         else:
             # * No PV layer, so all the heat goes straight to the thermal collector
             collector_heat_input = solar_heat_input(
@@ -575,7 +572,7 @@ class PVT:
                     glass_transmissivity=self._glass.transmissivity,
                     layer_absorptivity=self._collector.absorptivity,
                 ),
-            )  # [J]
+            )  # [W]
             pv_to_glass_heat_input = None  # [W]
 
         # Based on the heat supplied, both from the sun (depending on whether there is
@@ -599,7 +596,6 @@ class PVT:
             if self._glass is not None
             else None,
             input_water_temperature=input_water_temperature,
-            internal_resolution=internal_resolution,
             portion_covered=self._portion_covered,
             weather_conditions=weather_conditions,
         )
@@ -615,32 +611,30 @@ class PVT:
             )
         glass_heat_input: float = 0  # [W]
         if pv_to_glass_heat_input is not None:
-            glass_heat_input += pv_to_glass_heat_input
+            glass_heat_input += pv_to_glass_heat_input  # [W]
         if collector_to_glass_heat_input is not None:
-            glass_heat_input += (
-                collector_to_glass_heat_input / internal_resolution
-            )  # [J]
+            glass_heat_input += collector_to_glass_heat_input  # [W]
 
         # Pass this new temperature through to the glass instance to update it.
         if self._glass is not None:
             upward_glass_heat_loss = self._glass.update(
-                glass_heat_input, internal_resolution, weather_conditions
+                glass_heat_input, weather_conditions
             )
 
             return (
-                back_plate_heat_loss,  # [J]
-                bulk_water_heat_gain,  # [J]
-                collector_heat_input,  # [J]
+                back_plate_heat_loss,  # [W]
+                bulk_water_heat_gain,  # [W]
+                collector_heat_input,  # [W]
                 output_water_temperature,  # [K]
-                upward_collector_heat_loss,  # [J]
-                upward_glass_heat_loss,  # [J]
+                upward_collector_heat_loss,  # [W]
+                upward_glass_heat_loss,  # [W]
             )
 
         return (
-            back_plate_heat_loss,  # [J]
-            bulk_water_heat_gain,  # [J]
-            collector_heat_input,  # [J]
+            back_plate_heat_loss,  # [W]
+            bulk_water_heat_gain,  # [W]
+            collector_heat_input,  # [W]
             output_water_temperature,  # [K]
-            upward_collector_heat_loss,  # [J]
-            None,  # [J]
+            upward_collector_heat_loss,  # [W]
+            None,  # [W]
         )

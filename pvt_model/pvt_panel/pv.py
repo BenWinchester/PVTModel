@@ -26,7 +26,6 @@ from .__utils__ import (
     conductive_heat_transfer_with_gap,
     OpticalLayer,
     radiative_heat_transfer,
-    transmissivity_absorptivity_product,
     wind_heat_transfer,
 )
 
@@ -129,7 +128,6 @@ class PV(OpticalLayer):
         glass_emissivity: Optional[float],
         glass_temperature: Optional[float],
         glazed: bool,
-        internal_resolution: float,
         pv_to_collector_thermal_conductance: float,
         solar_heat_input_from_sun_to_pv_layer: float,
         weather_conditions: WeatherConditions,
@@ -153,9 +151,6 @@ class PV(OpticalLayer):
         :param glazed:
             Whether or not the panel is glazed, I.E., whether the panel has a glass
             layer or not.
-
-        :param internal_resolution:
-            The resolution of the model being run, measured in seconds.
 
         :param pv_to_collector_thermal_conductance:
             The thermal conductance between the PV and collector layers, measured in
@@ -183,25 +178,19 @@ class PV(OpticalLayer):
 
         # >>> If the layer is glazed, compute radiative and conductive heat to the glass
         if glazed and glass_emissivity is not None and glass_temperature is not None:
-            radiative_loss_upwards = (
-                radiative_heat_transfer(
-                    destination_emissivity=glass_emissivity,
-                    destination_temperature=glass_temperature,
-                    radiative_contact_area=self.area,
-                    source_emissivity=self.emissivity,
-                    source_temperature=self.temperature,
-                )  # [W]
-                * internal_resolution  # [seconds]
-            )  # [J]
-            convective_loss_upwards = (
-                conductive_heat_transfer_with_gap(
-                    air_gap_thickness=air_gap_thickness,
-                    contact_area=self.area,
-                    destination_temperature=glass_temperature,
-                    source_temperature=self.temperature,
-                )  # [W]
-                * internal_resolution  # [seconds]
-            )  # [J]
+            radiative_loss_upwards = radiative_heat_transfer(
+                destination_emissivity=glass_emissivity,
+                destination_temperature=glass_temperature,
+                radiative_contact_area=self.area,
+                source_emissivity=self.emissivity,
+                source_temperature=self.temperature,
+            )  # [W]
+            convective_loss_upwards = conductive_heat_transfer_with_gap(
+                air_gap_thickness=air_gap_thickness,
+                contact_area=self.area,
+                destination_temperature=glass_temperature,
+                source_temperature=self.temperature,
+            )  # [W]
         elif glazed and (glass_temperature is None or glass_temperature is None):
             raise ProgrammerJudgementFault(
                 "If the panel is glazed, a glass temperature and emissivity should be "
@@ -209,51 +198,39 @@ class PV(OpticalLayer):
             )
         # <<< If the layer is unglazed, compute losses to the sky and air.
         else:
-            radiative_loss_upwards = (
-                radiative_heat_transfer(
-                    destination_temperature=weather_conditions.sky_temperature,
-                    radiating_to_sky=True,
-                    radiative_contact_area=self.area,
-                    source_emissivity=self.emissivity,
-                    source_temperature=self.temperature,
-                )  # [W]
-                * internal_resolution  # [seconds]
-            )  # [J]
-
-            convective_loss_upwards = (
-                wind_heat_transfer(
-                    contact_area=self.area,
-                    destination_temperature=weather_conditions.ambient_temperature,
-                    source_temperature=self.temperature,
-                    wind_heat_transfer_coefficient=weather_conditions.wind_heat_transfer_coefficient,  # pylint: disable=line-too-long
-                )  # [W]
-                * internal_resolution  # [seconds]
-            )  # [J]
+            radiative_loss_upwards = radiative_heat_transfer(
+                destination_temperature=weather_conditions.sky_temperature,
+                radiating_to_sky=True,
+                radiative_contact_area=self.area,
+                source_emissivity=self.emissivity,
+                source_temperature=self.temperature,
+            )  # [W]
+            convective_loss_upwards = wind_heat_transfer(
+                contact_area=self.area,
+                destination_temperature=weather_conditions.ambient_temperature,
+                source_temperature=self.temperature,
+                wind_heat_transfer_coefficient=weather_conditions.wind_heat_transfer_coefficient,  # pylint: disable=line-too-long
+            )  # [W]
 
         # Compute the downward losses from the PV layer.
-        pv_to_collector = (
-            conductive_heat_transfer_no_gap(
-                contact_area=self.area,
-                destination_temperature=collector_temperature,
-                source_temperature=self.temperature,
-                thermal_conductance=pv_to_collector_thermal_conductance,
-            )  # [W]
-            * internal_resolution  # [seconds]
-        )  # [J]
+        pv_to_collector = conductive_heat_transfer_no_gap(
+            contact_area=self.area,
+            destination_temperature=collector_temperature,
+            source_temperature=self.temperature,
+            thermal_conductance=pv_to_collector_thermal_conductance,
+        )  # [W]
 
         # Compute the overall heat lost.
         heat_lost = (
             radiative_loss_upwards + convective_loss_upwards + pv_to_collector
-        )  # [J]
+        )  # [W]
 
         # Use this to compute the rise in temperature of the PV layer and set the
         # temperature appropriately.
         self.temperature += (
             solar_heat_input_from_sun_to_pv_layer - heat_lost
-        ) / (  # [J]
-            self._mass  # [kg]
-            * internal_resolution  # [s]
-            * self._heat_capacity  # [J/kg*K]
+        ) / (  # [W]
+            self._mass * self._heat_capacity  # [kg]  # [J/kg*K]
         )  # [K]
 
         # Return the heat transfered to the glass and collector layers.
@@ -261,11 +238,8 @@ class PV(OpticalLayer):
         if glazed:
             return (
                 pv_to_collector,  # [J]
-                (
-                    (radiative_loss_upwards + convective_loss_upwards)  # [J] + [J]
-                    / (internal_resolution)  # [seconds]
-                ),  # [W]
+                (radiative_loss_upwards + convective_loss_upwards),  # [W]
             )
         # <<< >>> Otherwise, return None.
-        return (pv_to_collector, None)  # [J] [W]
+        return (pv_to_collector, None)  # [W] Optional[W]
         # <<< End of conditional block.

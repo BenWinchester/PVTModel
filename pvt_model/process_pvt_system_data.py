@@ -124,7 +124,7 @@ def hot_water_tank_from_path(tank_data_file: str) -> tank.Tank:
 #############
 
 
-def pump_from_path(pump_data_file: str) -> tank.Tank:
+def pump_from_path(pump_data_file: str) -> pump.Pump:
     """
     Generate a :class:`pump.Pump` instance based on the path to the data file.
 

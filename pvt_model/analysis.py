@@ -15,7 +15,9 @@ check the external matplotlib.pyplot module.
 
 """
 
+import argparse
 import os
+import sys
 
 from typing import Any, List, Dict, Optional, Tuple, Union
 
@@ -34,8 +36,21 @@ GRAPH_DETAIL: GraphDetail = GraphDetail.lowest
 X_TICK_SEPARATION: int = int(8 * GRAPH_DETAIL.value / 48)
 # Which days of data to include
 DAYS_TO_INCLUDE: List[bool] = [False, True]
-# The name of the data file to use.
-DATA_FILE_NAME = "data_output_july_day_new_method_average_irradiance_7.json"
+
+
+def _parse_args(args) -> argparse.Namespace:
+    """
+    Parse the CLI args.
+
+    """
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--data-file-name", "-df", help="Path to the data file to parse."
+    )
+
+    return parser.parse_args(args)
 
 
 def _resolution_from_graph_detail(
@@ -84,21 +99,20 @@ def _reduce_data(
 
     """
 
-    # * First, only include the bits of data we want.
-    # @@@ This only works for two days so far:
-    # data = dict(list(data.items())[int(len(data) / 2) :])
-    # data = {
-    #     str(int(key) - 86400): value
-    #     for key, value in data.items()
-    # }
-
+    # Determine the number of data points to be amalgamated per graph point.
     data_points_per_graph_point: int = _resolution_from_graph_detail(
         graph_detail, len(data_to_reduce)
     )
 
+    # Construct a dictionary to contain this reduced data.
     reduced_data: Dict[Union[int, str], Dict[Any, Any]] = {
         index: dict()
-        for index in range(int(len(data_to_reduce) / data_points_per_graph_point))
+        for index in range(
+            int(
+                len([key for key in data_to_reduce if key.isdigit()])
+                / data_points_per_graph_point
+            )
+        )
     }
 
     # Depending on the type of data entry, i.e., whether it is a temperature, load,
@@ -348,6 +362,10 @@ def save_figure(figure_name: str) -> None:
     # Create a regex for cycling through the files.
     file_regex = re.compile("figure_{}_(?P<old_index>[0-9]).jpg".format(figure_name))
 
+    # Create a storage directory if it doesn't already exist.
+    if not os.path.isdir(OLD_FIGURES_DIRECTORY):
+        os.mkdir(OLD_FIGURES_DIRECTORY)
+
     # We need to work download from large numbers to new numbers.
     filenames = sorted(os.listdir(OLD_FIGURES_DIRECTORY))
     filenames.reverse()
@@ -500,11 +518,13 @@ def plot_figure(
 
 if __name__ == "__main__":
 
+    parsed_args = _parse_args(sys.argv[1:])
+
     # * Set up the logger
     logger = get_logger("pvt_analysis")
 
     # * Extract the data.
-    data = load_model_data(DATA_FILE_NAME)
+    data = load_model_data(parsed_args.data_file_name)
 
     # * Reduce the resolution of the data.
     data = _reduce_data(data, GRAPH_DETAIL)

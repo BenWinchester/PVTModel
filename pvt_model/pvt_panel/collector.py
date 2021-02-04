@@ -202,7 +202,6 @@ class Collector(OpticalLayer):
         glass_layer_included: bool,
         glass_temperature: Optional[float],
         input_water_temperature: float,
-        internal_resolution: float,
         portion_covered: float,
         weather_conditions: WeatherConditions,
     ) -> Tuple[float, float, float, Optional[float], float]:
@@ -219,7 +218,7 @@ class Collector(OpticalLayer):
             The back plate of the PV-T panel, through which heat is lost.
 
         :param collector_heat_input:
-            Heat inputted to the collector layer, measured in Joules.
+            Heat inputted to the collector layer, measured in Watts.
 
         :param glass_emissivity:
             The emissivity of the glass layer, if present. If no glass layer is present,
@@ -240,9 +239,6 @@ class Collector(OpticalLayer):
             The temperature of the input water flow to the collector, measured in
             Kelvin, at the current time step.
 
-        :param internal_resolution:
-            The resolution at which the simulation is being run, measured in seconds.
-
         :param portion_covered:
             The portion of the PV-T panel which is covered with PV.
 
@@ -251,11 +247,11 @@ class Collector(OpticalLayer):
 
         :return:
             A `tuple` containing:
-            - the heat loss through the back plate, measured in Joules;
-            - the heat transferred to the HTF, measured in Joules;
+            - the heat loss through the back plate, measured in Watts;
+            - the heat transferred to the HTF, measured in Watts;
             - the output water temperature from the collector;
-            - the heat transferred to the glass layer, measured in Joules;
-            - the upward heat loss, measured in Joules.
+            - the heat transferred to the glass layer, measured in Watts;
+            - the upward heat loss, measured in Watts.
 
         :raises: ProgrammerJudgementFault
             A :class:`..__utils__.ProgrammerJudgementFault` is raised if an attempt is
@@ -275,35 +271,28 @@ class Collector(OpticalLayer):
 
         # From the excess heat, compute what is not lost to the environment, and, from
         # there, what is transferred to the HTF.
-        back_plate_heat_loss = (
-            conductive_heat_transfer_no_gap(
-                contact_area=self.area,
-                destination_temperature=weather_conditions.ambient_temperature,
-                source_temperature=back_plate_instance.temperature,
-                thermal_conductance=back_plate_instance.conductance,
-            )
-            * internal_resolution
-        )  # [seconds]  # [J]
+        back_plate_heat_loss = conductive_heat_transfer_no_gap(
+            contact_area=self.area,
+            destination_temperature=weather_conditions.ambient_temperature,
+            source_temperature=back_plate_instance.temperature,
+            thermal_conductance=back_plate_instance.conductance,
+        )  # [W]
 
         # If there are no glass or PV layers, then we lose heat from the collector
         # layer directly.
         if not glass_layer_included and portion_covered != 1:
-            upward_heat_losses: float = (
-                wind_heat_transfer(
-                    contact_area=self.area * (1 - portion_covered),
-                    destination_temperature=weather_conditions.ambient_temperature,
-                    source_temperature=self.temperature,
-                    wind_heat_transfer_coefficient=weather_conditions.wind_heat_transfer_coefficient,  # pylint: disable=line-too-long
-                )  # [W]
-                + radiative_heat_transfer(
-                    destination_temperature=weather_conditions.sky_temperature,
-                    radiating_to_sky=True,
-                    radiative_contact_area=self.area * (1 - portion_covered),
-                    source_emissivity=self.emissivity,
-                    source_temperature=self.temperature,
-                )  # [W]
-                * internal_resolution
-            )
+            upward_heat_losses: float = wind_heat_transfer(
+                contact_area=self.area * (1 - portion_covered),
+                destination_temperature=weather_conditions.ambient_temperature,
+                source_temperature=self.temperature,
+                wind_heat_transfer_coefficient=weather_conditions.wind_heat_transfer_coefficient,  # pylint: disable=line-too-long
+            ) + radiative_heat_transfer(  # [W]
+                destination_temperature=weather_conditions.sky_temperature,
+                radiating_to_sky=True,
+                radiative_contact_area=self.area * (1 - portion_covered),
+                source_emissivity=self.emissivity,
+                source_temperature=self.temperature,
+            )  # [W]
         # If there is a glass layer, and a PV layer that does not fully cover the panel,
         # then we need to compute the energy transferred to the glass layer.
         elif glass_layer_included and portion_covered != 1:
@@ -312,104 +301,59 @@ class Collector(OpticalLayer):
                     "The system attempted to compute a radiative and/or conductive "
                     "transfer to a non-existant glass layer."
                 )
-            upward_heat_losses = (
-                radiative_heat_transfer(
-                    destination_emissivity=glass_emissivity,
-                    destination_temperature=glass_temperature,
-                    radiative_contact_area=self.area * (1 - portion_covered),
-                    source_emissivity=self.emissivity,
-                    source_temperature=self.temperature,
-                )  # [W]
-                + conductive_heat_transfer_with_gap(
-                    air_gap_thickness=air_gap_thickness,
-                    destination_temperature=glass_temperature,
-                    contact_area=self.area * (1 - portion_covered),
-                    source_temperature=self.temperature,
-                )  # [W]
-            ) * internal_resolution  # [J]
+            upward_heat_losses = radiative_heat_transfer(
+                destination_emissivity=glass_emissivity,
+                destination_temperature=glass_temperature,
+                radiative_contact_area=self.area * (1 - portion_covered),
+                source_emissivity=self.emissivity,
+                source_temperature=self.temperature,
+            ) + conductive_heat_transfer_with_gap(  # [W]
+                air_gap_thickness=air_gap_thickness,
+                destination_temperature=glass_temperature,
+                contact_area=self.area * (1 - portion_covered),
+                source_temperature=self.temperature,
+            )  # [W]
         # Otherwise, if the collector is completely covered by a PV layer, then there
         # are no upward heat losses as these are encapsulated in the PV layer heat
         # transfer variable.
         else:
-            upward_heat_losses = 0  # [J]
+            upward_heat_losses = 0  # [W]
 
-        # @@@
         # Check: The bulk-water temperature is computed via an average, see Hil '21 p.31
         # * Equation 10: Compute the heat transfer to the bulk water
-        bulk_water_heat_gain = (
-            convective_heat_transfer_to_fluid(
-                contact_area=self.htf_surface_area,
-                convective_heat_transfer_coefficient=self.convective_heat_transfer_coefficient_of_water,  # pylint: disable=line-too-long
-                fluid_temperature=self.bulk_water_temperature,
-                wall_temperature=self.temperature,
-            )  # [W]
-            * internal_resolution  # [s]
-        )  # [J]
+        bulk_water_heat_gain = convective_heat_transfer_to_fluid(
+            contact_area=self.htf_surface_area,
+            convective_heat_transfer_coefficient=self.convective_heat_transfer_coefficient_of_water,  # pylint: disable=line-too-long
+            fluid_temperature=self.bulk_water_temperature,
+            wall_temperature=self.temperature,
+        )  # [W]
 
         # * Compute the temperature rise of the bulk water.
-        bulk_water_temperature_gain = bulk_water_heat_gain / (  # [J]
+        bulk_water_temperature_gain = bulk_water_heat_gain / (  # [W]
             self.htf_volume  # [m^3]
             * DENSITY_OF_WATER  # [kg/m^3]
             * self.htf_heat_capacity  # [J/kg*K]
-            * internal_resolution  # [s]
         )
 
-        # @@@ There is a piece of code here that deals with the unphysical case that the
-        # @@@ HTF temperature rises above the collector temperature.
-        # if bulk_water_temperature_gain > 0 and bulk_water_temperature_gain > (
-        #     self.temperature - self.bulk_water_temperature
-        # ):
-        #     actual_bulk_water_temperature_gain = (
-        #         self.temperature - self.bulk_water_temperature
-        #     )
-        #     self.bulk_water_temperature = self.temperature
-        #     returned_heat: float = (
-        #         bulk_water_heat_gain  # [J]
-        #         - self.htf_heat_capacity  # [J/kg*K]
-        #         * self.htf_volume  # [m^3]
-        #         * DENSITY_OF_WATER  # [kg/m^3]
-        #         * actual_bulk_water_temperature_gain  # [K]
-        #     )
-        # elif bulk_water_temperature_gain < 0 and bulk_water_temperature_gain < (
-        #     self.temperature - self.bulk_water_temperature
-        # ):
-        #     actual_bulk_water_temperature_gain = (
-        #         self.bulk_water_temperature - self.temperature
-        #     )
-        #     self.bulk_water_temperature = self.temperature
-        #     returned_heat = (
-        #         bulk_water_heat_gain  # [J]
-        #         - self.htf_heat_capacity  # [J/kg*K]
-        #         * self.htf_volume  # [m^3]
-        #         * DENSITY_OF_WATER  # [kg/m^3]
-        #         * actual_bulk_water_temperature_gain  # [K]
-        #     )
-        # else:
         self.bulk_water_temperature += bulk_water_temperature_gain
-        returned_heat = 0
 
         # * Compute the output water temperature
         self.output_water_temperature = (
             self.bulk_water_temperature * 2 - input_water_temperature
         )
 
-        # This heat is now converted into Joules.
-        net_heat_gain = (
-            collector_heat_input
-            + returned_heat
-            - (  # [J]
-                back_plate_heat_loss  # [J]
-                + upward_heat_losses  # [J]
-                + bulk_water_heat_gain  # [J]
-            )
+        # The net heat is computed.
+        net_heat_gain = collector_heat_input - (  # [W]
+            back_plate_heat_loss  # [W]
+            + upward_heat_losses  # [W]
+            + bulk_water_heat_gain  # [W]
         )
+
+        # This heat is absorbed by the thermally-coupled collector-back-plate system.
         self.temperature += net_heat_gain / (
-            self._mass  # [kg]
-            * self._heat_capacity  # [J/kg*K]
-            * internal_resolution  # [s]
+            self._mass * self._heat_capacity  # [kg]  # [J/kg*K]
             + back_plate_instance.mass  # [kg]
             * back_plate_instance.heat_capacity  # [J/kg*K]
-            * internal_resolution  # [s]
         )
         back_plate_instance.temperature = self.temperature
 
