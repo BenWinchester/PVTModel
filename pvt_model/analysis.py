@@ -132,7 +132,13 @@ def _reduce_data(
         if any(
             [
                 key in data_entry_name
-                for key in ["temperature", "irradiance", "efficiency"]
+                for key in [
+                    "temperature",
+                    "irradiance",
+                    "efficiency",
+                    "hot_water_load",
+                    "electrical_load",
+                ]
             ]
         ):
             try:
@@ -205,8 +211,8 @@ def _post_process_data(
     # * Cycle through all the data points and compute the new values as needed.
     for data_entry in data_to_post_process.values():
         # Conversion needed from Wh to Joules.
-        data_entry["litres_consumed"] = (
-            data_entry["thermal_load"] / (HEAT_CAPACITY_OF_WATER * 50) * 3600
+        data_entry["litres_per_hour"] = (
+            data_entry["thermal_load"] / (HEAT_CAPACITY_OF_WATER * 50) * 60
         )
     return data_to_post_process
 
@@ -283,6 +289,7 @@ def plot(
     axes=None,
     shape: str = "x",
     colour: str = None,
+    bar_plot: bool = False,
 ) -> Optional[Any]:
     """
     Plots some model_data based on input parameters.
@@ -314,6 +321,9 @@ def plot(
     :param colour:
         The colour to use for the plot.
 
+    :param bar_plot:
+        Whether to plot a line graph (False) or a bar_plot plot (True).
+
     """
 
     x_model_data, y_model_data = (
@@ -328,20 +338,37 @@ def plot(
     # Reduce the values on the x axis to be times.
     # x_model_data = [float(item) / (resolution / 60) for item in x_model_data]
 
-    # If we are not using axes, then the model_data can be straight plotted...
-    if axes is None:
-        plt.scatter(x_model_data, y_model_data, label=label, marker=shape)
-        (line,) = plt.plot(x_model_data, y_model_data, label=label, marker=shape)
+    if bar_plot:
+        if axes is None:
+            if colour is None:
+                plt.bar(x_model_data, y_model_data, label=label)
+            else:
+                plt.bar(x_model_data, y_model_data, label=label, color=colour)
 
-    # ... otherwise, the model_data needs to be plotted on just on axis.
-    else:
-        axes.scatter(x_model_data, y_model_data, label=label, marker=shape)
-        if colour is None:
-            (line,) = axes.plot(x_model_data, y_model_data, label=label, marker=shape)
+        #  otherwise, the model_data needs to be plotted on just on axis.
         else:
-            (line,) = axes.plot(
-                x_model_data, y_model_data, label=label, marker=shape, color=colour
-            )
+            if colour is None:
+                line = axes.bar(x_model_data, y_model_data, label=label)
+            else:
+                line = axes.bar(x_model_data, y_model_data, label=label, color=colour)
+
+    else:
+        # If we are not using axes, then the model_data can be straight plotted...
+        if axes is None:
+            plt.scatter(x_model_data, y_model_data, label=label, marker=shape)
+            (line,) = plt.plot(x_model_data, y_model_data, label=label, marker=shape)
+
+        #  otherwise, the model_data needs to be plotted on just on axis.
+        else:
+            axes.scatter(x_model_data, y_model_data, label=label, marker=shape)
+            if colour is None:
+                (line,) = axes.plot(
+                    x_model_data, y_model_data, label=label, marker=shape
+                )
+            else:
+                (line,) = axes.plot(
+                    x_model_data, y_model_data, label=label, marker=shape, color=colour
+                )
 
     # Set the labels for the axes.
     plt.xlabel("Time of Day")
@@ -406,11 +433,13 @@ def plot_figure(
     first_axis_things_to_plot: List[str],
     first_axis_label: str,
     *,
+    first_axis_shape: str = "x",
     first_axis_y_limits: Optional[Tuple[int, int]] = None,
     second_axis_things_to_plot: Optional[List[str]] = None,
     second_axis_label: Optional[str] = None,
     second_axis_y_limits: Optional[Tuple[int, int]] = None,
     annotate_maximum: bool = False,
+    bar_plot: bool = False,
 ) -> None:
     """
     Does all the work needed to plot a figure with up to two axes and save it.
@@ -431,6 +460,9 @@ def plot_figure(
         A `tuple` giving the lower and upper limits to set for the y axis for the first
         axis.
 
+    :param first_axis_shape:
+        A `str` giving an optional override shape for the first axis.
+
     :param second_axis_things_to_plot:
         The list of variable names (keys in the JSON model_data) to plot on the second axis.
 
@@ -444,6 +476,9 @@ def plot_figure(
     :param annotate_maximum:
         If specified, the maximum will be plotted on the graph.
 
+    :param bar_plot:
+        If specified, a bar plot will be generated, rather than a line plot.
+
     """
 
     # Generate the necessary local variables needed for sub-plotting.
@@ -456,6 +491,8 @@ def plot_figure(
             model_data,
             hold=True,
             axes=ax1,
+            shape=first_axis_shape,
+            bar_plot=bar_plot,
         )
         for entry in first_axis_things_to_plot
     ]
@@ -492,6 +529,7 @@ def plot_figure(
                 hold=True,
                 axes=ax2,
                 shape=".",
+                bar_plot=bar_plot,
             )
             for entry in second_axis_things_to_plot
         ]
@@ -538,14 +576,18 @@ if __name__ == "__main__":
         data,
         ["electrical_load"],
         "Dwelling Load Profile / W",
+        first_axis_y_limits=[0, 5000],
+        first_axis_shape="d",
     )
 
     # Plot Figure 4b: Thermal Demand
     plot_figure(
         "maria_4b_thermal_load",
         data,
-        ["litres_consumed"],
-        "Hot Water Consumption / Litres",
+        ["hot_water_load"],
+        "Hot Water Consumption / Litres per hour",
+        first_axis_y_limits=[0, 12],
+        bar_plot=True,
     )
 
     # Plot Figure 5a: Diurnal Solar Irradiance
@@ -557,6 +599,7 @@ if __name__ == "__main__":
             # "normal_irradiance"
         ],
         "Solar Irradiance / Watts / meter squared",
+        first_axis_y_limits=[0, 600],
     )
 
     # Plot Figure 5b: Ambient Temperature
@@ -565,6 +608,7 @@ if __name__ == "__main__":
         data,
         first_axis_things_to_plot=["ambient_temperature", "sky_temperature"],
         first_axis_label="Temperature / deg C",
+        first_axis_y_limits=[0, 65],
     )
 
     # Plot Figure 6a: Panel-related Temperatures
@@ -580,6 +624,7 @@ if __name__ == "__main__":
             "sky_temperature",
         ],
         first_axis_label="Temperature / deg C",
+        first_axis_y_limits=[-10, 50],
     )
 
     # Plot Figure 6b: Tank-related Temperatures
@@ -592,6 +637,7 @@ if __name__ == "__main__":
             "tank_temperature",
         ],
         first_axis_label="Temperature / deg C",
+        first_axis_y_limits=[0, 50],
     )
 
     # Plot Figure 7: Stream-related Temperatures

@@ -30,6 +30,7 @@ class Glass(OpticalLayer):
     def update(
         self,
         heat_input: float,
+        internal_resolution: float,  # pylint: disable=unused-argument
         weather_conditions: WeatherConditions,
     ) -> float:
         """
@@ -37,6 +38,9 @@ class Glass(OpticalLayer):
 
         :param heat_input:
             The heat inputted to the glass layer, measured in Watts.
+
+        :param internal_resolution:
+            The internal resolution of the model, measured in seconds.
 
         :param weather_conditions:
             The weather conditions at the current time step.
@@ -61,10 +65,10 @@ class Glass(OpticalLayer):
 
         # This heat input, in Watts, is supplied throughout the duration, and so does
         # not need to be multiplied by the resolution.
-        self.temperature = self.temperature + (  # [K]
-            heat_input - upward_heat_losses
-        ) / (  # [W]
-            self._mass * self._heat_capacity
+        self.temperature = self.temperature + (
+            (heat_input - upward_heat_losses)  # [K]
+            # * internal_resolution  # [s]
+            / (self._mass * self._heat_capacity)  # [J]
         )  # [kg] * [J/kg*K]
 
         return upward_heat_losses  # [W]

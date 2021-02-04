@@ -207,6 +207,7 @@ class Collector(OpticalLayer):
         glass_layer_included: bool,
         glass_temperature: Optional[float],
         input_water_temperature: float,
+        internal_resolution: float,  # pylint: disable=unused-argument
         portion_covered: float,
         weather_conditions: WeatherConditions,
     ) -> Tuple[float, float, float, Optional[float], float]:
@@ -243,6 +244,9 @@ class Collector(OpticalLayer):
         :param input_water_temperature:
             The temperature of the input water flow to the collector, measured in
             Kelvin, at the current time step.
+
+        :param internal_resolution:
+            The internal resolution of the model, measured in seconds.
 
         :param portion_covered:
             The portion of the PV-T panel which is covered with PV.
@@ -334,10 +338,14 @@ class Collector(OpticalLayer):
         )  # [W]
 
         # * Compute the temperature rise of the bulk water.
-        bulk_water_temperature_gain = bulk_water_heat_gain / (  # [W]
-            self.htf_volume  # [m^3]
-            * DENSITY_OF_WATER  # [kg/m^3]
-            * self.htf_heat_capacity  # [J/kg*K]
+        bulk_water_temperature_gain = (
+            bulk_water_heat_gain  # [W]
+            # * internal_resolution  # [s]
+            / (  # [W]
+                self.htf_volume  # [m^3]
+                * DENSITY_OF_WATER  # [kg/m^3]
+                * self.htf_heat_capacity  # [J/kg*K]
+            )
         )
 
         self.bulk_water_temperature += bulk_water_temperature_gain
@@ -355,10 +363,14 @@ class Collector(OpticalLayer):
         )
 
         # This heat is absorbed by the thermally-coupled collector-back-plate system.
-        self.temperature += net_heat_gain / (
-            self._mass * self._heat_capacity  # [kg]  # [J/kg*K]
-            + back_plate_instance.mass  # [kg]
-            * back_plate_instance.heat_capacity  # [J/kg*K]
+        self.temperature += (
+            net_heat_gain  # [W]
+            # * internal_resolution  # [s]
+            / (
+                self._mass * self._heat_capacity  # [kg]  # [J/kg*K]
+                + back_plate_instance.mass  # [kg]
+                * back_plate_instance.heat_capacity  # [J/kg*K]
+            )
         )
         back_plate_instance.temperature = self.temperature
 

@@ -128,6 +128,7 @@ class PV(OpticalLayer):
         glass_emissivity: Optional[float],
         glass_temperature: Optional[float],
         glazed: bool,
+        internal_resolution: float,  # pylint: disable=unused-argument
         pv_to_collector_thermal_conductance: float,
         solar_heat_input_from_sun_to_pv_layer: float,
         weather_conditions: WeatherConditions,
@@ -151,6 +152,9 @@ class PV(OpticalLayer):
         :param glazed:
             Whether or not the panel is glazed, I.E., whether the panel has a glass
             layer or not.
+
+        :param internal_resolution:
+            The internal resolution of the run, measured in seconds.
 
         :param pv_to_collector_thermal_conductance:
             The thermal conductance between the PV and collector layers, measured in
@@ -228,9 +232,9 @@ class PV(OpticalLayer):
         # Use this to compute the rise in temperature of the PV layer and set the
         # temperature appropriately.
         self.temperature += (
-            solar_heat_input_from_sun_to_pv_layer - heat_lost
-        ) / (  # [W]
-            self._mass * self._heat_capacity  # [kg]  # [J/kg*K]
+            (solar_heat_input_from_sun_to_pv_layer - heat_lost)  # [W]
+            # * internal_resolution  # [s]
+            / (self._mass * self._heat_capacity)  # [kg] * [J/kg*K]
         )  # [K]
 
         # Return the heat transfered to the glass and collector layers.

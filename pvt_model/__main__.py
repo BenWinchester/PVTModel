@@ -128,6 +128,9 @@ class SystemData:
     .. attribute:: gross_electrical_output
         The electrical power produced by the panel, measured in Watts.
 
+    .. attribute:: hot_water_load
+        The hot-water load in litres per hour.
+
     .. attribute:: htf_pump_on
         Whether the HTF pump is on (True) or off (False).
 
@@ -198,6 +201,7 @@ class SystemData:
     exchanger_temperature_drop: float
     glass_temperature: Optional[float]
     gross_electrical_output: float
+    hot_water_load: float
     htf_pump_on: bool
     net_electrical_output: float
     normal_irradiance: float
@@ -558,7 +562,9 @@ def main(args) -> None:
         #             )
         #         )
         # <<< Code in this next block runs the PVT updator at the internal resolution.
-        pvt_update_output = pvt_panel.update(input_water_temperature, current_weather)
+        pvt_update_output = pvt_panel.update(
+            input_water_temperature, parsed_args.internal_resolution, current_weather
+        )
 
         (
             back_plate_heat_loss,  # [W]
@@ -666,6 +672,7 @@ def main(args) -> None:
                 glass_temperature=pvt_panel.glass_temperature - ZERO_CELCIUS_OFFSET,  # type: ignore
                 gross_electrical_output=pvt_panel.electrical_output(current_weather),
                 htf_pump_on=htf_pump.on,
+                hot_water_load=load_system[(load.ProfileType.HOT_WATER, date_and_time)],
                 net_electrical_output=pvt_panel.electrical_output(current_weather)
                 - current_electrical_load,
                 normal_irradiance=pvt_panel.get_solar_irradiance(current_weather),

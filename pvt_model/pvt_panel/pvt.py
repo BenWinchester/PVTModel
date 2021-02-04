@@ -489,6 +489,7 @@ class PVT:
     def update(
         self,
         input_water_temperature: float,
+        internal_resolution: float,
         weather_conditions: WeatherConditions,
     ) -> Tuple[float, Optional[float], float, float, float, Optional[float]]:
         """
@@ -496,6 +497,9 @@ class PVT:
 
         :param input_water_temperature:
             The water temperature going into the PV-T collector.
+
+        :param internal_resolution:
+            The internal resolution of the model, measured in seconds.
 
         :param weather_conditions:
             The weather conditions at the time of day being incremented to.
@@ -539,6 +543,7 @@ class PVT:
                 if self._glass is not None
                 else None,
                 glazed=self.glazed,
+                internal_resolution=internal_resolution,
                 pv_to_collector_thermal_conductance=self._pv_to_collector_thermal_conductance,
                 solar_heat_input_from_sun_to_pv_layer=solar_heat_input(
                     self._pv.area,
@@ -596,6 +601,7 @@ class PVT:
             if self._glass is not None
             else None,
             input_water_temperature=input_water_temperature,
+            internal_resolution=internal_resolution,
             portion_covered=self._portion_covered,
             weather_conditions=weather_conditions,
         )
@@ -618,7 +624,7 @@ class PVT:
         # Pass this new temperature through to the glass instance to update it.
         if self._glass is not None:
             upward_glass_heat_loss = self._glass.update(
-                glass_heat_input, weather_conditions
+                glass_heat_input, internal_resolution, weather_conditions
             )
 
             return (
