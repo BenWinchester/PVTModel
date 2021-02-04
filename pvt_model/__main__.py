@@ -595,7 +595,7 @@ def main(args) -> None:
         # The tank heat gain here is measured in Joules.
         (
             updated_input_water_temperature,  # [K]
-            tank_heat_gain,  # [J]
+            tank_heat_gain,  # [W]
         ) = heat_exchanger.update(
             input_water_heat_capacity=pvt_panel.htf_heat_capacity,  # [J/kg*K]
             input_water_mass=pvt_panel.mass_flow_rate  # [kg/s]
@@ -606,7 +606,7 @@ def main(args) -> None:
 
         # Compute the new tank temperature after supplying this demand
         tank_output_water_temp = hot_water_tank.update(  # [K]
-            tank_heat_gain,  # [J]
+            tank_heat_gain * parsed_args.internal_resolution,  # [J]
             parsed_args.resolution,  # [minutes]
             current_hot_water_load,  # [litres/time_step] = [kg/time_step]
             weather_forecaster.mains_water_temp,  # [K]

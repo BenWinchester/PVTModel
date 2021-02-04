@@ -234,6 +234,7 @@ class PV(OpticalLayer):
         self.temperature += (
             (solar_heat_input_from_sun_to_pv_layer - heat_lost)  # [W]
             * internal_resolution  # [s]
+            * 0.5  # @@@ MAGIC FACTOR!!!
             / (self._mass * self._heat_capacity)  # [kg] * [J/kg*K]
         )  # [K]
 

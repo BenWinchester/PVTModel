@@ -340,7 +340,8 @@ class Collector(OpticalLayer):
         # * Compute the temperature rise of the bulk water.
         bulk_water_temperature_gain = (
             bulk_water_heat_gain  # [W]
-            # * internal_resolution  # [s]
+            * 0.5  # @@@ MAGIC FACTOR!!!
+            * internal_resolution  # [s]
             / (  # [W]
                 self.htf_volume  # [m^3]
                 * DENSITY_OF_WATER  # [kg/m^3]
@@ -366,6 +367,7 @@ class Collector(OpticalLayer):
         self.temperature += (
             net_heat_gain  # [W]
             * internal_resolution  # [s]
+            * 0.5  # @@@ MAGIC FACTOR!!!
             / (
                 self._mass * self._heat_capacity  # [kg]  # [J/kg*K]
                 + back_plate_instance.mass  # [kg]
