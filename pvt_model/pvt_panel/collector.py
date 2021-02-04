@@ -24,9 +24,11 @@ from ..__utils__ import (
     CollectorParameters,
     DENSITY_OF_WATER,
     get_logger,
+    NUSSELT_NUMBER,
     LOGGER_NAME,
     OpticalLayerParameters,
     ProgrammerJudgementFault,
+    THERMAL_CONDUCTIVITY_OF_WATER,
     WeatherConditions,
 )
 from .__utils__ import (
@@ -139,9 +141,12 @@ class Collector(OpticalLayer):
         # @@@ Maria here used a value of 259, irrespective of these properties.
         # @@@ For temporary consistency, this value is used.
 
-        return 259 * 100
+        # return 259
 
-        # return NUSSELT_NUMBER * THERMAL_CONDUCTIVITY_OF_WATER / self._pipe_diameter
+        convective_heat_transfer_coefficient = (
+            NUSSELT_NUMBER * THERMAL_CONDUCTIVITY_OF_WATER / self._pipe_diameter
+        )
+        return 100 * convective_heat_transfer_coefficient
 
     @property
     def htf_surface_area(self) -> float:

@@ -13,7 +13,7 @@ mass: 150 # [kg]
 area: 1.9 # [m^2]
 # @@@ This could be extended to be temperature dependent
 # The heat-loss coefficient is measured in Watts per meter squared.
-heat_loss_coefficient: 3 # [W/m^2]
+heat_loss_coefficient: 3 # [W/m^2*K]
 # The heat-transfer coefficient is the product of the heat-loss coefficient and
 # the area of the tank
 heat_transfer_coefficient: "{heat_loss_coefficient} * {area}"

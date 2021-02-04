@@ -607,9 +607,16 @@ class WeatherForecaster:
         monthly_irradiance_profiles[Date(1, 6)] = monthly_irradiance_profiles[
             Date(1, 8)
         ]
-        monthly_irradiance_profiles[Date(1, 7)] = monthly_irradiance_profiles[
-            Date(1, 8)
-        ]
+        monthly_irradiance_profiles[Date(1, 7)] = _DailyProfile(
+            {
+                key: (
+                    monthly_irradiance_profiles[Date(1, 8)].profile[key] * 3
+                    + monthly_irradiance_profiles[Date(1, 4)].profile[key]
+                )
+                / 4
+                for key in monthly_irradiance_profiles[Date(1, 8)].profile.keys()
+            }
+        )
         monthly_irradiance_profiles[Date(1, 9)] = monthly_irradiance_profiles[
             Date(1, 4)
         ]

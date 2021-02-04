@@ -104,7 +104,7 @@ STEFAN_BOLTZMAN_CONSTANT: float = 5.670374419 * (10 ** (-8))
 THERMAL_CONDUCTIVITY_OF_AIR: float = 0.024
 # The thermal conductivity of water is obtained from
 # http://hyperphysics.phy-astr.gsu.edu/hbase/Tables/thrcn.html
-THERMAL_CONDUCTIVITY_OF_WATER: float = 0.6  # [W/m*K]
+THERMAL_CONDUCTIVITY_OF_WATER: float = 0.5918  # [W/m*K]
 
 
 ##############

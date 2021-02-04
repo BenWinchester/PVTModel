@@ -538,24 +538,27 @@ def main(args) -> None:
         )  # [litres/time_step] = [kg/time_step]
 
         # Call the pvt module to generate the new temperatures at this time step.
-        pvt_update_output = tuple()
-        for _ in range(parsed_args.internal_resolution):
-            if len(pvt_update_output) == 0:
-                pvt_update_output = pvt_panel.update(
-                    input_water_temperature,
-                    current_weather,
-                )  # [K]
-            else:
-                pvt_update_output = tuple(
-                    sum(entry)
-                    for entry in zip(
-                        pvt_update_output,
-                        pvt_panel.update(
-                            input_water_temperature,
-                            current_weather,
-                        ),
-                    )
-                )
+        # >>> Code in this block runs the PVT updator at a 1 second resolution.
+        # pvt_update_output = tuple()
+        # for _ in range(parsed_args.internal_resolution):
+        #     if len(pvt_update_output) == 0:
+        #         pvt_update_output = pvt_panel.update(
+        #             input_water_temperature,
+        #             current_weather,
+        #         )  # [K]
+        #     else:
+        #         pvt_update_output = tuple(
+        #             sum(entry)
+        #             for entry in zip(
+        #                 pvt_update_output,
+        #                 pvt_panel.update(
+        #                     input_water_temperature,
+        #                     current_weather,
+        #                 ),
+        #             )
+        #         )
+        # <<< Code in this next block runs the PVT updator at the internal resolution.
+        pvt_update_output = pvt_panel.update(input_water_temperature, current_weather)
 
         (
             back_plate_heat_loss,  # [W]
