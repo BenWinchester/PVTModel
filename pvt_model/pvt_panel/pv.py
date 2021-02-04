@@ -128,7 +128,7 @@ class PV(OpticalLayer):
         glass_emissivity: Optional[float],
         glass_temperature: Optional[float],
         glazed: bool,
-        internal_resolution: float,  # pylint: disable=unused-argument
+        internal_resolution: float,
         pv_to_collector_thermal_conductance: float,
         solar_heat_input_from_sun_to_pv_layer: float,
         weather_conditions: WeatherConditions,
@@ -233,7 +233,7 @@ class PV(OpticalLayer):
         # temperature appropriately.
         self.temperature += (
             (solar_heat_input_from_sun_to_pv_layer - heat_lost)  # [W]
-            # * internal_resolution  # [s]
+            * internal_resolution  # [s]
             / (self._mass * self._heat_capacity)  # [kg] * [J/kg*K]
         )  # [K]
 

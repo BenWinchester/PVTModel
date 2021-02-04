@@ -122,6 +122,12 @@ def parse_args(args) -> argparse.Namespace:
         "--pvt-data-file", "-p", help="The location of the PV-T system YAML data file."
     )
     parser.add_argument(
+        "--resolution",
+        "-r",
+        type=int,
+        help="The external resolution, in seconds, used by the model.",
+    )
+    parser.add_argument(
         "--start-time",
         "-st",
         type=int,
@@ -132,6 +138,13 @@ def parse_args(args) -> argparse.Namespace:
         "--tank-data-file",
         "-t",
         help="The location of the Hot-Water Tank system YAML data file.",
+    )
+    parser.add_argument(
+        "--use-internal-resolution",
+        default=False,
+        action="store_true",
+        help="Whether to use the internal resolution parameter or only compute at the "
+        "outer resolution.",
     )
     parser.add_argument(
         "--use-pvgis",
