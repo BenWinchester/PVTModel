@@ -434,6 +434,19 @@ class PVT:
         return self._glass is not None
 
     @property
+    def htf_convective_heat_transfer_coefficient(self) -> float:
+        """
+        Return the convective heat transfer coefficient to the HTF.
+
+        :returns:
+            The convective heat transfer coefficient between the thermal collector and
+            the HTF in the riser tubes, measured in Watts per meter squared Kelvin.
+
+        """
+
+        return self._collector.convective_heat_transfer_coefficient_of_water
+
+    @property
     def htf_heat_capacity(self) -> float:
         """
         Returns the heat-capacity of the heat-transfer fluid in the collector.
@@ -445,6 +458,33 @@ class PVT:
         """
 
         return self._collector.htf_heat_capacity
+
+    @property
+    def htf_surface_area(self) -> float:
+        """
+        Returns the surface area for heat transfer between the collector and the HTF.
+
+        The value returned is measured in meters squared.
+
+        :return:
+            The surface area of contact between the thermal collector and the HTF,
+            measured in meters squared.
+
+        """
+
+        return self._collector.htf_surface_area
+
+    @property
+    def htf_volume(self) -> float:
+        """
+        Returns the volume of HTF in the collector, measured in meters cubed.
+
+        :return:
+            The volume of HTF in the collector, measured in meters cubed.
+
+        """
+
+        return self._collector.htf_volume
 
     @property
     def mass_flow_rate(self) -> float:

@@ -146,7 +146,7 @@ class Collector(OpticalLayer):
         convective_heat_transfer_coefficient = (
             NUSSELT_NUMBER * THERMAL_CONDUCTIVITY_OF_WATER / self._pipe_diameter
         )
-        return 100 * convective_heat_transfer_coefficient
+        return convective_heat_transfer_coefficient
 
     @property
     def htf_surface_area(self) -> float:
