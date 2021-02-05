@@ -42,7 +42,7 @@ pvt_system:
   horizontal_tracking: False
   vertical_tracking: False
 glass:
-  density: 2500 # [kg/m^3]
+  density: 2270 # [kg/m^3]
   thickness: 0.0032 # [m]
   heat_capacity: 840 # [840J/kg*K]
   # The thermal conductivity of glass is obtained from;
