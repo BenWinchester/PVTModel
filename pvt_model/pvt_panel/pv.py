@@ -91,7 +91,7 @@ class PV(OpticalLayer):
         return (
             "PV("
             f"absorptivity: {self.absorptivity}, "
-            f"_heat_capacity: {self._heat_capacity}J/kg*K, "
+            f"heat_capacity: {self.heat_capacity}J/kg*K, "
             f"_mass: {self._mass}kg, "
             f"_reference_efficiency: {self._reference_efficiency}, "
             f"_reference_temperature: {self._reference_temperature}K, "
@@ -235,7 +235,7 @@ class PV(OpticalLayer):
             (solar_heat_input_from_sun_to_pv_layer - heat_lost)  # [W]
             * internal_resolution  # [s]
             * 0.5  # @@@ MAGIC FACTOR!!!
-            / (self._mass * self._heat_capacity)  # [kg] * [J/kg*K]
+            / (self._mass * self.heat_capacity)  # [kg] * [J/kg*K]
         )  # [K]
 
         # Return the heat transfered to the glass and collector layers.

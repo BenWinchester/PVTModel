@@ -69,7 +69,7 @@ class Glass(OpticalLayer):
             (heat_input - upward_heat_losses)  # [K]
             * internal_resolution  # [s]
             * 0.5  # @@@ MAGIC FACTOR!!!
-            / (self._mass * self._heat_capacity)  # [J]
+            / (self._mass * self.heat_capacity)  # [J]
         )  # [kg] * [J/kg*K]
 
         return upward_heat_losses  # [W]
