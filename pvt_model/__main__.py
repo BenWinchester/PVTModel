@@ -253,10 +253,7 @@ def _temperature_vector_gradient(
     except ProgrammerJudgementFault:
         pdb.set_trace(header="The system reached a timestep greater than the maximum.")
 
-    if (
-        any([value > 350 or value < 270 for value in temperature_vector])
-        or date_and_time.hour > 5
-    ):
+    if any([value > 350 or value < 270 for value in temperature_vector]):
         pdb.set_trace(
             header="Running - caught within temperature gradient method. "
             f"Time: {date_and_time}. "
@@ -329,6 +326,10 @@ def _temperature_vector_gradient(
             pvt_panel.collector.htf_heat_capacity,
             tank_to_collector_pipe.temperature,
             tank_temperature,
+        )
+        # @@@ SOLVE THE TANK TEMPERATURES EVERY HALF AN HOUR
+        tank_to_collector_pipe.temperature = heat_exchanger.get_output_htf_temperature(
+            collector_to_tank_pipe.temperature, tank_temperature
         )
 
     tank_temperature_gradient = (
@@ -484,12 +485,9 @@ def main(args) -> None:
         raise ProgrammerJudgementFault(
             "The resolution is not easily divisible into the day."
         )
-    time_series = numpy.linspace(
-        0,
-        int((final_date_and_time - initial_date_and_time).total_seconds()),
-        int(num_iterations),
-        endpoint=True,
-    )
+    time_series = [
+        index * parsed_args.resolution for index in range(int(num_iterations))
+    ]
 
     temperature_data = integrate.odeint(
         _temperature_vector_gradient,
