@@ -26,7 +26,8 @@ import re
 
 from matplotlib import pyplot as plt
 
-from __utils__ import GraphDetail, get_logger, HEAT_CAPACITY_OF_WATER
+from .constants import HEAT_CAPACITY_OF_WATER
+from .__utils__ import GraphDetail, get_logger
 
 # The directory in which old figures are saved
 OLD_FIGURES_DIRECTORY: str = "old_figures"

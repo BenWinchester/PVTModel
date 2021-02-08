@@ -13,20 +13,12 @@ This module represents a PV layer within a PV-T panel.
 
 """
 
-from typing import Optional, Tuple
-
 from ..__utils__ import (
     OpticalLayerParameters,
-    ProgrammerJudgementFault,
     PVParameters,
-    WeatherConditions,
 )
 from .__utils__ import (
-    conductive_heat_transfer_no_gap,
-    conductive_heat_transfer_with_gap,
     OpticalLayer,
-    radiative_heat_transfer,
-    wind_heat_transfer,
 )
 
 __all__ = ("PV",)
@@ -68,7 +60,6 @@ class PV(OpticalLayer):
                 pv_params.heat_capacity,
                 pv_params.area,
                 pv_params.thickness,
-                pv_params.temperature,
                 pv_params.transmissivity,
                 pv_params.absorptivity,
                 pv_params.emissivity,
@@ -92,22 +83,23 @@ class PV(OpticalLayer):
             "PV("
             f"absorptivity: {self.absorptivity}, "
             f"heat_capacity: {self.heat_capacity}J/kg*K, "
-            f"_mass: {self._mass}kg, "
             f"_reference_efficiency: {self._reference_efficiency}, "
             f"_reference_temperature: {self._reference_temperature}K, "
             f"_thermal_coefficient: {self._thermal_coefficient}K^(-1), "
             f"_transmissicity: {self.transmissivity}, "
             f"area: {self.area}m^2, "
             f"emissivity: {self.emissivity}, "
-            f"temperature: {self.temperature}K, "
+            f"mass: {self.mass}kg, "
             f"thickness: {self.thickness}m"
             ")"
         )
 
-    @property
-    def electrical_efficiency(self) -> float:
+    def electrical_efficiency(self, pv_temperature: float) -> float:
         """
         Returns the electrical efficiency of the PV panel based on its temperature.
+
+        :param pv_temperature:
+            The temperature of the PV layer, measured in Kelvin.
 
         :return:
             A decimal giving the percentage efficiency of the PV panel between 0 (0%
@@ -118,133 +110,5 @@ class PV(OpticalLayer):
         return self._reference_efficiency * (  # [unitless]
             1
             - self._thermal_coefficient  # [1/K]
-            * (self.temperature - self._reference_temperature)  # [K]
+            * (pv_temperature - self._reference_temperature)  # [K]
         )
-
-    def update(
-        self,
-        air_gap_thickness: float,
-        collector_temperature: float,
-        glass_emissivity: Optional[float],
-        glass_temperature: Optional[float],
-        glazed: bool,
-        internal_resolution: float,
-        pv_to_collector_thermal_conductance: float,
-        solar_heat_input_from_sun_to_pv_layer: float,
-        weather_conditions: WeatherConditions,
-    ) -> Tuple[float, Optional[float]]:
-        """
-        Update the internal properties of the PV layer based on external factors.
-
-        :param air_gap_thickness:
-            The thickness of the gap between the glass and PV layers, measured in
-            meters.
-
-        :param collector_temperature:
-            The temperature of the collector layer, measured in Kelvin.
-
-        :param glass_emissivity:
-            The emissivity of the glass layer.
-
-        :param glass_temperature:
-            The temperature glass layer of the PV-T panel in Kelvin.
-
-        :param glazed:
-            Whether or not the panel is glazed, I.E., whether the panel has a glass
-            layer or not.
-
-        :param internal_resolution:
-            The internal resolution of the run, measured in seconds.
-
-        :param pv_to_collector_thermal_conductance:
-            The thermal conductance between the PV and collector layers, measured in
-            Watts per meter squared Kelvin.
-
-        :param solar_heat_input_from_sun_to_pv_layer:
-            The heat gain due to the solar irradiance striking the panel, measured in
-            Joules.
-
-        :param weather_conditions:
-            The current weather conditions, passed in as a :class:`WeatherConditions`
-            instance.
-
-        :return:
-            The heat transferred to the collector and the glass layers respectively as a
-            `Tuple`. Both these values are measured in Joules.
-            If there is no glass layer present, then `None` is returned as the value of
-            the heat transfered to the glass layer.
-
-        :raises: ProgrammerJudgementFault
-            A :class:`..__utils__.ProgrammerJudgementFault` error is raised if the panel
-            is marked as being glazed but there is no glass layer present.
-
-        """
-
-        # >>> If the layer is glazed, compute radiative and conductive heat to the glass
-        if glazed and glass_emissivity is not None and glass_temperature is not None:
-            radiative_loss_upwards = radiative_heat_transfer(
-                destination_emissivity=glass_emissivity,
-                destination_temperature=glass_temperature,
-                radiative_contact_area=self.area,
-                source_emissivity=self.emissivity,
-                source_temperature=self.temperature,
-            )  # [W]
-            convective_loss_upwards = conductive_heat_transfer_with_gap(
-                air_gap_thickness=air_gap_thickness,
-                contact_area=self.area,
-                destination_temperature=glass_temperature,
-                source_temperature=self.temperature,
-            )  # [W]
-        elif glazed and (glass_temperature is None or glass_temperature is None):
-            raise ProgrammerJudgementFault(
-                "If the panel is glazed, a glass temperature and emissivity should be "
-                "defined and passed to the PV module."
-            )
-        # <<< If the layer is unglazed, compute losses to the sky and air.
-        else:
-            radiative_loss_upwards = radiative_heat_transfer(
-                destination_temperature=weather_conditions.sky_temperature,
-                radiating_to_sky=True,
-                radiative_contact_area=self.area,
-                source_emissivity=self.emissivity,
-                source_temperature=self.temperature,
-            )  # [W]
-            convective_loss_upwards = wind_heat_transfer(
-                contact_area=self.area,
-                destination_temperature=weather_conditions.ambient_temperature,
-                source_temperature=self.temperature,
-                wind_heat_transfer_coefficient=weather_conditions.wind_heat_transfer_coefficient,  # pylint: disable=line-too-long
-            )  # [W]
-
-        # Compute the downward losses from the PV layer.
-        pv_to_collector = conductive_heat_transfer_no_gap(
-            contact_area=self.area,
-            destination_temperature=collector_temperature,
-            source_temperature=self.temperature,
-            thermal_conductance=pv_to_collector_thermal_conductance,
-        )  # [W]
-
-        # Compute the overall heat lost.
-        heat_lost = (
-            radiative_loss_upwards + convective_loss_upwards + pv_to_collector
-        )  # [W]
-
-        # Use this to compute the rise in temperature of the PV layer and set the
-        # temperature appropriately.
-        self.temperature += (
-            (solar_heat_input_from_sun_to_pv_layer - heat_lost)  # [W]
-            * internal_resolution  # [s]
-            * 0.5  # @@@ MAGIC FACTOR!!!
-            / (self._mass * self.heat_capacity)  # [kg] * [J/kg*K]
-        )  # [K]
-
-        # Return the heat transfered to the glass and collector layers.
-        # >>> If the collector is glazed, return the heat transfered to the glass layer.
-        if glazed:
-            return (
-                pv_to_collector,  # [J]
-                (radiative_loss_upwards + convective_loss_upwards),  # [W]
-            )
-        # <<< >>> Otherwise, return None.
-        return (pv_to_collector, None)  # [W] Optional[W]
-        # <<< End of conditional block.

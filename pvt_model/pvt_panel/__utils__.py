@@ -92,7 +92,6 @@ class OpticalLayer(Layer):
                 optical_params.heat_capacity,
                 optical_params.area,
                 optical_params.thickness,
-                optical_params.temperature,
             )
         )
 

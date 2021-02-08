@@ -144,8 +144,8 @@ def pv_temperature_gradient(
     return (
         # Solar heat input
         physics_utils.solar_heat_input(
-            pvt_panel.pv_area,
-            weather_conditions.solar_energy_input,
+            pvt_panel.pv.area,
+            weather_conditions.irradiance,
             physics_utils.transmissivity_absorptivity_product(
                 diffuse_reflection_coefficient=pvt_panel.glass.diffuse_reflection_coefficient,  # pylint: disable=line-too-long
                 glass_transmissivity=pvt_panel.glass.transmissivity,
@@ -219,7 +219,7 @@ def collector_temperature_gradient(
         # Solar heat input
         physics_utils.solar_heat_input(
             (1 - pvt_panel.portion_covered) * pvt_panel.area,
-            weather_conditions.solar_energy_input,
+            weather_conditions.irradiance,
             physics_utils.transmissivity_absorptivity_product(
                 diffuse_reflection_coefficient=pvt_panel.glass.diffuse_reflection_coefficient,  # pylint: disable=line-too-long
                 glass_transmissivity=pvt_panel.glass.transmissivity,
@@ -262,7 +262,7 @@ def collector_temperature_gradient(
 
 
 def bulk_water_temperature_gradient(
-    bulk_water_temperature: float, collector_temperature: float, pvt_panel: float
+    bulk_water_temperature: float, collector_temperature: float, pvt_panel: pvt.PVT
 ) -> float:
     """
     Computes the temperature gradient of the bulk water.
@@ -281,7 +281,7 @@ def bulk_water_temperature_gradient(
 
     """
 
-    return (
+    bw_temp_grad: float = (
         physics_utils.convective_heat_transfer_to_fluid(
             contact_area=pvt_panel.collector.htf_surface_area,
             convective_heat_transfer_coefficient=pvt_panel.collector.convective_heat_transfer_coefficient_of_water,  # pylint: disable=line-too-long
@@ -289,5 +289,7 @@ def bulk_water_temperature_gradient(
             wall_temperature=collector_temperature,
         )  # [W]
     ) / (
-        pvt_panel.collector.htf_volume * DENSITY_OF_WATER
-    )  # [J/K]
+        pvt_panel.collector.htf_volume * DENSITY_OF_WATER  # [J/K]
+    )  # [K/s]
+
+    return bw_temp_grad

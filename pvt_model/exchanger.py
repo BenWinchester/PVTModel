@@ -13,10 +13,6 @@ This module represents the heat exchanger within the hot-water tank.
 
 """
 
-from typing import Tuple
-
-from . import tank
-
 __all__ = ("Exchanger",)
 
 
@@ -84,13 +80,15 @@ class Exchanger:
 
         """
 
-        return (
+        tank_heat_addition: float = (
             self._efficiency
             * input_water_mass_flow_rate  # [kg/s]
             * input_water_heat_capacity  # [J/kg*K]
         ) * (
             input_water_temperature - water_tank_temperature  # [K]
         )  # [W]
+
+        return tank_heat_addition
 
     def get_output_htf_temperature(
         self,
@@ -111,6 +109,9 @@ class Exchanger:
 
         """
 
-        return input_water_temperature - self._efficiency * (
-            input_water_temperature - water_tank_temperature
+        exchanger_output_temperature: float = (
+            input_water_temperature
+            - self._efficiency * (input_water_temperature - water_tank_temperature)
         )
+
+        return exchanger_output_temperature

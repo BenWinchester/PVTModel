@@ -24,12 +24,12 @@ from typing import Any, Dict
 
 from .pvt_panel import pvt
 from . import exchanger, tank, pump
+from .constants import (
+    HEAT_CAPACITY_OF_WATER,
+)
 from .__utils__ import (
     BackLayerParameters,
     CollectorParameters,
-    HEAT_CAPACITY_OF_WATER,
-    INITIAL_SYSTEM_TEMPERATURE,
-    INITIAL_TANK_TEMPERATURE,
     InvalidDataError,
     MissingDataError,
     MissingParametersError,
@@ -105,7 +105,6 @@ def hot_water_tank_from_path(tank_data_file: str) -> tank.Tank:
             HEAT_CAPACITY_OF_WATER,  # [J/kg*K]
             float(tank_data["heat_loss_coefficient"]),  # [W/m^2*K]
             float(tank_data["mass"]),  # [kg]
-            INITIAL_TANK_TEMPERATURE,  # [K]
         )
     except KeyError as e:
         raise MissingDataError(
@@ -186,7 +185,6 @@ def _back_params_from_data(
             back_data["heat_capacity"],  # [J/kg*K]
             area,  # [m^2]
             back_data["thickness"],  # [m]
-            INITIAL_SYSTEM_TEMPERATURE,  # [K]
             back_data["thermal_conductivity"],  # [W/m*K]
         )
     except KeyError as e:
@@ -237,7 +235,6 @@ def _collector_params_from_data(
             heat_capacity=collector_data["heat_capacity"],  # [J/kg*K]
             area=area,  # [m^2]
             thickness=collector_data["thickness"],  # [m]
-            temperature=INITIAL_SYSTEM_TEMPERATURE,  # [K]
             transmissivity=collector_data["transmissivity"],  # [unitless]
             absorptivity=collector_data["absorptivity"],  # [unitless]
             emissivity=collector_data["emissivity"],  # [unitless]
@@ -287,7 +284,6 @@ def _glass_params_from_data(
             glass_data["heat_capacity"],  # [J/kg*K]
             area,  # [m^2]
             glass_data["thickness"],  # [m]
-            293,  # [K]
             glass_data["transmissivity"],  # [unitless]
             glass_data["absorptivity"],  # [unitless]
             glass_data["emissivity"],  # [unitless]
@@ -326,7 +322,6 @@ def _pv_params_from_data(area: float, pv_data: Dict[str, Any]) -> PVParameters:
             pv_data["heat_capacity"],  # [J/kg*K]
             area,  # [m^2]
             pv_data["thickness"],  # [m]
-            INITIAL_SYSTEM_TEMPERATURE,  # [K]
             pv_data["transmissivity"],  # [unitless]
             pv_data["absorptivity"],  # [unitless]
             pv_data["emissivity"],  # [unitless]

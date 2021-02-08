@@ -592,16 +592,12 @@ class LayerParameters:
     .. attribute:: thickness
         The thickness of the layer, measured in meters.
 
-    .. attribute:: temperature
-        The temperature at which to initialise the layer, measured in Kelvin.
-
     """
 
     mass: float
     heat_capacity: float
     area: float
     thickness: float
-    temperature: float
 
 
 @dataclass

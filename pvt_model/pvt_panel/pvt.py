@@ -31,7 +31,6 @@ from ..__utils__ import (
     PVParameters,
     WeatherConditions,
 )
-from .__utils__ import solar_heat_input, transmissivity_absorptivity_product
 
 __all__ = ("PVT",)
 
@@ -53,8 +52,18 @@ class PVT:
     """
     Represents an entire PV-T collector.
 
+    .. attribute:: air_gap_thickness
+        The thickness of the air gap between the glass and PV (or collector) layers,
+        measured in meters.
+
+    .. attribute:: latitude
+        The latitude of the panel, measured in degrees.
+
+    .. attribute:: longitude
+        The longitude of the panel, measured in degrees.
+
     .. attribute:: portion_covered
-      The portion of the PV-T panel which is covered with PV.
+        The portion of the PV-T panel which is covered with PV.
 
     .. attribute:: timezone
         The timezone that the PVT system is based in.
@@ -62,10 +71,6 @@ class PVT:
     """
 
     # Private attributes:
-    #
-    # .. attribute:: _air_gap_thickness
-    #   The thickness of the air gap between the glass and PV (or collector) layers,
-    #   measured in meters.
     #
     # .. attribute:: _azimuthal_orientation
     #   The angle between the normal to the panel's surface and True North.
@@ -172,11 +177,11 @@ class PVT:
 
         """
 
-        self._air_gap_thickness = air_gap_thickness
+        self.air_gap_thickness = air_gap_thickness
         self._azimuthal_orientation = azimuthal_orientation
         self._horizontal_tracking = horizontal_tracking
-        self._latitude = latitude
-        self._longitude = longitude
+        self.latitude = latitude
+        self.longitude = longitude
         self.portion_covered = portion_covered
         self.pv_to_collector_thermal_conductance = pv_to_collector_thermal_conductance
         self._vertical_tracking = vertical_tracking
@@ -200,14 +205,16 @@ class PVT:
 
         # Instantiate the glass layer.
         if glazed:
-            self.glass: Optional[glass.Glass] = glass.Glass(glass_parameters)
+            self.glass: glass.Glass = glass.Glass(glass_parameters)
         else:
-            self.glass = None
+            raise ProgrammerJudgementFault(
+                "A glass layer is required in the current set up."
+            )
 
         # Instantiate the PV layer.
         if portion_covered != 0 and pv_parameters is not None:
             pv_parameters.area *= portion_covered
-            self.pv: Optional[pv.PV] = pv.PV(pv_parameters)
+            self.pv: pv.PV = pv.PV(pv_parameters)
         # If the PV layer parameters have not been specified, then raise an error.
         elif portion_covered != 0 and pv_parameters is None:
             raise MissingParametersError(
@@ -215,7 +222,9 @@ class PVT:
                 "PV-layer parameters must be provided if including a PV layer.",
             )
         else:
-            self.pv = None
+            raise ProgrammerJudgementFault(
+                "A PV layer is required in the current set up."
+            )
 
         # Instantiate the collector layer.
         self.collector = collector.Collector(collector_parameters)
@@ -239,7 +248,7 @@ class PVT:
             f"glass: {self.glass}, "
             f"pv: {self.pv}, "
             f"azimuthal_orientation: {self._azimuthal_orientation}, "
-            f"coordinates: {self._latitude}N {self._longitude}E, "
+            f"coordinates: {self.latitude}N {self.longitude}E, "
             f"tilt: {self._tilt}deg, "
         )
 
@@ -295,7 +304,7 @@ class PVT:
 
         """
 
-        return (self._latitude, self._longitude)
+        return (self.latitude, self.longitude)
 
     def electrical_output(self, weather_conditions: WeatherConditions) -> float:
         """
@@ -313,14 +322,16 @@ class PVT:
 
         """
 
-        return (
-            self.electrical_efficiency
+        electrical_output: float = (
+            self.pv.electrical_efficiency  # type: ignore
+            if self.pv is not None
+            else 0
             * self.get_solar_irradiance(weather_conditions)
             * self.area
             * self.portion_covered
-            if self.electrical_efficiency is not None
-            else 0
         )
+
+        return electrical_output
 
     def get_solar_irradiance(  # pylint: disable=no-self-use
         self, weather_conditions: WeatherConditions
@@ -356,160 +367,3 @@ class PVT:
         # >>> Beginning of Maria's profile fetching.
         return weather_conditions.irradiance
         # <<< End of Maria's profile fetching.
-
-    def update(
-        self,
-        input_water_temperature: float,
-        internal_resolution: float,
-        weather_conditions: WeatherConditions,
-    ) -> Tuple[float, Optional[float], float, float, float, Optional[float]]:
-        """
-        Updates the properties of the PV-T collector based on a changed input temp..
-
-        :param input_water_temperature:
-            The water temperature going into the PV-T collector.
-
-        :param internal_resolution:
-            The internal resolution of the model, measured in seconds.
-
-        :param weather_conditions:
-            The weather conditions at the time of day being incremented to.
-
-        :return:
-            A `tuple` containing:
-            - the heat lost through the back plate, measured in Joules;
-            - the heat gain by the bulk water, measured in Joules;
-            - the heat inputted to the collector, measured in Joules;
-            - the output water temperature from the thermal collector, measured in
-              Kelvin;
-            - the upward heat lost from the collector layer, measured in Joules;
-            - the upward heat lost from the glass layer, measured in Joules.
-
-        :raises: ProgrammerJudgementFault
-            Raised if the panel does not have a glass layer but is marked as being
-            glazed.
-
-        """
-
-        # Compute the solar energy inputted to the system in Joules per meter squared.
-        solar_energy_input = self.get_solar_irradiance(weather_conditions)  # [W/m^2]
-
-        if self.glass is None:
-            raise ProgrammerJudgementFault(
-                "The glass layer needs to be specified for now."
-            )
-
-        # Call the pv panel to update its temperature.
-        pv_toglass_heat_input: Optional[float] = None
-        if self.pv is not None:
-            # The excese PV heat generated is in units of Watts.
-            # * PV covers 75%
-            collector_heat_input, pv_toglass_heat_input = self.pv.update(
-                air_gap_thickness=self._air_gap_thickness,
-                collector_temperature=self.collector.temperature,
-                glass_emissivity=self.glass.emissivity
-                if self.glass is not None
-                else None,
-                glass_temperature=self.glass.temperature
-                if self.glass is not None
-                else None,
-                glazed=self.glazed,
-                internal_resolution=internal_resolution,
-                pv_to_collector_thermal_conductance=self.pv_to_collector_thermal_conductance,
-                solar_heat_input_from_sun_topv_layer=solar_heat_input(
-                    self.pv.area,
-                    solar_energy_input,
-                    transmissivity_absorptivity_product(
-                        diffuse_reflection_coefficient=self.glass.diffuse_reflection_coefficient,
-                        glass_transmissivity=self.glass.transmissivity,
-                        layer_absorptivity=self.pv.absorptivity,
-                    ),
-                    self.pv.electrical_efficiency,
-                ),
-                weather_conditions=weather_conditions,
-            )  # [W], [W]
-            # * 25% of the collector is uncovered
-            collector_heat_input += solar_heat_input(
-                self.collector.area * (1 - self.portion_covered),
-                solar_energy_input,
-                transmissivity_absorptivity_product(
-                    diffuse_reflection_coefficient=self.glass.diffuse_reflection_coefficient,
-                    glass_transmissivity=self.glass.transmissivity,
-                    layer_absorptivity=self.collector.absorptivity,
-                ),
-            )  # [W]
-        else:
-            # * No PV layer, so all the heat goes straight to the thermal collector
-            collector_heat_input = solar_heat_input(
-                self.collector.area,
-                solar_energy_input,
-                transmissivity_absorptivity_product(
-                    diffuse_reflection_coefficient=self.glass.diffuse_reflection_coefficient,
-                    glass_transmissivity=self.glass.transmissivity,
-                    layer_absorptivity=self.collector.absorptivity,
-                ),
-            )  # [W]
-            pv_toglass_heat_input = None  # [W]
-
-        # Based on the heat supplied, both from the sun (depending on whether there is
-        # no PV layer present, or whether the PV layer does not fully cover the panel),
-        # and from the heat transfered in from the PV layer.
-        (
-            back_plate_heat_loss,  # [J]
-            bulk_water_heat_gain,  # [J]
-            output_water_temperature,  # [K]
-            collector_toglass_heat_input,  # [J]
-            upwardcollector_heat_loss,  # [J]
-        ) = self.collector.update(
-            air_gap_thickness=self._air_gap_thickness,
-            back_plate_instance=self._back_plate,
-            collector_heat_input=collector_heat_input,
-            glass_emissivity=self.glass.emissivity if self.glass is not None else None,
-            glass_layer_included=self.glass is not None,
-            glass_temperature=self.glass.temperature
-            if self.glass is not None
-            else None,
-            input_water_temperature=input_water_temperature,
-            internal_resolution=internal_resolution,
-            portion_covered=self.portion_covered,
-            weather_conditions=weather_conditions,
-        )
-
-        # Determine the heat inputted to the glass layer.
-        if (
-            self.glazed
-            and pv_toglass_heat_input is None
-            and collector_toglass_heat_input is None
-        ):
-            raise ProgrammerJudgementFault(
-                "The panel has neither a PV or Collector layer if glazed."
-            )
-        glass_heat_input: float = 0  # [W]
-        if pv_toglass_heat_input is not None:
-            glass_heat_input += pv_toglass_heat_input  # [W]
-        if collector_toglass_heat_input is not None:
-            glass_heat_input += collector_toglass_heat_input  # [W]
-
-        # Pass this new temperature through to the glass instance to update it.
-        if self.glass is not None:
-            upwardglass_heat_loss = self.glass.update(
-                glass_heat_input, internal_resolution, weather_conditions
-            )
-
-            return (
-                back_plate_heat_loss,  # [W]
-                bulk_water_heat_gain,  # [W]
-                collector_heat_input,  # [W]
-                output_water_temperature,  # [K]
-                upwardcollector_heat_loss,  # [W]
-                upwardglass_heat_loss,  # [W]
-            )
-
-        return (
-            back_plate_heat_loss,  # [W]
-            bulk_water_heat_gain,  # [W]
-            collector_heat_input,  # [W]
-            output_water_temperature,  # [K]
-            upwardcollector_heat_loss,  # [W]
-            None,  # [W]
-        )

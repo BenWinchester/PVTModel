@@ -19,7 +19,6 @@ __all__ = (
     "FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR",
     "HEAT_CAPACITY_OF_WATER",
     "INITIAL_SYSTEM_TEMPERATURE_VECTOR",
-    "INITIAL_TANK_TEMPERATURE",
     "NUSSELT_NUMBER",
     "STEFAN_BOLTZMAN_CONSTANT",
     "THERMAL_CONDUCTIVITY_OF_AIR",
@@ -48,11 +47,11 @@ HEAT_CAPACITY_OF_WATER: int = 4182
 # The `tuple` contains the glass, pv, collector, bulk-water, and tank initial
 # temperatures.
 INITIAL_SYSTEM_TEMPERATURE_VECTOR = (
-    ZERO_CELCIUS_OFFSET + 20,
-    ZERO_CELCIUS_OFFSET + 30,
-    ZERO_CELCIUS_OFFSET + 30,
-    ZERO_CELCIUS_OFFSET + 30,
-    ZERO_CELCIUS_OFFSET + 30,
+    ZERO_CELCIUS_OFFSET + 20,  # Var: T_Glass / K
+    ZERO_CELCIUS_OFFSET + 30,  # Var: T_PV / K
+    ZERO_CELCIUS_OFFSET + 30,  # Var: T_Collector / K
+    ZERO_CELCIUS_OFFSET + 30,  # Var: T_BulkWater / K
+    ZERO_CELCIUS_OFFSET + 30,  # Var: T_Tank / K
 )  # [K]
 # The initial temperature of the hot-water tank, at which it should be instantiated,
 # measured in Kelvin.

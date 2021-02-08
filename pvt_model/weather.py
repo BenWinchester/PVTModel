@@ -363,6 +363,9 @@ class WeatherForecaster:
     """
     Represents a weather forecaster, determining weather conditions and irradiance.
 
+    .. attribute:: mains_water_temperature
+        The mains water temperature, measured in Kelvin.
+
     """
 
     # Private attributes:
@@ -393,7 +396,7 @@ class WeatherForecaster:
     def __init__(
         self,
         average_irradiance: bool,
-        mains_water_temp: float,
+        mains_water_temperature: float,
         monthly_weather_data: Dict[str, Dict[str, Union[str, float]]],
         monthly_irradiance_profiles: Dict[Date, _DailyProfile],
         monthly_temperature_profiles: Dict[Date, _DailyProfile],
@@ -405,7 +408,7 @@ class WeatherForecaster:
             Whether to average the solar intensity for each month (True), or use the
             data for each day (False) as required.
 
-        :param mains_water_temp:
+        :param mains_water_temperature:
             The mains water temperature, measured in Kelvin.
 
         :param monthly_weather_data:
@@ -419,7 +422,7 @@ class WeatherForecaster:
 
         self._average_irradiance = average_irradiance
 
-        self.mains_water_temp = mains_water_temp + ZERO_CELCIUS_OFFSET
+        self.mains_water_temperature = mains_water_temperature + ZERO_CELCIUS_OFFSET
 
         self._monthly_weather_data: Dict[int, _MonthlyWeatherData] = {
             self._month_abbr_to_num[month]: _MonthlyWeatherData.from_yaml(
@@ -453,7 +456,7 @@ class WeatherForecaster:
 
         return (
             "WeatherForecaster("
-            f"mains_water_temp: {self.mains_water_temp}, "
+            f"mains_water_temperature: {self.mains_water_temperature}, "
             f"num_months: {len(self._monthly_weather_data.keys())}"
             ")"
         )
