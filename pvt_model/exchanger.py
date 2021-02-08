@@ -54,68 +54,63 @@ class Exchanger:
 
         return f"Exchanger(efficiency: {self._efficiency})"
 
-    def update(
+    def get_heat_addition(
         self,
+        input_water_mass_flow_rate: float,
         input_water_heat_capacity: float,
-        input_water_mass: float,
         input_water_temperature: float,
-        water_tank: tank.Tank,
-    ) -> Tuple[float, float]:
+        water_tank_temperature: float,
+    ) -> float:
         """
-        Updates the tank temperature based on the input water temperature.
+        Computes the heat added to the hot-water tank.
 
         :param input_water_heat_capacity:
-            The heat capacity of the water used to feed the heat exchanger, measured in
-            Joules per kilogram Kelvin.
+            The heat capacity of the HTF, measured in Joules per kilogram Kelvin.
 
-        :param input_water_mass:
-            The flow rate of water entering the exchanger from the PV-T panel, measured
-            in kilograms per unit time step. As this has been multiplied by the number
-            of seconds per unit time step, it is effectively just the mass that has
-            passed through the exchanger and delivered some heat.
+        :param input_water_mass_flow_rate:
+            The mass flow rate of water through the HTF side of the heat exchanger,
+            measured in kilograms per second.
 
         :param input_water_temperature:
-            The temperature of the water being inputted to the heat exchanger, measured
-            in Kelvin.
+            The tempertaure of the HTF being inputted on the HTF side of the heat
+            exchanger.
 
-        :param tank:
-            A :class:`tank.Tank` representing the hot-water tank being filled.
+        :param water_tank_temperature:
+            The hot-water tank temperature, measured in Kelvin.
 
         :return:
-            The output water temperature from the heat exchanger, measured in Kelvin,
-            and the heat added to the hot-water tank, measured in Joules, as a Tuple.
+            The heat addition to the hot-water tank from the exchanger, measured in
+            Watts.
 
         """
 
-        # If the water inputted to the exchanger is less than the tank temperature, then
-        # run it straight back into the next cycle.
-        if input_water_temperature <= water_tank.temperature:
-            return input_water_temperature, 0
-
-        # Determine the new tank temperature using properties of the tank.
-        # Determine the heat added in Joules. Because the input water flow rate is
-        # measured in kilograms per time step, this can be used as is as a total mass
-        # flow param in kilograms.
-        heat_added = (
-            # self._efficiency
-            # * input_water_mass  # [kg]
-            # * input_water_heat_capacity  # [J/kg*K]
-            57300  # [W/K]
-        ) * (
-            input_water_temperature - water_tank.temperature
-        )  # [K]
-
-        # @@@
-        # >>> Potential incorrect equation.
-        # Apply the first law of Thermodynamics to determine the output water
-        # temperature from the heat exchanger.
-        output_water_temperature = input_water_temperature - self._efficiency * (
-            input_water_temperature - water_tank.temperature
-        )
-        # <<< End of potential incorrect equation.
-
-        # Return the output temperature of the heat exchanger.
         return (
-            output_water_temperature,
-            heat_added,
+            self._efficiency
+            * input_water_mass_flow_rate  # [kg/s]
+            * input_water_heat_capacity  # [J/kg*K]
+        ) * (
+            input_water_temperature - water_tank_temperature  # [K]
+        )  # [W]
+
+    def get_output_htf_temperature(
+        self,
+        input_water_temperature: float,
+        water_tank_temperature: float,
+    ) -> float:
+        """
+        Computes the temperature of the HTF leaving the heat exchanger, in Kelvin.
+
+        :param input_water_temperature:
+            The temperature of the HTF entering the heat exchanger, measured in Kelvin.
+
+        :param water_tank_temperature:
+            The temperature of the hot-water tank, measured in Kelvin.
+
+        :return:
+            The temperature of the HTF leaving the heat exchanger, measured in Kelvin.
+
+        """
+
+        return input_water_temperature - self._efficiency * (
+            input_water_temperature - water_tank_temperature
         )

@@ -7,9 +7,9 @@
 ########################################################################################
 
 """
-The collector module for the PV-T model.
+The PV module for the PV-T model.
 
-This module represents a thermal collector within a PV-T panel.
+This module represents a PV layer within a PV-T panel.
 
 """
 

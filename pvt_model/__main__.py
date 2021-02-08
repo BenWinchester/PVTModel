@@ -34,31 +34,35 @@ from dateutil.relativedelta import relativedelta
 from . import (
     argparser,
     efficiency,
+    exchanger,
     load,
     mains_power,
-    physics_utils,
+    pipe,
     process_pvt_system_data,
     pump,
+    tank,
     weather,
 )
 
-from .pvt_panel import pvt
+from .pvt_panel import panel_utils, physics_utils, pvt
+
+from .constants import (
+    DENSITY_OF_WATER,
+    HEAT_CAPACITY_OF_WATER,
+    INITIAL_SYSTEM_TEMPERATURE_VECTOR,
+    THERMAL_CONDUCTIVITY_OF_AIR,
+    ZERO_CELCIUS_OFFSET,
+)
 
 from .__utils__ import (
     CarbonEmissions,
-    DENSITY_OF_WATER,
     FileType,
     get_logger,
-    HEAT_CAPACITY_OF_WATER,
-    INITIAL_SYSTEM_TEMPERATURE_VECTOR,
     LOGGER_NAME,
     MissingParametersError,
     ProgrammerJudgementFault,
-    solar_heat_input,
-    THERMAL_CONDUCTIVITY_OF_AIR,
     time_iterator,
     TotalPowerData,
-    ZERO_CELCIUS_OFFSET,
 )
 
 
@@ -181,20 +185,19 @@ def _date_and_time_from_time_step(
 def _temperature_vector_gradient(
     temperature_vector: Tuple[float, float, float, float, float],
     time: numpy.float64,
-    initial_date_and_time: datetime.datetime,
+    collector_to_tank_pipe: pipe.Pipe,
     final_date_and_time: datetime.datetime,
+    heat_exchanger: exchanger.Exchanger,
+    hot_water_tank: tank.Tank,
+    initial_date_and_time: datetime.datetime,
+    load_system: load.LoadSystem,
     parsed_args: Namespace,
     pvt_panel: pvt.PVT,
+    tank_to_collector_pipe: pipe.Pipe,
     weather_forecaster: weather.WeatherForecaster,
 ) -> Tuple[float, float, float, float, float]:
     """
     Computes the vector of the temperature gradients at some time t.
-
-    :param initial_date_and_time:
-        The initial date and time for the simulation run.
-
-    :param final_date_and_time:
-        The final date and time for the simulation run.
 
     :param temperature_vector:
         A `tuple` representing a vector containing:
@@ -208,6 +211,33 @@ def _temperature_vector_gradient(
 
     :param time:
         The current time in seconds from the beginning of the model run.
+
+    :param collector_to_tank_pipe:
+        Pipe running from the PVT collector to the hot-water tank.
+
+    :param final_date_and_time:
+        The final date and time for the simulation run.
+
+    :param heat_exchanger:
+        The heat exchanger between the HTF and the tank.
+
+    :param hot_water_tank:
+        Instance representing the hot-water tank.
+
+    :param initial_date_and_time:
+        The initial date and time for the simulation run.
+
+    :param load_system:
+        The load system, containing information about the loads placed on the system.
+
+    :param parsed_args:
+        Parsed arguments from the command line, stored as a :class:`argparse.Namespace`.
+
+    :param pvt_panel:
+        An instance representing the PVT panel.
+
+    :param tank_to_collector_pipe:
+        Pipe running from the hot-water tank to the PVT collector.
 
     :param weather_forecaster:
         A :class:`weather.WeatherForecaster` containing weather information and exposing
@@ -240,151 +270,64 @@ def _temperature_vector_gradient(
         _date_and_time_from_time_step(initial_date_and_time, final_date_and_time, time),
     )
 
-    glass_temperature_gradient = (
-        # PV to Glass conductive heat input
-        physics_utils.conductive_heat_transfer_with_gap(
-            air_gap_thickness=pvt_panel.air_gap_thickness,
-            contact_area=pvt_panel.pv.area,
-            destination_temperature=glass_temperature,
-            source_temperature=pv_temperature,
-        )  # [W]
-        # PV to Glass radiative heat input
-        + physics_utils.radiative_heat_transfer(
-            destination_emissivity=pvt_panel.glass.emissivity,
-            destination_temperature=glass_temperature,
-            radiating_to_sky=False,
-            radiative_contact_area=pvt_panel.pv.area,
-            source_emissivity=pvt_panel.pv.emissivity,
-            source_temperature=pv_temperature,
-        )  # [W]
-        # Collector to Glass conductive heat input
-        + physics_utils.conductive_heat_transfer_with_gap(
-            air_gap_thickness=pvt_panel.air_gap_thickness,
-            contact_area=(1 - pvt_panel.portion_covered) * pvt_panel.area,
-            destination_temperature=glass_temperature,
-            source_temperature=collector_temperature,
-        )  # [W]
-        # Collector to Glass radiative heat input
-        + physics_utils.radiative_heat_transfer(
-            destination_emissivity=pvt_panel.glass.emissivity,
-            destination_temperature=glass_temperature,
-            radiating_to_sky=False,
-            radiative_contact_area=(1 - pvt_panel.portion_covered) * pvt_panel.area,
-            source_emissivity=pvt_panel.collector.emissivity,
-            source_temperature=collector_temperature,
-        )  # [W]
-        # Wind to Glass heat input
-        + physics_utils.wind_heat_transfer(
-            contact_area=pvt_panel.area,
-            destination_temperature=glass_temperature,
-            source_temperature=weather_conditions.ambient_temperature,
-            wind_heat_transfer_coefficient=weather_conditions.wind_heat_transfer_coefficient,
+    # Determine the current hot-water load.
+    current_hot_water_load = load_system
+
+    glass_temperature_gradient = panel_utils.glass_temperature_gradient(
+        collector_temperature,
+        glass_temperature,
+        pv_temperature,
+        pvt_panel,
+        weather_conditions,
+    )  # [K/s]
+
+    pv_temperature_gradient = panel_utils.pv_temperature_gradient(
+        collector_temperature,
+        glass_temperature,
+        pv_temperature,
+        pvt_panel,
+        weather_conditions,
+    )  # [K/s]
+
+    collector_temperature_gradient = panel_utils.collector_temperature_gradient(
+        bulk_water_temperature,
+        collector_temperature,
+        glass_temperature,
+        pv_temperature,
+        pvt_panel,
+        weather_conditions,
+    )  # [K/s]
+
+    bulk_water_temperature_gradient = panel_utils.bulk_water_temperature_gradient(
+        bulk_water_temperature, collector_temperature, pvt_panel
+    )  # [K/s]
+
+    collector_to_tank_pipe.temperature = (
+        2 * bulk_water_temperature - tank_to_collector_pipe.temperature
+    )  # [K]
+
+    if collector_to_tank_pipe.temperature <= tank_temperature:
+        tank_to_collector_pipe.temperature = collector_to_tank_pipe.temperature
+        tank_heat_addition: float = 0
+    else:
+        tank_heat_addition = heat_exchanger.get_heat_addition(
+            pvt_panel.collector.mass_flow_rate,
+            pvt_panel.collector.htf_heat_capacity,
+            tank_to_collector_pipe.temperature,
+            tank_temperature,
         )
-        # Sky to Glass heat input
-        - physics_utils.radiative_heat_transfer(
-            destination_temperature=weather_conditions.sky_temperature,
-            radiating_to_sky=True,
-            radiative_contact_area=pvt_panel.area,
-            source_emissivity=pvt_panel.glass.emissivity,
-            source_temperature=glass_temperature,
+
+    tank_temperature_gradient = (
+        tank_heat_addition
+        + tank.net_enthalpy_gain(
+            tank_temperature,
+            weather_conditions.mains_water_temperature,
+            current_hot_water_load,  # [kg]
         )
-    ) / (
-        pvt_panel.glass.mass * pvt_panel.glass.heat_capacity  # [J/K]
+        - hot_water_tank.heat_loss(
+            weather_conditions.ambient_tank_temperature, tank_temperature
+        )
     )
-
-    pv_temperature_gradient = (
-        # Solar heat input
-        solar_heat_input(
-            pvt_panel.pv_area,
-            weather_conditions.solar_energy_input,
-            physics_utils.transmissivity_absorptivity_product(
-                diffuse_reflection_coefficient=pvt_panel.glass.diffuse_reflection_coefficient,  # pylint: disable=line-too-long
-                glass_transmissivity=pvt_panel.glass.transmissivity,
-                layer_absorptivity=pvt_panel.pv.absorptivity,
-            ),
-        )  # [W]
-        # Collector to PV heat input
-        + physics_utils.conductive_heat_transfer_no_gap(
-            contact_area=pvt_panel.pv.area,
-            destination_temperature=pv_temperature,
-            source_temperature=collector_temperature,
-            thermal_conductance=pvt_panel.pv_to_collector_thermal_conductance,
-        )  # [W]
-        # Glass to PV conductive heat input
-        + physics_utils.conductive_heat_transfer_with_gap(
-            air_gap_thickness=pvt_panel.air_gap_thickness,
-            contact_area=pvt_panel.pv.area,
-            destination_temperature=pv_temperature,
-            source_temperature=glass_temperature,
-        )  # [W]
-        # Glass to PV radiative heat input
-        + physics_utils.radiative_heat_transfer(
-            destination_emissivity=pvt_panel.pv.emissivity,
-            destination_temperature=pv_temperature,
-            radiating_to_sky=False,
-            radiative_contact_area=pvt_panel.pv.area,
-            source_emissivity=pvt_panel.glass.emissivity,
-            source_temperature=glass_temperature,
-        )  # [W]
-    ) / (
-        pvt_panel.pv.mass * pvt_panel.pv.heat_capacity
-    )  # [J/K]
-
-    collector_temperature_gradient = (
-        # Solar heat input
-        solar_heat_input(
-            (1 - pvt_panel.portion_covered) * pvt_panel.area,
-            weather_conditions.solar_energy_input,
-            physics_utils.transmissivity_absorptivity_product(
-                diffuse_reflection_coefficient=pvt_panel.glass.diffuse_reflection_coefficient,  # pylint: disable=line-too-long
-                glass_transmissivity=pvt_panel.glass.transmissivity,
-                layer_absorptivity=pvt_panel.collector.absorptivity,
-            ),
-        )  # [W]
-        # PV to Collector heat input
-        + physics_utils.conductive_heat_transfer_no_gap(
-            contact_area=pvt_panel.pv.area,
-            destination_temperature=collector_temperature,
-            source_temperature=pv_temperature,
-            thermal_conductance=pvt_panel.pv_to_collector_thermal_conductance,
-        )  # [W]
-        # Glass to Collector conductive heat input
-        + physics_utils.conductive_heat_transfer_with_gap(
-            air_gap_thickness=pvt_panel.air_gap_thickness,
-            contact_area=(1 - pvt_panel.portion_covered) * pvt_panel.area,
-            destination_temperature=collector_temperature,
-            source_temperature=glass_temperature,
-        )  # [W]
-        # Glass to Collector radiative heat input
-        + physics_utils.radiative_heat_transfer(
-            destination_emissivity=pvt_panel.collector.emissivity,
-            destination_temperature=collector_temperature,
-            radiating_to_sky=False,
-            radiative_contact_area=(1 - pvt_panel.portion_covered) * pvt_panel.area,
-            source_emissivity=pvt_panel.glass.emissivity,
-            source_temperature=glass_temperature,
-        )  # [W]
-        # Bulk Water to Collector convective heat input
-        - physics_utils.convective_heat_transfer_to_fluid(
-            contact_area=pvt_panel.collector.htf_surface_area,
-            convective_heat_transfer_coefficient=pvt_panel.collector.convective_heat_transfer_coefficient_of_water,  # pylint: disable=line-too-long
-            fluid_temperature=bulk_water_temperature,
-            wall_temperature=collector_temperature,
-        )  # [W]
-    ) / (
-        pvt_panel.collector.mass * pvt_panel.collector.heat_capacity
-    )  # [J/K]
-
-    bulk_water_temperature_gradient = (
-        physics_utils.convective_heat_transfer_to_fluid(
-            contact_area=pvt_panel.collector.htf_surface_area,
-            convective_heat_transfer_coefficient=pvt_panel.collector.convective_heat_transfer_coefficient_of_water,  # pylint: disable=line-too-long
-            fluid_temperature=bulk_water_temperature,
-            wall_temperature=collector_temperature,
-        )  # [W]
-    ) / (
-        pvt_panel.collector.htf_volume * DENSITY_OF_WATER
-    )  # [J/K]
 
     return (
         glass_temperature_gradient,
@@ -446,7 +389,7 @@ def main(args) -> None:
 
     # Initialise the PV-T panel.
     pvt_panel = process_pvt_system_data.pvt_panel_from_path(
-        INITIAL_SYSTEM_TEMPERATURE,
+        INITIAL_SYSTEM_TEMPERATURE_VECTOR[3],
         parsed_args.portion_covered,
         parsed_args.pvt_data_file,
         parsed_args.unglazed,
@@ -470,12 +413,6 @@ def main(args) -> None:
     )
     logger.info("Mains supply successfully instantiated: %s", mains_supply)
 
-    # Loop through all times and iterate the system.
-    input_water_temperature: float = (
-        parsed_args.input_water_temperature + ZERO_CELCIUS_OFFSET
-        if parsed_args.input_water_temperature is not None
-        else INITIAL_SYSTEM_TEMPERATURE
-    )  # [K]
     num_months = (
         (parsed_args.initial_month if parsed_args.initial_month is not None else 1)
         - 1
@@ -515,15 +452,22 @@ def main(args) -> None:
         weather_forecaster,
     )
 
+    time_series = numpy.linspace(
+        0, final_date_and_time - initial_date_and_time, parsed_args.resolution
+    )
+
     temperature_data = scipy.integrate.odeint(
         _temperature_vector_gradient,
         INITIAL_SYSTEM_TEMPERATURE_VECTOR,
         time_series,
-        initial_date_and_time,
-        final_date_and_time,
-        parsed_args,
-        pvt_panel,
-        weather_forecaster,
+        args=(
+            time_series,
+            initial_date_and_time,
+            final_date_and_time,
+            parsed_args,
+            pvt_panel,
+            weather_forecaster,
+        ),
     )
 
 

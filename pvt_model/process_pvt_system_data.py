@@ -351,10 +351,6 @@ def pvt_panel_from_path(
     """
     Generate a :class:`pvt.PVT` instance based on the path to the data file.
 
-    :param initial_collector_htf_tempertaure:
-        The intial temperature, measured in Kelvin, of the HTF within the thermal
-        collector.
-
     :param portion_covered:
         The portion of the PV-T panel which is covered in PV.
 

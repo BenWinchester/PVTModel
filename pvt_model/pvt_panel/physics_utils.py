@@ -13,7 +13,7 @@ The physics utility module for the PVT model.
 
 from typing import Optional
 
-from .__utils__ import (
+from ..__utils__ import (
     ProgrammerJudgementFault,
     STEFAN_BOLTZMAN_CONSTANT,
     THERMAL_CONDUCTIVITY_OF_AIR,

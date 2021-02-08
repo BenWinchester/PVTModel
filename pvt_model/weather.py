@@ -32,8 +32,8 @@ from typing import Any, Dict, Optional, Set, Tuple, Union
 import json
 import pysolar
 
+from .constants import ZERO_CELCIUS_OFFSET
 from .__utils__ import (
-    ZERO_CELCIUS_OFFSET,
     LOGGER_NAME,
     MissingParametersError,
     ProgrammerJudgementFault,

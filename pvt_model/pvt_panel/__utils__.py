@@ -14,14 +14,9 @@ various modules throughout the PVT panel component.
 
 """
 
-from typing import Optional
-
 from ..__utils__ import (
     LayerParameters,
     OpticalLayerParameters,
-    ProgrammerJudgementFault,
-    STEFAN_BOLTZMAN_CONSTANT,
-    THERMAL_CONDUCTIVITY_OF_AIR,
 )
 
 __all__ = (
@@ -116,12 +111,11 @@ class OpticalLayer(Layer):
 
         return (
             "OpticalLayer("
-            f"_heat_capacity: {self._heat_capacity}, "
-            f"mass: {self.mass}, "
             f"absorptivity: {self.absorptivity}, "
             f"area: {self.area}, "
             f"emissivitiy: {self.emissivity}, "
-            f"temperature: {self.temperature}, "
+            f"heat_capacity: {self.heat_capacity}, "
+            f"mass: {self.mass}, "
             f"thickness: {self.thickness}, "
             f"transmissivity: {self.transmissivity}"
             ")"

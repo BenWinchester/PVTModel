@@ -13,9 +13,41 @@ This module represents the hot-water tank.
 
 """
 
-from .__utils__ import HEAT_CAPACITY_OF_WATER
+from .constants import HEAT_CAPACITY_OF_WATER
 
-__all__ = ("Tank",)
+__all__ = (
+    "net_enthalpy_gain",
+    "Tank",
+)
+
+
+def net_enthalpy_gain(
+    delivery_temperature: float,
+    mains_water_temperature: float,
+    water_demand_volume: float,
+) -> float:
+    """
+    Computes the net enthalpy gain by the tank due to delivering water, in Watts.
+
+    :param delivery_temperature:
+        The delivery temperature of the hot-water tank, measured in Kelvin.
+
+    :param mains_water_temperature:
+        The temperature of the mains water used to replace any water removed from the
+        hot-water tank, measured in Kelvin.
+
+    :param water_demand_volume:
+        The volume of water removed from the tank, measured in litres. This will be the
+        same as the mass of water removed from the tank, measured in kilograms, due to
+        the density of water.
+
+    """
+
+    return (
+        water_demand_volume  # [kg]
+        * HEAT_CAPACITY_OF_WATER  # [J/kg*K]
+        * (mains_water_temperature - delivery_temperature)  # [K]
+    )
 
 
 class Tank:
@@ -34,9 +66,6 @@ class Tank:
     .. attribute:: mass
         The mass of water in the hot-water tank, measured in kilograms.
 
-    .. attribute:: temperature
-        The temperature of the hot-water tank, measured in Kelvin.
-
     """
 
     def __init__(
@@ -45,7 +74,6 @@ class Tank:
         heat_capacity: float,
         heat_loss_coefficient: float,
         mass: float,
-        temperature: float,
     ) -> None:
         """
         Instantiate a hot-water tank.
@@ -63,17 +91,12 @@ class Tank:
         :param mass:
             The mass of water that can be held within the tank, measured in kilograms.
 
-        :param temperature:
-            The temperature of the water within the tank when initilialsed, measured in
-            Kelvin.
-
         """
 
         self.area = area
         self.heat_capacity = heat_capacity
         self.heat_loss_coefficient = heat_loss_coefficient
         self.mass = mass
-        self.temperature = temperature
 
     def __repr__(self) -> str:
         """
@@ -90,67 +113,26 @@ class Tank:
             f"heat_capacity: {self.heat_capacity}J/kg*K, "
             f"heat_loss_coefficient: {self.heat_loss_coefficient}W/m^2*K, "
             f"mass: {self.mass}kg, "
-            f"temperature: {self.temperature}K"
             ")"
         )
 
-    def update(
-        self,
-        heat_gain: float,
-        internal_resolution: float,
-        water_demand_volume: float,
-        mains_water_temp: float,
-        ambient_tank_temperature: float,
+    def heat_loss(
+        self, ambient_tank_temperature: float, tank_temperature: float
     ) -> float:
         """
-        Updates the tank temperature when a certain volume of hot water is demanded.
+        Computes the heat loss through the walls of the tank, measured in Watts.
 
-        :param internal_resolution:
-            The internal_resolution of the model currently being run, measured in seconds.
-
-        :param water_demand_volume:
-            The volume of hot water demanded by the end user, measured in litres.
-
-        :param mains_water_temp:
-            The temperature of the mains water used to fill the tank, measured in
+        :param ambient_temperature:
+            The temperature of the air surrounding the hot-water tank, measured in
             Kelvin.
 
-        :param ambient_tank_temperature:
-            The temperature of the air surrounding the tank, measured in Kelvin.
-
-        :return:
-            The temperature of the hot-water delivered.
+        :param tank_temperature:
+            The temperature of the fluid within the tank, measured in Kelvin.
 
         """
 
-        # We need to multiply by the internal_resolution in order to compute the total
-        # heat lost from the tank during the time duration.
-        heat_loss = (
+        return (
             self.area  # [m^2]
             * self.heat_loss_coefficient  # [W/m^2*K]
-            * (self.temperature - ambient_tank_temperature)  # [K]
-        ) * internal_resolution  # [s]
-
-        delivery_temp = self.temperature
-
-        net_enthalpy_gain = (
-            water_demand_volume  # [kg]
-            * HEAT_CAPACITY_OF_WATER  # [J/kg*K]
-            * (mains_water_temp - delivery_temp)  # [K]
-        )
-
-        # We lose this heat, as we're considering things as 30min "block" inputs and
-        # outputs.
-        self.temperature += (heat_gain - heat_loss + net_enthalpy_gain) / (
-            self.mass * self.heat_capacity
-        )
-
-        # The new temperature is computed by a mass-weighted average of the temperatures
-        # of the various water sources that go into making up the new content of the
-        # hot-water tank.
-        # self.temperature = (
-        #     self.temperature * (self.mass - water_demand_volume)
-        #     + mains_water_temp * water_demand_volume
-        # ) / self.mass
-
-        return delivery_temp
+            * (tank_temperature - ambient_tank_temperature)  # [K]
+        )  # [W]

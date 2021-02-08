@@ -50,7 +50,7 @@ class Collector(OpticalLayer):
     """
     Represents the thermal collector (lower) layer of the PV-T panel.
 
-    .. attribute:: htfheat_capacity
+    .. attribute:: htf_heat_capacity
         The heat capacity of the heat-transfer fluid passing through the collector,
         measured in Joules per kilogram Kelvin.
 
@@ -100,7 +100,7 @@ class Collector(OpticalLayer):
         self._number_of_pipes = collector_params.number_of_pipes
         self._pipe_diameter = collector_params.pipe_diameter
         self.bulk_water_temperature = collector_params.bulk_water_temperature
-        self.htfheat_capacity = collector_params.htfheat_capacity
+        self.htf_heat_capacity = collector_params.htf_heat_capacity
         self.output_water_temperature = collector_params.output_water_temperature
 
     def __repr__(self) -> str:
@@ -118,7 +118,7 @@ class Collector(OpticalLayer):
             f"_mass: {self._mass}kg, "
             f"area: {self.area}m^2, "
             f"bulk_water_temperature: {self.bulk_water_temperature}, "
-            f"htfheat_capacity: {self.htfheat_capacity}J/kg*K)"
+            f"htf_heat_capacity: {self.htf_heat_capacity}J/kg*K)"
             f"mass_flow_rate: {self.mass_flow_rate}kg/s, "
             f"output_temperature: {self.output_water_temperature}K, "
             f"thickness: {self.thickness}m, "
@@ -334,7 +334,7 @@ class Collector(OpticalLayer):
             / (  # [W]
                 self.htf_volume  # [m^3]
                 * DENSITY_OF_WATER  # [kg/m^3]
-                * self.htfheat_capacity  # [J/kg*K]
+                * self.htf_heat_capacity  # [J/kg*K]
             )
         )
 
