@@ -628,55 +628,55 @@ if __name__ == "__main__":
         first_axis_y_limits=[-10, 50],
     )
 
-    # Plot Figure 6b: Tank-related Temperatures
-    plot_figure(
-        "maria_6b_tank_temperature",
-        data,
-        first_axis_things_to_plot=[
-            "collector_output_temperature",
-            "tank_output_temperature",
-            "tank_temperature",
-        ],
-        first_axis_label="Temperature / deg C",
-        first_axis_y_limits=[0, 50],
-    )
+    # # Plot Figure 6b: Tank-related Temperatures
+    # plot_figure(
+    #     "maria_6b_tank_temperature",
+    #     data,
+    #     first_axis_things_to_plot=[
+    #         "collector_output_temperature",
+    #         "tank_output_temperature",
+    #         "tank_temperature",
+    #     ],
+    #     first_axis_label="Temperature / deg C",
+    #     first_axis_y_limits=[0, 50],
+    # )
 
-    # Plot Figure 7: Stream-related Temperatures
-    plot_figure(
-        "maria_7_stream_temperature",
-        data,
-        first_axis_things_to_plot=[
-            "collector_temperature_gain",
-            "exchanger_temperature_drop",
-        ],
-        first_axis_label="Temperature Gain / deg C",
-        second_axis_things_to_plot=["tank_heat_addition"],
-        second_axis_label="Tank Heat Addition / W",
-    )
+    # # Plot Figure 7: Stream-related Temperatures
+    # plot_figure(
+    #     "maria_7_stream_temperature",
+    #     data,
+    #     first_axis_things_to_plot=[
+    #         "collector_temperature_gain",
+    #         "exchanger_temperature_drop",
+    #     ],
+    #     first_axis_label="Temperature Gain / deg C",
+    #     second_axis_things_to_plot=["tank_heat_addition"],
+    #     second_axis_label="Tank Heat Addition / W",
+    # )
 
-    # Plot Figure 8A - Electrical Power and Net Electrical Power
-    plot_figure(
-        "maria_8a_electrical_output",
-        data,
-        ["gross_electrical_output", "net_electrical_output"],
-        "Electrical Energy Supplied / Wh",
-    )
+    # # Plot Figure 8A - Electrical Power and Net Electrical Power
+    # plot_figure(
+    #     "maria_8a_electrical_output",
+    #     data,
+    #     ["gross_electrical_output", "net_electrical_output"],
+    #     "Electrical Energy Supplied / Wh",
+    # )
 
-    # Plot Figure 8B - Thermal Power Supplied and Thermal Power Demanded
-    plot_figure(
-        "maria_8b_thermal_output",
-        data,
-        ["thermal_load", "thermal_output"],
-        "Thermal Energy Supplied / Wh",
-    )
+    # # Plot Figure 8B - Thermal Power Supplied and Thermal Power Demanded
+    # plot_figure(
+    #     "maria_8b_thermal_output",
+    #     data,
+    #     ["thermal_load", "thermal_output"],
+    #     "Thermal Energy Supplied / Wh",
+    # )
 
-    # Plot Figure 10 - Electrical Power, Gross only
-    plot_figure(
-        "maria_10_gross_electrical_output",
-        data,
-        ["gross_electrical_output"],
-        "Electrical Energy Supplied / Wh",
-    )
+    # # Plot Figure 10 - Electrical Power, Gross only
+    # plot_figure(
+    #     "maria_10_gross_electrical_output",
+    #     data,
+    #     ["gross_electrical_output"],
+    #     "Electrical Energy Supplied / Wh",
+    # )
 
     """  # pylint: disable=pointless-string-statement
     # * Plotting all tank-related temperatures

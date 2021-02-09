@@ -15,23 +15,25 @@ processing the command-line arguments that define the scope of the model run.
 
 """
 
+import dataclasses
 import datetime
 import os
 import pdb
 import sys
 
 from argparse import Namespace
-from typing import Tuple
+from typing import Any, Dict, Optional, Tuple
 
+import json
 import numpy
 import pytz
+import yaml
 
 from dateutil.relativedelta import relativedelta
 from scipy import integrate  # type: ignore
 
 from . import (
     argparser,
-    exchanger,
     load,
     mains_power,
     pipe,
@@ -43,6 +45,7 @@ from . import (
 from .pvt_panel import panel_utils, pvt
 
 from .constants import (
+    DENSITY_OF_WATER,
     INITIAL_SYSTEM_TEMPERATURE_VECTOR,
     ZERO_CELCIUS_OFFSET,
 )
@@ -54,6 +57,8 @@ from .__utils__ import (  # pylint: disable=unused-import
     LOGGER_NAME,
     MissingParametersError,
     ProgrammerJudgementFault,
+    SystemData,
+    time_iterator,
     TotalPowerData,
 )
 
@@ -73,6 +78,42 @@ SOLAR_IRRADIANCE_FOLDERNAME = "solar_irradiance_profiles"
 TEMPERATURE_FOLDERNAME = "temperature_profiles"
 # Name of the weather data file.
 WEATHER_DATA_FILENAME = "weather.yaml"
+
+
+def _date_and_time_from_time_step(
+    initial_date_and_time: datetime.datetime,
+    final_date_and_time: datetime.datetime,
+    time_step: numpy.float64,
+) -> datetime.datetime:
+    """
+    Returns a :class:`datetime.datetime` instance representing the current time.
+
+    :param initial_date_and_time:
+        The initial date and time for the model run.
+
+    :param final_date_and_time:
+        The final date and time for the model run.
+
+    :param time_step:
+        The current time step, measured in seconds from the start of the run.
+
+    :return:
+        The current date and time, based on the iterative point.
+
+    :raises: ProgrammerJudgementFault
+        Raised if the date and time being returned is greater than the maximum for the
+        run.
+
+    """
+
+    date_and_time = initial_date_and_time + relativedelta(seconds=time_step)
+
+    if date_and_time > final_date_and_time:
+        raise ProgrammerJudgementFault(
+            "The model reached a time step greater than the maximum time step."
+        )
+
+    return date_and_time
 
 
 def _get_load_system(location: str) -> load.LoadSystem:
@@ -138,54 +179,80 @@ def _get_weather_forecaster(
     return weather_forecaster
 
 
-def _date_and_time_from_time_step(
-    initial_date_and_time: datetime.datetime,
-    final_date_and_time: datetime.datetime,
-    time_step: numpy.float64,
-) -> datetime.datetime:
+def _save_data(
+    file_type: FileType,
+    output_file_name: str,
+    system_data: Dict[datetime.datetime, SystemData],
+    carbon_emissions: Optional[CarbonEmissions] = None,
+    total_power_data: Optional[TotalPowerData] = None,
+) -> None:
     """
-    Returns a :class:`datetime.datetime` instance representing the current time.
-
-    :param initial_date_and_time:
-        The initial date and time for the model run.
-
-    :param final_date_and_time:
-        The final date and time for the model run.
-
-    :param time_step:
-        The current time step, measured in seconds from the start of the run.
-
-    :return:
-        The current date and time, based on the iterative point.
-
-    :raises: ProgrammerJudgementFault
-        Raised if the date and time being returned is greater than the maximum for the
-        run.
-
+    Save data when called. The data entry should be appended to the file.
+    :param file_type:
+        The file type that's being saved.
+    :param output_file_name:
+        The destination file name.
+    :param system_data:
+        The data to save.
+    :param carbon_emissions:
+        The carbon emissions data for the run.
+    :param total_power_data:
+        The total power data for the run.
     """
 
-    date_and_time = initial_date_and_time + relativedelta(seconds=time_step)
+    # Convert the system data entry to JSON-readable format
+    system_data_dict: Dict[str, Dict[str, Any]] = {
+        key.strftime("%d/%m/%Y::%H:%M:%S"): dataclasses.asdict(value)
+        for key, value in system_data.items()
+    }
 
-    if date_and_time > final_date_and_time:
-        raise ProgrammerJudgementFault(
-            "The model reached a time step greater than the maximum time step."
-        )
+    # If we're saving YAML data part-way through, then append to the file.
+    if file_type == FileType.YAML:
+        with open(f"{output_file_name}.yaml", "a") as output_yaml_file:
+            yaml.dump(
+                system_data_dict,
+                output_yaml_file,
+            )
 
-    return date_and_time
+    # If we're dumping JSON, open the file, and append to it.
+    if file_type == FileType.JSON:
+        # Append the total power and emissions data for the run.
+        if total_power_data is not None:
+            system_data_dict.update(dataclasses.asdict(total_power_data))
+        if carbon_emissions is not None:
+            system_data_dict.update(dataclasses.asdict(carbon_emissions))
+
+        # Save the data
+        # If this is the initial dump, then create the file.
+        if not os.path.isfile(f"{output_file_name}.json"):
+            with open(f"{output_file_name}.json", "w") as output_json_file:
+                json.dump(
+                    system_data_dict,
+                    output_json_file,
+                    indent=4,
+                )
+        else:
+            with open(f"{output_file_name}.json", "r+") as output_json_file:
+                # Read the data and append the current update.
+                filedata = json.load(output_json_file)
+                filedata.update(system_data_dict)
+                # Overwrite the file with the updated data.
+                output_json_file.seek(0)
+                json.dump(
+                    filedata,
+                    output_json_file,
+                    indent=4,
+                )
 
 
 def _temperature_vector_gradient(
     temperature_vector: Tuple[float, float, float, float, float],
     time: numpy.float64,
-    collector_to_tank_pipe: pipe.Pipe,
     final_date_and_time: datetime.datetime,
-    heat_exchanger: exchanger.Exchanger,
     hot_water_tank: tank.Tank,
     initial_date_and_time: datetime.datetime,
-    load_system: load.LoadSystem,
     parsed_args: Namespace,
     pvt_panel: pvt.PVT,
-    tank_to_collector_pipe: pipe.Pipe,
     weather_forecaster: weather.WeatherForecaster,
 ) -> Tuple[float, float, float, float, float]:
     """
@@ -204,9 +271,6 @@ def _temperature_vector_gradient(
     :param time:
         The current time in seconds from the beginning of the model run.
 
-    :param collector_to_tank_pipe:
-        Pipe running from the PVT collector to the hot-water tank.
-
     :param final_date_and_time:
         The final date and time for the simulation run.
 
@@ -219,17 +283,11 @@ def _temperature_vector_gradient(
     :param initial_date_and_time:
         The initial date and time for the simulation run.
 
-    :param load_system:
-        The load system, containing information about the loads placed on the system.
-
     :param parsed_args:
         Parsed arguments from the command line, stored as a :class:`argparse.Namespace`.
 
     :param pvt_panel:
         An instance representing the PVT panel.
-
-    :param tank_to_collector_pipe:
-        Pipe running from the hot-water tank to the PVT collector.
 
     :param weather_forecaster:
         A :class:`weather.WeatherForecaster` containing weather information and exposing
@@ -251,13 +309,17 @@ def _temperature_vector_gradient(
             initial_date_and_time, final_date_and_time, time
         )
     except ProgrammerJudgementFault:
-        pdb.set_trace(header="The system reached a timestep greater than the maximum.")
+        logger.error("The system reached a timestep greater than the maximum.")
+        date_and_time = _date_and_time_from_time_step(
+            initial_date_and_time, final_date_and_time, time - 86400
+        )
 
     if any([value > 350 or value < 270 for value in temperature_vector]):
-        pdb.set_trace(
-            header="Running - caught within temperature gradient method. "
-            f"Time: {date_and_time}. "
-            f"Temperature vector: f{temperature_vector}"
+        logger.debug(
+            "Temperatures exceed the bounds specified for logging an error. "
+            "Time: %s. Temperature vector: %s",
+            date_and_time,
+            temperature_vector,
         )
 
     # Unpack the temperature tuple.
@@ -276,13 +338,6 @@ def _temperature_vector_gradient(
         parsed_args.cloud_efficacy_factor,
         date_and_time,
     )
-
-    # Determine the current hot-water load.
-    current_hot_water_load = (
-        load_system[(load.ProfileType.HOT_WATER, date_and_time)]  # [litres/hour]
-        * parsed_args.resolution
-        / 3600  # [hours/internal time step]
-    )  # [litres/time step]
 
     glass_temperature_gradient = panel_utils.glass_temperature_gradient(
         collector_temperature,
@@ -310,36 +365,11 @@ def _temperature_vector_gradient(
     )  # [K/s]
 
     bulk_water_temperature_gradient = panel_utils.bulk_water_temperature_gradient(
-        bulk_water_temperature, collector_temperature, pvt_panel
+        bulk_water_temperature, collector_temperature, pvt_panel, 0
     )  # [K/s]
 
-    collector_to_tank_pipe.temperature = (
-        2 * bulk_water_temperature - tank_to_collector_pipe.temperature
-    )  # [K]
-
-    if collector_to_tank_pipe.temperature <= tank_temperature:
-        tank_to_collector_pipe.temperature = collector_to_tank_pipe.temperature
-        tank_heat_addition: float = 0
-    else:
-        tank_heat_addition = heat_exchanger.get_heat_addition(
-            pvt_panel.collector.mass_flow_rate,
-            pvt_panel.collector.htf_heat_capacity,
-            tank_to_collector_pipe.temperature,
-            tank_temperature,
-        )
-        # @@@ SOLVE THE TANK TEMPERATURES EVERY HALF AN HOUR
-        tank_to_collector_pipe.temperature = heat_exchanger.get_output_htf_temperature(
-            collector_to_tank_pipe.temperature, tank_temperature
-        )
-
     tank_temperature_gradient = (
-        tank_heat_addition
-        + tank.net_enthalpy_gain(
-            tank_temperature,
-            weather_forecaster.mains_water_temperature,
-            current_hot_water_load,  # [kg]
-        )
-        - hot_water_tank.heat_loss(
+        -hot_water_tank.heat_loss(
             weather_conditions.ambient_tank_temperature, tank_temperature
         )  # [W]
     ) / (
@@ -353,6 +383,14 @@ def _temperature_vector_gradient(
         bulk_water_temperature_gradient,
         tank_temperature_gradient,
     )
+
+    if any([value > 1 for value in temperature_vector_gradient]):
+        logger.debug(
+            "Temperature gradient vector too high. Time: %s. "
+            "Temperature gradient vector: %s.",
+            date_and_time,
+            temperature_vector_gradient,
+        )
 
     return temperature_vector_gradient
 
@@ -438,6 +476,7 @@ def main(args) -> None:
     )
     logger.info("Mains supply successfully instantiated: %s", mains_supply)
 
+    # Set up the time iterator.
     num_months = (
         (parsed_args.initial_month if parsed_args.initial_month is not None else 1)
         - 1
@@ -460,6 +499,9 @@ def main(args) -> None:
             days=parsed_args.days
         )
 
+    # Set up a holder for information about the system.
+    system_data: Dict[datetime.datetime, SystemData] = dict()
+
     # Set up a holder for the information about the final output of the system.
     # total_power_data = TotalPowerData()
 
@@ -477,39 +519,170 @@ def main(args) -> None:
         weather_forecaster,
     )
 
-    # Set up the time array.
-    num_iterations = (
-        final_date_and_time - initial_date_and_time
-    ).total_seconds() / parsed_args.resolution
-    if int(num_iterations) != num_iterations:
-        raise ProgrammerJudgementFault(
-            "The resolution is not easily divisible into the day."
+    previous_run_temperature_vector: Tuple[
+        float, float, float, float, float
+    ] = INITIAL_SYSTEM_TEMPERATURE_VECTOR
+
+    for run_number, date_and_time in enumerate(
+        time_iterator(
+            first_time=initial_date_and_time,
+            last_time=final_date_and_time,
+            resolution=parsed_args.tank_resolution,
+            timezone=pvt_panel.timezone,
         )
-    time_series = [
-        index * parsed_args.resolution for index in range(int(num_iterations))
-    ]
+    ):
 
-    temperature_data = integrate.odeint(
-        _temperature_vector_gradient,
-        INITIAL_SYSTEM_TEMPERATURE_VECTOR,
-        time_series,
-        args=(
-            collector_to_tank_pipe,
-            final_date_and_time,
-            heat_exchanger,
-            hot_water_tank,
-            initial_date_and_time,
-            load_system,
-            parsed_args,
-            pvt_panel,
-            tank_to_collector_pipe,
-            weather_forecaster,
-        ),
-    )
+        # Set up the internal time array.
+        time_series = range(
+            run_number * parsed_args.tank_resolution,
+            (1 + run_number) * parsed_args.tank_resolution
+            + parsed_args.panel_resolution,
+            parsed_args.panel_resolution,
+        )
 
-    pdb.set_trace(header="Model run complete.")
+        # Run the system model at the internal resolution.
+        temperature_array = integrate.odeint(
+            _temperature_vector_gradient,
+            previous_run_temperature_vector,
+            time_series,
+            args=(
+                final_date_and_time,
+                hot_water_tank,
+                initial_date_and_time,
+                parsed_args,
+                pvt_panel,
+                weather_forecaster,
+            ),
+        )
 
-    print(temperature_data)
+        logger.info(
+            "Internal run completed. Temperature vector: %s",
+            previous_run_temperature_vector,
+        )
+
+        end_of_run_bulk_water_temperature = temperature_array[-1][3]
+        end_of_run_tank_temperature = temperature_array[-1][4]
+        previous_run_temperature_vector = temperature_array[-1]
+
+        # Determine the current hot-water load.
+        current_hot_water_load = (
+            load_system[(load.ProfileType.HOT_WATER, date_and_time)]  # [litres/hour]
+            * parsed_args.tank_resolution
+            / 3600  # [hours/internal time step]
+        )  # [kg]
+
+        # Determine the output temperature of the collector, and whether any heat is
+        # added to the hot-water tank.
+        collector_to_tank_pipe.temperature = (
+            2 * end_of_run_bulk_water_temperature - tank_to_collector_pipe.temperature
+        )  # [K]
+
+        # If there is a temperature drop across the panel, then the pump should be
+        # switched off. Otherwise, we are fine to use the computed value.
+        if collector_to_tank_pipe.temperature < end_of_run_bulk_water_temperature:
+            collector_to_tank_pipe.temperature = end_of_run_bulk_water_temperature
+            tank_to_collector_pipe.temperature = end_of_run_bulk_water_temperature
+
+        # >>> If the flow is diverted and is not to the hot-water tank.
+        if collector_to_tank_pipe.temperature <= end_of_run_tank_temperature:
+            tank_heat_addition: float = 0
+            tank_to_collector_pipe.temperature = collector_to_tank_pipe.temperature
+
+        # <<< Elif the flow is to the collector >>>
+        else:
+            tank_heat_addition = heat_exchanger.get_heat_addition(
+                pvt_panel.collector.mass_flow_rate,
+                pvt_panel.collector.htf_heat_capacity,
+                collector_to_tank_pipe.temperature,
+                end_of_run_tank_temperature,
+            )  # [W]
+            tank_to_collector_pipe.temperature = (
+                heat_exchanger.get_output_htf_temperature(
+                    collector_to_tank_pipe.temperature, end_of_run_tank_temperature
+                )
+            )
+        # >>> End of conditional block.
+
+        # Determine the bulk-water heat loss to the tank.
+        # bulk_water_temperature_step = (
+        #     -tank_heat_addition * parsed_args.tank_resolution  # [W] * [s]
+        # ) / (
+        #     DENSITY_OF_WATER  # [kg/m^3]
+        #     * pvt_panel.collector.htf_volume  # [m^3]
+        #     * pvt_panel.collector.htf_heat_capacity  # [J/kg*K]
+        # )  # [K]
+
+        # Determine the tank temperature step.
+        tank_temperature_step = (
+            tank_heat_addition * parsed_args.tank_resolution  # [W] * [s]
+            + tank.net_enthalpy_gain(  # [J]
+                end_of_run_tank_temperature,
+                weather_forecaster.mains_water_temperature,
+                current_hot_water_load,
+            )
+        ) / (
+            hot_water_tank.mass * hot_water_tank.heat_capacity  # [J/K]
+        )  # [K]
+
+        # Determine the new tank temperature, pipe temperature, and bulk-water
+        # temperature for the next run.
+        previous_run_temperature_vector[3] = (
+            collector_to_tank_pipe.temperature + tank_to_collector_pipe.temperature
+        ) / 2  # [K]
+
+        previous_run_temperature_vector[4] += tank_temperature_step  # [K]
+
+        logger.info(
+            "Tank temperatures computed. Temperature vector: %s",
+            previous_run_temperature_vector,
+        )
+
+        system_data.update(
+            {
+                _date_and_time_from_time_step(
+                    initial_date_and_time, final_date_and_time, time_series[row_index]
+                ): SystemData(
+                    glass_temperature=row_data[0] - ZERO_CELCIUS_OFFSET,
+                    pv_temperature=row_data[1] - ZERO_CELCIUS_OFFSET,
+                    collector_temperature=row_data[2] - ZERO_CELCIUS_OFFSET,
+                    bulk_water_temperature=row_data[3] - ZERO_CELCIUS_OFFSET,
+                    tank_temperature=row_data[4] - ZERO_CELCIUS_OFFSET,
+                    ambient_temperature=weather_forecaster.get_weather(
+                        pvt_panel.latitude,
+                        pvt_panel.longitude,
+                        parsed_args.cloud_efficacy_factor,
+                        _date_and_time_from_time_step(
+                            initial_date_and_time,
+                            final_date_and_time,
+                            time_series[row_index] % 86400,
+                        ),
+                    ).ambient_temperature
+                    - ZERO_CELCIUS_OFFSET,
+                    sky_temperature=weather_forecaster.get_weather(
+                        pvt_panel.latitude,
+                        pvt_panel.longitude,
+                        parsed_args.cloud_efficacy_factor,
+                        _date_and_time_from_time_step(
+                            initial_date_and_time,
+                            final_date_and_time,
+                            time_series[row_index] % 86400,
+                        ),
+                    ).sky_temperature
+                    - ZERO_CELCIUS_OFFSET,
+                )
+                for row_index, row_data in enumerate(temperature_array)
+            }
+        )
+
+        system_data[date_and_time].collector_input_temperature = (
+            tank_to_collector_pipe.temperature - ZERO_CELCIUS_OFFSET
+        )
+        system_data[date_and_time].collector_output_temperature = (
+            collector_to_tank_pipe.temperature - ZERO_CELCIUS_OFFSET
+        )
+
+    # Save the output data from the run.
+    _save_data(FileType.JSON, parsed_args.output, system_data)
 
 
 if __name__ == "__main__":

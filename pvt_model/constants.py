@@ -51,7 +51,7 @@ INITIAL_SYSTEM_TEMPERATURE_VECTOR = (
     ZERO_CELCIUS_OFFSET + 35,  # Var: T_PV / K
     ZERO_CELCIUS_OFFSET + 34,  # Var: T_Collector / K
     ZERO_CELCIUS_OFFSET + 34,  # Var: T_BulkWater / K
-    ZERO_CELCIUS_OFFSET + 30,  # Var: T_Tank / K
+    ZERO_CELCIUS_OFFSET + 40,  # Var: T_Tank / K
 )  # [K]
 # The initial temperature of the hot-water tank, at which it should be instantiated,
 # measured in Kelvin.

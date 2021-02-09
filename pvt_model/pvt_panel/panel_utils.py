@@ -262,7 +262,10 @@ def collector_temperature_gradient(
 
 
 def bulk_water_temperature_gradient(
-    bulk_water_temperature: float, collector_temperature: float, pvt_panel: pvt.PVT
+    bulk_water_temperature: float,
+    collector_temperature: float,
+    pvt_panel: pvt.PVT,
+    tank_heat_addition: float,
 ) -> float:
     """
     Computes the temperature gradient of the bulk water.
@@ -276,6 +279,10 @@ def bulk_water_temperature_gradient(
     :param pvt_panel:
         An instance representing the PVT panel.
 
+    :param tank_heat_adition:
+        The heat adition to the hot-water tank, measured in Watts. From C.O.Energy, any
+        heat added to the tank must be removed from the bulk water.
+
     :return:
         The temperature gradient of the bulk water, measured in Kelvin.
 
@@ -288,6 +295,7 @@ def bulk_water_temperature_gradient(
             fluid_temperature=bulk_water_temperature,
             wall_temperature=collector_temperature,
         )  # [W]
+        - tank_heat_addition  # [W]
     ) / (
         pvt_panel.collector.htf_volume * DENSITY_OF_WATER  # [J/K]
     )  # [K/s]

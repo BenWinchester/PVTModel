@@ -20,7 +20,7 @@ import logging
 import os
 
 from dataclasses import dataclass
-from typing import Any, Dict, Generator
+from typing import Any, Dict, Generator, Optional
 
 from dateutil.relativedelta import relativedelta
 
@@ -48,6 +48,7 @@ __all__ = (
     "ProgrammerJudgementFault",
     "PVParameters",
     "read_yaml",
+    "SystemData",
     "time_iterator",
     "TotalPowerData",
     "UtilityType",
@@ -398,6 +399,53 @@ class GraphDetail(enum.Enum):
     medium = 720
     low = 144
     lowest = 48
+
+
+@dataclass
+class SystemData:
+    """
+    Contains information about the system at a given time step.
+
+    .. attribute:: ambient_temperature
+        The ambient temperature, measured in Celcius.
+
+    .. attribute:: bulk_water_temperature
+        The temperature of the bulk water, measured in Celcius.
+
+    .. attribute:: collector_temperature
+        The temperature of the collector layer, measured in Celcius.
+
+    .. attribute:: glass_temperature
+        The temperature of the glass layer, measured in Celcius.
+
+    .. attribute:: pv_temperature
+        The temperature of the PV layer, measured in Celcius.
+
+    .. attribute:: sky_temperature
+        The temperature of the sky, measured in Celcius.
+
+    .. attribute:: tank_temperature
+        The temperature of the hot-water tank, measured in Celcius.
+
+    .. attribute:: collector_input_temperature
+        The temperature of the HTF inputted into the collector, measured in Celcius.
+        This can be set to `None` if no data is recorded.
+
+    .. attribute:: collector_output_temperature
+        The temperature of the HTF outputted from the collector, measured in Celcius.
+        This can be set to `None` if no data is recorded.
+
+    """
+
+    ambient_temperature: float
+    bulk_water_temperature: float
+    collector_temperature: float
+    glass_temperature: float
+    pv_temperature: float
+    sky_temperature: float
+    tank_temperature: float
+    collector_input_temperature: Optional[float] = None
+    collector_output_temperature: Optional[float] = None
 
 
 @dataclass
@@ -784,7 +832,7 @@ def time_iterator(
     *,
     first_time: datetime.datetime,
     last_time: datetime.datetime,
-    internal_resolution: int,
+    resolution: int,
     timezone: datetime.timezone,
 ) -> Generator[datetime.datetime, None, None]:
     """
@@ -796,7 +844,7 @@ def time_iterator(
     :param last_time:
         The last time, which, when reached, should cause the generator to stop.
 
-    :param internal_resolution:
+    :param resolution:
         The time step, in seconds, for which the simulation should be run before saving.
 
     :param timezone:
@@ -812,7 +860,7 @@ def time_iterator(
     while current_time < last_time:
         yield current_time.replace(tzinfo=timezone)
         current_time += relativedelta(
-            hours=internal_resolution // 3600,
-            minutes=internal_resolution // 60,
-            seconds=internal_resolution % 60,
+            hours=resolution // 3600,
+            minutes=(resolution // 60) % 60,
+            seconds=resolution % 60,
         )

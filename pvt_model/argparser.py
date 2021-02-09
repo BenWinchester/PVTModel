@@ -73,13 +73,6 @@ def parse_args(args) -> argparse.Namespace:
         "Celcius. Defaults to 20 Celcius if not provided.",
     )
     parser.add_argument(
-        "--internal-resolution",
-        "-ir",
-        help="The internal resolution, in seconds, used by the model.",
-        type=int,
-        default=1,
-    )
-    parser.add_argument(
         "--location", "-l", help="The location for which to run the simulation."
     )
     parser.add_argument(
@@ -107,6 +100,13 @@ def parse_args(args) -> argparse.Namespace:
         help="The output file to save data to. This should be of JSON format.",
     )
     parser.add_argument(
+        "--panel-resolution",
+        "-pr",
+        help="The resolution, in seconds, used to solve the panel temperatures.",
+        type=int,
+        default=1,
+    )
+    parser.add_argument(
         "--portion-covered",
         "-pc",
         type=float,
@@ -122,10 +122,10 @@ def parse_args(args) -> argparse.Namespace:
         "--pvt-data-file", "-p", help="The location of the PV-T system YAML data file."
     )
     parser.add_argument(
-        "--resolution",
-        "-r",
+        "--tank-resolution",
+        "-tr",
         type=int,
-        help="The external resolution, in seconds, used by the model.",
+        help="The resolution, in seconds, used to solve the tank temperatures.",
     )
     parser.add_argument(
         "--start-time",
