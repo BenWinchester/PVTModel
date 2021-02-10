@@ -527,42 +527,17 @@ def main(args) -> None:
         time_iterator(
             first_time=initial_date_and_time,
             last_time=final_date_and_time,
-            resolution=parsed_args.tank_resolution,
+            resolution=parsed_args.resolution,
             timezone=pvt_panel.timezone,
         )
     ):
 
-        # Set up the internal time array.
-        time_series = range(
-            run_number * parsed_args.tank_resolution,
-            (1 + run_number) * parsed_args.tank_resolution
-            + parsed_args.panel_resolution,
-            parsed_args.panel_resolution,
-        )
-
-        # Run the system model at the internal resolution.
-        temperature_array = integrate.odeint(
-            _temperature_vector_gradient,
-            previous_run_temperature_vector,
-            time_series,
-            args=(
-                final_date_and_time,
-                hot_water_tank,
-                initial_date_and_time,
-                parsed_args,
-                pvt_panel,
-                weather_forecaster,
-            ),
-        )
+        # Call to the matrix solver to compute the temperatures at the next time step.
 
         logger.info(
             "Internal run completed. Temperature vector: %s",
             previous_run_temperature_vector,
         )
-
-        end_of_run_bulk_water_temperature = temperature_array[-1][3]
-        end_of_run_tank_temperature = temperature_array[-1][4]
-        previous_run_temperature_vector = temperature_array[-1]
 
         # Determine the current hot-water load.
         current_hot_water_load = (
@@ -570,72 +545,6 @@ def main(args) -> None:
             * parsed_args.tank_resolution
             / 3600  # [hours/internal time step]
         )  # [kg]
-
-        # Determine the output temperature of the collector, and whether any heat is
-        # added to the hot-water tank.
-        collector_to_tank_pipe.temperature = (
-            2 * end_of_run_bulk_water_temperature - tank_to_collector_pipe.temperature
-        )  # [K]
-
-        # If there is a temperature drop across the panel, then the pump should be
-        # switched off. Otherwise, we are fine to use the computed value.
-        if collector_to_tank_pipe.temperature < end_of_run_bulk_water_temperature:
-            collector_to_tank_pipe.temperature = end_of_run_bulk_water_temperature
-            tank_to_collector_pipe.temperature = end_of_run_bulk_water_temperature
-
-        # >>> If the flow is diverted and is not to the hot-water tank.
-        if collector_to_tank_pipe.temperature <= end_of_run_tank_temperature:
-            tank_heat_addition: float = 0
-            tank_to_collector_pipe.temperature = collector_to_tank_pipe.temperature
-
-        # <<< Elif the flow is to the collector >>>
-        else:
-            tank_heat_addition = heat_exchanger.get_heat_addition(
-                pvt_panel.collector.mass_flow_rate,
-                pvt_panel.collector.htf_heat_capacity,
-                collector_to_tank_pipe.temperature,
-                end_of_run_tank_temperature,
-            )  # [W]
-            tank_to_collector_pipe.temperature = (
-                heat_exchanger.get_output_htf_temperature(
-                    collector_to_tank_pipe.temperature, end_of_run_tank_temperature
-                )
-            )
-        # >>> End of conditional block.
-
-        # Determine the bulk-water heat loss to the tank.
-        # bulk_water_temperature_step = (
-        #     -tank_heat_addition * parsed_args.tank_resolution  # [W] * [s]
-        # ) / (
-        #     DENSITY_OF_WATER  # [kg/m^3]
-        #     * pvt_panel.collector.htf_volume  # [m^3]
-        #     * pvt_panel.collector.htf_heat_capacity  # [J/kg*K]
-        # )  # [K]
-
-        # Determine the tank temperature step.
-        tank_temperature_step = (
-            tank_heat_addition * parsed_args.tank_resolution  # [W] * [s]
-            + tank.net_enthalpy_gain(  # [J]
-                end_of_run_tank_temperature,
-                weather_forecaster.mains_water_temperature,
-                current_hot_water_load,
-            )
-        ) / (
-            hot_water_tank.mass * hot_water_tank.heat_capacity  # [J/K]
-        )  # [K]
-
-        # Determine the new tank temperature, pipe temperature, and bulk-water
-        # temperature for the next run.
-        previous_run_temperature_vector[3] = (
-            collector_to_tank_pipe.temperature + tank_to_collector_pipe.temperature
-        ) / 2  # [K]
-
-        previous_run_temperature_vector[4] += tank_temperature_step  # [K]
-
-        logger.info(
-            "Tank temperatures computed. Temperature vector: %s",
-            previous_run_temperature_vector,
-        )
 
         system_data.update(
             {

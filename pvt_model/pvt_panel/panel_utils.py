@@ -58,8 +58,14 @@ def glass_temperature_gradient(
     """
 
     return (
+        # Glass solar heat input
+        physics_utils.solar_heat_input(
+            pvt_panel.area,
+            weather_conditions.irradiance,
+            pvt_panel.glass.absorptivity,
+        )
         # PV to Glass conductive heat input
-        physics_utils.conductive_heat_transfer_with_gap(
+        + physics_utils.conductive_heat_transfer_with_gap(
             air_gap_thickness=pvt_panel.air_gap_thickness,
             contact_area=pvt_panel.pv.area,
             destination_temperature=glass_temperature,

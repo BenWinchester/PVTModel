@@ -32,16 +32,16 @@ class PV(OpticalLayer):
 
     # Private attributes:
     #
-    # .. attribute:: _reference_efficiency
+    # .. attribute:: reference_efficiency
     #   The efficiency of the PV layer at the reference temperature. Thie value varies
     #   between 1 (corresponding to 100% efficiency), and 0 (corresponding to 0%
     #   efficiency)
     #
-    # .. attribute:: _reference_temperature
+    # .. attribute:: reference_temperature
     #   The referencee temperature, in Kelvin, at which the reference efficiency is
     #   defined.
     #
-    # .. attribute:: _thermal_coefficient
+    # .. attribute:: thermal_coefficient
     #   The thermal coefficient for the efficiency of the panel.
     #
 
@@ -66,9 +66,9 @@ class PV(OpticalLayer):
             )
         )
 
-        self._reference_efficiency = pv_params.reference_efficiency
-        self._reference_temperature = pv_params.reference_temperature
-        self._thermal_coefficient = pv_params.thermal_coefficient
+        self.reference_efficiency = pv_params.reference_efficiency
+        self.reference_temperature = pv_params.reference_temperature
+        self.thermal_coefficient = pv_params.thermal_coefficient
 
     def __repr__(self) -> str:
         """
@@ -83,13 +83,13 @@ class PV(OpticalLayer):
             "PV("
             f"absorptivity: {self.absorptivity}, "
             f"heat_capacity: {self.heat_capacity}J/kg*K, "
-            f"_reference_efficiency: {self._reference_efficiency}, "
-            f"_reference_temperature: {self._reference_temperature}K, "
-            f"_thermal_coefficient: {self._thermal_coefficient}K^(-1), "
             f"_transmissicity: {self.transmissivity}, "
             f"area: {self.area}m^2, "
             f"emissivity: {self.emissivity}, "
             f"mass: {self.mass}kg, "
+            f"reference_efficiency: {self.reference_efficiency}, "
+            f"reference_temperature: {self.reference_temperature}K, "
+            f"thermal_coefficient: {self.thermal_coefficient}K^(-1), "
             f"thickness: {self.thickness}m"
             ")"
         )
@@ -107,8 +107,8 @@ class PV(OpticalLayer):
 
         """
 
-        return self._reference_efficiency * (  # [unitless]
+        return self.reference_efficiency * (  # [unitless]
             1
-            - self._thermal_coefficient  # [1/K]
-            * (pv_temperature - self._reference_temperature)  # [K]
+            - self.thermal_coefficient  # [1/K]
+            * (pv_temperature - self.reference_temperature)  # [K]
         )

@@ -100,8 +100,8 @@ def parse_args(args) -> argparse.Namespace:
         help="The output file to save data to. This should be of JSON format.",
     )
     parser.add_argument(
-        "--panel-resolution",
-        "-pr",
+        "--resolution",
+        "-r",
         help="The resolution, in seconds, used to solve the panel temperatures.",
         type=int,
         default=1,
@@ -122,12 +122,6 @@ def parse_args(args) -> argparse.Namespace:
         "--pvt-data-file", "-p", help="The location of the PV-T system YAML data file."
     )
     parser.add_argument(
-        "--tank-resolution",
-        "-tr",
-        type=int,
-        help="The resolution, in seconds, used to solve the tank temperatures.",
-    )
-    parser.add_argument(
         "--start-time",
         "-st",
         type=int,
@@ -138,13 +132,6 @@ def parse_args(args) -> argparse.Namespace:
         "--tank-data-file",
         "-t",
         help="The location of the Hot-Water Tank system YAML data file.",
-    )
-    parser.add_argument(
-        "--use-internal-resolution",
-        default=False,
-        action="store_true",
-        help="Whether to use the internal resolution parameter or only compute at the "
-        "outer resolution.",
     )
     parser.add_argument(
         "--use-pvgis",

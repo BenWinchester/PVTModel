@@ -529,6 +529,9 @@ class WeatherConditions:
     .. attribute:: ambient_temperature
         The ambient temperature in
 
+    .. attribute:: mains_water_temperature
+        The temperature of the mains water, measured in Kelvin.
+
     """
 
     _irradiance: float
@@ -536,6 +539,7 @@ class WeatherConditions:
     azimuthal_angle: float
     wind_speed: float
     ambient_temperature: float
+    mains_water_temperature: float
 
     @property
     def ambient_tank_temperature(self) -> float:

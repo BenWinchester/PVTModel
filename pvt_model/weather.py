@@ -812,5 +812,10 @@ class WeatherForecaster:
 
         # Return all of these in a WeatherConditions variable.
         return WeatherConditions(
-            irradiance, declination, azimuthal_angle, wind_speed, ambient_temperature
+            irradiance,
+            declination,
+            azimuthal_angle,
+            wind_speed,
+            ambient_temperature,
+            self.mains_water_temperature,
         )
