@@ -26,7 +26,6 @@ __all__ = (
     "conductive_heat_transfer_coefficient_with_gap",
     "convective_heat_transfer_to_fluid",
     "radiative_heat_transfer_coefficient",
-    "solar_heat_input",
     "transmissivity_absorptivity_product",
 )
 
@@ -160,51 +159,6 @@ def radiative_heat_transfer_coefficient(
         * (source_temperature ** 2 + destination_temperature ** 2)  # [K^2]
         * (source_temperature + destination_temperature)  # [K]
     ) / ((1 / source_emissivity) + (1 / destination_emissivity) - 1)
-
-
-def solar_heat_input(
-    area: float,
-    solar_energy_input: float,
-    ta_product: float,
-    electrical_efficiency: Optional[float] = None,
-) -> float:
-    """
-    Determines the heat input due to solar irradiance, measured in Joules per time step.
-
-    The nature of the panel being only partially-covered with photovoltaic cells means
-    that, for some of the panel, a fraction of the light is removed as electrical
-    energy (the PV-covered section), and that, for some of the panel, all of the
-    incident light that is absorbed by the panel is converted into heat.
-
-    :param area:
-        The area of the layer, measured in meters squared.
-
-    :param solar_energy_input:
-        The solar energy input, normal to the panel, measured in Energy per meter
-        squared per resolution time interval.
-
-    :param ta_product:
-        The transmissivity-absorptivity product for the light reaching the layer,
-        defined as a dimensionless number between 0 and 1.
-
-    :param electrical_efficiency:
-        The electrical conversion efficiency of the layer, defined between 0 and 1.
-
-    :return:
-        The solar heating input, measured in Watts.
-
-    """
-
-    # If the layer is not electrical, compute the input as a thermal-only layer.
-    if electrical_efficiency is None:
-        return ta_product * solar_energy_input * area  # [J/time_step*m^2]  # [m^2]
-
-    return (
-        ta_product
-        * solar_energy_input  # [J/time_step*m^2]
-        * area  # [m^2]
-        * (1 - electrical_efficiency)
-    )
 
 
 def transmissivity_absorptivity_product(
