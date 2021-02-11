@@ -56,6 +56,13 @@ class PVT:
         The thickness of the air gap between the glass and PV (or collector) layers,
         measured in meters.
 
+    .. attribute:: collector
+      Represents the lower (thermal-collector) layer of the panel.
+
+    .. attribute:: glass
+      Represents the upper (glass) layer of the panel. This is set to `None` if the
+      panel is unglazed.
+
     .. attribute:: latitude
         The latitude of the panel, measured in degrees.
 
@@ -74,13 +81,6 @@ class PVT:
     #
     # .. attribute:: _azimuthal_orientation
     #   The angle between the normal to the panel's surface and True North.
-    #
-    # .. attribute:: collector
-    #   Represents the lower (thermal-collector) layer of the panel.
-    #
-    # .. attribute:: glass
-    #   Represents the upper (glass) layer of the panel. This is set to `None` if the
-    #   panel is unglazed.
     #
     # .. attribute:: _horizontal_tracking
     #   A `bool` giving whether or not the panel tracks horizontally.
@@ -230,7 +230,7 @@ class PVT:
         self.collector = collector.Collector(collector_parameters)
 
         # Instantiate the back_plate layer.
-        self._back_plate = back_plate.BackPlate(back_params)
+        self.back_plate = back_plate.BackPlate(back_params)
 
     def __repr__(self) -> str:
         """
@@ -243,7 +243,7 @@ class PVT:
 
         return (
             "PVT("
-            f"_back_plate: {self._back_plate}_"
+            f"back_plate: {self.back_plate}_"
             f"collector: {self.collector}, "
             f"glass: {self.glass}, "
             f"pv: {self.pv}, "

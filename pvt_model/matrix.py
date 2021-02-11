@@ -97,13 +97,17 @@ def _get_glass_equation_coefficients(
     # Compute the glass temperature term.
     glass_equation_coefficients[0, 0] = (
         # Change in internal energy of the glass layer
-        pvt_panel.glass.mass * pvt_panel.glass.heat_capacity / resolution  # [W/K]
-        # Conductive heat transfer from the PV and collector layers
+        (
+            pvt_panel.glass.mass  # [kg]
+            * pvt_panel.glass.heat_capacity  # [J/kg*K]
+            / resolution  # [s]
+        )  # [W/s]
+        # Conductive heat transfer with the PV and collector layers
         + physics_utils.conductive_heat_transfer_coefficient_with_gap(
             pvt_panel.air_gap_thickness
         )  # [W/m^2*K]
         * pvt_panel.area  # [m^2]
-        # Radiative heat transfer from the PV layer
+        # Radiative heat transfer with the PV layer
         + physics_utils.radiative_heat_transfer_coefficient(
             destination_emissivity=pvt_panel.glass.emissivity,
             destination_temperature=previous_glass_temperature,
@@ -177,7 +181,6 @@ def _get_pv_equation_coefficients(
     previous_pv_temperature: float,
     pvt_panel: pvt.PVT,
     resolution: int,
-    weather_conditions: WeatherConditions,
 ) -> numpy.ndarray:
     """
     Calculates the coefficient for the row representing the PV-layer equation.
@@ -245,18 +248,6 @@ def _get_pv_equation_coefficients(
         # Conductive heat transfer to the collector layer.
         + pvt_panel.pv_to_collector_thermal_conductance  # [W/m^2*K]
         * pvt_panel.pv.area  # [m^2]
-        # Solar heat input to the layer.
-        - (
-            physics_utils.transmissivity_absorptivity_product(
-                diffuse_reflection_coefficient=pvt_panel.glass.diffuse_reflection_coefficient,
-                glass_transmissivity=pvt_panel.glass.transmissivity,
-                layer_absorptivity=pvt_panel.pv.absorptivity,
-            )
-            * pvt_panel.pv.area  # [m^2]
-            * weather_conditions.irradiance  # [W/m^2]
-            * pvt_panel.pv.reference_efficiency
-            * pvt_panel.pv.reference_temperature  # [1/K]
-        )
     )  # [W/K]
 
     # Compute the collector temperature term.
@@ -338,12 +329,8 @@ def _get_collector_equation_coefficients(
 
     # Compute the collector temperature term.
     collector_equation_coefficients[0, 2] = (
-        # Internal energy change of the collector layer.
-        pvt_panel.collector.mass  # [kg]
-        * pvt_panel.collector.heat_capacity  # [J/kg*K]
-        / resolution  # [s]
         # Conductive heat transfer from the PV layer.
-        + pvt_panel.pv_to_collector_thermal_conductance  # [W/m^2*K]
+        pvt_panel.pv_to_collector_thermal_conductance  # [W/m^2*K]
         * pvt_panel.pv.area  # [m^2]
         # Conductive heat transfer from the glass layer
         + physics_utils.conductive_heat_transfer_coefficient_with_gap(
@@ -364,6 +351,15 @@ def _get_collector_equation_coefficients(
         + collector_to_htf_efficiency
         * pvt_panel.collector.mass_flow_rate  # [kg/s]
         * pvt_panel.collector.htf_heat_capacity  # [J/kg*K]
+        # Back plate heat loss.
+        + pvt_panel.back_plate.conductance  # [W/m^2*K]
+        * pvt_panel.area  # [m^2]
+        * (1 - pvt_panel.portion_covered)
+        # Internal energy change of the collector layer.
+        + pvt_panel.collector.mass  # [kg]
+        * pvt_panel.collector.heat_capacity  # [J/kg*K]
+        * constants.NC
+        / resolution  # [s]
     )  # [W/K]
 
     # Compute the collector-input-htf temperature term.
@@ -396,11 +392,11 @@ def _get_collector_htf_equation_coefficients(
     collector_htf_equation_coefficients = numpy.zeros([1, 6])
 
     # Collector temperature term.
-    collector_htf_equation_coefficients[0, 2] = -collector_to_htf_efficiency
+    collector_htf_equation_coefficients[0, 2] = collector_to_htf_efficiency
     # Collector input temperature term.
-    collector_htf_equation_coefficients[0, 3] = collector_to_htf_efficiency - 1
+    collector_htf_equation_coefficients[0, 3] = 1 - collector_to_htf_efficiency
     # Collector output temperature term.
-    collector_htf_equation_coefficients[0, 4] = 1
+    collector_htf_equation_coefficients[0, 4] = -1
 
     return collector_htf_equation_coefficients
 
@@ -500,7 +496,7 @@ def _get_tank_equation_coefficients(
         # Demand heat loss
         + current_hot_water_load  # [kg/s]
         * constants.HEAT_CAPACITY_OF_WATER  # [J/kg*K]
-    )
+    )  # [W/K]
 
     return tank_equation_coefficients
 
@@ -579,7 +575,6 @@ def calculate_coefficient_matrix(
         previous_pv_temperature,
         pvt_panel,
         resolution,
-        weather_conditions,
     )
 
     # Compute the collector-layer-equation coefficients.
@@ -711,6 +706,7 @@ def calculate_resultant_vector(
 
     # Compute the collector-layer-equation value.
     resultant_vector[2] = (
+        # Solar heat input
         physics_utils.transmissivity_absorptivity_product(
             diffuse_reflection_coefficient=pvt_panel.glass.diffuse_reflection_coefficient,
             glass_transmissivity=pvt_panel.glass.transmissivity,
@@ -719,10 +715,17 @@ def calculate_resultant_vector(
         * weather_conditions.irradiance  # [W/m^2]
         * pvt_panel.area  # [m^2]
         * (1 - pvt_panel.portion_covered)
+        # Internal energy change.
         + pvt_panel.collector.mass  # [kg]
         * pvt_panel.collector.heat_capacity  # [J/kg*K]
         * previous_collector_temperature  # [K]
+        * constants.NC
         / resolution  # [s]
+        # Back plate heat loss.
+        + pvt_panel.back_plate.conductance  # [W/m^2*K]
+        * pvt_panel.area  # [m^2]
+        * (1 - pvt_panel.portion_covered)
+        * weather_conditions.ambient_temperature  # [K]
     )  # [W]
 
     resultant_vector[5] = (

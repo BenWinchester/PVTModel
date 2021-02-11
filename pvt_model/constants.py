@@ -19,6 +19,7 @@ __all__ = (
     "FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR",
     "HEAT_CAPACITY_OF_WATER",
     "INITIAL_SYSTEM_TEMPERATURE_VECTOR",
+    "NC",
     "NUSSELT_NUMBER",
     "STEFAN_BOLTZMAN_CONSTANT",
     "THERMAL_CONDUCTIVITY_OF_AIR",
@@ -29,6 +30,12 @@ __all__ = (
 #############
 # Constants #
 #############
+
+# @@@
+# This constant is used in the equations in the model Gan sent through.
+NC = 1
+# NC = 19414.28
+# NC = 200
 
 # The temperature of absolute zero in Kelvin, used for converting Celcius to Kelvin and
 # vice-a-versa.
@@ -52,7 +59,7 @@ INITIAL_SYSTEM_TEMPERATURE_VECTOR = [
     ZERO_CELCIUS_OFFSET + 34,  # Var: T_Collector / K
     ZERO_CELCIUS_OFFSET + 34,  # Var: T_Collector_input / K
     ZERO_CELCIUS_OFFSET + 34,  # Var: T_Collector_output / K
-    ZERO_CELCIUS_OFFSET + 40,  # Var: T_Tank / K
+    ZERO_CELCIUS_OFFSET + 35,  # Var: T_Tank / K
 ]  # [K]
 # The initial temperature of the hot-water tank, at which it should be instantiated,
 # measured in Kelvin.

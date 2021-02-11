@@ -1,5 +1,4 @@
 #!/usr/bin/python3.7
-# type: ignore
 ########################################################################################
 # analysis.py - The analysis module for the model.
 #
@@ -211,10 +210,14 @@ def _post_process_data(
 
     # * Cycle through all the data points and compute the new values as needed.
     for data_entry in data_to_post_process.values():
-        # Conversion needed from Wh to Joules.
-        data_entry["litres_per_hour"] = (
-            data_entry["thermal_load"] / (HEAT_CAPACITY_OF_WATER * 50) * 60
+        data_entry["collector_temperature_gain"] = (
+            data_entry["collector_output_temperature"]
+            - data_entry["collector_input_temperature"]
         )
+    #     # Conversion needed from Wh to Joules.
+    #     data_entry["litres_per_hour"] = (
+    #         data_entry["thermal_load"] / (HEAT_CAPACITY_OF_WATER * 50) * 60
+    #     )
     return data_to_post_process
 
 
@@ -571,37 +574,56 @@ if __name__ == "__main__":
     # * Create new data values where needed.
     data = _post_process_data(data)
 
-    # Plot Figure 4a: Electrical Demand
+    # Plot All Temperatures
     plot_figure(
-        "maria_4a_electrical_load",
+        "all_temperatures",
         data,
-        ["electrical_load"],
-        "Dwelling Load Profile / W",
-        first_axis_y_limits=[0, 5000],
-        first_axis_shape="d",
-    )
-
-    # Plot Figure 4b: Thermal Demand
-    plot_figure(
-        "maria_4b_thermal_load",
-        data,
-        ["hot_water_load"],
-        "Hot Water Consumption / Litres per hour",
-        first_axis_y_limits=[0, 12],
-        bar_plot=True,
-    )
-
-    # Plot Figure 5a: Diurnal Solar Irradiance
-    plot_figure(
-        "maria_5a_solar_irradiance",
-        data,
-        [
-            "solar_irradiance",
-            # "normal_irradiance"
+        first_axis_things_to_plot=[
+            "ambient_temperature",
+            "bulk_water_temperature",
+            "collector_temperature",
+            "collector_input_temperature",
+            "collector_output_temperature",
+            "glass_temperature",
+            "pv_temperature",
+            "sky_temperature",
+            "tank_temperature",
         ],
-        "Solar Irradiance / Watts / meter squared",
-        first_axis_y_limits=[0, 600],
+        first_axis_label="Temperature / deg C",
+        first_axis_y_limits=[-10, 50],
     )
+
+    # # Plot Figure 4a: Electrical Demand
+    # plot_figure(
+    #     "maria_4a_electrical_load",
+    #     data,
+    #     ["electrical_load"],
+    #     "Dwelling Load Profile / W",
+    #     first_axis_y_limits=[0, 5000],
+    #     first_axis_shape="d",
+    # )
+
+    # # Plot Figure 4b: Thermal Demand
+    # plot_figure(
+    #     "maria_4b_thermal_load",
+    #     data,
+    #     ["hot_water_load"],
+    #     "Hot Water Consumption / Litres per hour",
+    #     first_axis_y_limits=[0, 12],
+    #     bar_plot=True,
+    # )
+
+    # # Plot Figure 5a: Diurnal Solar Irradiance
+    # plot_figure(
+    #     "maria_5a_solar_irradiance",
+    #     data,
+    #     [
+    #         "solar_irradiance",
+    #         # "normal_irradiance"
+    #     ],
+    #     "Solar Irradiance / Watts / meter squared",
+    #     first_axis_y_limits=[0, 600],
+    # )
 
     # Plot Figure 5b: Ambient Temperature
     plot_figure(
@@ -628,31 +650,31 @@ if __name__ == "__main__":
         first_axis_y_limits=[-10, 50],
     )
 
-    # # Plot Figure 6b: Tank-related Temperatures
-    # plot_figure(
-    #     "maria_6b_tank_temperature",
-    #     data,
-    #     first_axis_things_to_plot=[
-    #         "collector_output_temperature",
-    #         "tank_output_temperature",
-    #         "tank_temperature",
-    #     ],
-    #     first_axis_label="Temperature / deg C",
-    #     first_axis_y_limits=[0, 50],
-    # )
+    # Plot Figure 6b: Tank-related Temperatures
+    plot_figure(
+        "maria_6b_tank_temperature",
+        data,
+        first_axis_things_to_plot=[
+            "collector_output_temperature",
+            "collector_input_temperature",
+            "tank_temperature",
+        ],
+        first_axis_label="Temperature / deg C",
+        first_axis_y_limits=[0, 50],
+    )
 
-    # # Plot Figure 7: Stream-related Temperatures
-    # plot_figure(
-    #     "maria_7_stream_temperature",
-    #     data,
-    #     first_axis_things_to_plot=[
-    #         "collector_temperature_gain",
-    #         "exchanger_temperature_drop",
-    #     ],
-    #     first_axis_label="Temperature Gain / deg C",
-    #     second_axis_things_to_plot=["tank_heat_addition"],
-    #     second_axis_label="Tank Heat Addition / W",
-    # )
+    # Plot Figure 7: Stream-related Temperatures
+    plot_figure(
+        "maria_7_stream_temperature",
+        data,
+        first_axis_things_to_plot=[
+            "collector_temperature_gain",
+            "exchanger_temperature_drop",
+        ],
+        first_axis_label="Temperature Gain / deg C",
+        # second_axis_things_to_plot=["tank_heat_addition"],
+        # second_axis_label="Tank Heat Addition / W",
+    )
 
     # # Plot Figure 8A - Electrical Power and Net Electrical Power
     # plot_figure(

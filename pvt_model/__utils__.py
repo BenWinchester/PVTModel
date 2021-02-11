@@ -415,6 +415,13 @@ class SystemData:
     .. attribute:: collector_temperature
         The temperature of the collector layer, measured in Celcius.
 
+    .. attribute:: date
+        A `str` giving the current date.
+
+    .. attribute:: exchanger_temperature_drop
+        The temperature drop through the heat exchanger in the tank, measured in Kelvin
+        or Celcius. (As it is a temperature difference, the two scales are equivalent.)
+
     .. attribute:: glass_temperature
         The temperature of the glass layer, measured in Celcius.
 
@@ -426,6 +433,9 @@ class SystemData:
 
     .. attribute:: tank_temperature
         The temperature of the hot-water tank, measured in Celcius.
+
+    .. attribute:: time
+        A `str` giving the current time.
 
     .. attribute:: collector_input_temperature
         The temperature of the HTF inputted into the collector, measured in Celcius.
@@ -440,10 +450,13 @@ class SystemData:
     ambient_temperature: float
     bulk_water_temperature: float
     collector_temperature: float
+    date: str
     glass_temperature: float
+    exchanger_temperature_drop: float
     pv_temperature: float
     sky_temperature: float
     tank_temperature: float
+    time: str
     collector_input_temperature: Optional[float] = None
     collector_output_temperature: Optional[float] = None
 

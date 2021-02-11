@@ -203,8 +203,7 @@ def _save_data(
 
     # Convert the system data entry to JSON-readable format
     system_data_dict: Dict[str, Dict[str, Any]] = {
-        key.strftime("%d/%m/%Y::%H:%M:%S"): dataclasses.asdict(value)
-        for key, value in system_data.items()
+        key: dataclasses.asdict(value) for key, value in system_data.items()
     }
 
     # If we're saving YAML data part-way through, then append to the file.
@@ -557,10 +556,10 @@ def main(args) -> None:
         )
 
         coefficient_matrix = matrix.calculate_coefficient_matrix(
-            0.5,
+            1.2,
             current_hot_water_load,
             hot_water_tank,
-            0.5,
+            1.2,
             previous_run_temperature_vector,
             pvt_panel,
             parsed_args.resolution,
@@ -591,7 +590,9 @@ def main(args) -> None:
             current_run_temperature_vector,
         )
 
-        system_data[date_and_time] = SystemData(
+        system_data[run_number] = SystemData(
+            date=date_and_time.strftime("%d/%m/%Y"),
+            time=date_and_time.strftime("%H:%M:%S"),
             glass_temperature=current_run_temperature_vector[0, 0]
             - ZERO_CELCIUS_OFFSET,
             pv_temperature=current_run_temperature_vector[1, 0] - ZERO_CELCIUS_OFFSET,
@@ -609,6 +610,11 @@ def main(args) -> None:
             - ZERO_CELCIUS_OFFSET,
             ambient_temperature=weather_conditions.ambient_temperature
             - ZERO_CELCIUS_OFFSET,
+            exchanger_temperature_drop=current_run_temperature_vector[3, 0]
+            - current_run_temperature_vector[4, 0]
+            if current_run_temperature_vector[4, 0]
+            > current_run_temperature_vector[5, 0]
+            else 0,
             tank_temperature=current_run_temperature_vector[5, 0] - ZERO_CELCIUS_OFFSET,
             sky_temperature=weather_conditions.sky_temperature - ZERO_CELCIUS_OFFSET,
         )
