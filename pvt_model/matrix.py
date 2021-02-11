@@ -358,7 +358,7 @@ def _get_collector_equation_coefficients(
         # Internal energy change of the collector layer.
         + pvt_panel.collector.mass  # [kg]
         * pvt_panel.collector.heat_capacity  # [J/kg*K]
-        * constants.NC
+        * constants.NUMBER_OF_COLLECTORS
         / resolution  # [s]
     )  # [W/K]
 
@@ -502,7 +502,6 @@ def _get_tank_equation_coefficients(
 
 
 def calculate_coefficient_matrix(
-    collector_to_htf_efficiency: float,
     current_hot_water_load: float,
     hot_water_tank: tank.Tank,
     htf_to_tank_efficiency: float,
@@ -558,6 +557,8 @@ def calculate_coefficient_matrix(
 
     # Instantiate an empty array to represent the matrix.
     coefficient_matrix = numpy.zeros([6, 6])
+
+    collector_to_htf_efficiency = pvt_panel.collector.collector_to_htf_efficiency
 
     # Compute the glass-layer-equation coefficients.
     coefficient_matrix[0] = _get_glass_equation_coefficients(
@@ -661,12 +662,15 @@ def calculate_resultant_vector(
 
     # Compute the glass-layer-equation value.
     resultant_vector[0] = (
+        # Solar absorption
         pvt_panel.glass.absorptivity
         * pvt_panel.area  # [m^2]
         * weather_conditions.irradiance  # [W]
+        # Convective heat loss to the wind.
         + weather_conditions.wind_heat_transfer_coefficient  # [W/m^2*K]
         * pvt_panel.area  # [m^2]
         * weather_conditions.ambient_temperature  # [K]
+        # Radiative heat transfer to the sky
         + physics_utils.radiative_heat_transfer_coefficient(
             destination_temperature=weather_conditions.sky_temperature,
             radiating_to_sky=True,
@@ -675,6 +679,7 @@ def calculate_resultant_vector(
         )  # [W/m^2*K]
         * pvt_panel.area  # [m^2]
         * weather_conditions.sky_temperature  # [K]
+        # Change in internal energy
         + pvt_panel.glass.mass  # [kg]
         * pvt_panel.glass.heat_capacity  # [J/kg*K]
         * previous_glass_temperature  # [K]
@@ -719,7 +724,7 @@ def calculate_resultant_vector(
         + pvt_panel.collector.mass  # [kg]
         * pvt_panel.collector.heat_capacity  # [J/kg*K]
         * previous_collector_temperature  # [K]
-        * constants.NC
+        * constants.NUMBER_OF_COLLECTORS
         / resolution  # [s]
         # Back plate heat loss.
         + pvt_panel.back_plate.conductance  # [W/m^2*K]

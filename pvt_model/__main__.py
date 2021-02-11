@@ -525,6 +525,7 @@ def main(args) -> None:
     previous_run_temperature_vector: numpy.ndarray = numpy.asarray(  # type: ignore
         INITIAL_SYSTEM_TEMPERATURE_VECTOR
     )
+    time_iterator_step = relativedelta(seconds=parsed_args.resolution)
 
     for run_number, date_and_time in enumerate(
         time_iterator(
@@ -541,25 +542,29 @@ def main(args) -> None:
             previous_run_temperature_vector,
         )
 
-        # Determine the current hot-water load.
+        # Determine the "i+1" time.
+        next_date_and_time = date_and_time + time_iterator_step
+
+        # Determine the "i+1" current hot-water load.
         current_hot_water_load = (
-            load_system[(load.ProfileType.HOT_WATER, date_and_time)]  # [litres/hour]
+            load_system[
+                (load.ProfileType.HOT_WATER, next_date_and_time)
+            ]  # [litres/hour]
             / 3600  # [seconds/hour]
         )  # [kg/s]
 
-        # Determine the current weather conditions.
+        # Determine the "i+1" current weather conditions.
         weather_conditions = weather_forecaster.get_weather(
             pvt_panel.latitude,
             pvt_panel.longitude,
             parsed_args.cloud_efficacy_factor,
-            date_and_time,
+            next_date_and_time,
         )
 
         coefficient_matrix = matrix.calculate_coefficient_matrix(
-            1.2,
             current_hot_water_load,
             hot_water_tank,
-            1.2,
+            heat_exchanger.efficiency,
             previous_run_temperature_vector,
             pvt_panel,
             parsed_args.resolution,
@@ -591,8 +596,8 @@ def main(args) -> None:
         )
 
         system_data[run_number] = SystemData(
-            date=date_and_time.strftime("%d/%m/%Y"),
-            time=date_and_time.strftime("%H:%M:%S"),
+            date=next_date_and_time.strftime("%d/%m/%Y"),
+            time=next_date_and_time.strftime("%H:%M:%S"),
             glass_temperature=current_run_temperature_vector[0, 0]
             - ZERO_CELCIUS_OFFSET,
             pv_temperature=current_run_temperature_vector[1, 0] - ZERO_CELCIUS_OFFSET,

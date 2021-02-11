@@ -19,7 +19,7 @@ __all__ = (
     "FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR",
     "HEAT_CAPACITY_OF_WATER",
     "INITIAL_SYSTEM_TEMPERATURE_VECTOR",
-    "NC",
+    "NUMBER_OF_COLLECTORS",
     "NUSSELT_NUMBER",
     "STEFAN_BOLTZMAN_CONSTANT",
     "THERMAL_CONDUCTIVITY_OF_AIR",
@@ -33,9 +33,9 @@ __all__ = (
 
 # @@@
 # This constant is used in the equations in the model Gan sent through.
-NC = 1
-# NC = 19414.28
-# NC = 200
+NUMBER_OF_COLLECTORS = 1
+# NUMBER_OF_COLLECTORS = 19414.28
+# NUMBER_OF_COLLECTORS = 200
 
 # The temperature of absolute zero in Kelvin, used for converting Celcius to Kelvin and
 # vice-a-versa.

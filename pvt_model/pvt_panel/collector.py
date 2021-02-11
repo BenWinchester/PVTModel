@@ -15,6 +15,10 @@ This module represents a thermal collector within a PV-T panel.
 
 import math
 
+import numpy
+
+from .. import constants
+
 from ..__utils__ import (
     CollectorParameters,
     get_logger,
@@ -85,10 +89,10 @@ class Collector(OpticalLayer):
             )
         )
 
-        self._length = collector_params.length
+        self.length = collector_params.length
         self._mass_flow_rate = collector_params.mass_flow_rate
-        self._number_of_pipes = collector_params.number_of_pipes
-        self._pipe_diameter = collector_params.pipe_diameter
+        self.number_of_pipes = collector_params.number_of_pipes
+        self.pipe_diameter = collector_params.pipe_diameter
         self.bulk_water_temperature = collector_params.bulk_water_temperature
         self.htf_heat_capacity = collector_params.htf_heat_capacity
         self.output_water_temperature = collector_params.output_water_temperature
@@ -116,6 +120,50 @@ class Collector(OpticalLayer):
         )
 
     @property
+    def collector_to_htf_efficiency(self) -> float:
+        """
+        Computes the efficiency using an NTU method between the collector and the HTF.
+
+        :return:
+            The efficiency of the heat transfer process between the collector and the HTF.
+
+        """
+        # Compute the required collector to HTF efficiency
+        collector_to_htf_efficiency = 1 - numpy.exp(
+            -constants.NUMBER_OF_COLLECTORS
+            * (
+                (
+                    1
+                    / (
+                        self.convective_heat_transfer_coefficient_of_water  # [W/m^2*K]
+                        * numpy.pi
+                        * self.pipe_diameter  # [m]
+                        * self.length  # [m]
+                        * self.number_of_pipes
+                    )  # [W/K]
+                    + 0.001
+                    / (
+                        385
+                        * 0.2
+                        * self.pipe_diameter  # [m]
+                        * self.length  # [m]
+                        * self.number_of_pipes
+                    )  # [m^2]
+                    + 1 / 500
+                )
+                ** (
+                    -1
+                    / (
+                        self.mass_flow_rate  # [kg/s]
+                        * self.htf_heat_capacity  # [J/kg*K]
+                    )  # [W/K]
+                )
+            )
+        )
+
+        return collector_to_htf_efficiency
+
+    @property
     def convective_heat_transfer_coefficient_of_water(self) -> float:
         """
         Returns the convective heat transfer coefficient of water, measured in W/m^2*K.
@@ -133,7 +181,7 @@ class Collector(OpticalLayer):
         # return 259
 
         convective_heat_transfer_coefficient = (
-            NUSSELT_NUMBER * THERMAL_CONDUCTIVITY_OF_WATER / self._pipe_diameter
+            NUSSELT_NUMBER * THERMAL_CONDUCTIVITY_OF_WATER / self.pipe_diameter
         )
         return convective_heat_transfer_coefficient
 
@@ -151,10 +199,10 @@ class Collector(OpticalLayer):
         """
 
         return (
-            self._number_of_pipes  # [pipes]
+            self.number_of_pipes  # [pipes]
             * math.pi
-            * self._pipe_diameter  # [m]
-            * self._length  # [m]
+            * self.pipe_diameter  # [m]
+            * self.length  # [m]
         )
 
     @property
@@ -168,10 +216,10 @@ class Collector(OpticalLayer):
         """
 
         return (
-            self._number_of_pipes  # [pipes]
+            self.number_of_pipes  # [pipes]
             * math.pi
-            * (self._pipe_diameter) ** 2  # [m^2]
-            * self._length
+            * (self.pipe_diameter) ** 2  # [m^2]
+            * self.length
         )
 
     @property

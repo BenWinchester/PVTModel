@@ -20,13 +20,10 @@ class Exchanger:
     """
     Represents a physical heat exchanger within a hot-water tank.
 
-    """
+    .. attribute:: efficiency
+        The efficiency of the heat exchanger, defined between 0 and 1.
 
-    # Private Attributes:
-    #
-    # .. attribute:: _efficiency
-    #   The efficiency of the heat exchanger, defined between 0 and 1.
-    #
+    """
 
     def __init__(self, efficiency) -> None:
         """
@@ -37,7 +34,7 @@ class Exchanger:
 
         """
 
-        self._efficiency = efficiency
+        self.efficiency = efficiency
 
     def __repr__(self) -> str:
         """
@@ -48,7 +45,7 @@ class Exchanger:
 
         """
 
-        return f"Exchanger(efficiency: {self._efficiency})"
+        return f"Exchanger(efficiency: {self.efficiency})"
 
     def get_heat_addition(
         self,
@@ -81,7 +78,7 @@ class Exchanger:
         """
 
         tank_heat_addition: float = (
-            self._efficiency
+            self.efficiency
             * input_water_mass_flow_rate  # [kg/s]
             * input_water_heat_capacity  # [J/kg*K]
         ) * (
@@ -111,7 +108,7 @@ class Exchanger:
 
         exchanger_output_temperature: float = (
             input_water_temperature
-            - self._efficiency * (input_water_temperature - water_tank_temperature)
+            - self.efficiency * (input_water_temperature - water_tank_temperature)
         )
 
         return exchanger_output_temperature

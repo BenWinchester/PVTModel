@@ -13,6 +13,8 @@ The physics utility module for the PVT model.
 
 from typing import Optional
 
+import numpy
+
 from .constants import (
     STEFAN_BOLTZMAN_CONSTANT,
     THERMAL_CONDUCTIVITY_OF_AIR,

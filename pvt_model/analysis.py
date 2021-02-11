@@ -25,8 +25,16 @@ import re
 
 from matplotlib import pyplot as plt
 
-from .constants import HEAT_CAPACITY_OF_WATER
-from .__utils__ import GraphDetail, get_logger
+try:
+    from .constants import HEAT_CAPACITY_OF_WATER
+    from .__utils__ import GraphDetail, get_logger
+except ModuleNotFoundError:
+    import logging
+
+    logging.error(
+        "Incorrect module import. Try running with `python3.7 -m pvt_model.analysis`"
+    )
+    raise
 
 # The directory in which old figures are saved
 OLD_FIGURES_DIRECTORY: str = "old_figures"
@@ -590,7 +598,7 @@ if __name__ == "__main__":
             "tank_temperature",
         ],
         first_axis_label="Temperature / deg C",
-        first_axis_y_limits=[-10, 50],
+        # first_axis_y_limits=[-10, 50],
     )
 
     # # Plot Figure 4a: Electrical Demand
@@ -647,7 +655,7 @@ if __name__ == "__main__":
             "sky_temperature",
         ],
         first_axis_label="Temperature / deg C",
-        first_axis_y_limits=[-10, 50],
+        # first_axis_y_limits=[-10, 50],
     )
 
     # Plot Figure 6b: Tank-related Temperatures
@@ -660,7 +668,7 @@ if __name__ == "__main__":
             "tank_temperature",
         ],
         first_axis_label="Temperature / deg C",
-        first_axis_y_limits=[0, 50],
+        # first_axis_y_limits=[0, 50],
     )
 
     # Plot Figure 7: Stream-related Temperatures
