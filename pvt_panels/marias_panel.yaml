@@ -26,11 +26,6 @@ pvt_system:
   longitude: 0.0098 # [deg]
   # The timezone offset in Hours from UTC.
   timezone: 0 # [hours]
-  # The air gap thickness is measured in meters.
-  air_gap_thickness: 0.005 # [m]
-  # The conductance, measured in Watts per meter squared Kelvin, between the PV layer
-  # and collector layers of the panel.
-  pv_to_collector_conductance: 500 # [W/m^2*K]
   # The length of the collector is measured in meters.
   length: 1 # [m]
   # The area is measured in meters squared.
@@ -42,40 +37,41 @@ pvt_system:
   horizontal_tracking: False
   vertical_tracking: False
 glass:
-  density: 2270 # [kg/m^3]
-  thickness: 0.0032 # [m]
-  heat_capacity: 840 # [840J/kg*K]
-  # The thermal conductivity of glass is obtained from;
-  # https://www.engineeringtoolbox.com/thermal-conductivity-d_429.html
-  # and is measured in Watts per meter Kelvin.
-  thermal_conductivity: 1.04 # [W/m*K]
+  # @@@ Value NOT taken from Maria's paper.
   absorptivity: 0.43 # [unitless]
-  transmissivity: 0.9 # [unitless]
+  # @@@ Value NOT taken from Maria's paper.
+  density: 2270 # [kg/m^3]
+  diffuse_reflection_coefficient: 0.16
   emissivity: 0.88 # [unitless]
+  # @@@ Value NOT taken from Maria's paper.
+  heat_capacity: 840 # [840J/kg*K]
+  thermal_conductivity: 1.04 # [W/m*K]
+  thickness: 0.0032 # [m]
+  transmissivity: 0.9 # [unitless]
 air_gap:
   thickness: 0.005 # [m]
   thermal_conductivity: 0.025 # [W/m*K]
 pv:
-  # Density measured in kilograms per meter cubed.
-  # The value for this is (unfortunately) obtained from
-  # https://en.wikipedia.org/wiki/Amorphous_silicon#:~:text=The%20density%20of%20amorphous%20Si,cm3)%20at%20300%20K.
-  density: 2330 # [kg/m^3]
-  # Thickness measured in meters.
-  thickness: 0.00035 # [m]
-  # Heat capacity measured in Joules per kilogram Kelvin.
-  heat_capacity: 712 # [J/kg*K]
-  # Therma308l conductivity measured in Watts per meter Kelvin.
-  thermal_conductivity: 148 # [W/m*K]
   absorptivity: 0.9 # [unitless]
-  transmissivity: 0.9 # [unitless]
-  # *** Updated and accurate value for the emissivity is needed
+  # @@@ Value NOT taken from Maria's paper.
+  cell_material: "silicon"
+  cell_type: "monocrystalline"
+  density: 2330 # [kg/m^3]
   emissivity: 0.9 # [unitless]
-  reference_efficiency: 0.1432 # [unitless]
-  # The reference temperature is measured in Kelvin
-  reference_temperature: 298 # [K]
-  # The thermal coefficient gives the efficiency drop per degree rise in
-  # temperature above the reference temperature.
-  thermal_coefficient: 0.0045 # [K^-1]
+  # @@@ Value NOT taken from Maria's paper.
+  heat_capacity: 712 # [J/kg*K]
+  maximum_power_point_current: 8.34 # [A]
+  maximum_power_point_voltage: 30 # [V]
+  nominal_power: 250 # [W]
+  open_circuit_voltage: 36.9 # [V]
+  short_cirvuit_current: 8.34 # [A]
+  thermal_coefficient: 0.53 # [K^-1]
+  # @@@ Value NOT taken from Maria's paper.
+  thermal_conductivity: 148 # [W/m*K]
+  thickness: 0.00035 # [m]
+  transmissivity: 0.9 # [unitless]
+  reference_efficiency: 0.154 # [unitless]
+  reference_temperature: 318.15 # [K]
 eva:
   thickness: 0.0005 # [m]
   thermal_conductivity: 0.35 # [W/m*K]
@@ -86,26 +82,23 @@ tedlar:
   thickenss: 0.0001 # [m]
   thermal_conductivity: 0.2 # [W/m*K]
 collector:
-  # *** The mass parameter may not be needed
-  density: 8960 # [kg/m^3]
-  thickness: 0.0002 # [m]
-  # *** The heat capacity is taken as that for copper
-  heat_capacity: 386 # [J/kg*K]
-  # The mass flow rate is measured in litres per hour.
-  # [Citation needed]
-  # 108 L/h is the value used by Maria for the mass flow rate - this is faster than many
-  # conventional systems.
-  mass_flow_rate: 108 # [L/h]
-  # The diameter of the pipes, in meters.
-  pipe_diameter: 0.01 # [m]
-  # The number of pipe flowing along the back of the collector.
-  number_of_pipes: 11 # [pipes]
-  # The spacing between adjacent tubes along the rear of the collector.
-  pipe_spacing: 0.095 # [m]
   absorptivity: 0.95 # [unitless]
+  # @@@ Value NOT taken from Maria's paper.
+  density: 8960 # [kg/m^3]
   emissivity: 0.05 # [unitless]
-  transmissivity: 0.9 # [unitless]
+  # @@@ Value NOT taken from Maria's paper.
+  heat_capacity: 386 # [J/kg*K]
+  mass_flow_rate: 108 # [L/h]
+  maximum_operating_pressure: 3.5 # [bar]
+  number_of_pipes: 11 # [pipes]
+  pipe_diameter: 0.01 # [m]
+  pipe_spacing: 0.095 # [m]
+  recommended_flow_pressure_drop: 0.15 # [bar]
+  recommended_mass_flow_rate: 108 # [L/h]
+  # @@@ Value NOT taken from Maria's paper.
   thermal_conductivity: 310 # [W/m*K]
+  thickness: 0.0002 # [m]
+  transmissivity: 0.9 # [unitless]
 # Quantities for the back plate taken as those for Tedlar.
 back:
   density: 2330 # [kg/m^3]

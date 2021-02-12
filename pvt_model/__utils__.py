@@ -527,8 +527,11 @@ class WeatherConditions:
     """
     Contains information about the various weather conditions at any given time.
 
-    .. attribute:: irradiance
-        The solar irradiance in Watts per meter squared.
+    .. attribute:: ambient_tank_temperature
+        The ambient temperature surrounding the hot-water tank, measured in Kelvin.
+
+    .. attribute:: ambient_temperature
+        The ambient temperature in
 
     .. attribute:: declination
         The angle of declination of the sun above the horizon
@@ -539,32 +542,24 @@ class WeatherConditions:
     .. attribute:: wind_speed
         The wind speed in meters per second.
 
-    .. attribute:: ambient_temperature
-        The ambient temperature in
-
     .. attribute:: mains_water_temperature
         The temperature of the mains water, measured in Kelvin.
 
     """
 
+    # Private attributes:
+    #
+    # .. attribute:: _irradiance
+    #   The solar irradiance in Watts per meter squared.
+    #
+
     _irradiance: float
-    declination: float
-    azimuthal_angle: float
-    wind_speed: float
+    ambient_tank_temperature: float
     ambient_temperature: float
+    azimuthal_angle: float
+    declination: float
     mains_water_temperature: float
-
-    @property
-    def ambient_tank_temperature(self) -> float:
-        """
-        The ambient temperature within the household, measured in Kelvin.
-
-        Maria's model used 20 degrees centigrade as the ambient tank temperature. There
-        is extensible scope here to alter the calculation to include other factors.
-
-        """
-
-        return 20 + ZERO_CELCIUS_OFFSET
+    wind_speed: float
 
     @property
     def irradiance(self) -> float:
