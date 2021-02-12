@@ -542,6 +542,9 @@ def main(args) -> None:
             previous_run_temperature_vector,
         )
 
+        # Determine the efficiency of the heat transfer from the collector to the HTF.
+        collector_to_htf_efficiency = pvt_panel.collector.collector_to_htf_efficiency
+
         # Determine the "i+1" time.
         next_date_and_time = date_and_time + time_iterator_step
 
@@ -562,6 +565,7 @@ def main(args) -> None:
         )
 
         coefficient_matrix = matrix.calculate_coefficient_matrix(
+            collector_to_htf_efficiency,
             current_hot_water_load,
             hot_water_tank,
             heat_exchanger.efficiency,
@@ -572,6 +576,7 @@ def main(args) -> None:
         )
 
         resultant_vector = matrix.calculate_resultant_vector(
+            collector_to_htf_efficiency,
             current_hot_water_load,
             hot_water_tank,
             previous_run_temperature_vector,
@@ -586,8 +591,9 @@ def main(args) -> None:
             str(resultant_vector),
         )
 
-        current_run_temperature_vector = linalg.solve(
-            a=coefficient_matrix, b=resultant_vector
+        current_run_output = linalg.solve(a=coefficient_matrix, b=resultant_vector)
+        current_run_temperature_vector = numpy.asarray(
+            [current_run_output[index][0] for index in range(len(current_run_output))]
         )
 
         logger.info(
@@ -598,29 +604,26 @@ def main(args) -> None:
         system_data[run_number] = SystemData(
             date=next_date_and_time.strftime("%d/%m/%Y"),
             time=next_date_and_time.strftime("%H:%M:%S"),
-            glass_temperature=current_run_temperature_vector[0, 0]
+            glass_temperature=current_run_temperature_vector[0] - ZERO_CELCIUS_OFFSET,
+            pv_temperature=current_run_temperature_vector[1] - ZERO_CELCIUS_OFFSET,
+            collector_temperature=current_run_temperature_vector[2]
             - ZERO_CELCIUS_OFFSET,
-            pv_temperature=current_run_temperature_vector[1, 0] - ZERO_CELCIUS_OFFSET,
-            collector_temperature=current_run_temperature_vector[2, 0]
+            collector_input_temperature=current_run_temperature_vector[3]
             - ZERO_CELCIUS_OFFSET,
-            collector_input_temperature=current_run_temperature_vector[3, 0]
-            - ZERO_CELCIUS_OFFSET,
-            collector_output_temperature=current_run_temperature_vector[4, 0]
+            collector_output_temperature=current_run_temperature_vector[4]
             - ZERO_CELCIUS_OFFSET,
             bulk_water_temperature=(
-                current_run_temperature_vector[3, 0]
-                + current_run_temperature_vector[4, 0]
+                previous_run_temperature_vector[3] + current_run_temperature_vector[4]
             )
             / 2
             - ZERO_CELCIUS_OFFSET,
             ambient_temperature=weather_conditions.ambient_temperature
             - ZERO_CELCIUS_OFFSET,
-            exchanger_temperature_drop=current_run_temperature_vector[3, 0]
-            - current_run_temperature_vector[4, 0]
-            if current_run_temperature_vector[4, 0]
-            > current_run_temperature_vector[5, 0]
+            exchanger_temperature_drop=current_run_temperature_vector[3]
+            - current_run_temperature_vector[4]
+            if current_run_temperature_vector[4] > current_run_temperature_vector[5]
             else 0,
-            tank_temperature=current_run_temperature_vector[5, 0] - ZERO_CELCIUS_OFFSET,
+            tank_temperature=current_run_temperature_vector[5] - ZERO_CELCIUS_OFFSET,
             sky_temperature=weather_conditions.sky_temperature - ZERO_CELCIUS_OFFSET,
         )
 

@@ -36,7 +36,9 @@ except ModuleNotFoundError:
     )
     raise
 
-# The directory in which old figures are saved
+# The directory into which which should be saved
+NEW_FIGURES_DIRECTORY: str = "figures"
+# The directory in which old figures are saved and stored for long-term access
 OLD_FIGURES_DIRECTORY: str = "old_figures"
 # How detailed the graph should be
 GRAPH_DETAIL: GraphDetail = GraphDetail.lowest
@@ -404,6 +406,8 @@ def save_figure(figure_name: str) -> None:
     # Create a storage directory if it doesn't already exist.
     if not os.path.isdir(OLD_FIGURES_DIRECTORY):
         os.mkdir(OLD_FIGURES_DIRECTORY)
+    if not os.path.isdir(NEW_FIGURES_DIRECTORY):
+        os.mkdir(NEW_FIGURES_DIRECTORY)
 
     # We need to work download from large numbers to new numbers.
     filenames = sorted(os.listdir(OLD_FIGURES_DIRECTORY))
@@ -425,18 +429,23 @@ def save_figure(figure_name: str) -> None:
         )
 
     # Move the current _1 file into the old directory
-    if os.path.isfile(f"figure_{figure_name}_1.jpg"):
+    if os.path.isfile(
+        os.path.join(NEW_FIGURES_DIRECTORY, f"figure_{figure_name}_1.jpg")
+    ):
         os.rename(
-            f"figure_{figure_name}_1.jpg",
+            os.path.join(NEW_FIGURES_DIRECTORY, f"figure_{figure_name}_1.jpg"),
             os.path.join(OLD_FIGURES_DIRECTORY, f"figure_{figure_name}_1.jpg"),
         )
 
     # If it exists, move the current figure to _1
-    if os.path.isfile(f"figure_{figure_name}.jpg"):
-        os.rename(f"figure_{figure_name}.jpg", f"figure_{figure_name}_1.jpg")
+    if os.path.isfile(os.path.join(NEW_FIGURES_DIRECTORY, f"figure_{figure_name}.jpg")):
+        os.rename(
+            os.path.join(NEW_FIGURES_DIRECTORY, f"figure_{figure_name}.jpg"),
+            os.path.join(NEW_FIGURES_DIRECTORY, f"figure_{figure_name}_1.jpg"),
+        )
 
     # Save the figure
-    plt.savefig(f"figure_{figure_name}.jpg")
+    plt.savefig(os.path.join(NEW_FIGURES_DIRECTORY, f"figure_{figure_name}.jpg"))
 
 
 def plot_figure(

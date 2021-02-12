@@ -362,13 +362,6 @@ def _get_collector_equation_coefficients(
         / resolution  # [s]
     )  # [W/K]
 
-    # Compute the collector-input-htf temperature term.
-    collector_equation_coefficients[0, 3] = -(
-        collector_to_htf_efficiency
-        * pvt_panel.collector.mass_flow_rate  # [kg/s]
-        * pvt_panel.collector.htf_heat_capacity  # [J/kg*K]
-    )  # [W/K]
-
     return collector_equation_coefficients
 
 
@@ -393,8 +386,6 @@ def _get_collector_htf_equation_coefficients(
 
     # Collector temperature term.
     collector_htf_equation_coefficients[0, 2] = collector_to_htf_efficiency
-    # Collector input temperature term.
-    collector_htf_equation_coefficients[0, 3] = 1 - collector_to_htf_efficiency
     # Collector output temperature term.
     collector_htf_equation_coefficients[0, 4] = -1
 
@@ -502,6 +493,7 @@ def _get_tank_equation_coefficients(
 
 
 def calculate_coefficient_matrix(
+    collector_to_htf_efficiency: float,
     current_hot_water_load: float,
     hot_water_tank: tank.Tank,
     htf_to_tank_efficiency: float,
@@ -558,8 +550,6 @@ def calculate_coefficient_matrix(
     # Instantiate an empty array to represent the matrix.
     coefficient_matrix = numpy.zeros([6, 6])
 
-    collector_to_htf_efficiency = pvt_panel.collector.collector_to_htf_efficiency
-
     # Compute the glass-layer-equation coefficients.
     coefficient_matrix[0] = _get_glass_equation_coefficients(
         previous_collector_temperature,
@@ -613,6 +603,7 @@ def calculate_coefficient_matrix(
 
 
 def calculate_resultant_vector(
+    collector_to_htf_efficiency: float,
     current_hot_water_load: float,
     hot_water_tank: tank.Tank,
     previous_temperature_vector: numpy.ndarray,
@@ -622,6 +613,10 @@ def calculate_resultant_vector(
 ) -> numpy.ndarray:
     """
     Calculates the "resultant vector" required to solve the PV-T system itteratively.
+
+    :param collector_to_htf_efficiency:
+        The efficiency of the heat transfer process between the thermal collector layer
+        and the HTF passing through the collector.
 
     :param current_hot_water_load:
         The current hot-water load, measured in kilograms per second.
@@ -655,7 +650,7 @@ def calculate_resultant_vector(
         previous_glass_temperature,
         previous_pv_temperature,
         previous_collector_temperature,
-        _,
+        previous_collector_input_temperature,
         _,
         previous_tank_temperature,
     ) = previous_temperature_vector
@@ -731,7 +726,16 @@ def calculate_resultant_vector(
         * pvt_panel.area  # [m^2]
         * (1 - pvt_panel.portion_covered)
         * weather_conditions.ambient_temperature  # [K]
+        # Compute the collector-input-htf temperature term.
+        + collector_to_htf_efficiency
+        * pvt_panel.collector.mass_flow_rate  # [kg/s]
+        * pvt_panel.collector.htf_heat_capacity  # [J/kg*K]
+        * previous_collector_input_temperature  # [K]
     )  # [W]
+
+    resultant_vector[3] = (
+        collector_to_htf_efficiency - 1
+    ) * previous_collector_input_temperature  # [K]
 
     resultant_vector[5] = (
         # Internal tank heat change.
