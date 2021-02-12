@@ -56,9 +56,9 @@ HEAT_CAPACITY_OF_WATER: int = 4182
 INITIAL_SYSTEM_TEMPERATURE_VECTOR = [
     ZERO_CELCIUS_OFFSET + 20,  # Var: T_Glass / K
     ZERO_CELCIUS_OFFSET + 35,  # Var: T_PV / K
-    ZERO_CELCIUS_OFFSET + 34,  # Var: T_Collector / K
-    ZERO_CELCIUS_OFFSET + 34,  # Var: T_Collector_input / K
-    ZERO_CELCIUS_OFFSET + 34,  # Var: T_Collector_output / K
+    ZERO_CELCIUS_OFFSET + 35,  # Var: T_Collector / K
+    ZERO_CELCIUS_OFFSET + 35,  # Var: T_Collector_input / K
+    ZERO_CELCIUS_OFFSET + 35,  # Var: T_Collector_output / K
     ZERO_CELCIUS_OFFSET + 35,  # Var: T_Tank / K
 ]  # [K]
 # The initial temperature of the hot-water tank, at which it should be instantiated,

@@ -657,12 +657,8 @@ def calculate_resultant_vector(
 
     # Compute the glass-layer-equation value.
     resultant_vector[0] = (
-        # Solar absorption
-        pvt_panel.glass.absorptivity
-        * pvt_panel.area  # [m^2]
-        * weather_conditions.irradiance  # [W]
         # Convective heat loss to the wind.
-        + weather_conditions.wind_heat_transfer_coefficient  # [W/m^2*K]
+        weather_conditions.wind_heat_transfer_coefficient  # [W/m^2*K]
         * pvt_panel.area  # [m^2]
         * weather_conditions.ambient_temperature  # [K]
         # Radiative heat transfer to the sky
@@ -679,6 +675,10 @@ def calculate_resultant_vector(
         * pvt_panel.glass.heat_capacity  # [J/kg*K]
         * previous_glass_temperature  # [K]
         / resolution  # [s]
+        # Solar absorption
+        # + pvt_panel.glass.absorptivity
+        # * pvt_panel.area  # [m^2]
+        # * weather_conditions.irradiance  # [W]
     )  # [W]
 
     # Compute the PV-layer-equation value.
