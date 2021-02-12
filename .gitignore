@@ -1,5 +1,7 @@
 # Internal git files
 *.diff
+*.diff*
+*.diff.*
 # Ignore model outputs
 *.log*
 *.jpg*
