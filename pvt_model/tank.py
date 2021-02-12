@@ -122,6 +122,8 @@ class Tank:
         """
         Computes the heat loss through the walls of the tank, measured in Watts.
 
+        A value of 573 W/K is used by Maria's paper.
+
         :param ambient_temperature:
             The temperature of the air surrounding the hot-water tank, measured in
             Kelvin.
@@ -129,10 +131,14 @@ class Tank:
         :param tank_temperature:
             The temperature of the fluid within the tank, measured in Kelvin.
 
+        :return:
+            The heat loss from the tank, measured in Watts.
+
         """
 
         return (
-            self.area  # [m^2]
-            * self.heat_loss_coefficient  # [W/m^2*K]
+            573  # [W/K]
+            # self.area  # [m^2]
+            # * self.heat_loss_coefficient  # [W/m^2*K]
             * (tank_temperature - ambient_tank_temperature)  # [K]
         )  # [W]

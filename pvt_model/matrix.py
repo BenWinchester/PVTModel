@@ -54,8 +54,8 @@ __all__ = (
 
 
 def _get_glass_equation_coefficients(
-    previous_collector_temperature: float,
-    previous_glass_temperature: float,
+    best_guess_collector_temperature: float,
+    best_guess_glass_temperature: float,
     previous_pv_temperature: float,
     pvt_panel: pvt.PVT,
     resolution: int,
@@ -64,11 +64,11 @@ def _get_glass_equation_coefficients(
     """
     Calculates the coefficient for the row representing the glass-layer equation.
 
-    :param previous_collector_temperature:
-        The temperature of the collector layer at the previous time step, measured in
-        Kelvin.
+    :param best_guess_collector_temperature:
+        The best guess for the temperature of the collector layer at the time step being
+        calculated, measured in Kelvin.
 
-    :param previous_glass_temperature:
+    :param best_guess_glass_temperature:
         The temperature of the glass layer at the previous time step, measured in
         Kelvin.
 
@@ -110,7 +110,7 @@ def _get_glass_equation_coefficients(
         # Radiative heat transfer with the PV layer
         + physics_utils.radiative_heat_transfer_coefficient(
             destination_emissivity=pvt_panel.glass.emissivity,
-            destination_temperature=previous_glass_temperature,
+            destination_temperature=best_guess_glass_temperature,
             source_emissivity=pvt_panel.pv.emissivity,
             source_temperature=previous_pv_temperature,
         )  # [W/m^2*K]
@@ -118,9 +118,9 @@ def _get_glass_equation_coefficients(
         # Radiative heat transfer from the collector layer
         + physics_utils.radiative_heat_transfer_coefficient(
             destination_emissivity=pvt_panel.glass.emissivity,
-            destination_temperature=previous_glass_temperature,
+            destination_temperature=best_guess_glass_temperature,
             source_emissivity=pvt_panel.collector.emissivity,
-            source_temperature=previous_collector_temperature,
+            source_temperature=best_guess_collector_temperature,
         )  # [W/m^2*K]
         * pvt_panel.area  # [m^2]
         * (1 - pvt_panel.portion_covered)
@@ -132,7 +132,7 @@ def _get_glass_equation_coefficients(
             destination_temperature=weather_conditions.sky_temperature,
             radiating_to_sky=True,
             source_emissivity=pvt_panel.glass.emissivity,
-            source_temperature=previous_glass_temperature,
+            source_temperature=best_guess_glass_temperature,
         )  # [W/m^2*K]
         * pvt_panel.area  # [m^2]
     )  # [W/K]
@@ -147,7 +147,7 @@ def _get_glass_equation_coefficients(
         # Radiative heat transfer from the PV layer
         + physics_utils.radiative_heat_transfer_coefficient(
             destination_emissivity=pvt_panel.glass.emissivity,
-            destination_temperature=previous_glass_temperature,
+            destination_temperature=best_guess_glass_temperature,
             source_emissivity=pvt_panel.pv.emissivity,
             source_temperature=previous_pv_temperature,
         )  # [W/m^2*K]
@@ -165,9 +165,9 @@ def _get_glass_equation_coefficients(
         # Radiative heat transfer from the collector layer
         + physics_utils.radiative_heat_transfer_coefficient(
             destination_emissivity=pvt_panel.glass.emissivity,
-            destination_temperature=previous_glass_temperature,
+            destination_temperature=best_guess_glass_temperature,
             source_emissivity=pvt_panel.collector.emissivity,
-            source_temperature=previous_collector_temperature,
+            source_temperature=best_guess_collector_temperature,
         )  # [W/m^2*K]
         * pvt_panel.area  # [m^2]
         * (1 - pvt_panel.portion_covered)
@@ -177,7 +177,7 @@ def _get_glass_equation_coefficients(
 
 
 def _get_pv_equation_coefficients(
-    previous_glass_temperature: float,
+    best_guess_glass_temperature: float,
     previous_pv_temperature: float,
     pvt_panel: pvt.PVT,
     resolution: int,
@@ -185,7 +185,7 @@ def _get_pv_equation_coefficients(
     """
     Calculates the coefficient for the row representing the PV-layer equation.
 
-    :param previous_glass_temperature:
+    :param best_guess_glass_temperature:
         The temperature of the glass layer at the previous time step, measured in
         Kelvin.
 
@@ -221,7 +221,7 @@ def _get_pv_equation_coefficients(
             destination_emissivity=pvt_panel.pv.emissivity,
             destination_temperature=previous_pv_temperature,
             source_emissivity=pvt_panel.glass.emissivity,
-            source_temperature=previous_glass_temperature,
+            source_temperature=best_guess_glass_temperature,
         )  # [W/m^2*K]
         * pvt_panel.pv.area  # [m^2]
     )  # [W/K]
@@ -242,7 +242,7 @@ def _get_pv_equation_coefficients(
             destination_emissivity=pvt_panel.pv.emissivity,
             destination_temperature=previous_pv_temperature,
             source_emissivity=pvt_panel.glass.emissivity,
-            source_temperature=previous_glass_temperature,
+            source_temperature=best_guess_glass_temperature,
         )  # [W/m^2*K]
         * pvt_panel.pv.area  # [m^2]
         # Conductive heat transfer to the collector layer.
@@ -262,8 +262,8 @@ def _get_pv_equation_coefficients(
 
 def _get_collector_equation_coefficients(
     collector_to_htf_efficiency: float,
-    previous_collector_temperature: float,
-    previous_glass_temperature: float,
+    best_guess_collector_temperature: float,
+    best_guess_glass_temperature: float,
     pvt_panel: pvt.PVT,
     resolution: int,
     weather_conditions: WeatherConditions,  # pylint: disable=unused-argument
@@ -275,11 +275,11 @@ def _get_collector_equation_coefficients(
         The efficiency of the heat transfer process between the thermal collector layer
         and the HTF in the collector tubes.
 
-    :param previous_collector_temperature:
+    :param best_guess_collector_temperature:
         The temperature of the collector layer at the previous time step, measured in
         Kelvin.
 
-    :param previous_glass_temperature:
+    :param best_guess_glass_temperature:
         The temperature of the glass layer at the previous time step, measured in
         Kelvin.
 
@@ -312,9 +312,9 @@ def _get_collector_equation_coefficients(
         # Radiative heat transfer from the glass layer
         + physics_utils.radiative_heat_transfer_coefficient(
             destination_emissivity=pvt_panel.glass.emissivity,
-            destination_temperature=previous_glass_temperature,
+            destination_temperature=best_guess_glass_temperature,
             source_emissivity=pvt_panel.collector.emissivity,
-            source_temperature=previous_collector_temperature,
+            source_temperature=best_guess_collector_temperature,
         )  # [W/m^2*K]
         * pvt_panel.area  # [m^2]
         * (1 - pvt_panel.portion_covered)
@@ -341,9 +341,9 @@ def _get_collector_equation_coefficients(
         # Radiative heat transfer from the glass layer
         + physics_utils.radiative_heat_transfer_coefficient(
             destination_emissivity=pvt_panel.glass.emissivity,
-            destination_temperature=previous_glass_temperature,
+            destination_temperature=best_guess_glass_temperature,
             source_emissivity=pvt_panel.collector.emissivity,
-            source_temperature=previous_collector_temperature,
+            source_temperature=best_guess_collector_temperature,
         )  # [W/m^2*K]
         * pvt_panel.area  # [m^2]
         * (1 - pvt_panel.portion_covered)
@@ -484,6 +484,7 @@ def _get_tank_equation_coefficients(
         # Tank heat loss
         + hot_water_tank.area  # [m^2]
         * hot_water_tank.heat_loss_coefficient  # [W/m^2*K]
+        # + 573
         # Demand heat loss
         + current_hot_water_load  # [kg/s]
         * constants.HEAT_CAPACITY_OF_WATER  # [J/kg*K]
@@ -493,17 +494,23 @@ def _get_tank_equation_coefficients(
 
 
 def calculate_coefficient_matrix(
+    best_guess_temperature_vector: numpy.ndarray,
     collector_to_htf_efficiency: float,
     current_hot_water_load: float,
     hot_water_tank: tank.Tank,
     htf_to_tank_efficiency: float,
-    previous_temperature_vector: numpy.ndarray,
     pvt_panel: pvt.PVT,
     resolution: int,
     weather_conditions: WeatherConditions,
 ) -> numpy.ndarray:
     """
     Calculates the matrix of coefficients required to solve the PV-T system itteratively
+
+    :param best_guess_temperature_vector:
+        An array containing the best guess of temperatures at the next time step, i.e.,
+        the time step being computed. The radiative heat transfer, for instance, depends
+        in a non-linear way on the temperatures at the next time step. In order to
+        estimate these values well, a best guess is needed.
 
     :param collector_to_htf_efficiency:
         The efficiency of the heat transfer process between the thermal collector layer
@@ -518,9 +525,6 @@ def calculate_coefficient_matrix(
     :param htf_to_tank_efficiency:
         The efficiency of the heat transfer process between the heat transfer fluid and
         the hot-water tank.
-
-    :param previous_temperature_vector:
-        An array containing the temperatures at the previous time step.
 
     :param pvt_panel:
         A :class:`pvt.PVT` instance representing the PVT panel being modelled.
@@ -537,24 +541,24 @@ def calculate_coefficient_matrix(
 
     """
 
-    # Unpack the temperature vector from the previous time step.
+    # Unpack the temperature vectors for the best guess time step and previous time step
     (
-        previous_glass_temperature,
-        previous_pv_temperature,
-        previous_collector_temperature,
+        best_guess_glass_temperature,
+        best_guess_pv_temperature,
+        best_guess_collector_temperature,
         _,
-        previous_collector_output_temperature,
-        previous_tank_temperature,
-    ) = previous_temperature_vector
+        best_guess_collector_output_temperature,
+        best_guess_tank_temperature,
+    ) = best_guess_temperature_vector
 
     # Instantiate an empty array to represent the matrix.
     coefficient_matrix = numpy.zeros([6, 6])
 
     # Compute the glass-layer-equation coefficients.
     coefficient_matrix[0] = _get_glass_equation_coefficients(
-        previous_collector_temperature,
-        previous_glass_temperature,
-        previous_pv_temperature,
+        best_guess_collector_temperature,
+        best_guess_glass_temperature,
+        best_guess_pv_temperature,
         pvt_panel,
         resolution,
         weather_conditions,
@@ -562,8 +566,8 @@ def calculate_coefficient_matrix(
 
     # Compute the PV-layer-equation coefficients.
     coefficient_matrix[1] = _get_pv_equation_coefficients(
-        previous_glass_temperature,
-        previous_pv_temperature,
+        best_guess_glass_temperature,
+        best_guess_pv_temperature,
         pvt_panel,
         resolution,
     )
@@ -571,8 +575,8 @@ def calculate_coefficient_matrix(
     # Compute the collector-layer-equation coefficients.
     coefficient_matrix[2] = _get_collector_equation_coefficients(
         collector_to_htf_efficiency,
-        previous_collector_temperature,
-        previous_glass_temperature,
+        best_guess_collector_temperature,
+        best_guess_glass_temperature,
         pvt_panel,
         resolution,
         weather_conditions,
@@ -584,8 +588,8 @@ def calculate_coefficient_matrix(
 
     coefficient_matrix[4] = _get_tank_htf_equation_coefficients(
         htf_to_tank_efficiency,
-        previous_collector_output_temperature,
-        previous_tank_temperature,
+        best_guess_collector_output_temperature,
+        best_guess_tank_temperature,
     )
 
     coefficient_matrix[5] = _get_tank_equation_coefficients(
@@ -594,8 +598,8 @@ def calculate_coefficient_matrix(
         pvt_panel.collector.htf_heat_capacity,
         htf_to_tank_efficiency,
         pvt_panel.collector.mass_flow_rate,
-        previous_collector_output_temperature,
-        previous_tank_temperature,
+        best_guess_collector_output_temperature,
+        best_guess_tank_temperature,
         resolution,
     )
 
@@ -603,6 +607,7 @@ def calculate_coefficient_matrix(
 
 
 def calculate_resultant_vector(
+    best_guess_glass_temperature: float,
     collector_to_htf_efficiency: float,
     current_hot_water_load: float,
     hot_water_tank: tank.Tank,
@@ -613,6 +618,9 @@ def calculate_resultant_vector(
 ) -> numpy.ndarray:
     """
     Calculates the "resultant vector" required to solve the PV-T system itteratively.
+
+    :best_guess_glass_temperature:
+        The best guess for the temperature of the glass layer at the current time step.
 
     :param collector_to_htf_efficiency:
         The efficiency of the heat transfer process between the thermal collector layer
@@ -666,7 +674,7 @@ def calculate_resultant_vector(
             destination_temperature=weather_conditions.sky_temperature,
             radiating_to_sky=True,
             source_emissivity=pvt_panel.glass.emissivity,
-            source_temperature=previous_glass_temperature,
+            source_temperature=best_guess_glass_temperature,
         )  # [W/m^2*K]
         * pvt_panel.area  # [m^2]
         * weather_conditions.sky_temperature  # [K]
@@ -676,9 +684,9 @@ def calculate_resultant_vector(
         * previous_glass_temperature  # [K]
         / resolution  # [s]
         # Solar absorption
-        # + pvt_panel.glass.absorptivity
-        # * pvt_panel.area  # [m^2]
-        # * weather_conditions.irradiance  # [W]
+        + pvt_panel.glass.absorptivity
+        * pvt_panel.area  # [m^2]
+        * weather_conditions.irradiance  # [W]
     )  # [W]
 
     # Compute the PV-layer-equation value.
@@ -744,6 +752,7 @@ def calculate_resultant_vector(
         * previous_tank_temperature  # [K]
         / resolution  # [s]
         # Tank heat loss.
+        # + 573
         + hot_water_tank.area  # [m^2]
         * hot_water_tank.heat_loss_coefficient  # [W/m^2*K]
         * weather_conditions.ambient_temperature  # [K]

@@ -15,6 +15,7 @@ panel.
 """
 
 __all__ = (
+    "CONVERGENT_SOLUTION_PRECISION",
     "DENSITY_OF_WATER",
     "FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR",
     "HEAT_CAPACITY_OF_WATER",
@@ -41,6 +42,8 @@ NUMBER_OF_COLLECTORS = 1
 # vice-a-versa.
 ZERO_CELCIUS_OFFSET: float = 273.15
 
+# The precision at which to calculate the convergent solution.
+CONVERGENT_SOLUTION_PRECISION = 0.001
 # The density of water, measured in kilograms per meter cubed.
 DENSITY_OF_WATER: int = 1000
 # The free convective, heat-transfer coefficient of air. This varies, and potentially
@@ -57,9 +60,9 @@ INITIAL_SYSTEM_TEMPERATURE_VECTOR = [
     ZERO_CELCIUS_OFFSET + 20,  # Var: T_Glass / K
     ZERO_CELCIUS_OFFSET + 35,  # Var: T_PV / K
     ZERO_CELCIUS_OFFSET + 35,  # Var: T_Collector / K
-    ZERO_CELCIUS_OFFSET + 35,  # Var: T_Collector_input / K
-    ZERO_CELCIUS_OFFSET + 35,  # Var: T_Collector_output / K
-    ZERO_CELCIUS_OFFSET + 35,  # Var: T_Tank / K
+    ZERO_CELCIUS_OFFSET + 34.75,  # Var: T_Collector_input / K
+    ZERO_CELCIUS_OFFSET + 34.75,  # Var: T_Collector_output / K
+    ZERO_CELCIUS_OFFSET + 34.75,  # Var: T_Tank / K
 ]  # [K]
 # The initial temperature of the hot-water tank, at which it should be instantiated,
 # measured in Kelvin.

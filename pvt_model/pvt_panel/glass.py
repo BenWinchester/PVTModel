@@ -13,7 +13,7 @@ This module represents a glass layer within a PV-T panel.
 
 """
 
-from .__utils__ import OpticalLayer
+from .__utils__ import OpticalLayer, OpticalLayerParameters
 
 __all__ = ("Glass",)
 
@@ -24,4 +24,21 @@ class Glass(OpticalLayer):
 
     """
 
-    diffuse_reflection_coefficient = 0.16
+    def __init__(
+        self,
+        diffuse_reflection_coefficient: float,
+        optical_layer_params: OpticalLayerParameters,
+    ) -> None:
+        """
+        Instantiate a glass layer instance.
+
+        :param diffuse_reflection_coefficient:
+            The coefficient of diffuse reflectivity of the layer.
+
+        :param optical_layer_params:
+            Parameters used to instantiate a generic optical layer.
+
+        """
+
+        self.diffuse_reflection_coefficient = diffuse_reflection_coefficient
+        super().__init__(optical_layer_params)

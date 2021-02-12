@@ -107,6 +107,7 @@ class PVT:
         area: float,
         back_params: BackLayerParameters,
         collector_parameters: CollectorParameters,
+        diffuse_reflection_coefficient: float,
         glass_parameters: OpticalLayerParameters,
         glazed: bool,
         latitude: float,
@@ -135,6 +136,9 @@ class PVT:
 
         :param collector_parameters:
             Parametsrs used to instantiate the collector layer.
+
+        :param diffuse_reflection_coefficient:
+            The coefficient of diffuse reflectivity of the upper layer.
 
         :param glass_parameters:
             Parameters used to instantiate the glass layer.
@@ -206,7 +210,9 @@ class PVT:
 
         # Instantiate the glass layer.
         if glazed:
-            self.glass: glass.Glass = glass.Glass(glass_parameters)
+            self.glass: glass.Glass = glass.Glass(
+                diffuse_reflection_coefficient, glass_parameters
+            )
         else:
             raise ProgrammerJudgementFault(
                 "A glass layer is required in the current set up."

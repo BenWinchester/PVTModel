@@ -20,13 +20,11 @@ import logging
 import os
 
 from dataclasses import dataclass
+from dateutil.relativedelta import relativedelta
 from typing import Any, Dict, Generator, Optional
 
-from dateutil.relativedelta import relativedelta
-
+import numpy
 import yaml
-
-from .constants import ZERO_CELCIUS_OFFSET
 
 __all__ = (
     "BackLayerParameters",
@@ -34,6 +32,7 @@ __all__ = (
     "CarbonEmissions",
     "CollectorParameters",
     "Date",
+    "DivergentSolutionError",
     "FileType",
     "get_logger",
     "GraphDetail",
@@ -68,6 +67,54 @@ LOGGER_NAME = "my_first_pvt_model"
 ##############
 # Exceptions #
 ##############
+
+
+class DivergentSolutionError(Exception):
+    """
+    Raised when a divergent solution occurs.
+
+    """
+
+    def __init__(
+        self,
+        convergence_run_number: int,
+        run_one_temperature_difference: float,
+        run_one_temperature_vector: numpy.ndarray,
+        run_two_temperature_difference: float,
+        run_two_temperature_vector: numpy.ndarray,
+    ) -> None:
+        """
+        Instantiate a :class:`DivergentSolutionError`.
+
+        :param convergence_run_number:
+            The number of runs attempted to reach a convergent solution.
+
+        :param run_one_temperature_difference:
+            The temperature difference between the i-2 and i-1 iterations.
+
+        :param run_one_temperature_vector:
+            The temperature vector computed at the i-1 iteration.
+
+        :param run_two_temperature_difference:
+            The temperature difference between the i-1 and i iterations.
+
+        :param run_two_temperature_vector:
+            The temperature vector computed at the i iteration.
+
+        """
+
+        super().__init__(
+            "A divergent solution was found when attempting to compute the "
+            "temperatures at the next time step:\n"
+            f"Number of convergent runs attempted: {convergence_run_number}\n"
+            f"Previous difference: {run_one_temperature_difference}\n"
+            "Current difference: {run_two_temperature_difference}\n"
+            "Divergence is hence "
+            f"{round(run_two_temperature_difference - run_one_temperature_difference, 2)}"
+            " away from the current solution.\n"
+            f"Previous solution temperatures:\n{run_one_temperature_vector}\n"
+            f"Current solution temperatures:\n{run_two_temperature_vector}\n",
+        )
 
 
 class InternalError(Exception):

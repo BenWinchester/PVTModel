@@ -20,7 +20,7 @@ happens within this module.
 
 import datetime
 
-from typing import Any, Dict
+from typing import Any, Dict, Tuple
 
 from .pvt_panel import pvt
 from . import exchanger, tank, pump
@@ -258,7 +258,7 @@ def _collector_params_from_data(
 
 def _glass_params_from_data(
     area: float, glass_data: Dict[str, Any]
-) -> OpticalLayerParameters:
+) -> Tuple[float, OpticalLayerParameters]:
     """
     Generate a :class:`OpticalLayerParameters` containing glass-layer info from data.
 
@@ -275,18 +275,21 @@ def _glass_params_from_data(
     """
 
     try:
-        return OpticalLayerParameters(
-            glass_data["mass"]  # [kg]
-            if "mass" in glass_data
-            else glass_data["density"]  # [kg/m^3]
-            * glass_data["thickness"]  # [m]
-            * area,  # [m^2]
-            glass_data["heat_capacity"],  # [J/kg*K]
-            area,  # [m^2]
-            glass_data["thickness"],  # [m]
-            glass_data["transmissivity"],  # [unitless]
-            glass_data["absorptivity"],  # [unitless]
-            glass_data["emissivity"],  # [unitless]
+        return (
+            glass_data["diffuse_reflection_coefficient"],
+            OpticalLayerParameters(
+                glass_data["mass"]  # [kg]
+                if "mass" in glass_data
+                else glass_data["density"]  # [kg/m^3]
+                * glass_data["thickness"]  # [m]
+                * area,  # [m^2]
+                glass_data["heat_capacity"],  # [J/kg*K]
+                area,  # [m^2]
+                glass_data["thickness"],  # [m]
+                glass_data["transmissivity"],  # [unitless]
+                glass_data["absorptivity"],  # [unitless]
+                glass_data["emissivity"],  # [unitless]
+            ),
         )
     except KeyError as e:
         raise MissingDataError(
@@ -364,7 +367,7 @@ def pvt_panel_from_path(
     # Set up the PVT module
     pvt_data = read_yaml(pvt_data_file)
 
-    glass_parameters = _glass_params_from_data(
+    diffuse_reflection_coefficient, glass_parameters = _glass_params_from_data(
         pvt_data["pvt_system"]["area"], pvt_data["glass"]
     )
     pv_parameters = (
@@ -384,18 +387,19 @@ def pvt_panel_from_path(
 
     try:
         pvt_panel = pvt.PVT(
-            air_gap_thickness=pvt_data["pvt_system"]["air_gap_thickness"],  # [m]
+            air_gap_thickness=pvt_data["air_gap"]["thickness"],  # [m]
             area=pvt_data["pvt_system"]["area"],  # [m^2]
             back_params=back_parameters,
             collector_parameters=collector_parameters,
+            diffuse_reflection_coefficient=diffuse_reflection_coefficient,
             glass_parameters=glass_parameters,
             glazed=not unglazed,
             latitude=pvt_data["pvt_system"]["latitude"],  # [deg]
             longitude=pvt_data["pvt_system"]["longitude"],  # [deg]
             portion_covered=portion_covered,  # [unitless]
             pv_parameters=pv_parameters if portion_covered != 0 else None,
-            pv_to_collector_thermal_conductance=pvt_data["pvt_system"][
-                "pv_to_collector_conductance"
+            pv_to_collector_thermal_conductance=pvt_data["air_gap"][
+                "thermal_conductivity"
             ],  # [W/m^2*K]
             timezone=datetime.timezone(
                 datetime.timedelta(hours=int(pvt_data["pvt_system"]["timezone"]))

@@ -34,6 +34,8 @@ from scipy import linalg  # type: ignore
 
 from . import (
     argparser,
+    constants,
+    exchanger,
     load,
     mains_power,
     matrix,
@@ -53,6 +55,7 @@ from .constants import (
 
 from .__utils__ import (  # pylint: disable=unused-import
     CarbonEmissions,
+    DivergentSolutionError,
     FileType,
     get_logger,
     LOGGER_NAME,
@@ -79,6 +82,37 @@ SOLAR_IRRADIANCE_FOLDERNAME = "solar_irradiance_profiles"
 TEMPERATURE_FOLDERNAME = "temperature_profiles"
 # Name of the weather data file.
 WEATHER_DATA_FILENAME = "weather.yaml"
+
+
+def _calculate_vector_difference(
+    first_vector: numpy.ndarray,
+    second_vector: numpy.ndarray,
+) -> float:
+    """
+    Computes a measure of the difference between two vectors.
+
+    :param first_vector:
+        The first vector.
+
+    :param second_vector:
+        The second vector.
+
+    :return:
+        A measure of the difference between the two vectors.
+
+    """
+
+    # Compute the gross difference between the vectors.
+    try:
+        diff_vector = second_vector - first_vector
+    except ValueError as e:
+        raise ProgrammerJudgementFault(
+            "Atempt was made to compute the difference between two vectors of "
+            f"different sizes: {str(e)}"
+        ) from None
+
+    # Square the values in this vector to avoid sign issues and return the sum.
+    return sum([value ** 2 for value in diff_vector])
 
 
 def _date_and_time_from_time_step(
@@ -243,6 +277,186 @@ def _save_data(
                     output_json_file,
                     indent=4,
                 )
+
+
+def _solve_temperature_vector_convergence_method(
+    collector_to_htf_efficiency: float,
+    current_hot_water_load: float,
+    heat_exchanger: exchanger.Exchanger,
+    hot_water_tank: tank.Tank,
+    next_date_and_time: datetime.datetime,
+    parsed_args: Namespace,
+    previous_run_temperature_vector: numpy.ndarray,
+    pvt_panel: pvt.PVT,
+    run_one_temperature_vector: numpy.ndarray,
+    weather_conditions: weather.WeatherConditions,
+    convergence_run_number: int = 0,
+    run_one_temperature_difference: float = 5 * constants.ZERO_CELCIUS_OFFSET ** 2,
+) -> numpy.ndarray:
+    """
+    Itteratively solves for the temperature vector to find a convergent solution.
+
+    The method used to compute the temperatures at the next time step involves
+    approximating a non-linear temperature dependance using a best-guess set of
+    temperatures for the temperatures at the next time step.
+
+    The "best guess" temperature vector is fed into the matrix solver method, and, from
+    this, approximations for the non-linear terms are computed. This then returns a
+    "best guess" matrix, from which the temperatures at the next time step are computed.
+
+    Whether the solution is converging, or has converged, is determined.
+        - If the solution has converged, the temperature vector computed is returned;
+        - If the solution has diverged, an error is raised;
+        - If the solution is converging, but has not yet converged, then the function
+          runs through again.
+
+    :param collector_to_htf_efficiency:
+        The efficiency of the heat transfer process between the thermal collector and
+        the HTF.
+
+    :param current_hot_water_load:
+        The current hot-water load placed on the system, measured in kilograms per
+        second.
+
+    :param heat_exchanger:
+        The heat exchanger being modelled in the system.
+
+    :param hot_water_tank:
+        A :class:`tank.Tank` instance representing the hot-water tank being modelled in
+        the system.
+
+    :param next_date_and_time:
+        The date and time at the time step being solved.
+
+    :param parsed_args:
+        The parsed command-line arguments.
+
+    :param previous_run_temperature_vector:
+        The temperatures at the previous time step.
+
+    :param pvt_panel:
+        A :class:`pvt.PVT` instance representing the PVT panel being modelled.
+
+    :param run_one_temperature_vector:
+        The temperature vector at the last run of the convergent solver.
+
+    :param weather_conditions:
+        The weather conditions at the time step being computed.
+
+    :param run_one_temperature_difference:
+        The temperature difference between the two vectors when the function was
+        previously run.
+
+    :return:
+        The temperatures at the next time step.
+
+    :raises: DivergentSolutionError
+        Raised if the solution starts to diverge.
+
+    """
+
+    logger.info(
+        "Date and time: %s; Run number: %s: " "Beginning convergent calculation.",
+        next_date_and_time.strftime("%d/%m/%Y %H:%M:%S"),
+        convergence_run_number,
+    )
+
+    coefficient_matrix = matrix.calculate_coefficient_matrix(
+        run_one_temperature_vector,
+        collector_to_htf_efficiency,
+        current_hot_water_load,
+        hot_water_tank,
+        heat_exchanger.efficiency,
+        pvt_panel,
+        parsed_args.resolution,
+        weather_conditions,
+    )
+
+    resultant_vector = matrix.calculate_resultant_vector(
+        run_one_temperature_vector[0],
+        collector_to_htf_efficiency,
+        current_hot_water_load,
+        hot_water_tank,
+        previous_run_temperature_vector,
+        pvt_panel,
+        parsed_args.resolution,
+        weather_conditions,
+    )
+
+    # logger.info(
+    #     "Matrix equation computed.\nA =\n%s\nB =\n%s",
+    #     str(coefficient_matrix),
+    #     str(resultant_vector),
+    # )
+
+    run_two_output = linalg.solve(a=coefficient_matrix, b=resultant_vector)
+    run_two_temperature_vector = numpy.asarray(
+        [run_two_output[index][0] for index in range(len(run_two_output))]
+    )
+
+    import pdb
+
+    pdb.set_trace(
+        header=f"{next_date_and_time.strftime('%H:%M')}: Run {convergence_run_number}"
+    )
+
+    logger.info(
+        "Date and time: %s; Run number: %s: "
+        "Temperatures successfully computed. Temperature vector: T = %s",
+        next_date_and_time.strftime("%d/%m/%Y %H:%M:%S"),
+        convergence_run_number,
+        run_two_temperature_vector,
+    )
+
+    run_two_temperature_difference = _calculate_vector_difference(
+        run_one_temperature_vector, run_two_temperature_vector
+    )
+
+    # If the solution has converged, return the temperature vector.
+    if run_two_temperature_difference < constants.CONVERGENT_SOLUTION_PRECISION:
+        logger.info(
+            "Date and time: %s; Run number: %s: Convergent solution found. "
+            "Convergent difference: %s",
+            next_date_and_time.strftime("%d/%m/%Y %H:%M:%S"),
+            convergence_run_number,
+            run_two_temperature_difference,
+        )
+        return run_two_temperature_vector
+
+    # If the solution has diverged, raise an Exception.
+    if run_two_temperature_difference > run_one_temperature_difference:
+        logger.error(
+            "The temperature solutions at the next time step diverged. "
+            "See %s for more details.",
+            LOGGER_NAME,
+        )
+        logger.info(
+            "Local variables at the time of the dump:\n%s",
+            "\n".join([f"{key}: {value}" for key, value in locals().items()]),
+        )
+        raise DivergentSolutionError(
+            convergence_run_number,
+            run_one_temperature_difference,
+            run_one_temperature_vector,
+            run_two_temperature_difference,
+            run_two_temperature_vector,
+        )
+
+    # Otherwise, continue to solve until the prevision is reached.
+    return _solve_temperature_vector_convergence_method(
+        collector_to_htf_efficiency=collector_to_htf_efficiency,
+        current_hot_water_load=current_hot_water_load,
+        heat_exchanger=heat_exchanger,
+        hot_water_tank=hot_water_tank,
+        next_date_and_time=next_date_and_time,
+        parsed_args=parsed_args,
+        previous_run_temperature_vector=previous_run_temperature_vector,
+        pvt_panel=pvt_panel,
+        run_one_temperature_vector=run_two_temperature_vector,
+        weather_conditions=weather_conditions,
+        convergence_run_number=convergence_run_number + 1,
+        run_one_temperature_difference=run_two_temperature_difference,
+    )
 
 
 # def _temperature_vector_gradient(
@@ -537,7 +751,7 @@ def main(args) -> None:
     ):
 
         logger.info(
-            "Beginning internal run. Time: %s.\nPrevious temperature vector: T=\n%s",
+            "Time: %s: Beginning internal run. Previous temperature vector: T=%s",
             date_and_time.strftime("%d/%m/%Y %H:%M:%S"),
             previous_run_temperature_vector,
         )
@@ -564,41 +778,17 @@ def main(args) -> None:
             next_date_and_time,
         )
 
-        coefficient_matrix = matrix.calculate_coefficient_matrix(
-            collector_to_htf_efficiency,
-            current_hot_water_load,
-            hot_water_tank,
-            heat_exchanger.efficiency,
-            previous_run_temperature_vector,
-            pvt_panel,
-            parsed_args.resolution,
-            weather_conditions,
-        )
-
-        resultant_vector = matrix.calculate_resultant_vector(
-            collector_to_htf_efficiency,
-            current_hot_water_load,
-            hot_water_tank,
-            previous_run_temperature_vector,
-            pvt_panel,
-            parsed_args.resolution,
-            weather_conditions,
-        )
-
-        logger.info(
-            "Matrix equation computed.\nA =\n%s\nB =\n%s",
-            str(coefficient_matrix),
-            str(resultant_vector),
-        )
-
-        current_run_output = linalg.solve(a=coefficient_matrix, b=resultant_vector)
-        current_run_temperature_vector = numpy.asarray(
-            [current_run_output[index][0] for index in range(len(current_run_output))]
-        )
-
-        logger.info(
-            "Temperatures successfully computed. Temperature vector: T =\n%s",
-            current_run_temperature_vector,
+        current_run_temperature_vector = _solve_temperature_vector_convergence_method(
+            collector_to_htf_efficiency=collector_to_htf_efficiency,
+            current_hot_water_load=current_hot_water_load,
+            heat_exchanger=heat_exchanger,
+            hot_water_tank=hot_water_tank,
+            next_date_and_time=next_date_and_time,
+            parsed_args=parsed_args,
+            previous_run_temperature_vector=previous_run_temperature_vector,
+            pvt_panel=pvt_panel,
+            run_one_temperature_vector=previous_run_temperature_vector,
+            weather_conditions=weather_conditions,
         )
 
         system_data[run_number] = SystemData(
