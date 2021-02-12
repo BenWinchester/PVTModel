@@ -383,22 +383,22 @@ def _solve_temperature_vector_convergence_method(
         weather_conditions,
     )
 
-    # logger.info(
-    #     "Matrix equation computed.\nA =\n%s\nB =\n%s",
-    #     str(coefficient_matrix),
-    #     str(resultant_vector),
-    # )
+    logger.info(
+        "Matrix equation computed.\nA =\n%s\nB =\n%s",
+        str(coefficient_matrix),
+        str(resultant_vector),
+    )
 
     run_two_output = linalg.solve(a=coefficient_matrix, b=resultant_vector)
     run_two_temperature_vector = numpy.asarray(
         [run_two_output[index][0] for index in range(len(run_two_output))]
     )
 
-    import pdb
+    # import pdb
 
-    pdb.set_trace(
-        header=f"{next_date_and_time.strftime('%H:%M')}: Run {convergence_run_number}"
-    )
+    # pdb.set_trace(
+    #     header=f"{next_date_and_time.strftime('%H:%M')}: Run {convergence_run_number}"
+    # )
 
     logger.info(
         "Date and time: %s; Run number: %s: "
