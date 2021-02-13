@@ -114,6 +114,9 @@ def _reduce_data(
         graph_detail, len(data_to_reduce)
     )
 
+    if data_points_per_graph_point <= 1:
+        return data_to_reduce
+
     # Construct a dictionary to contain this reduced data.
     reduced_data: Dict[Union[int, str], Dict[Any, Any]] = {
         index: dict()
@@ -677,7 +680,7 @@ if __name__ == "__main__":
             "tank_temperature",
         ],
         first_axis_label="Temperature / deg C",
-        # first_axis_y_limits=[0, 50],
+        first_axis_y_limits=[0, 50],
     )
 
     # Plot Figure 7: Stream-related Temperatures

@@ -22,6 +22,8 @@ import datetime
 
 from typing import Any, Dict, Tuple
 
+import numpy
+
 from .pvt_panel import pvt
 from . import exchanger, tank, pump
 from .constants import (
@@ -229,9 +231,20 @@ def _collector_params_from_data(
         return CollectorParameters(
             mass=collector_data["mass"]  # [kg]
             if "mass" in collector_data
-            else area  # [m^2]
-            * collector_data["density"]  # [kg/m^3]
-            * collector_data["thickness"],  # [m]
+            else (
+                # Main collector body area.
+                area  # [m^2]
+                * collector_data["density"]  # [kg/m^3]
+                * collector_data["thickness"]  # [m]
+                # Collector pipe area
+                + (
+                    numpy.pi
+                    * collector_data["pipe_diameter"]  # [m]
+                    * collector_data["length"]  # [m]
+                )
+                * collector_data["density"]  # [kg/m^3]
+                * collector_data["thickness"]  # [m]
+            ),
             heat_capacity=collector_data["heat_capacity"],  # [J/kg*K]
             area=area,  # [m^2]
             thickness=collector_data["thickness"],  # [m]

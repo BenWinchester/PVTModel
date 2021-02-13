@@ -459,156 +459,6 @@ def _solve_temperature_vector_convergence_method(
     )
 
 
-# def _temperature_vector_gradient(
-#     temperature_vector: Tuple[float, float, float, float, float],
-#     time: numpy.float64,
-#     final_date_and_time: datetime.datetime,
-#     hot_water_tank: tank.Tank,
-#     initial_date_and_time: datetime.datetime,
-#     parsed_args: Namespace,
-#     pvt_panel: pvt.PVT,
-#     weather_forecaster: weather.WeatherForecaster,
-# ) -> Tuple[float, float, float, float, float]:
-#     """
-#     Computes the vector of the temperature gradients at some time t.
-
-#     :param temperature_vector:
-#         A `tuple` representing a vector containing:
-#         - the glass temperature,
-#         - the pv layer temperature,
-#         - the collector temperature,
-#         - the bulk-water temperature,
-#         - the hot-water tank tempreature.
-
-#         All of these temperature values are measured in Kelvin.
-
-#     :param time:
-#         The current time in seconds from the beginning of the model run.
-
-#     :param final_date_and_time:
-#         The final date and time for the simulation run.
-
-#     :param heat_exchanger:
-#         The heat exchanger between the HTF and the tank.
-
-#     :param hot_water_tank:
-#         Instance representing the hot-water tank.
-
-#     :param initial_date_and_time:
-#         The initial date and time for the simulation run.
-
-#     :param parsed_args:
-#         Parsed arguments from the command line, stored as a :class:`argparse.Namespace`.
-
-#     :param pvt_panel:
-#         An instance representing the PVT panel.
-
-#     :param weather_forecaster:
-#         A :class:`weather.WeatherForecaster` containing weather information and exposing
-#         functions enabling the weather conditions to be calculated at some given time.
-
-#     :return:
-#         A `tuple` representing a vector containing:
-#         - the differential of the glass temperature with respect to time,
-#         - the differential of the pv layer temperature with respect to time,
-#         - the differential of the collector temperature with respect to time,
-#         - the differential of the bulk-water temperature with respect to time,
-#         - the differential of the hot-water tank temperature with respect to time.
-
-#     """
-
-#     try:
-#         # Determine the current date and time.
-#         date_and_time = _date_and_time_from_time_step(
-#             initial_date_and_time, final_date_and_time, time
-#         )
-#     except ProgrammerJudgementFault:
-#         logger.error("The system reached a timestep greater than the maximum.")
-#         date_and_time = _date_and_time_from_time_step(
-#             initial_date_and_time, final_date_and_time, time - 86400
-#         )
-
-#     if any([value > 350 or value < 270 for value in temperature_vector]):
-#         logger.debug(
-#             "Temperatures exceed the bounds specified for logging an error. "
-#             "Time: %s. Temperature vector: %s",
-#             date_and_time,
-#             temperature_vector,
-#         )
-
-#     # Unpack the temperature tuple.
-#     (
-#         glass_temperature,
-#         pv_temperature,
-#         collector_temperature,
-#         bulk_water_temperature,
-#         tank_temperature,
-#     ) = temperature_vector
-
-#     # Determine the environmental conditions at the current time step.
-#     weather_conditions = weather_forecaster.get_weather(
-#         pvt_panel.latitude,
-#         pvt_panel.longitude,
-#         parsed_args.cloud_efficacy_factor,
-#         date_and_time,
-#     )
-
-#     glass_temperature_gradient = panel_utils.glass_temperature_gradient(
-#         collector_temperature,
-#         glass_temperature,
-#         pv_temperature,
-#         pvt_panel,
-#         weather_conditions,
-#     )  # [K/s]
-
-#     pv_temperature_gradient = panel_utils.pv_temperature_gradient(
-#         collector_temperature,
-#         glass_temperature,
-#         pv_temperature,
-#         pvt_panel,
-#         weather_conditions,
-#     )  # [K/s]
-
-#     collector_temperature_gradient = panel_utils.collector_temperature_gradient(
-#         bulk_water_temperature,
-#         collector_temperature,
-#         glass_temperature,
-#         pv_temperature,
-#         pvt_panel,
-#         weather_conditions,
-#     )  # [K/s]
-
-#     bulk_water_temperature_gradient = panel_utils.bulk_water_temperature_gradient(
-#         bulk_water_temperature, collector_temperature, pvt_panel, 0
-#     )  # [K/s]
-
-#     tank_temperature_gradient = (
-#         -hot_water_tank.heat_loss(
-#             weather_conditions.ambient_tank_temperature, tank_temperature
-#         )  # [W]
-#     ) / (
-#         hot_water_tank.mass * hot_water_tank.heat_capacity  # [J/K]
-#     )  # [K/s]
-
-#     temperature_vector_gradient = (
-#         glass_temperature_gradient,
-#         pv_temperature_gradient,
-#         collector_temperature_gradient,
-#         bulk_water_temperature_gradient,
-#         tank_temperature_gradient,
-#     )
-
-#     if any([value > 1 for value in temperature_vector_gradient]):
-#         logger.debug(
-#             "Temperature gradient vector too high. Time: %s. "
-#             "Temperature gradient vector: %s.",
-#             date_and_time,
-#             temperature_vector_gradient,
-#         )
-
-#     return temperature_vector_gradient
-
-
 def main(args) -> None:
     """
     The main module for the code.
@@ -741,6 +591,38 @@ def main(args) -> None:
     )
     time_iterator_step = relativedelta(seconds=parsed_args.resolution)
 
+    # Save the initial system data.
+    weather_conditions = weather_forecaster.get_weather(
+        pvt_panel.latitude,
+        pvt_panel.longitude,
+        parsed_args.cloud_efficacy_factor,
+        initial_date_and_time,
+    )
+    system_data[0] = SystemData(
+        date=initial_date_and_time.strftime("%d/%m/%Y"),
+        time=initial_date_and_time.strftime("%H:%M:%S"),
+        glass_temperature=previous_run_temperature_vector[0] - ZERO_CELCIUS_OFFSET,
+        pv_temperature=previous_run_temperature_vector[1] - ZERO_CELCIUS_OFFSET,
+        collector_temperature=previous_run_temperature_vector[2] - ZERO_CELCIUS_OFFSET,
+        collector_input_temperature=previous_run_temperature_vector[3]
+        - ZERO_CELCIUS_OFFSET,
+        collector_output_temperature=previous_run_temperature_vector[4]
+        - ZERO_CELCIUS_OFFSET,
+        bulk_water_temperature=(
+            previous_run_temperature_vector[3] + previous_run_temperature_vector[4]
+        )
+        / 2
+        - ZERO_CELCIUS_OFFSET,
+        ambient_temperature=weather_conditions.ambient_temperature
+        - ZERO_CELCIUS_OFFSET,
+        exchanger_temperature_drop=previous_run_temperature_vector[3]
+        - previous_run_temperature_vector[4]
+        if previous_run_temperature_vector[4] > previous_run_temperature_vector[5]
+        else 0,
+        tank_temperature=previous_run_temperature_vector[5] - ZERO_CELCIUS_OFFSET,
+        sky_temperature=weather_conditions.sky_temperature - ZERO_CELCIUS_OFFSET,
+    )
+
     for run_number, date_and_time in enumerate(
         time_iterator(
             first_time=initial_date_and_time,
@@ -791,9 +673,13 @@ def main(args) -> None:
             weather_conditions=weather_conditions,
         )
 
-        system_data[run_number] = SystemData(
+        system_data[run_number + 1] = SystemData(
             date=next_date_and_time.strftime("%d/%m/%Y"),
-            time=next_date_and_time.strftime("%H:%M:%S"),
+            time=str(
+                (next_date_and_time.day - initial_date_and_time.day) * 24
+                + next_date_and_time.hour
+            )
+            + next_date_and_time.strftime("%H:%M:%S")[2:],
             glass_temperature=current_run_temperature_vector[0] - ZERO_CELCIUS_OFFSET,
             pv_temperature=current_run_temperature_vector[1] - ZERO_CELCIUS_OFFSET,
             collector_temperature=current_run_temperature_vector[2]

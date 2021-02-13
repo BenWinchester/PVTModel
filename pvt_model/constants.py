@@ -57,7 +57,7 @@ HEAT_CAPACITY_OF_WATER: int = 4182
 # The `tuple` contains the glass, pv, collector, bulk-water, and tank initial
 # temperatures.
 INITIAL_SYSTEM_TEMPERATURE_VECTOR = [
-    ZERO_CELCIUS_OFFSET + 20,  # Var: T_Glass / K
+    ZERO_CELCIUS_OFFSET + 19,  # Var: T_Glass / K
     ZERO_CELCIUS_OFFSET + 35,  # Var: T_PV / K
     ZERO_CELCIUS_OFFSET + 35,  # Var: T_Collector / K
     ZERO_CELCIUS_OFFSET + 34.75,  # Var: T_Collector_input / K
