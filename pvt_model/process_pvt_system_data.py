@@ -398,8 +398,8 @@ def pvt_panel_from_path(
             longitude=pvt_data["pvt_system"]["longitude"],  # [deg]
             portion_covered=portion_covered,  # [unitless]
             pv_parameters=pv_parameters if portion_covered != 0 else None,
-            pv_to_collector_thermal_conductance=pvt_data["air_gap"][
-                "thermal_conductivity"
+            pv_to_collector_thermal_conductance=pvt_data["pvt_system"][
+                "pv_to_collector_conductance"
             ],  # [W/m^2*K]
             timezone=datetime.timezone(
                 datetime.timedelta(hours=int(pvt_data["pvt_system"]["timezone"]))

@@ -137,8 +137,7 @@ class Tank:
         """
 
         return (
-            573  # [W/K]
-            # self.area  # [m^2]
-            # * self.heat_loss_coefficient  # [W/m^2*K]
+            self.area  # [m^2]
+            * self.heat_loss_coefficient  # [W/m^2*K]
             * (tank_temperature - ambient_tank_temperature)  # [K]
         )  # [W]

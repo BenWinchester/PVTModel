@@ -181,6 +181,7 @@ def _get_pv_equation_coefficients(
     best_guess_pv_temperature: float,
     pvt_panel: pvt.PVT,
     resolution: int,
+    weather_conditions: WeatherConditions,
 ) -> numpy.ndarray:
     """
     Calculates the coefficient for the row representing the PV-layer equation.
@@ -249,6 +250,16 @@ def _get_pv_equation_coefficients(
         # Conductive heat transfer to the collector layer.
         + pvt_panel.pv_to_collector_thermal_conductance  # [W/m^2*K]
         * pvt_panel.pv.area  # [m^2]
+        # Solar heat input.
+        - physics_utils.transmissivity_absorptivity_product(
+            diffuse_reflection_coefficient=pvt_panel.glass.diffuse_reflection_coefficient,
+            glass_transmissivity=pvt_panel.glass.transmissivity,
+            layer_absorptivity=pvt_panel.pv.absorptivity,
+        )
+        * pvt_panel.pv.area  # [m^2]
+        * weather_conditions.irradiance  # [W/m^2]
+        * pvt_panel.pv.reference_efficiency
+        * pvt_panel.pv.thermal_coefficient  # [1/K]
     )  # [W/K]
 
     # Compute the collector temperature term.
@@ -570,6 +581,7 @@ def calculate_coefficient_matrix(
         best_guess_pv_temperature,
         pvt_panel,
         resolution,
+        weather_conditions,
     )
 
     # Compute the collector-layer-equation coefficients.

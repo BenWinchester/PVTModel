@@ -108,7 +108,7 @@ class DivergentSolutionError(Exception):
             "temperatures at the next time step:\n"
             f"Number of convergent runs attempted: {convergence_run_number}\n"
             f"Previous difference: {run_one_temperature_difference}\n"
-            "Current difference: {run_two_temperature_difference}\n"
+            f"Current difference: {run_two_temperature_difference}\n"
             "Divergence is hence "
             f"{round(run_two_temperature_difference - run_one_temperature_difference, 2)}"
             " away from the current solution.\n"
