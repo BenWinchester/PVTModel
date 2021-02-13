@@ -68,12 +68,14 @@ pv:
   nominal_power: 250 # [W]
   open_circuit_voltage: 36.9 # [V]
   short_cirvuit_current: 8.34 # [A]
-  thermal_coefficient: 0.53 # [K^-1]
+  thermal_coefficient: 0.0045 # [K^-1]
+  # thermal_coefficient: 0.53 # [K^-1]
   # @@@ Value NOT taken from Maria's paper.
   thermal_conductivity: 148 # [W/m*K]
   thickness: 0.00035 # [m]
   transmissivity: 0.9 # [unitless]
   reference_efficiency: 0.154 # [unitless]
+  # reference_temperature: 298 # [K]
   reference_temperature: 318.15 # [K]
 eva:
   thickness: 0.0005 # [m]
