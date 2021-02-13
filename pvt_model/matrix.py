@@ -178,7 +178,7 @@ def _get_glass_equation_coefficients(
 
 def _get_pv_equation_coefficients(
     best_guess_glass_temperature: float,
-    previous_pv_temperature: float,
+    best_guess_pv_temperature: float,
     pvt_panel: pvt.PVT,
     resolution: int,
 ) -> numpy.ndarray:
@@ -189,8 +189,9 @@ def _get_pv_equation_coefficients(
         The temperature of the glass layer at the previous time step, measured in
         Kelvin.
 
-    :param previous_pv_temperature:
-        The temperature of the PV layer at the previous time step, measured in Kelvin.
+    :param best_guess_pv_temperature:
+        The best guess for the temperature of the PV layer at the current time step,
+        measured in Kelvin.
 
     :param pvt_panel:
         A :class:`pvt.PVT` instance representing the PVT panel being modelled.
@@ -219,7 +220,7 @@ def _get_pv_equation_coefficients(
         # Radiative heat transfer from the PV layer
         + physics_utils.radiative_heat_transfer_coefficient(
             destination_emissivity=pvt_panel.pv.emissivity,
-            destination_temperature=previous_pv_temperature,
+            destination_temperature=best_guess_pv_temperature,
             source_emissivity=pvt_panel.glass.emissivity,
             source_temperature=best_guess_glass_temperature,
         )  # [W/m^2*K]
@@ -240,7 +241,7 @@ def _get_pv_equation_coefficients(
         # Radiative heat transfer from the glass layer.
         + physics_utils.radiative_heat_transfer_coefficient(
             destination_emissivity=pvt_panel.pv.emissivity,
-            destination_temperature=previous_pv_temperature,
+            destination_temperature=best_guess_pv_temperature,
             source_emissivity=pvt_panel.glass.emissivity,
             source_temperature=best_guess_glass_temperature,
         )  # [W/m^2*K]
@@ -484,7 +485,6 @@ def _get_tank_equation_coefficients(
         # Tank heat loss
         + hot_water_tank.area  # [m^2]
         * hot_water_tank.heat_loss_coefficient  # [W/m^2*K]
-        # + 573
         # Demand heat loss
         + current_hot_water_load  # [kg/s]
         * constants.HEAT_CAPACITY_OF_WATER  # [J/kg*K]
