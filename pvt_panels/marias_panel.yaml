@@ -26,6 +26,9 @@ pvt_system:
   longitude: 0.0098 # [deg]
   # The timezone offset in Hours from UTC.
   timezone: 0 # [hours]
+  # The conductance, measured in Watts per meter squared Kelvin, between the PV layer
+  # and collector layers of the panel.
+  pv_to_collector_conductance: 500 # [W/m^2*K]
   # The length of the collector is measured in meters.
   length: 1 # [m]
   # The area is measured in meters squared.
