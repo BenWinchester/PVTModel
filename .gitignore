@@ -1,5 +1,7 @@
 # Internal git files
 *.diff
+*.diff*
+*.diff.*
 # Ignore model outputs
 *.log*
 *.jpg*
@@ -11,6 +13,7 @@
 # Ignore data files
 data_*
 output_*
+**/output_files
 # Additional files
 foo.txt
 # Private scripts

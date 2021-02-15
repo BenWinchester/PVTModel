@@ -15,7 +15,9 @@ check the external matplotlib.pyplot module.
 
 """
 
+import argparse
 import os
+import sys
 
 from typing import Any, List, Dict, Optional, Tuple, Union
 
@@ -24,9 +26,20 @@ import re
 
 from matplotlib import pyplot as plt
 
-from .__utils__ import GraphDetail, get_logger, HEAT_CAPACITY_OF_WATER
+try:
+    from .constants import HEAT_CAPACITY_OF_WATER  # pylint: disable=unused-import
+    from .__utils__ import GraphDetail, get_logger
+except ModuleNotFoundError:
+    import logging
 
-# The directory in which old figures are saved
+    logging.error(
+        "Incorrect module import. Try running with `python3.7 -m pvt_model.analysis`"
+    )
+    raise
+
+# The directory into which which should be saved
+NEW_FIGURES_DIRECTORY: str = "figures"
+# The directory in which old figures are saved and stored for long-term access
 OLD_FIGURES_DIRECTORY: str = "old_figures"
 # How detailed the graph should be
 GRAPH_DETAIL: GraphDetail = GraphDetail.lowest
@@ -34,8 +47,21 @@ GRAPH_DETAIL: GraphDetail = GraphDetail.lowest
 X_TICK_SEPARATION: int = int(8 * GRAPH_DETAIL.value / 48)
 # Which days of data to include
 DAYS_TO_INCLUDE: List[bool] = [False, True]
-# The name of the data file to use.
-DATA_FILE_NAME = "data_output_july_day_new_method_average_irradiance_4.json"
+
+
+def _parse_args(args) -> argparse.Namespace:
+    """
+    Parse the CLI args.
+
+    """
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--data-file-name", "-df", help="Path to the data file to parse."
+    )
+
+    return parser.parse_args(args)
 
 
 def _resolution_from_graph_detail(
@@ -84,21 +110,23 @@ def _reduce_data(
 
     """
 
-    # * First, only include the bits of data we want.
-    # @@@ This only works for two days so far:
-    # data = dict(list(data.items())[int(len(data) / 2) :])
-    # data = {
-    #     str(int(key) - 86400): value
-    #     for key, value in data.items()
-    # }
-
+    # Determine the number of data points to be amalgamated per graph point.
     data_points_per_graph_point: int = _resolution_from_graph_detail(
         graph_detail, len(data_to_reduce)
     )
 
+    if data_points_per_graph_point <= 1:
+        return data_to_reduce
+
+    # Construct a dictionary to contain this reduced data.
     reduced_data: Dict[Union[int, str], Dict[Any, Any]] = {
         index: dict()
-        for index in range(int(len(data_to_reduce) / data_points_per_graph_point))
+        for index in range(
+            int(
+                len([key for key in data_to_reduce if key.isdigit()])
+                / data_points_per_graph_point
+            )
+        )
     }
 
     # Depending on the type of data entry, i.e., whether it is a temperature, load,
@@ -118,7 +146,13 @@ def _reduce_data(
         if any(
             [
                 key in data_entry_name
-                for key in ["temperature", "irradiance", "efficiency"]
+                for key in [
+                    "temperature",
+                    "irradiance",
+                    "efficiency",
+                    "hot_water_load",
+                    "electrical_load",
+                ]
             ]
         ):
             try:
@@ -190,10 +224,14 @@ def _post_process_data(
 
     # * Cycle through all the data points and compute the new values as needed.
     for data_entry in data_to_post_process.values():
-        # Conversion needed from Wh to Joules.
-        data_entry["litres_consumed"] = (
-            data_entry["thermal_load"] / (HEAT_CAPACITY_OF_WATER * 50) * 3600
+        data_entry["collector_temperature_gain"] = (
+            data_entry["collector_output_temperature"]
+            - data_entry["collector_input_temperature"]
         )
+    #     # Conversion needed from Wh to Joules.
+    #     data_entry["litres_per_hour"] = (
+    #         data_entry["thermal_load"] / (HEAT_CAPACITY_OF_WATER * 50) * 60
+    #     )
     return data_to_post_process
 
 
@@ -269,6 +307,7 @@ def plot(
     axes=None,
     shape: str = "x",
     colour: str = None,
+    bar_plot: bool = False,
 ) -> Optional[Any]:
     """
     Plots some model_data based on input parameters.
@@ -300,6 +339,9 @@ def plot(
     :param colour:
         The colour to use for the plot.
 
+    :param bar_plot:
+        Whether to plot a line graph (False) or a bar_plot plot (True).
+
     """
 
     x_model_data, y_model_data = (
@@ -314,20 +356,37 @@ def plot(
     # Reduce the values on the x axis to be times.
     # x_model_data = [float(item) / (resolution / 60) for item in x_model_data]
 
-    # If we are not using axes, then the model_data can be straight plotted...
-    if axes is None:
-        plt.scatter(x_model_data, y_model_data, label=label, marker=shape)
-        (line,) = plt.plot(x_model_data, y_model_data, label=label, marker=shape)
+    if bar_plot:
+        if axes is None:
+            if colour is None:
+                plt.bar(x_model_data, y_model_data, label=label)
+            else:
+                plt.bar(x_model_data, y_model_data, label=label, color=colour)
 
-    # ... otherwise, the model_data needs to be plotted on just on axis.
-    else:
-        axes.scatter(x_model_data, y_model_data, label=label, marker=shape)
-        if colour is None:
-            (line,) = axes.plot(x_model_data, y_model_data, label=label, marker=shape)
+        #  otherwise, the model_data needs to be plotted on just on axis.
         else:
-            (line,) = axes.plot(
-                x_model_data, y_model_data, label=label, marker=shape, color=colour
-            )
+            if colour is None:
+                line = axes.bar(x_model_data, y_model_data, label=label)
+            else:
+                line = axes.bar(x_model_data, y_model_data, label=label, color=colour)
+
+    else:
+        # If we are not using axes, then the model_data can be straight plotted...
+        if axes is None:
+            plt.scatter(x_model_data, y_model_data, label=label, marker=shape)
+            (line,) = plt.plot(x_model_data, y_model_data, label=label, marker=shape)
+
+        #  otherwise, the model_data needs to be plotted on just on axis.
+        else:
+            axes.scatter(x_model_data, y_model_data, label=label, marker=shape)
+            if colour is None:
+                (line,) = axes.plot(
+                    x_model_data, y_model_data, label=label, marker=shape
+                )
+            else:
+                (line,) = axes.plot(
+                    x_model_data, y_model_data, label=label, marker=shape, color=colour
+                )
 
     # Set the labels for the axes.
     plt.xlabel("Time of Day")
@@ -347,6 +406,12 @@ def save_figure(figure_name: str) -> None:
 
     # Create a regex for cycling through the files.
     file_regex = re.compile("figure_{}_(?P<old_index>[0-9]).jpg".format(figure_name))
+
+    # Create a storage directory if it doesn't already exist.
+    if not os.path.isdir(OLD_FIGURES_DIRECTORY):
+        os.mkdir(OLD_FIGURES_DIRECTORY)
+    if not os.path.isdir(NEW_FIGURES_DIRECTORY):
+        os.mkdir(NEW_FIGURES_DIRECTORY)
 
     # We need to work download from large numbers to new numbers.
     filenames = sorted(os.listdir(OLD_FIGURES_DIRECTORY))
@@ -368,18 +433,23 @@ def save_figure(figure_name: str) -> None:
         )
 
     # Move the current _1 file into the old directory
-    if os.path.isfile(f"figure_{figure_name}_1.jpg"):
+    if os.path.isfile(
+        os.path.join(NEW_FIGURES_DIRECTORY, f"figure_{figure_name}_1.jpg")
+    ):
         os.rename(
-            f"figure_{figure_name}_1.jpg",
+            os.path.join(NEW_FIGURES_DIRECTORY, f"figure_{figure_name}_1.jpg"),
             os.path.join(OLD_FIGURES_DIRECTORY, f"figure_{figure_name}_1.jpg"),
         )
 
     # If it exists, move the current figure to _1
-    if os.path.isfile(f"figure_{figure_name}.jpg"):
-        os.rename(f"figure_{figure_name}.jpg", f"figure_{figure_name}_1.jpg")
+    if os.path.isfile(os.path.join(NEW_FIGURES_DIRECTORY, f"figure_{figure_name}.jpg")):
+        os.rename(
+            os.path.join(NEW_FIGURES_DIRECTORY, f"figure_{figure_name}.jpg"),
+            os.path.join(NEW_FIGURES_DIRECTORY, f"figure_{figure_name}_1.jpg"),
+        )
 
     # Save the figure
-    plt.savefig(f"figure_{figure_name}.jpg")
+    plt.savefig(os.path.join(NEW_FIGURES_DIRECTORY, f"figure_{figure_name}.jpg"))
 
 
 def plot_figure(
@@ -388,11 +458,13 @@ def plot_figure(
     first_axis_things_to_plot: List[str],
     first_axis_label: str,
     *,
+    first_axis_shape: str = "x",
     first_axis_y_limits: Optional[Tuple[int, int]] = None,
     second_axis_things_to_plot: Optional[List[str]] = None,
     second_axis_label: Optional[str] = None,
     second_axis_y_limits: Optional[Tuple[int, int]] = None,
     annotate_maximum: bool = False,
+    bar_plot: bool = False,
 ) -> None:
     """
     Does all the work needed to plot a figure with up to two axes and save it.
@@ -413,6 +485,9 @@ def plot_figure(
         A `tuple` giving the lower and upper limits to set for the y axis for the first
         axis.
 
+    :param first_axis_shape:
+        A `str` giving an optional override shape for the first axis.
+
     :param second_axis_things_to_plot:
         The list of variable names (keys in the JSON model_data) to plot on the second axis.
 
@@ -426,6 +501,9 @@ def plot_figure(
     :param annotate_maximum:
         If specified, the maximum will be plotted on the graph.
 
+    :param bar_plot:
+        If specified, a bar plot will be generated, rather than a line plot.
+
     """
 
     # Generate the necessary local variables needed for sub-plotting.
@@ -438,6 +516,8 @@ def plot_figure(
             model_data,
             hold=True,
             axes=ax1,
+            shape=first_axis_shape,
+            bar_plot=bar_plot,
         )
         for entry in first_axis_things_to_plot
     ]
@@ -474,6 +554,7 @@ def plot_figure(
                 hold=True,
                 axes=ax2,
                 shape=".",
+                bar_plot=bar_plot,
             )
             for entry in second_axis_things_to_plot
         ]
@@ -500,11 +581,13 @@ def plot_figure(
 
 if __name__ == "__main__":
 
+    parsed_args = _parse_args(sys.argv[1:])
+
     # * Set up the logger
     logger = get_logger("pvt_analysis")
 
     # * Extract the data.
-    data = load_model_data(DATA_FILE_NAME)
+    data = load_model_data(parsed_args.data_file_name)
 
     # * Reduce the resolution of the data.
     data = _reduce_data(data, GRAPH_DETAIL)
@@ -512,32 +595,56 @@ if __name__ == "__main__":
     # * Create new data values where needed.
     data = _post_process_data(data)
 
-    # Plot Figure 4a: Electrical Demand
+    # Plot All Temperatures
     plot_figure(
-        "maria_4a_electrical_load",
+        "all_temperatures",
         data,
-        ["electrical_load"],
-        "Dwelling Load Profile / W",
-    )
-
-    # Plot Figure 4b: Thermal Demand
-    plot_figure(
-        "maria_4b_thermal_load",
-        data,
-        ["litres_consumed"],
-        "Hot Water Consumption / Litres",
-    )
-
-    # Plot Figure 5a: Diurnal Solar Irradiance
-    plot_figure(
-        "maria_5a_solar_irradiance",
-        data,
-        [
-            "solar_irradiance",
-            # "normal_irradiance"
+        first_axis_things_to_plot=[
+            "ambient_temperature",
+            "bulk_water_temperature",
+            "collector_temperature",
+            "collector_input_temperature",
+            "collector_output_temperature",
+            "glass_temperature",
+            "pv_temperature",
+            "sky_temperature",
+            "tank_temperature",
         ],
-        "Solar Irradiance / Watts / meter squared",
+        first_axis_label="Temperature / deg C",
+        # first_axis_y_limits=[-10, 50],
     )
+
+    # # Plot Figure 4a: Electrical Demand
+    # plot_figure(
+    #     "maria_4a_electrical_load",
+    #     data,
+    #     ["electrical_load"],
+    #     "Dwelling Load Profile / W",
+    #     first_axis_y_limits=[0, 5000],
+    #     first_axis_shape="d",
+    # )
+
+    # # Plot Figure 4b: Thermal Demand
+    # plot_figure(
+    #     "maria_4b_thermal_load",
+    #     data,
+    #     ["hot_water_load"],
+    #     "Hot Water Consumption / Litres per hour",
+    #     first_axis_y_limits=[0, 12],
+    #     bar_plot=True,
+    # )
+
+    # # Plot Figure 5a: Diurnal Solar Irradiance
+    # plot_figure(
+    #     "maria_5a_solar_irradiance",
+    #     data,
+    #     [
+    #         "solar_irradiance",
+    #         # "normal_irradiance"
+    #     ],
+    #     "Solar Irradiance / Watts / meter squared",
+    #     first_axis_y_limits=[0, 600],
+    # )
 
     # Plot Figure 5b: Ambient Temperature
     plot_figure(
@@ -545,6 +652,7 @@ if __name__ == "__main__":
         data,
         first_axis_things_to_plot=["ambient_temperature", "sky_temperature"],
         first_axis_label="Temperature / deg C",
+        first_axis_y_limits=[0, 65],
     )
 
     # Plot Figure 6a: Panel-related Temperatures
@@ -560,6 +668,7 @@ if __name__ == "__main__":
             "sky_temperature",
         ],
         first_axis_label="Temperature / deg C",
+        first_axis_y_limits=[-10, 50],
     )
 
     # Plot Figure 6b: Tank-related Temperatures
@@ -567,11 +676,12 @@ if __name__ == "__main__":
         "maria_6b_tank_temperature",
         data,
         first_axis_things_to_plot=[
-            "collector_input_temperature",
             "collector_output_temperature",
+            "collector_input_temperature",
             "tank_temperature",
         ],
         first_axis_label="Temperature / deg C",
+        first_axis_y_limits=[0, 50],
     )
 
     # Plot Figure 7: Stream-related Temperatures
@@ -583,33 +693,33 @@ if __name__ == "__main__":
             "exchanger_temperature_drop",
         ],
         first_axis_label="Temperature Gain / deg C",
-        second_axis_things_to_plot=["tank_heat_addition"],
-        second_axis_label="Tank Heat Addition / W",
+        # second_axis_things_to_plot=["tank_heat_addition"],
+        # second_axis_label="Tank Heat Addition / W",
     )
 
-    # Plot Figure 8A - Electrical Power and Net Electrical Power
-    plot_figure(
-        "maria_8a_electrical_output",
-        data,
-        ["gross_electrical_output", "net_electrical_output"],
-        "Electrical Energy Supplied / Wh",
-    )
+    # # Plot Figure 8A - Electrical Power and Net Electrical Power
+    # plot_figure(
+    #     "maria_8a_electrical_output",
+    #     data,
+    #     ["gross_electrical_output", "net_electrical_output"],
+    #     "Electrical Energy Supplied / Wh",
+    # )
 
-    # Plot Figure 8B - Thermal Power Supplied and Thermal Power Demanded
-    plot_figure(
-        "maria_8b_thermal_output",
-        data,
-        ["thermal_load", "thermal_output"],
-        "Thermal Energy Supplied / Wh",
-    )
+    # # Plot Figure 8B - Thermal Power Supplied and Thermal Power Demanded
+    # plot_figure(
+    #     "maria_8b_thermal_output",
+    #     data,
+    #     ["thermal_load", "thermal_output"],
+    #     "Thermal Energy Supplied / Wh",
+    # )
 
-    # Plot Figure 10 - Electrical Power, Gross only
-    plot_figure(
-        "maria_10_gross_electrical_output",
-        data,
-        ["gross_electrical_output"],
-        "Electrical Energy Supplied / Wh",
-    )
+    # # Plot Figure 10 - Electrical Power, Gross only
+    # plot_figure(
+    #     "maria_10_gross_electrical_output",
+    #     data,
+    #     ["gross_electrical_output"],
+    #     "Electrical Energy Supplied / Wh",
+    # )
 
     """  # pylint: disable=pointless-string-statement
     # * Plotting all tank-related temperatures

@@ -14,11 +14,16 @@ layer.
 
 """
 
-import unittest  # pylint: disable=unused-import
+import unittest
 
 from unittest import mock  # pylint: disable=unused-import
 
-from .. import back_plate  # pylint: disable=unused-import
+import pytest
+
+from ...__utils__ import BackLayerParameters
+from ...constants import FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR
+from .. import back_plate
+from .test_utils import PYTEST_PRECISION
 
 
 def test_instantiate() -> None:
@@ -28,7 +33,7 @@ def test_instantiate() -> None:
     """
 
 
-class TestProperties:
+class TestProperties(unittest.TestCase):
     """
     Tests the various publically exposed private attributes and method properties.
 
@@ -43,4 +48,39 @@ class TestProperties:
         """
         Tests that the calculation of the conductance is done correctly.
 
+        :equation:
+            conductnace = (
+                thickness / conductivity
+                + 1 / free_convective_heat_transfer_coefficient_of_air
+            ) ^ (-1)
+
+        :units:
+            W/m^2*K = ((m / W/m*K) + (1 / W/m^2*K)) ^ (-1)
+
+        :values:
+            thickness = 0.01 m
+            conductivity = 200 W/m*K
+            free_convective_heat_transfer_coefficient_of_air = 25 W/m^2*K
+
+        :result:
+            conductace = 24.9687890137 W/m^2*K
+
         """
+
+        # @@@ Switch to mocking once mocking is fixed.
+        self.assertEqual(FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR, 25)
+
+        test_back_plate = back_plate.BackPlate(
+            BackLayerParameters(
+                mass=100,
+                heat_capacity=4000,
+                area=15,
+                thickness=0.01,
+                conductivity=200,
+            )
+        )
+
+        self.assertEqual(
+            pytest.approx(test_back_plate.conductance, PYTEST_PRECISION),
+            pytest.approx(24.9687890137, PYTEST_PRECISION),
+        )

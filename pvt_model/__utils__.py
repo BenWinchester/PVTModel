@@ -19,11 +19,12 @@ import enum
 import logging
 import os
 
-from dataclasses import dataclass
-from typing import Any, Dict, Generator
+from typing import Any, Dict, Generator, Optional
 
+from dataclasses import dataclass
 from dateutil.relativedelta import relativedelta
 
+import numpy
 import yaml
 
 __all__ = (
@@ -32,34 +33,26 @@ __all__ = (
     "CarbonEmissions",
     "CollectorParameters",
     "Date",
-    "DENSITY_OF_WATER",
+    "DivergentSolutionError",
     "FileType",
-    "FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR",
-    "HEAT_CAPACITY_OF_WATER",
     "get_logger",
     "GraphDetail",
-    "INITIAL_SYSTEM_TEMPERATURE",
-    "INITIAL_TANK_TEMPERATURE",
     "InternalError",
     "InvalidDataError",
     "LOGGER_NAME",
     "MissingDataError",
     "MissingParametersError",
-    "NUSSELT_NUMBER",
     "ResolutionMismatchError",
     "LayerParameters",
     "OpticalLayerParameters",
     "ProgrammerJudgementFault",
     "PVParameters",
     "read_yaml",
-    "STEFAN_BOLTZMAN_CONSTANT",
-    "THERMAL_CONDUCTIVITY_OF_AIR",
-    "THERMAL_CONDUCTIVITY_OF_WATER",
+    "SystemData",
     "time_iterator",
     "TotalPowerData",
     "UtilityType",
     "WeatherConditions",
-    "ZERO_CELCIUS_OFFSET",
 )
 
 
@@ -67,49 +60,62 @@ __all__ = (
 # Constants #
 #############
 
-# The temperature of absolute zero in Kelvin, used for converting Celcius to Kelvin and
-# vice-a-versa.
-ZERO_CELCIUS_OFFSET: float = 273.15
 
-# The density of water, measured in kilograms per meter cubed.
-DENSITY_OF_WATER: int = 1000
-# The free convective, heat-transfer coefficient of air. This varies, and potentially
-# could be extended to the weather module and calculated on the fly depending on various
-# environmental conditions etc.. This is measured in Watts per meter squared
-# Kelvin.
-FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR: int = 25
-# The heat capacity of water, measured in Joules per kilogram Kelvin.
-HEAT_CAPACITY_OF_WATER: int = 4182
-# The initial temperature for the system to be instantiated at, measured in Kelvin.
-INITIAL_SYSTEM_TEMPERATURE = 303  # [K]
-# The initial temperature of the hot-water tank, at which it should be instantiated,
-# measured in Kelvin.
-INITIAL_TANK_TEMPERATURE = ZERO_CELCIUS_OFFSET + 34.75  # [K]
 # The name used for the internal logger.
 LOGGER_NAME = "my_first_pvt_model"
-# The Nusselt number of the flow is given as 6 in Maria's paper.
-NUSSELT_NUMBER: float = 6
-# The Stefan-Boltzman constant, given in Watts per meter squared Kelvin to the four.
-STEFAN_BOLTZMAN_CONSTANT: float = 5.670374419 * (10 ** (-8))
-# The convective, heat-transfer coefficienct of water. This varies (a LOT), and is
-# measured in units of Watts per meter squared Kelvin.
-# This is determined by the following formula:
-#   Nu = h_w * D / k_w
-# where D is the diameter of the pipe, in meters, and k_w is the thermal conductivity of
-# water.
-# @@@ I think a constant should be inserted here.
-
-# The thermal conductivity of air is measured in Watts per meter Kelvin.
-# ! This is defined at 273 Kelvin.
-THERMAL_CONDUCTIVITY_OF_AIR: float = 0.024
-# The thermal conductivity of water is obtained from
-# http://hyperphysics.phy-astr.gsu.edu/hbase/Tables/thrcn.html
-THERMAL_CONDUCTIVITY_OF_WATER: float = 0.6  # [W/m*K]
 
 
 ##############
 # Exceptions #
 ##############
+
+
+class DivergentSolutionError(Exception):
+    """
+    Raised when a divergent solution occurs.
+
+    """
+
+    def __init__(
+        self,
+        convergence_run_number: int,
+        run_one_temperature_difference: float,
+        run_one_temperature_vector: numpy.ndarray,
+        run_two_temperature_difference: float,
+        run_two_temperature_vector: numpy.ndarray,
+    ) -> None:
+        """
+        Instantiate a :class:`DivergentSolutionError`.
+
+        :param convergence_run_number:
+            The number of runs attempted to reach a convergent solution.
+
+        :param run_one_temperature_difference:
+            The temperature difference between the i-2 and i-1 iterations.
+
+        :param run_one_temperature_vector:
+            The temperature vector computed at the i-1 iteration.
+
+        :param run_two_temperature_difference:
+            The temperature difference between the i-1 and i iterations.
+
+        :param run_two_temperature_vector:
+            The temperature vector computed at the i iteration.
+
+        """
+
+        super().__init__(
+            "A divergent solution was found when attempting to compute the "
+            "temperatures at the next time step:\n"
+            f"Number of convergent runs attempted: {convergence_run_number}\n"
+            f"Previous difference: {run_one_temperature_difference}\n"
+            f"Current difference: {run_two_temperature_difference}\n"
+            "Divergence is hence "
+            f"{round(run_two_temperature_difference - run_one_temperature_difference, 2)}"
+            " away from the current solution.\n"
+            f"Previous solution temperatures:\n{run_one_temperature_vector}\n"
+            f"Current solution temperatures:\n{run_two_temperature_vector}\n",
+        )
 
 
 class InternalError(Exception):
@@ -444,6 +450,66 @@ class GraphDetail(enum.Enum):
 
 
 @dataclass
+class SystemData:
+    """
+    Contains information about the system at a given time step.
+
+    .. attribute:: ambient_temperature
+        The ambient temperature, measured in Celcius.
+
+    .. attribute:: bulk_water_temperature
+        The temperature of the bulk water, measured in Celcius.
+
+    .. attribute:: collector_temperature
+        The temperature of the collector layer, measured in Celcius.
+
+    .. attribute:: date
+        A `str` giving the current date.
+
+    .. attribute:: exchanger_temperature_drop
+        The temperature drop through the heat exchanger in the tank, measured in Kelvin
+        or Celcius. (As it is a temperature difference, the two scales are equivalent.)
+
+    .. attribute:: glass_temperature
+        The temperature of the glass layer, measured in Celcius.
+
+    .. attribute:: pv_temperature
+        The temperature of the PV layer, measured in Celcius.
+
+    .. attribute:: sky_temperature
+        The temperature of the sky, measured in Celcius.
+
+    .. attribute:: tank_temperature
+        The temperature of the hot-water tank, measured in Celcius.
+
+    .. attribute:: time
+        A `str` giving the current time.
+
+    .. attribute:: collector_input_temperature
+        The temperature of the HTF inputted into the collector, measured in Celcius.
+        This can be set to `None` if no data is recorded.
+
+    .. attribute:: collector_output_temperature
+        The temperature of the HTF outputted from the collector, measured in Celcius.
+        This can be set to `None` if no data is recorded.
+
+    """
+
+    ambient_temperature: float
+    bulk_water_temperature: float
+    collector_temperature: float
+    date: str
+    glass_temperature: float
+    exchanger_temperature_drop: float
+    pv_temperature: float
+    sky_temperature: float
+    tank_temperature: float
+    time: str
+    collector_input_temperature: Optional[float] = None
+    collector_output_temperature: Optional[float] = None
+
+
+@dataclass
 class TotalPowerData:
     """
     Contains information about the total power generated by the system.
@@ -509,8 +575,11 @@ class WeatherConditions:
     """
     Contains information about the various weather conditions at any given time.
 
-    .. attribute:: irradiance
-        The solar irradiance in Watts per meter squared.
+    .. attribute:: ambient_tank_temperature
+        The ambient temperature surrounding the hot-water tank, measured in Kelvin.
+
+    .. attribute:: ambient_temperature
+        The ambient temperature in
 
     .. attribute:: declination
         The angle of declination of the sun above the horizon
@@ -521,16 +590,24 @@ class WeatherConditions:
     .. attribute:: wind_speed
         The wind speed in meters per second.
 
-    .. attribute:: ambient_temperature
-        The ambient temperature in
+    .. attribute:: mains_water_temperature
+        The temperature of the mains water, measured in Kelvin.
 
     """
 
+    # Private attributes:
+    #
+    # .. attribute:: _irradiance
+    #   The solar irradiance in Watts per meter squared.
+    #
+
     _irradiance: float
-    declination: float
-    azimuthal_angle: float
-    wind_speed: float
+    ambient_tank_temperature: float
     ambient_temperature: float
+    azimuthal_angle: float
+    declination: float
+    mains_water_temperature: float
+    wind_speed: float
 
     @property
     def irradiance(self) -> float:
@@ -623,16 +700,12 @@ class LayerParameters:
     .. attribute:: thickness
         The thickness of the layer, measured in meters.
 
-    .. attribute:: temperature
-        The temperature at which to initialise the layer, measured in Kelvin.
-
     """
 
     mass: float
     heat_capacity: float
     area: float
     thickness: float
-    temperature: float
 
 
 @dataclass
@@ -706,9 +779,6 @@ class CollectorParameters(OpticalLayerParameters):
     .. attribute:: pipe_diameter
         The diameter of the pipe, in meters.
 
-    .. attribute:: pump_power
-        The electrical power, in Watts, consumed by the water pump in the collector.
-
     """
 
     bulk_water_temperature: float
@@ -718,7 +788,6 @@ class CollectorParameters(OpticalLayerParameters):
     number_of_pipes: float
     output_water_temperature: float
     pipe_diameter: float
-    pump_power: float
 
 
 @dataclass
@@ -823,7 +892,7 @@ def time_iterator(
     *,
     first_time: datetime.datetime,
     last_time: datetime.datetime,
-    internal_resolution: int,
+    resolution: int,
     timezone: datetime.timezone,
 ) -> Generator[datetime.datetime, None, None]:
     """
@@ -835,7 +904,7 @@ def time_iterator(
     :param last_time:
         The last time, which, when reached, should cause the generator to stop.
 
-    :param internal_resolution:
+    :param resolution:
         The time step, in seconds, for which the simulation should be run before saving.
 
     :param timezone:
@@ -851,7 +920,7 @@ def time_iterator(
     while current_time < last_time:
         yield current_time.replace(tzinfo=timezone)
         current_time += relativedelta(
-            hours=internal_resolution // 3600,
-            minutes=internal_resolution // 60,
-            seconds=internal_resolution % 60,
+            hours=resolution // 3600,
+            minutes=(resolution // 60) % 60,
+            seconds=resolution % 60,
         )

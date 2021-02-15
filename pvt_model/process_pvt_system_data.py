@@ -20,16 +20,18 @@ happens within this module.
 
 import datetime
 
-from typing import Any, Dict
+from typing import Any, Dict, Tuple
+
+import numpy
 
 from .pvt_panel import pvt
-from . import exchanger, tank
+from . import exchanger, tank, pump
+from .constants import (
+    HEAT_CAPACITY_OF_WATER,
+)
 from .__utils__ import (
     BackLayerParameters,
     CollectorParameters,
-    HEAT_CAPACITY_OF_WATER,
-    INITIAL_SYSTEM_TEMPERATURE,
-    INITIAL_TANK_TEMPERATURE,
     InvalidDataError,
     MissingDataError,
     MissingParametersError,
@@ -42,6 +44,7 @@ from .__utils__ import (
 __all__ = (
     "heat_exchanger_from_path",
     "hot_water_tank_from_path",
+    "pump_from_path",
     "pvt_panel_from_path",
 )
 
@@ -104,7 +107,6 @@ def hot_water_tank_from_path(tank_data_file: str) -> tank.Tank:
             HEAT_CAPACITY_OF_WATER,  # [J/kg*K]
             float(tank_data["heat_loss_coefficient"]),  # [W/m^2*K]
             float(tank_data["mass"]),  # [kg]
-            INITIAL_TANK_TEMPERATURE,  # [K]
         )
     except KeyError as e:
         raise MissingDataError(
@@ -115,6 +117,40 @@ def hot_water_tank_from_path(tank_data_file: str) -> tank.Tank:
         raise InvalidDataError(
             tank_data_file,
             "Tank data variables provided must be floating point integers.",
+        ) from None
+
+
+#############
+# Pump code #
+#############
+
+
+def pump_from_path(pump_data_file: str) -> pump.Pump:
+    """
+    Generate a :class:`pump.Pump` instance based on the path to the data file.
+
+    :param pump)data_file:
+        The path to the pump data file.
+
+    :return:
+        A :class:`tank.Tank` instance representing the hot-water tank.
+
+    """
+
+    pump_data = read_yaml(pump_data_file)
+    try:
+        return pump.Pump(
+            float(pump_data["power"]),  # [W]
+        )
+    except KeyError as e:
+        raise MissingDataError(
+            "Not all data needed to instantiate the pump class was provided. "
+            f"File: {pump_data_file}. Error: {str(e)}"
+        ) from None
+    except ValueError as e:
+        raise InvalidDataError(
+            pump_data_file,
+            "Pump data variables provided must be floating point integers.",
         ) from None
 
 
@@ -151,7 +187,6 @@ def _back_params_from_data(
             back_data["heat_capacity"],  # [J/kg*K]
             area,  # [m^2]
             back_data["thickness"],  # [m]
-            INITIAL_SYSTEM_TEMPERATURE,  # [K]
             back_data["thermal_conductivity"],  # [W/m*K]
         )
     except KeyError as e:
@@ -196,13 +231,23 @@ def _collector_params_from_data(
         return CollectorParameters(
             mass=collector_data["mass"]  # [kg]
             if "mass" in collector_data
-            else area  # [m^2]
-            * collector_data["density"]  # [kg/m^3]
-            * collector_data["thickness"],  # [m]
+            else (
+                # Main collector body area.
+                area  # [m^2]
+                * collector_data["density"]  # [kg/m^3]
+                * collector_data["thickness"]  # [m]
+                # Collector pipe area
+                + (
+                    numpy.pi
+                    * collector_data["pipe_diameter"]  # [m]
+                    * collector_data["length"]  # [m]
+                )
+                * collector_data["density"]  # [kg/m^3]
+                * collector_data["thickness"]  # [m]
+            ),
             heat_capacity=collector_data["heat_capacity"],  # [J/kg*K]
             area=area,  # [m^2]
             thickness=collector_data["thickness"],  # [m]
-            temperature=INITIAL_SYSTEM_TEMPERATURE,  # [K]
             transmissivity=collector_data["transmissivity"],  # [unitless]
             absorptivity=collector_data["absorptivity"],  # [unitless]
             emissivity=collector_data["emissivity"],  # [unitless]
@@ -215,7 +260,6 @@ def _collector_params_from_data(
             number_of_pipes=collector_data["number_of_pipes"],  # [pipes]
             output_water_temperature=initial_collector_htf_tempertaure,  # [K]
             pipe_diameter=collector_data["pipe_diameter"],  # [m]
-            pump_power=collector_data["pump_power"],  # [W]
         )
     except KeyError as e:
         raise MissingDataError(
@@ -227,7 +271,7 @@ def _collector_params_from_data(
 
 def _glass_params_from_data(
     area: float, glass_data: Dict[str, Any]
-) -> OpticalLayerParameters:
+) -> Tuple[float, OpticalLayerParameters]:
     """
     Generate a :class:`OpticalLayerParameters` containing glass-layer info from data.
 
@@ -244,19 +288,21 @@ def _glass_params_from_data(
     """
 
     try:
-        return OpticalLayerParameters(
-            glass_data["mass"]  # [kg]
-            if "mass" in glass_data
-            else glass_data["density"]  # [kg/m^3]
-            * glass_data["thickness"]  # [m]
-            * area,  # [m^2]
-            glass_data["heat_capacity"],  # [J/kg*K]
-            area,  # [m^2]
-            glass_data["thickness"],  # [m]
-            INITIAL_SYSTEM_TEMPERATURE,  # [K]
-            glass_data["transmissivity"],  # [unitless]
-            glass_data["absorptivity"],  # [unitless]
-            glass_data["emissivity"],  # [unitless]
+        return (
+            glass_data["diffuse_reflection_coefficient"],
+            OpticalLayerParameters(
+                glass_data["mass"]  # [kg]
+                if "mass" in glass_data
+                else glass_data["density"]  # [kg/m^3]
+                * glass_data["thickness"]  # [m]
+                * area,  # [m^2]
+                glass_data["heat_capacity"],  # [J/kg*K]
+                area,  # [m^2]
+                glass_data["thickness"],  # [m]
+                glass_data["transmissivity"],  # [unitless]
+                glass_data["absorptivity"],  # [unitless]
+                glass_data["emissivity"],  # [unitless]
+            ),
         )
     except KeyError as e:
         raise MissingDataError(
@@ -292,7 +338,6 @@ def _pv_params_from_data(area: float, pv_data: Dict[str, Any]) -> PVParameters:
             pv_data["heat_capacity"],  # [J/kg*K]
             area,  # [m^2]
             pv_data["thickness"],  # [m]
-            INITIAL_SYSTEM_TEMPERATURE,  # [K]
             pv_data["transmissivity"],  # [unitless]
             pv_data["absorptivity"],  # [unitless]
             pv_data["emissivity"],  # [unitless]
@@ -317,10 +362,6 @@ def pvt_panel_from_path(
     """
     Generate a :class:`pvt.PVT` instance based on the path to the data file.
 
-    :param initial_collector_htf_tempertaure:
-        The intial temperature, measured in Kelvin, of the HTF within the thermal
-        collector.
-
     :param portion_covered:
         The portion of the PV-T panel which is covered in PV.
 
@@ -339,7 +380,7 @@ def pvt_panel_from_path(
     # Set up the PVT module
     pvt_data = read_yaml(pvt_data_file)
 
-    glass_parameters = _glass_params_from_data(
+    diffuse_reflection_coefficient, glass_parameters = _glass_params_from_data(
         pvt_data["pvt_system"]["area"], pvt_data["glass"]
     )
     pv_parameters = (
@@ -359,10 +400,11 @@ def pvt_panel_from_path(
 
     try:
         pvt_panel = pvt.PVT(
-            air_gap_thickness=pvt_data["pvt_system"]["air_gap_thickness"],  # [m]
+            air_gap_thickness=pvt_data["air_gap"]["thickness"],  # [m]
             area=pvt_data["pvt_system"]["area"],  # [m^2]
             back_params=back_parameters,
             collector_parameters=collector_parameters,
+            diffuse_reflection_coefficient=diffuse_reflection_coefficient,
             glass_parameters=glass_parameters,
             glazed=not unglazed,
             latitude=pvt_data["pvt_system"]["latitude"],  # [deg]

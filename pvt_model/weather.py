@@ -32,8 +32,8 @@ from typing import Any, Dict, Optional, Set, Tuple, Union
 import json
 import pysolar
 
+from .constants import ZERO_CELCIUS_OFFSET
 from .__utils__ import (
-    ZERO_CELCIUS_OFFSET,
     LOGGER_NAME,
     MissingParametersError,
     ProgrammerJudgementFault,
@@ -363,6 +363,9 @@ class WeatherForecaster:
     """
     Represents a weather forecaster, determining weather conditions and irradiance.
 
+    .. attribute:: mains_water_temperature
+        The mains water temperature, measured in Kelvin.
+
     """
 
     # Private attributes:
@@ -392,8 +395,9 @@ class WeatherForecaster:
 
     def __init__(
         self,
+        ambient_tank_temperature: float,
         average_irradiance: bool,
-        mains_water_temp: float,
+        mains_water_temperature: float,
         monthly_weather_data: Dict[str, Dict[str, Union[str, float]]],
         monthly_irradiance_profiles: Dict[Date, _DailyProfile],
         monthly_temperature_profiles: Dict[Date, _DailyProfile],
@@ -401,11 +405,14 @@ class WeatherForecaster:
         """
         Instantiate a weather forecaster class.
 
+        :param ambient_tank_temperature:
+            The average ambient temperature surrounding the hot-water wank.
+
         :param average_irradiance:
             Whether to average the solar intensity for each month (True), or use the
             data for each day (False) as required.
 
-        :param mains_water_temp:
+        :param mains_water_temperature:
             The mains water temperature, measured in Kelvin.
 
         :param monthly_weather_data:
@@ -417,9 +424,9 @@ class WeatherForecaster:
 
         """
 
+        self.ambient_tank_temperature = ambient_tank_temperature
         self._average_irradiance = average_irradiance
-
-        self.mains_water_temp = mains_water_temp + ZERO_CELCIUS_OFFSET
+        self.mains_water_temperature = mains_water_temperature + ZERO_CELCIUS_OFFSET
 
         self._monthly_weather_data: Dict[int, _MonthlyWeatherData] = {
             self._month_abbr_to_num[month]: _MonthlyWeatherData.from_yaml(
@@ -453,7 +460,7 @@ class WeatherForecaster:
 
         return (
             "WeatherForecaster("
-            f"mains_water_temp: {self.mains_water_temp}, "
+            f"mains_water_temperature: {self.mains_water_temperature}, "
             f"num_months: {len(self._monthly_weather_data.keys())}"
             ")"
         )
@@ -517,6 +524,21 @@ class WeatherForecaster:
             raise MissingParametersError(
                 "WeatherForecaster",
                 "The mains water temperature param is missing from {}.".format(
+                    weather_data_path
+                ),
+            ) from None
+
+        try:
+            ambient_tank_temperature = data.pop("average_ambient_household_temperature")
+        except KeyError:
+            logger.error(
+                "Weather forecaster from %s is missing "
+                "'average_ambient_household_temperature' data.",
+                weather_data_path,
+            )
+            raise MissingParametersError(
+                "WeatherForecaster",
+                "The average ambient tank temperature param is missing from {}.".format(
                     weather_data_path
                 ),
             ) from None
@@ -607,9 +629,16 @@ class WeatherForecaster:
         monthly_irradiance_profiles[Date(1, 6)] = monthly_irradiance_profiles[
             Date(1, 8)
         ]
-        monthly_irradiance_profiles[Date(1, 7)] = monthly_irradiance_profiles[
-            Date(1, 8)
-        ]
+        monthly_irradiance_profiles[Date(1, 7)] = _DailyProfile(
+            {
+                key: (
+                    monthly_irradiance_profiles[Date(1, 8)].profile[key] * 3
+                    + monthly_irradiance_profiles[Date(1, 4)].profile[key]
+                )
+                / 4
+                for key in monthly_irradiance_profiles[Date(1, 8)].profile.keys()
+            }
+        )
         monthly_irradiance_profiles[Date(1, 9)] = monthly_irradiance_profiles[
             Date(1, 4)
         ]
@@ -634,6 +663,7 @@ class WeatherForecaster:
 
         # Instantiate and return a Weather Forecaster based off of this weather data.
         return cls(
+            ambient_tank_temperature,
             average_irradiance,
             mains_water_temp,
             data,
@@ -802,5 +832,11 @@ class WeatherForecaster:
 
         # Return all of these in a WeatherConditions variable.
         return WeatherConditions(
-            irradiance, declination, azimuthal_angle, wind_speed, ambient_temperature
+            _irradiance=irradiance,
+            azimuthal_angle=azimuthal_angle,
+            ambient_tank_temperature=self.ambient_tank_temperature,
+            ambient_temperature=ambient_temperature,
+            declination=declination,
+            mains_water_temperature=self.mains_water_temperature,
+            wind_speed=wind_speed,
         )

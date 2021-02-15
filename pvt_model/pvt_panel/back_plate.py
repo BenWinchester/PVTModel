@@ -16,9 +16,9 @@ This module represents the back plate of a PV-T panel.
 from .__utils__ import Layer
 from ..__utils__ import (
     BackLayerParameters,
-    FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR,
     LayerParameters,
 )
+from ..constants import FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR
 
 __all__ = ("BackPlate",)
 
@@ -48,7 +48,6 @@ class BackPlate(Layer):
                 back_params.heat_capacity,
                 back_params.area,
                 back_params.thickness,
-                back_params.temperature,
             )
         )
 
@@ -62,14 +61,14 @@ class BackPlate(Layer):
             A `str` giving a nice representation of the layer.
 
         """
-        return "BackPlate(area: {}, conductivity: {}, heat_capacity: {}, mass: {}, ".format(
-            self.area,
-            self.conductivity,
-            self._heat_capacity,  # [J/kg*K]
-            self._mass,  # [J/kg*K]
-        ) + "temp: {}, thickness: {})".format(
-            self.temperature,
-            self.thickness,
+        return (
+            "BackPlate("
+            f"area: {self.area}, "
+            f"conductivity: {self.conductivity}, "
+            f"heat_capacity: {self.heat_capacity}, "
+            f"mass: {self.mass}, "
+            f"thickness: {self.thickness}"
+            ")"
         )
 
     @property
@@ -84,30 +83,7 @@ class BackPlate(Layer):
 
         return (
             self.thickness / self.conductivity  # [m] / [W/m*K]
-            + 1 / FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR  # [W/m^2*K]^-1
-        )
-
-    @property
-    def heat_capacity(self) -> float:
-        """
-        Return the heat capacity of the back plate.
-
-        :return:
-            The heat capacity of the back plate layer, measured in Joules per kilogram
-            Kelvin.
-
-        """
-
-        return self._heat_capacity
-
-    @property
-    def mass(self) -> float:
-        """
-        Return the mass of the back plate.
-
-        :return:
-            The mass of the back plate layer, measured in kilograms.
-
-        """
-
-        return self._mass
+            + 1 / FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR  # [m^2*K/W]
+        ) ** (
+            -1
+        )  # [W/m^2*K]

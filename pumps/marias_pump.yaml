@@ -1,0 +1,18 @@
+########################################################################################
+# my_first_pump.yaml - Data concerning the pump used in the PV-T system.
+#
+# Copyright 2021, Ben Winchester
+########################################################################################
+
+efficiency: 0.85
+flow_rate:
+  maximum: 4000 # [litres/hour]
+  nominal: 972 # [litres/hour]
+head:
+  maximum: 6 # [m]
+operating_pressure:
+  maximum: 10 # [bar]
+  nominal: 3.5 # [bar]
+power:
+  nominal: 9.07 # [W]
+system_head_loss: 2.91 # [m]
