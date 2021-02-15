@@ -313,13 +313,18 @@ class PVT:
 
         return (self.latitude, self.longitude)
 
-    def electrical_output(self, weather_conditions: WeatherConditions) -> float:
+    def electrical_output(
+        self, pv_temperature: float, weather_conditions: WeatherConditions
+    ) -> float:
         """
         Returns the electrical output of the PV-T panel in Watts.
 
         NOTE: We here need to include the portion of the panel that is covered s.t. the
         correct electricitiy-generating area is accounted for, rather than accidentailly
         inculding areas which do not generated electricity.
+
+        :param pv_temperature:
+            The temperature of the PV layer, measured in Kelvin.
 
         :param weather_conditions:
             The current weather conditions at the time step being incremented to.
@@ -329,14 +334,15 @@ class PVT:
 
         """
 
-        electrical_output: float = (
-            self.pv.electrical_efficiency  # type: ignore
-            if self.pv is not None
-            else 0
-            * self.get_solar_irradiance(weather_conditions)
-            * self.area
-            * self.portion_covered
-        )
+        if self.pv is not None:
+            electrical_output: float = (
+                self.pv.electrical_efficiency(pv_temperature)
+                * self.get_solar_irradiance(weather_conditions)
+                * self.area
+                * self.portion_covered
+            )
+        else:
+            electrical_output = 0
 
         return electrical_output
 

@@ -39,7 +39,7 @@ class _BaseTest(unittest.TestCase):
 
         super().setUp()
 
-        self.glass_parameterse = OpticalLayerParameters(
+        self.glass_parameters = OpticalLayerParameters(
             mass=150,
             heat_capacity=4000,
             area=100,
@@ -51,7 +51,7 @@ class _BaseTest(unittest.TestCase):
         self.diffuse_reflection_coefficient = 0.18
 
         self.glass = glass.Glass(
-            self.diffuse_reflection_coefficient, self.glass_parameterse
+            self.diffuse_reflection_coefficient, self.glass_parameters
         )
 
 
@@ -73,12 +73,12 @@ class TestInstantiate(_BaseTest):
             self.glass.diffuse_reflection_coefficient,
             self.diffuse_reflection_coefficient,
         )
-        self.assertEqual(self.glass.mass, self.glass_parameterse.mass)
-        self.assertEqual(self.glass.heat_capacity, self.glass_parameterse.heat_capacity)
-        self.assertEqual(self.glass.area, self.glass_parameterse.area)
-        self.assertEqual(self.glass.thickness, self.glass_parameterse.thickness)
+        self.assertEqual(self.glass.mass, self.glass_parameters.mass)
+        self.assertEqual(self.glass.heat_capacity, self.glass_parameters.heat_capacity)
+        self.assertEqual(self.glass.area, self.glass_parameters.area)
+        self.assertEqual(self.glass.thickness, self.glass_parameters.thickness)
         self.assertEqual(
-            self.glass.transmissivity, self.glass_parameterse.transmissivity
+            self.glass.transmissivity, self.glass_parameters.transmissivity
         )
-        self.assertEqual(self.glass.absorptivity, self.glass_parameterse.absorptivity)
-        self.assertEqual(self.glass.emissivity, self.glass_parameterse.emissivity)
+        self.assertEqual(self.glass.absorptivity, self.glass_parameters.absorptivity)
+        self.assertEqual(self.glass.emissivity, self.glass_parameters.emissivity)
