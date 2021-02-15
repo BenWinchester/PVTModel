@@ -1,0 +1,21 @@
+pvt_model/load.py:467:    def from_data(cls, data_file_paths: Set[str]) -> Any:  # type: ignore
+# Scipy module does not expose correctly with mypy.
+pvt_model/__main__.py:32:from scipy import linalg  # type: ignore
+# FIXME: Dictionary update method requires better type-checking and use of other modules.
+pvt_model/__main__.py:252:            system_data_dict.update(dataclasses.asdict(total_power_data))  # type: ignore
+pvt_model/__main__.py:254:            system_data_dict.update(dataclasses.asdict(carbon_emissions))  # type: ignore
+# Mypy array method does not correctly return.
+pvt_model/__main__.py:390:    run_two_temperature_vector: numpy.ndarray = numpy.asarray(  # type: ignore
+pvt_model/__main__.py:586:    previous_run_temperature_vector: numpy.ndarray = numpy.asarray(  # type: ignore
+# Type annotations not needed in the analysis module.
+pvt_model/analysis.py:2:# type: ignore
+# Internal __add__ method cannot reference the class name.
+pvt_model/weather.py:76:    def __add__(self, other) -> Any:  # type: ignore
+# Internal __truediv__ method cannot reference the class name.
+pvt_model/weather.py:97:    def __truediv__(self, divisor: float) -> Any:  # type: ignore
+# Instnatiation method cannot reference the class name.
+pvt_model/weather.py:202:    ) -> Any:  # type: ignore
+# FIXME: Unknown declaration of `type:ignore`.
+pvt_model/weather.py:433:                month, month_data  # type: ignore
+# Instnatiation method cannot reference the class name.
+pvt_model/weather.py:476:    ) -> Any:  # type: ignore

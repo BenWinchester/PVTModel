@@ -15,8 +15,6 @@ This module tests the various internal and external methods provided by the PV p
 
 import unittest
 
-from unittest import mock  # pylint: disable=unused-import
-
 import pytest
 
 from ...__utils__ import PVParameters

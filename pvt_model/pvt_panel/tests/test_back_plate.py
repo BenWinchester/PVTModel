@@ -16,8 +16,6 @@ layer.
 
 import unittest
 
-from unittest import mock  # pylint: disable=unused-import
-
 import pytest
 
 from ...__utils__ import BackLayerParameters
