@@ -162,6 +162,8 @@ class TestProperties(unittest.TestCase):
         """
 
         # @@@ Fix this mock when mock patching is fixed.
+        self.assertEqual(NUSSELT_NUMBER, 6)
+        self.assertEqual(THERMAL_CONDUCTIVITY_OF_WATER, 0.5918)
         expectected_heat_transfer_coefficient = (
             NUSSELT_NUMBER * THERMAL_CONDUCTIVITY_OF_WATER
         ) / self.collector.pipe_diameter

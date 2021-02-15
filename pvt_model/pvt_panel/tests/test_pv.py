@@ -13,66 +13,113 @@ This module tests the various internal and external methods provided by the PV p
 
 """
 
-import unittest  # pylint: disable=unused-import
+import unittest
 
 from unittest import mock  # pylint: disable=unused-import
 
-from .. import pv  # pylint: disable=unused-import
+import pytest
+
+from ...__utils__ import PVParameters
+from .. import pv
+from .test_utils import PYTEST_PRECISION
 
 
-def test_instantiate() -> None:
+class _BaseTest(unittest.TestCase):
     """
-    Tests the instantisation of a :class:`pv.PV` instance.
-
-    This checks that all private attributes are set as expected.
+    Contains base functionality to set up mocks and functions in common across tests.
 
     """
 
+    def setUp(self) -> None:
+        """
+        Sets up mocks in common across test cases.
 
-def test_electrical_efficiency() -> None:
-    """
-    Tests the electrical efficiency calculation within of a :class:`pv.PV` instances.
+        """
 
-    Photovoltaic cells produce an electrical output. An inherent property of a PV cell,
-    or layer, is its electrical efficiency. This depends on the temperature, and so is
-    an internal function within the PV layer and is dependant on its temperature.
+        super().setUp()
 
-    The electrical efficiency is hence computed for a dummy PV layer, using the
-    following formula and values:
-
-    electrical_efficiency = reference_electrical_efficiency * [
-        1 - thermal_coefficient * (
-            temperature_of_the_pv_layer - reference_pv_temperature
+        self.pv_parameters = PVParameters(
+            mass=150,
+            heat_capacity=4000,
+            area=100,
+            thickness=0.015,
+            transmissivity=0.9,
+            absorptivity=0.88,
+            emissivity=0.5,
+            reference_efficiency=0.15,
+            reference_temperature=300,
+            thermal_coefficient=0.1,
         )
-    ]
+
+        self.pv = pv.PV(self.pv_parameters)
+
+
+class TestInstantiate(_BaseTest):
+    """
+    Tests the instantiation of the :class:`pv.PV` instance.
 
     """
 
+    def test_instantiate(self) -> None:
+        """
+        Tests the instantisation of a :class:`pv.PV` instance.
 
-class TestUpdate:
+        This checks that all private attributes are set as expected.
+
+        """
+
+        self.assertEqual(self.pv.mass, self.pv_parameters.mass)
+        self.assertEqual(self.pv.heat_capacity, self.pv_parameters.heat_capacity)
+        self.assertEqual(self.pv.area, self.pv_parameters.area)
+        self.assertEqual(self.pv.thickness, self.pv_parameters.thickness)
+        self.assertEqual(self.pv.transmissivity, self.pv_parameters.transmissivity)
+        self.assertEqual(self.pv.absorptivity, self.pv_parameters.absorptivity)
+        self.assertEqual(self.pv.emissivity, self.pv_parameters.emissivity)
+        self.assertEqual(
+            self.pv.reference_efficiency, self.pv_parameters.reference_efficiency
+        )
+        self.assertEqual(
+            self.pv.reference_temperature, self.pv_parameters.reference_temperature
+        )
+        self.assertEqual(
+            self.pv.thermal_coefficient, self.pv_parameters.thermal_coefficient
+        )
+
+
+class TestProperties(_BaseTest):
     """
-    Tests the internal update method of :class:`pv.PV` instances.
-
-    The update method has several different flows depending on the other layers. This
-    class contains methods that probe all of these paths, as well as exceptions that
-    may occur.
+    Tests various properties of the :class:`pv.PV` instance.
 
     """
 
-    def test_update_with_glass_layer(self) -> None:
+    def test_electrical_efficiency(self) -> None:
         """
-        Tests the update method with a glass layer being present.
+        Tests the electrical efficiency calculation within of a :class:`pv.PV` instances.
 
-        Depending on whether a glass layer is present, the updating behaviour of the PV
-        layer will be different, and the calls to various utility modules will be different.
+        Photovoltaic cells produce an electrical output. An inherent property of a PV cell,
+        or layer, is its electrical efficiency. This depends on the temperature, and so is
+        an internal function within the PV layer and is dependant on its temperature.
+
+        :equation:
+            electrical_efficiency = reference_electrical_efficiency * [
+                1 - thermal_coefficient * (
+                    temperature_of_the_pv_layer - reference_pv_temperature
+                )
+            ]
+
+        :units:
+            [unitless] = [unitless] * (1 - K^-1) * K
+
+        :values:
+            temperature_of_the_pv_layer = 350 K
 
         """
 
-    def test_update_no_glass_layer(self) -> None:
-        """
-        Tests the update method with a glass layer being present.
+        expected_electrical_efficiency = self.pv.reference_efficiency * (
+            1 - self.pv.thermal_coefficient * (350 - self.pv.reference_temperature)
+        )
 
-        Depending on whether a glass layer is present, the updating behaviour of the PV
-        layer will be different, and the calls to various utility modules will be different.
-
-        """
+        self.assertEqual(
+            pytest.approx(self.pv.electrical_efficiency(350), PYTEST_PRECISION),
+            pytest.approx(expected_electrical_efficiency, PYTEST_PRECISION),
+        )
