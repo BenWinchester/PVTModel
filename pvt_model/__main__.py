@@ -22,7 +22,7 @@ import pdb
 import sys
 
 from argparse import Namespace
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, Union
 
 import json
 import numpy
@@ -217,7 +217,7 @@ def _get_weather_forecaster(
 def _save_data(
     file_type: FileType,
     output_file_name: str,
-    system_data: Dict[datetime.datetime, SystemData],
+    system_data: Dict[int, SystemData],
     carbon_emissions: Optional[CarbonEmissions] = None,
     total_power_data: Optional[TotalPowerData] = None,
 ) -> None:
@@ -236,7 +236,7 @@ def _save_data(
     """
 
     # Convert the system data entry to JSON-readable format
-    system_data_dict: Dict[str, Dict[str, Any]] = {
+    system_data_dict: Dict[int, Dict[str, Any]] = {
         key: dataclasses.asdict(value) for key, value in system_data.items()
     }
 
@@ -252,9 +252,9 @@ def _save_data(
     if file_type == FileType.JSON:
         # Append the total power and emissions data for the run.
         if total_power_data is not None:
-            system_data_dict.update(dataclasses.asdict(total_power_data))
+            system_data_dict.update(dataclasses.asdict(total_power_data))  # type: ignore
         if carbon_emissions is not None:
-            system_data_dict.update(dataclasses.asdict(carbon_emissions))
+            system_data_dict.update(dataclasses.asdict(carbon_emissions))  # type: ignore
 
         # Save the data
         # If this is the initial dump, then create the file.
@@ -390,7 +390,7 @@ def _solve_temperature_vector_convergence_method(
     )
 
     run_two_output = linalg.solve(a=coefficient_matrix, b=resultant_vector)
-    run_two_temperature_vector = numpy.asarray(
+    run_two_temperature_vector: numpy.ndarray = numpy.asarray(  # type: ignore
         [run_two_output[index][0] for index in range(len(run_two_output))]
     )
 
@@ -567,7 +567,7 @@ def main(args) -> None:
         )
 
     # Set up a holder for information about the system.
-    system_data: Dict[datetime.datetime, SystemData] = dict()
+    system_data: Dict[int, SystemData] = dict()
 
     # Set up a holder for the information about the final output of the system.
     # total_power_data = TotalPowerData()

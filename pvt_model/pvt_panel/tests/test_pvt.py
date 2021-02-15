@@ -25,6 +25,7 @@ from ...__utils__ import (
     CollectorParameters,
     MissingParametersError,
     OpticalLayerParameters,
+    ProgrammerJudgementFault,
     PVParameters,
     WeatherConditions,
 )
@@ -40,14 +41,14 @@ class _BaseTest(unittest.TestCase):
     def _pvt(
         self,
         azimuthal_orientation: Optional[float] = 180,
-        horizontal_tracking: Optional[bool] = False,
-        glazed: Optional[bool] = True,
+        horizontal_tracking: bool = False,
+        glazed: bool = True,
         latitude: float = 53.55,
         longitude: float = 0.011,
         tilt: Optional[float] = 35,
-        portion_covered: Optional[float] = 0.75,
+        portion_covered: float = 0.75,
         pv_params_provded: bool = True,
-        vertical_tracking: Optional[bool] = False,
+        vertical_tracking: bool = False,
     ) -> pvt.PVT:
         """
         Instantiate a :class:`pvt.PVT` instance based on parameters passed in.
@@ -126,7 +127,7 @@ class _BaseTest(unittest.TestCase):
             back_params=back_layer_parameters,
             collector_parameters=collector_parameters,
             diffuse_reflection_coefficient=0.18,
-            glass_parameters=glass_parameters if glazed else None,
+            glass_parameters=glass_parameters,
             glazed=glazed,
             latitude=latitude,
             longitude=longitude,
@@ -273,6 +274,12 @@ class TestSolarAngle(_BaseTest):
             ),
             0,
         )
+
+        # Fail if the PVT panel is incorrectly setup.
+        if pvt_panel._azimuthal_orientation is None or pvt_panel._tilt is None:
+            raise ProgrammerJudgementFault(
+                "The azimuthal orientation and tilt on the PV panel were not set."
+            )
 
         # Check a series of angles.
         solar_angle_array = [(180, 50), (180, 90), (45, 50), (180, 90)]

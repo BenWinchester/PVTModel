@@ -1,4 +1,5 @@
 #!/usr/bin/python3.7
+# type: ignore
 ########################################################################################
 # analysis.py - The analysis module for the model.
 #
