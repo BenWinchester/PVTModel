@@ -10,11 +10,12 @@
 
 # Determine the mypy `type:ignore` declarations.
 type_ignore_uses="$(grep 'type: ignore' pvt_model -rn)"
-type_ignore_declarations="$(cat enforcement/mypy_enforcement.txt)"
+type_ignore_declarations="$(grep -v '^#' enforcement/mypy_enforcement.txt)"
 if [[ "$type_ignore_uses" == "$type_ignore_declarations" ]]
 then
     exit 0
 else
-    echo "Not all `type:ignore` instances referenced in enforcement/my_enforcement.txt."
+    echo "Not all `type:ignore` instances referenced in enforcement/my_enforcement.txt:"
+    diff  <(echo "$type_ignore_uses" ) <(echo "$type_ignore_declarations")
     exit 1
 fi
