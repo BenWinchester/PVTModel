@@ -19,9 +19,10 @@ import enum
 import logging
 import os
 
+from typing import Any, Dict, Generator, Optional
+
 from dataclasses import dataclass
 from dateutil.relativedelta import relativedelta
-from typing import Any, Dict, Generator, Optional
 
 import numpy
 import yaml

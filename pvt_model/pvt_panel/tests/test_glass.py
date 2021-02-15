@@ -16,13 +16,8 @@ of the panel.
 
 import unittest
 
-from unittest import mock  # pylint: disable=unused-import
-
-import pytest
-
 from ...__utils__ import OpticalLayerParameters
 from .. import glass
-from .test_utils import PYTEST_PRECISION
 
 
 class _BaseTest(unittest.TestCase):

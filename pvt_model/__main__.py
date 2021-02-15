@@ -18,11 +18,10 @@ processing the command-line arguments that define the scope of the model run.
 import dataclasses
 import datetime
 import os
-import pdb
 import sys
 
 from argparse import Namespace
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Dict, Optional
 
 import json
 import numpy
@@ -39,7 +38,6 @@ from . import (
     load,
     mains_power,
     matrix,
-    pipe,
     process_pvt_system_data,
     tank,
     weather,
@@ -48,7 +46,6 @@ from . import (
 from .pvt_panel import pvt
 
 from .constants import (
-    DENSITY_OF_WATER,
     INITIAL_SYSTEM_TEMPERATURE_VECTOR,
     ZERO_CELCIUS_OFFSET,
 )
@@ -531,8 +528,8 @@ def main(args) -> None:
     logger.info("Hot-water tank successfully instantiated: %s", hot_water_tank)
 
     # Instantiate the two pipes used to store input and output temperature values.
-    collector_to_tank_pipe = pipe.Pipe(temperature=INITIAL_SYSTEM_TEMPERATURE_VECTOR[3])
-    tank_to_collector_pipe = pipe.Pipe(temperature=INITIAL_SYSTEM_TEMPERATURE_VECTOR[3])
+    # collector_to_tank_pipe = pipe.Pipe(temperature=INITIAL_SYSTEM_TEMPERATURE_VECTOR[3])
+    # tank_to_collector_pipe = pipe.Pipe(temperature=INITIAL_SYSTEM_TEMPERATURE_VECTOR[3])
 
     # Instnatiate the hot-water pump.
     # htf_pump = process_pvt_system_data.pump_from_path(parsed_args.pump_data_file)

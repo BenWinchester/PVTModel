@@ -18,7 +18,7 @@ import unittest
 
 from datetime import timedelta, timezone
 from typing import Optional
-from unittest import mock  # pylint: disable=unused-import
+from unittest import mock
 
 from ...__utils__ import (
     BackLayerParameters,
@@ -32,117 +32,110 @@ from ...__utils__ import (
 from .. import pvt
 
 
-class _BaseTest(unittest.TestCase):
+def _pvt(
+    azimuthal_orientation: Optional[float] = 180,
+    horizontal_tracking: bool = False,
+    glazed: bool = True,
+    latitude: float = 53.55,
+    longitude: float = 0.011,
+    tilt: Optional[float] = 35,
+    portion_covered: float = 0.75,
+    pv_params_provded: bool = True,
+    vertical_tracking: bool = False,
+) -> pvt.PVT:
     """
-    Contains common functionality and helper functions for the test suite.
+    Instantiate a :class:`pvt.PVT` instance based on parameters passed in.
+
+    :param azimuthal_orientation:
+        The azimuthal orientation of the panel: 0 for due North, 180 for due South.
+
+    :param horizontal_tracking:
+        Whether or not the panel tracks horizontally.
+
+    :param glazed:
+        Whether or not the panel has a glass layer.
+
+    :param tilt:
+        The tilt of the panel, in degrees, above the horzion.
+
+    :param portion_covered:
+        The portion of the panel which is covered with photovoltaics.
+
+    :param pv_params_provided:
+        Whether PV parameters should be provided to the :class:`pvt.PVT` instantiate
+        method.
+
+    :param vertical_tracking:
+        Whether or not the panel tracks vertically.
+
+    :return:
+        A :class:`pvt.PVT` instance based on the parameters passed in.
 
     """
 
-    def _pvt(
-        self,
-        azimuthal_orientation: Optional[float] = 180,
-        horizontal_tracking: bool = False,
-        glazed: bool = True,
-        latitude: float = 53.55,
-        longitude: float = 0.011,
-        tilt: Optional[float] = 35,
-        portion_covered: float = 0.75,
-        pv_params_provded: bool = True,
-        vertical_tracking: bool = False,
-    ) -> pvt.PVT:
-        """
-        Instantiate a :class:`pvt.PVT` instance based on parameters passed in.
+    back_layer_parameters = BackLayerParameters(
+        mass=100, heat_capacity=2500, area=15, thickness=0.15, conductivity=500
+    )
+    collector_parameters = CollectorParameters(
+        mass=100,
+        heat_capacity=4000,
+        area=15,
+        thickness=0.05,
+        transmissivity=0.9,
+        absorptivity=0.88,
+        emissivity=0.3,
+        bulk_water_temperature=300,
+        htf_heat_capacity=4180,
+        length=1,
+        mass_flow_rate=108,
+        number_of_pipes=11,
+        output_water_temperature=373,
+        pipe_diameter=0.05,
+    )
+    glass_parameters = OpticalLayerParameters(
+        mass=150,
+        heat_capacity=4000,
+        area=100,
+        thickness=0.015,
+        transmissivity=0.9,
+        absorptivity=0.88,
+        emissivity=0.5,
+    )
+    pv_parameters = PVParameters(
+        mass=150,
+        heat_capacity=4000,
+        area=100,
+        thickness=0.015,
+        transmissivity=0.9,
+        absorptivity=0.88,
+        emissivity=0.5,
+        reference_efficiency=0.15,
+        reference_temperature=300,
+        thermal_coefficient=0.1,
+    )
 
-        :param azimuthal_orientation:
-            The azimuthal orientation of the panel: 0 for due North, 180 for due South.
-
-        :param horizontal_tracking:
-            Whether or not the panel tracks horizontally.
-
-        :param glazed:
-            Whether or not the panel has a glass layer.
-
-        :param tilt:
-            The tilt of the panel, in degrees, above the horzion.
-
-        :param portion_covered:
-            The portion of the panel which is covered with photovoltaics.
-
-        :param pv_params_provided:
-            Whether PV parameters should be provided to the :class:`pvt.PVT` instantiate
-            method.
-
-        :param vertical_tracking:
-            Whether or not the panel tracks vertically.
-
-        :return:
-            A :class:`pvt.PVT` instance based on the parameters passed in.
-
-        """
-
-        back_layer_parameters = BackLayerParameters(
-            mass=100, heat_capacity=2500, area=15, thickness=0.15, conductivity=500
-        )
-        collector_parameters = CollectorParameters(
-            mass=100,
-            heat_capacity=4000,
-            area=15,
-            thickness=0.05,
-            transmissivity=0.9,
-            absorptivity=0.88,
-            emissivity=0.3,
-            bulk_water_temperature=300,
-            htf_heat_capacity=4180,
-            length=1,
-            mass_flow_rate=108,
-            number_of_pipes=11,
-            output_water_temperature=373,
-            pipe_diameter=0.05,
-        )
-        glass_parameters = OpticalLayerParameters(
-            mass=150,
-            heat_capacity=4000,
-            area=100,
-            thickness=0.015,
-            transmissivity=0.9,
-            absorptivity=0.88,
-            emissivity=0.5,
-        )
-        pv_parameters = PVParameters(
-            mass=150,
-            heat_capacity=4000,
-            area=100,
-            thickness=0.015,
-            transmissivity=0.9,
-            absorptivity=0.88,
-            emissivity=0.5,
-            reference_efficiency=0.15,
-            reference_temperature=300,
-            thermal_coefficient=0.1,
-        )
-
-        return pvt.PVT(
-            air_gap_thickness=0.05,
-            area=15,
-            back_params=back_layer_parameters,
-            collector_parameters=collector_parameters,
-            diffuse_reflection_coefficient=0.18,
-            glass_parameters=glass_parameters,
-            glazed=glazed,
-            latitude=latitude,
-            longitude=longitude,
-            portion_covered=portion_covered,
-            pv_parameters=pv_parameters if pv_params_provded else None,
-            pv_to_collector_thermal_conductance=500,
-            timezone=timezone(timedelta(0)),
-            azimuthal_orientation=azimuthal_orientation,
-            horizontal_tracking=horizontal_tracking,
-            tilt=tilt,
-            vertical_tracking=vertical_tracking,
-        )
+    return pvt.PVT(
+        air_gap_thickness=0.05,
+        area=15,
+        back_params=back_layer_parameters,
+        collector_parameters=collector_parameters,
+        diffuse_reflection_coefficient=0.18,
+        glass_parameters=glass_parameters,
+        glazed=glazed,
+        latitude=latitude,
+        longitude=longitude,
+        portion_covered=portion_covered,
+        pv_parameters=pv_parameters if pv_params_provded else None,
+        pv_to_collector_thermal_conductance=500,
+        timezone=timezone(timedelta(0)),
+        azimuthal_orientation=azimuthal_orientation,
+        horizontal_tracking=horizontal_tracking,
+        tilt=tilt,
+        vertical_tracking=vertical_tracking,
+    )
 
 
-class TestInstantiate(_BaseTest):
+class TestInstantiate(unittest.TestCase):
     """
     Tests the instantisation of the :class:`pvt.PVT` instance, probing all paths.
 
@@ -155,7 +148,7 @@ class TestInstantiate(_BaseTest):
         """
 
         try:
-            self._pvt()
+            _pvt()
         except MissingParametersError:
             self.fail("Exception raised in the mainline case.")
 
@@ -166,7 +159,7 @@ class TestInstantiate(_BaseTest):
         """
 
         with self.assertRaises(MissingParametersError):
-            self._pvt(tilt=None)
+            _pvt(tilt=None)
 
     def test_horizontal_error(self) -> None:
         """
@@ -175,7 +168,7 @@ class TestInstantiate(_BaseTest):
         """
 
         with self.assertRaises(MissingParametersError):
-            self._pvt(azimuthal_orientation=None)
+            _pvt(azimuthal_orientation=None)
 
     def test_portion_covered_error(self) -> None:
         """
@@ -184,10 +177,10 @@ class TestInstantiate(_BaseTest):
         """
 
         with self.assertRaises(MissingParametersError):
-            self._pvt(pv_params_provded=False)
+            _pvt(pv_params_provded=False)
 
 
-class TestSolarAngle(_BaseTest):
+class TestSolarAngle(unittest.TestCase):
     """
     Tests that the solar diference calculation is done correctly.
 
@@ -202,7 +195,7 @@ class TestSolarAngle(_BaseTest):
 
         """
 
-        dual_axis_panel = self._pvt(horizontal_tracking=True, vertical_tracking=True)
+        dual_axis_panel = _pvt(horizontal_tracking=True, vertical_tracking=True)
         solar_angle_array = [(180, 50), (180, 90), (45, 50), (180, 90)]
 
         self.assertTrue(
@@ -223,7 +216,7 @@ class TestSolarAngle(_BaseTest):
 
         """
 
-        horizontally_tracking_panel = self._pvt(horizontal_tracking=True)
+        horizontally_tracking_panel = _pvt(horizontal_tracking=True)
 
         # Assert that the panel returns the same angles regardless of azimuthal angle.
         self.assertEqual(
@@ -241,7 +234,7 @@ class TestSolarAngle(_BaseTest):
 
         """
 
-        vertically_tracking_panel = self._pvt(vertical_tracking=True)
+        vertically_tracking_panel = _pvt(vertical_tracking=True)
 
         # Assert that the panel returns the same angles regardless of the declination.
         self.assertEqual(
@@ -265,7 +258,7 @@ class TestSolarAngle(_BaseTest):
 
         """
 
-        pvt_panel = self._pvt(azimuthal_orientation=180, tilt=35)
+        pvt_panel = _pvt(azimuthal_orientation=180, tilt=35)
 
         # Test when the sun is inline
         self.assertEqual(
@@ -276,7 +269,10 @@ class TestSolarAngle(_BaseTest):
         )
 
         # Fail if the PVT panel is incorrectly setup.
-        if pvt_panel._azimuthal_orientation is None or pvt_panel._tilt is None:
+        if (
+            pvt_panel._azimuthal_orientation is None  # pylint: disable=protected-access
+            or pvt_panel._tilt is None  # pylint: disable=protected-access
+        ):
             raise ProgrammerJudgementFault(
                 "The azimuthal orientation and tilt on the PV panel were not set."
             )
@@ -316,7 +312,7 @@ class TestSolarAngle(_BaseTest):
         )
 
 
-class TestIrradiance(_BaseTest):
+class TestIrradiance(unittest.TestCase):
     """
     Tests the internal solar irradiance computation function.
 
@@ -331,7 +327,7 @@ class TestIrradiance(_BaseTest):
 
         """
 
-        pvt_panel = self._pvt()
+        pvt_panel = _pvt()
         weather_conditions = WeatherConditions(500, 0, 0, 0, 0, 0, 0)
 
         self.assertEqual(
@@ -340,7 +336,7 @@ class TestIrradiance(_BaseTest):
         )
 
 
-class TestProperties(_BaseTest):
+class TestProperties(unittest.TestCase):
     """
     Tests the various publicised internal properties of the :class:`pvt.PVT` class.
 
@@ -352,7 +348,7 @@ class TestProperties(_BaseTest):
 
         """
 
-        pvt_panel = self._pvt(latitude=45.5, longitude=10)
+        pvt_panel = _pvt(latitude=45.5, longitude=10)
 
         self.assertEqual(pvt_panel.coordinates, (45.5, 10))
 
@@ -367,7 +363,7 @@ class TestProperties(_BaseTest):
             "pvt_model.pvt_panel.pv.PV.electrical_efficiency", mock.MagicMock()
         ) as mock_pv_electrical_efficiency:
             mock_pv_electrical_efficiency.return_value = 0.5
-            pvt_panel = self._pvt()
+            pvt_panel = _pvt()
             weather_conditions = WeatherConditions(
                 _irradiance=500,
                 ambient_tank_temperature=0,
