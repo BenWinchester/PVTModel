@@ -667,7 +667,7 @@ if __name__ == "__main__":
             "sky_temperature",
         ],
         first_axis_label="Temperature / deg C",
-        # first_axis_y_limits=[-10, 50],
+        first_axis_y_limits=[-10, 50],
     )
 
     # Plot Figure 6b: Tank-related Temperatures

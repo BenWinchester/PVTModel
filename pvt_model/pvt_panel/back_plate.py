@@ -83,5 +83,7 @@ class BackPlate(Layer):
 
         return (
             self.thickness / self.conductivity  # [m] / [W/m*K]
-            + 1 / FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR  # [W/m^2*K]^-1
-        )
+            + 1 / FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR  # [m^2*K/W]
+        ) ** (
+            -1
+        )  # [W/m^2*K]

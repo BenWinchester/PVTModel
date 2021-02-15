@@ -14,23 +14,19 @@ layer.
 
 """
 
-import unittest  # pylint: disable=unused-import
+import unittest
 
 from unittest import mock  # pylint: disable=unused-import
 
-from .. import collector  # pylint: disable=unused-import
+import pytest
+import numpy
+
+from ...__utils__ import CollectorParameters
+from .. import collector
+from .test_utils import PYTEST_PRECISION
 
 
-def test_instantiate() -> None:
-    """
-    Tests the instantisation of a :class:`collector.Collector` instance.
-
-    This checks that all private attributes are set as expected.
-
-    """
-
-
-class TestProperties:
+class TestProperties(unittest.TestCase):
     """
     Tests the various publically exposed private attributes and method properties.
 
@@ -40,6 +36,42 @@ class TestProperties:
     checks both kinds.
 
     """
+
+    def setUp(self) -> None:
+        """
+        Sets up mocks in common across all test cases.
+
+        """
+
+        super().setUp()
+
+        collector_parameters = CollectorParameters(
+            mass=100,
+            heat_capacity=4000,
+            area=15,
+            thickness=0.05,
+            transmissivity=0.9,
+            absorptivity=0.88,
+            emissivity=0.3,
+            bulk_water_temperature=300,
+            htf_heat_capacity=4180,
+            length=1,
+            mass_flow_rate=108,
+            number_of_pipes=11,
+            output_water_temperature=373,
+            pipe_diameter=0.05,
+        )
+
+        self.collector = collector.Collector(collector_parameters)
+
+    def test_collector_to_htf_efficiency(self) -> None:
+        """
+        Tests the calculation for the efficiency for collector-to-htf efficiency.
+
+        Tests that the correct calculation is done to determine the efficiency of the
+        heat transfer process from the collector to the HTF in the riser tubes.
+
+        """
 
     def test_convective_heat_transfer_coefficient_of_water(self) -> None:
         """
@@ -54,81 +86,58 @@ class TestProperties:
         """
         Tests that the correct calculation is done for the HTF surface area.
 
+        The contact area, in meters squared, between the collector and the HTF should be
+        computed. This is the internal area of the pipes in the collector.
+
+        :equation:
+            area = number_of_tubes * tube_length * PI * tube_diameter
+
+        :units:
+            m^2 = [dimensionless] * m * [dimensionless] * m
+
         """
+
+        expected_htf_area = (
+            self.collector.number_of_pipes
+            * self.collector.length
+            * numpy.pi
+            * self.collector.pipe_diameter
+        )
+
+        self.assertEqual(
+            pytest.approx(expected_htf_area, PYTEST_PRECISION),
+            pytest.approx(self.collector.htf_surface_area, PYTEST_PRECISION),
+        )
 
     def test_htf_volume(self) -> None:
         """
         Tests that the correct calculation is done for the HTF volume in the collector.
 
+        The volume of HTF, in meters cubed, within the thermal collector riser tubes
+        should be computed.
+
+        :equation:
+            volume = number_of_tubes * tube_length * PI * (tube_diameter / 2) ^ 2
+
+        :units:
+            m^3 = [dimensionless] * m * [dimensionless] * m ^2
+
         """
+
+        expected_htf_volume = (
+            self.collector.number_of_pipes
+            * self.collector.length
+            * numpy.pi
+            * (self.collector.pipe_diameter / 2) ** 2
+        )
+
+        self.assertEqual(
+            pytest.approx(expected_htf_volume, PYTEST_PRECISION),
+            pytest.approx(self.collector.htf_volume, PYTEST_PRECISION),
+        )
 
     def test_mass_flow_rate(self) -> None:
         """
         Tests that the correct internal calculation of the mass flow rate is done.
-
-        """
-
-
-class TestUpdate:
-    """
-    Tests the internal update method of :class:`collector.Collector` instances.
-
-    The update method has several different flows depending on the upper layers. This
-    class contains methods that probe all of these paths, as well as exceptions that
-    may occur.
-
-    """
-
-    def test_update_no_pv_no_glass(self) -> None:
-        """
-        Tests the update case where there are neither PV nor glass layers above.
-
-        """
-
-    def test_update_some_pv_no_glass(self) -> None:
-        """
-        Tests the update case where there is a partial PV layer but no glass layer.
-
-        """
-
-    def test_update_all_pv_no_glass(self) -> None:
-        """
-        Tests the udpate case where the collector is fully covered by a PV layer.
-
-        """
-
-    def test_update_no_pv_with_glass(self) -> None:
-        """
-        Tests the collector's update method when covered with a glass layer only.
-
-        Tests the update case where there is no PV layer but the collector is fully
-        covered by a glass layer.
-
-        """
-
-    def test_update_some_pv_with_glass(self) -> None:
-        """
-        Tests the collector's update method when covered with part-PV and part-glass.
-
-        Tests the update case where there is a partial PV layer and the remainder of the
-        collector laer is covered by a glass layer.
-
-        """
-
-    def test_update_all_pv_with_glass(self) -> None:
-        """
-        Tests the collector's update method when fully-covered with PV.
-
-        Tests the update case where the collector is fully covered by a PV layer but
-        where a glass layer is still present.
-
-        NOTE: In this instance, the collector code should not supply any upward heat to
-        the glass layer.
-
-        """
-
-    def test_melt(self) -> None:
-        """
-        Tests that, when the collector melts, the pdb debugger is called.
 
         """

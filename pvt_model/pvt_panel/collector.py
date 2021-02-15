@@ -218,7 +218,7 @@ class Collector(OpticalLayer):
         return (
             self.number_of_pipes  # [pipes]
             * math.pi
-            * (self.pipe_diameter) ** 2  # [m^2]
+            * (self.pipe_diameter / 2) ** 2  # [m^2]
             * self.length
         )
 
