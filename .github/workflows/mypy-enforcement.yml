@@ -15,4 +15,4 @@ jobs:
       - uses: actions/checkout@v2
       - name: Enforce mypy error declaration
         run: |
-          enforcement/mypy_enforcement.sh
+          /usr/bin/env bash enforcement/mypy_enforcement.sh
