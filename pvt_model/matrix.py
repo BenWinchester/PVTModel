@@ -130,11 +130,11 @@ def _get_glass_equation_coefficients(
         )  # [W/m^2*K]
         * pvt_panel.area  # [m^2]
         # Change in internal energy of the glass layer
-        + (
-            pvt_panel.glass.mass  # [kg]
-            * pvt_panel.glass.heat_capacity  # [J/kg*K]
-            / resolution  # [s]
-        )  # [W/s]
+        # + (
+        #     pvt_panel.glass.mass  # [kg]
+        #     * pvt_panel.glass.heat_capacity  # [J/kg*K]
+        #     / resolution  # [s]
+        # )  # [W/s]
     )  # [W/K]
 
     # Compute the PV temperature term.
@@ -230,13 +230,8 @@ def _get_pv_equation_coefficients(
 
     # Compute the PV temperature term.
     pv_equation_coefficients[0, 1] = (
-        # Change in internal energy of the PV layer.
-        pvt_panel.pv.mass  # [kg]
-        * pvt_panel.pv.heat_capacity  # [J/kg*K]
-        * constants.NUMBER_OF_COLLECTORS
-        / resolution  # [s]
         # Conductive heat transfer from the glass layer.
-        + physics_utils.conductive_heat_transfer_coefficient_with_gap(
+        physics_utils.conductive_heat_transfer_coefficient_with_gap(
             pvt_panel.air_gap_thickness
         )  # [W/m^2*K]
         * pvt_panel.pv.area  # [m^2]
@@ -251,6 +246,11 @@ def _get_pv_equation_coefficients(
         # Conductive heat transfer to the collector layer.
         + pvt_panel.pv_to_collector_thermal_conductance  # [W/m^2*K]
         * pvt_panel.pv.area  # [m^2]
+        # Change in internal energy of the PV layer.
+        # + pvt_panel.pv.mass  # [kg]
+        # * pvt_panel.pv.heat_capacity  # [J/kg*K]
+        # * constants.NUMBER_OF_COLLECTORS
+        # / resolution  # [s]
         # Solar heat input.
         - physics_utils.transmissivity_absorptivity_product(
             diffuse_reflection_coefficient=pvt_panel.glass.diffuse_reflection_coefficient,
@@ -369,14 +369,14 @@ def _get_collector_equation_coefficients(
         * pvt_panel.area  # [m^2]
         * (1 - pvt_panel.portion_covered)
         # Internal energy change of the collector layer.
-        + (
-            pvt_panel.collector.mass  # [kg]
-            * pvt_panel.collector.heat_capacity  # [J/kg*K]
-            + pvt_panel.back_plate.mass  # [kg]
-            * pvt_panel.back_plate.heat_capacity  # [J/kg*K]
-        )
-        * constants.NUMBER_OF_COLLECTORS
-        / resolution  # [s]
+        # + (
+        #     pvt_panel.collector.mass  # [kg]
+        #     * pvt_panel.collector.heat_capacity  # [J/kg*K]
+        #     + pvt_panel.back_plate.mass  # [kg]
+        #     * pvt_panel.back_plate.heat_capacity  # [J/kg*K]
+        # )
+        # * constants.NUMBER_OF_COLLECTORS
+        # / resolution  # [s]
     )  # [W/K]
 
     # Compute the collector input temperature term.
@@ -498,12 +498,8 @@ def _get_tank_equation_coefficients(
 
     # Compute the tank-temperature term.
     tank_equation_coefficients[0, 5] = (
-        # Change in internal energy
-        hot_water_tank.mass  # [kg]
-        * hot_water_tank.heat_capacity  # [J/kg*K]
-        / resolution  # [s]
         # Heat addition
-        + htf_to_tank_efficiency
+        htf_to_tank_efficiency
         * mass_flow_rate  # [kg/s]
         * htf_heat_capacity  # [J/kg*K]
         * heat_added_to_tank
@@ -513,6 +509,10 @@ def _get_tank_equation_coefficients(
         # Demand heat loss
         + current_hot_water_load  # [kg/s]
         * constants.HEAT_CAPACITY_OF_WATER  # [J/kg*K]
+        # Change in internal energy
+        + hot_water_tank.mass  # [kg]
+        * hot_water_tank.heat_capacity  # [J/kg*K]
+        / resolution  # [s]
     )  # [W/K]
 
     return tank_equation_coefficients
@@ -709,10 +709,10 @@ def calculate_resultant_vector(
         # * pvt_panel.area  # [m^2]
         # * weather_conditions.irradiance  # [W]
         # Change in internal energy
-        + pvt_panel.glass.mass  # [kg]
-        * pvt_panel.glass.heat_capacity  # [J/kg*K]
-        * previous_glass_temperature  # [K]
-        / resolution  # [s]
+        # + pvt_panel.glass.mass  # [kg]
+        # * pvt_panel.glass.heat_capacity  # [J/kg*K]
+        # * previous_glass_temperature  # [K]
+        # / resolution  # [s]
     )  # [W]
 
     # Compute the PV-layer-equation value.
@@ -734,11 +734,11 @@ def calculate_resultant_vector(
             )
         )  # [W]
         # Change in internal energy.
-        + pvt_panel.pv.mass  # [kg]
-        * pvt_panel.pv.heat_capacity  # [J/kg*K]
-        * previous_pv_temperature  # [K]
-        * constants.NUMBER_OF_COLLECTORS
-        / resolution  # [s]
+        # + pvt_panel.pv.mass  # [kg]
+        # * pvt_panel.pv.heat_capacity  # [J/kg*K]
+        # * previous_pv_temperature  # [K]
+        # * constants.NUMBER_OF_COLLECTORS
+        # / resolution  # [s]
     )  # [W]
 
     # Compute the collector-layer-equation value.
@@ -753,15 +753,15 @@ def calculate_resultant_vector(
         * pvt_panel.area  # [m^2]
         * (1 - pvt_panel.portion_covered)
         # Internal energy change.
-        + (
-            pvt_panel.collector.mass  # [kg]
-            * pvt_panel.collector.heat_capacity  # [J/kg*K]
-            + pvt_panel.back_plate.mass  # [kg]
-            * pvt_panel.back_plate.heat_capacity  # [J/kg*K]
-        )
-        * previous_collector_temperature  # [K]
-        * constants.NUMBER_OF_COLLECTORS
-        / resolution  # [s]
+        # + (
+        #     pvt_panel.collector.mass  # [kg]
+        #     * pvt_panel.collector.heat_capacity  # [J/kg*K]
+        #     + pvt_panel.back_plate.mass  # [kg]
+        #     * pvt_panel.back_plate.heat_capacity  # [J/kg*K]
+        # )
+        # * previous_collector_temperature  # [K]
+        # * constants.NUMBER_OF_COLLECTORS
+        # / resolution  # [s]
         # Back plate heat loss.
         + pvt_panel.back_plate.conductance  # [W/m^2*K]
         * pvt_panel.area  # [m^2]
@@ -779,20 +779,20 @@ def calculate_resultant_vector(
     ) * previous_collector_input_temperature  # [K]
 
     resultant_vector[5] = (
-        # Internal tank heat change.
-        hot_water_tank.mass  # [kg]
-        * hot_water_tank.heat_capacity  # [J/kg*K]
-        * previous_tank_temperature  # [K]
-        / resolution  # [s]
         # Tank heat loss.
-        # + 573
-        + hot_water_tank.area  # [m^2]
+        # 573
+        hot_water_tank.area  # [m^2]
         * hot_water_tank.heat_loss_coefficient  # [W/m^2*K]
         * weather_conditions.ambient_temperature  # [K]
         # Demand water enthalpy gain.
         + current_hot_water_load  # [kg/s]
         * constants.HEAT_CAPACITY_OF_WATER  # [J/kg*K]
         * weather_conditions.mains_water_temperature  # [K]
+        # Internal tank heat change.
+        + hot_water_tank.mass  # [kg]
+        * hot_water_tank.heat_capacity  # [J/kg*K]
+        * previous_tank_temperature  # [K]
+        / resolution  # [s]
     )  # [W]
 
     return resultant_vector
