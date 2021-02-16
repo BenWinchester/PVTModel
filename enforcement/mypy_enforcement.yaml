@@ -1,0 +1,55 @@
+########################################################################################
+# enforcement/mypy_enforcement.yaml - "type:ignore" enforcement file
+#
+# Copyright 2021, Ben Winchester
+########################################################################################
+
+- file: pvt_model/load.py
+  justification: "Method cannot reference the class name."
+  line: 467
+  usage: "def from_data(cls, data_file_paths: Set[str]) -> Any:"
+- file: pvt_model/__main__.py
+  justification: "Scipy module does not expose correctly with mypy."
+  line: 32
+  usage: "from scipy import linalg"
+- file: pvt_model/__main__.py
+  justification: "FIXME: Dictionary update method requires better type-checking and use of other modules."
+  line: 252
+  usage: "system_data_dict.update(dataclasses.asdict(total_power_data))"
+- file: pvt_model/__main__.py
+  justification: "FIXME: Dictionary update method requires better type-checking and use of other modules."
+  line: 254
+  usage: "system_data_dict.update(dataclasses.asdict(carbon_emissions))"
+- file: pvt_model/__main__.py
+  justification: "Mypy array does not correctly expose its type annotation."
+  line: 390
+  usage: "run_two_temperature_vector: numpy.ndarray = numpy.asarray("
+- file: pvt_model/__main__.py
+  justification: "Mypy array does not correctly expose its type annotation."
+  line: 586
+  usage: "previous_run_temperature_vector: numpy.ndarray = numpy.asarray("
+- file: pvt_model/analysis.py
+  justification: "Type annotations not needed in the analysis module."
+  line: 2
+  usage: ""
+  whole_file: True
+- file: pvt_model/weather.py
+  justification: "Internal __add__ method cannot reference the class name."
+  line: 76
+  usage: "def __add__(self, other) -> Any:"
+- file: pvt_model/weather.py
+  justification: "Internal __truediv__ method cannot reference the class name."
+  line: 97
+  usage: "def __truediv__(self, divisor: float) -> Any:"
+- file: pvt_model/weather.py
+  justification: "Instnatiation method cannot reference the class name."
+  line: 202
+  usage: ") -> Any:"
+- file: pvt_model/weather.py
+  line: 433
+  justification: "FIXME: Unknown declaration of `type:ignore`."
+  usage: "month, month_data"
+- file: pvt_model/weather.py
+  line: 476
+  justification: "Instnatiation method cannot reference the class name."
+  usage: ") -> Any:"
