@@ -1,0 +1,105 @@
+########################################################################################
+# enforcement/pylint_enforcement.yaml - "pylint: disable" enforcement file
+#
+# Copyright 2021, Ben Winchester
+########################################################################################
+- file: "pvt_model/pvt_panel/tests/test_collector.py"
+  flag: "protected-access"
+  justification: "Test module is permitted to access protected members."
+  line: 251
+- file: "pvt_model/pvt_panel/tests/test_pvt.py"
+  flag: protected-access
+  justification: "Test module is permitted to access protected members."
+  line: 204
+- file: "pvt_model/pvt_panel/tests/test_pvt.py"
+  flag: protected-access
+  justification: "Test module is permitted to access protected members."
+  line: 223
+- file: "pvt_model/pvt_panel/tests/test_pvt.py"
+  flag: protected-access
+  justification: "Test module is permitted to access protected members."
+  line: 226
+- file: "pvt_model/pvt_panel/tests/test_pvt.py"
+  flag: protected-access
+  justification: "Test module is permitted to access protected members."
+  line: 241
+- file: "pvt_model/pvt_panel/tests/test_pvt.py"
+  flag: protected-access
+  justification: "Test module is permitted to access protected members."
+  line: 244
+- file: "pvt_model/pvt_panel/tests/test_pvt.py"
+  flag: protected-access
+  justification: "Test module is permitted to access protected members."
+  line: 265
+- file: "pvt_model/pvt_panel/tests/test_pvt.py"
+  flag: protected-access
+  justification: "Test module is permitted to access protected members."
+  line: 273
+- file: "pvt_model/pvt_panel/tests/test_pvt.py"
+  flag: protected-access
+  justification: "Test module is permitted to access protected members."
+  line: 274
+- file: "pvt_model/pvt_panel/tests/test_pvt.py"
+  flag: protected-access
+  justification: "Test module is permitted to access protected members."
+  line: 284
+- file: "pvt_model/pvt_panel/tests/test_pvt.py"
+  flag: protected-access
+  justification: "Test module is permitted to access protected members."
+  line: 296
+- file: "pvt_model/pvt_panel/tests/test_pvt.py"
+  flag: protected-access
+  justification: "Test module is permitted to access protected members."
+  line: 304
+- file: "pvt_model/pvt_panel/tests/test_utils.py"
+  flag: unused-import
+  justification: "Test module is permitted to access protected members."
+  line: 17
+- file: "pvt_model/pvt_panel/tests/test_utils.py"
+  flag: unused-import
+  justification: "Test module is permitted to access protected members."
+  line: 19
+- file: "pvt_model/pvt_panel/tests/test_utils.py"
+  flag: unused-import
+  justification: "Test module is permitted to access protected members."
+  line: 21
+- file: "pvt_model/pvt_panel/tests/test_utils.py"
+  flag: unused-import
+  justification: "Test module is permitted to access protected members."
+  line: 23
+- file: "pvt_model/pvt_panel/tests/test_utils.py"
+  flag: protected-access
+  justification: "Test module is permitted to access protected members."
+  line: 69
+- file: "pvt_model/pvt_panel/tests/test_utils.py"
+  flag: protected-access
+  justification: "Test module is permitted to access protected members."
+  line: 73
+- file: "pvt_model/pvt_panel/pvt.py"
+  flag: no-self-use
+  justification: "Method has self-use under other functional flow."
+  line: 349
+- file: "pvt_model/__main__.py"
+  flag: unused-import
+  justification: "Temporary removal of advanced features."
+  line: 53
+- file: "pvt_model/analysis.py"
+  flag: unused-import
+  justification: "Temporary removal of other plots."
+  line: 30
+- file: "pvt_model/analysis.py"
+  flag: pointless-string-statement
+  justification: "Temporary removal of other plots."
+  line: 724
+- file: "pvt_model/analysis.py"
+  flag: pointless-string-statement
+  justification: "Temporary removal of other plots."
+  line: 849
+- file: "pvt_model/matrix.py"
+  flag: unused-argument
+  justification: "FIXME: No justification for this use."
+  line: 282
+- file: "pvt_model/weather.py"
+  flag: unused-argument
+  justification: "Cloud efficacy included for extensibility."
+  line: 780

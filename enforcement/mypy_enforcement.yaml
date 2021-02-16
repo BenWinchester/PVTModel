@@ -1,5 +1,5 @@
 ########################################################################################
-# enforcement/mypy_enforcement.yaml - "type:ignore" enforcement file
+# enforcement/mypy_enforcement.yaml - "type: ignore" enforcement file
 #
 # Copyright 2021, Ben Winchester
 ########################################################################################
