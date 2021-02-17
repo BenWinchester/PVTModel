@@ -648,13 +648,16 @@ class WeatherConditions:
         returned. If there is wind present, then this parameter is known as the "forced"
         wind_heat_transfer_coefficient.
 
+        NOTE: The equation from Ilaria's paper is used in stead of Maria's.
+
         :return:
             The convective heat transfer coefficient due to the wind, measured in Watts
             per meter squared Kelvin.
 
         """
 
-        return 4.5 + 2.9 * self.wind_speed
+        return 3.8 + 2 * self.wind_speed
+        # return 4.5 + 2.9 * self.wind_speed
 
     def __repr__(self) -> str:
         """

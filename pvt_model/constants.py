@@ -57,18 +57,18 @@ HEAT_CAPACITY_OF_WATER: int = 4182
 # The `tuple` contains the glass, pv, collector, bulk-water, and tank initial
 # temperatures.
 INITIAL_SYSTEM_TEMPERATURE_VECTOR = [
-    ZERO_CELCIUS_OFFSET + 19,  # Var: T_Glass / K
-    ZERO_CELCIUS_OFFSET + 35,  # Var: T_PV / K
-    ZERO_CELCIUS_OFFSET + 35,  # Var: T_Collector / K
-    ZERO_CELCIUS_OFFSET + 34.75,  # Var: T_Collector_input / K
-    ZERO_CELCIUS_OFFSET + 34.75,  # Var: T_Collector_output / K
-    ZERO_CELCIUS_OFFSET + 34.75,  # Var: T_Tank / K
+    ZERO_CELCIUS_OFFSET + 12.8723,  # Var: T_Glass / K
+    ZERO_CELCIUS_OFFSET + 14.70344,  # Var: T_PV / K
+    ZERO_CELCIUS_OFFSET + 14.736747,  # Var: T_Collector / K
+    ZERO_CELCIUS_OFFSET + 15.102505,  # Var: T_Collector_input / K
+    ZERO_CELCIUS_OFFSET + 15.102505,  # Var: T_Collector_output / K
+    ZERO_CELCIUS_OFFSET + 26.144,  # Var: T_Tank / K
 ]  # [K]
 # The initial temperature of the hot-water tank, at which it should be instantiated,
 # measured in Kelvin.
 INITIAL_TANK_TEMPERATURE = ZERO_CELCIUS_OFFSET + 34.75  # [K]
 # The Nusselt number of the flow is given as 6 in Maria's paper.
-NUSSELT_NUMBER: float = 6
+NUSSELT_NUMBER: float = 4.36
 # The Stefan-Boltzman constant, given in Watts per meter squared Kelvin to the four.
 STEFAN_BOLTZMAN_CONSTANT: float = 5.670374419 * (10 ** (-8))
 # The convective, heat-transfer coefficienct of water. This varies (a LOT), and is
