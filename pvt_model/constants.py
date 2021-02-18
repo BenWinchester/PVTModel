@@ -14,12 +14,14 @@ panel.
 
 """
 
+from .__utils__ import TemperatureName
+
 __all__ = (
     "CONVERGENT_SOLUTION_PRECISION",
     "DENSITY_OF_WATER",
     "FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR",
     "HEAT_CAPACITY_OF_WATER",
-    "INITIAL_SYSTEM_TEMPERATURE_VECTOR",
+    "INITIAL_SYSTEM_TEMPERATURE_MAPPING",
     "NUMBER_OF_COLLECTORS",
     "NUSSELT_NUMBER",
     "STEFAN_BOLTZMAN_CONSTANT",
@@ -56,14 +58,17 @@ HEAT_CAPACITY_OF_WATER: int = 4182
 # The initial temperature for the system to be instantiated at, measured in Kelvin.
 # The `tuple` contains the glass, pv, collector, bulk-water, and tank initial
 # temperatures.
-INITIAL_SYSTEM_TEMPERATURE_VECTOR = [
-    ZERO_CELCIUS_OFFSET + 12.8723,  # Var: T_Glass / K
-    ZERO_CELCIUS_OFFSET + 14.70344,  # Var: T_PV / K
-    ZERO_CELCIUS_OFFSET + 14.736747,  # Var: T_Collector / K
-    ZERO_CELCIUS_OFFSET + 15.102505,  # Var: T_Collector_input / K
-    ZERO_CELCIUS_OFFSET + 15.102505,  # Var: T_Collector_output / K
-    ZERO_CELCIUS_OFFSET + 26.144,  # Var: T_Tank / K
-]  # [K]
+INITIAL_SYSTEM_TEMPERATURE_MAPPING = {
+    TemperatureName.glass: ZERO_CELCIUS_OFFSET + 12.8723,  # [K]
+    TemperatureName.pv: ZERO_CELCIUS_OFFSET + 14.70344,  # [K]
+    TemperatureName.collector: ZERO_CELCIUS_OFFSET + 14.736747,  # [K]
+    TemperatureName.bulk_water: ZERO_CELCIUS_OFFSET + 15.102505,  # [K]
+    TemperatureName.collector_input: ZERO_CELCIUS_OFFSET + 15.102505,  # [K]
+    TemperatureName.collector_output: ZERO_CELCIUS_OFFSET + 15.102505,  # [K]
+    TemperatureName.tank: ZERO_CELCIUS_OFFSET + 26.144,  # [K]
+    TemperatureName.tank_input: ZERO_CELCIUS_OFFSET + 15.102505,  # [K]
+    TemperatureName.tank_output: ZERO_CELCIUS_OFFSET + 15.102505,  # [K]
+}  # [K]
 # The initial temperature of the hot-water tank, at which it should be instantiated,
 # measured in Kelvin.
 INITIAL_TANK_TEMPERATURE = ZERO_CELCIUS_OFFSET + 34.75  # [K]

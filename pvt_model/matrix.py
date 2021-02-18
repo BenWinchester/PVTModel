@@ -45,7 +45,7 @@ import numpy
 from . import constants, physics_utils, tank
 
 from .pvt_panel import pvt
-from .__utils__ import WeatherConditions
+from .__utils__ import TemperatureName, WeatherConditions
 
 __all__ = (
     "calculate_coefficient_matrix",
@@ -92,10 +92,10 @@ def _get_glass_equation_coefficients(
     """
 
     # Instantiate an empty array to represent the matrix row.
-    glass_equation_coefficients = numpy.zeros([1, 6])
+    glass_equation_coefficients = numpy.zeros([1, len(TemperatureName)])
 
     # Compute the glass temperature term.
-    glass_equation_coefficients[0, 0] = (
+    glass_equation_coefficients[0][TemperatureName.glass.value] = (
         # Radiative heat transfer to the sky
         physics_utils.radiative_heat_transfer_coefficient(
             destination_temperature=weather_conditions.sky_temperature,
@@ -138,7 +138,7 @@ def _get_glass_equation_coefficients(
     )  # [W/K]
 
     # Compute the PV temperature term.
-    glass_equation_coefficients[0, 1] = -(
+    glass_equation_coefficients[0][TemperatureName.pv.value] = -(
         # Conductive heat transfer from the PV layer
         physics_utils.conductive_heat_transfer_coefficient_with_gap(
             pvt_panel.air_gap_thickness
@@ -155,7 +155,7 @@ def _get_glass_equation_coefficients(
     )  # [W/K]
 
     # Compute the collector temperature term.
-    glass_equation_coefficients[0, 2] = -(
+    glass_equation_coefficients[0][TemperatureName.collector.value] = -(
         # Conductive heat transfer from the collector layer
         physics_utils.conductive_heat_transfer_coefficient_with_gap(
             pvt_panel.air_gap_thickness
@@ -209,10 +209,10 @@ def _get_pv_equation_coefficients(
 
     """
 
-    pv_equation_coefficients = numpy.zeros([1, 6])
+    pv_equation_coefficients = numpy.zeros([1, len(TemperatureName)])
 
     # Compute the glass temperature term.
-    pv_equation_coefficients[0, 0] = -(
+    pv_equation_coefficients[0][TemperatureName.glass.value] = -(
         # Conductive heat transfer from the PV layer
         physics_utils.conductive_heat_transfer_coefficient_with_gap(
             pvt_panel.air_gap_thickness
@@ -229,7 +229,7 @@ def _get_pv_equation_coefficients(
     )  # [W/K]
 
     # Compute the PV temperature term.
-    pv_equation_coefficients[0, 1] = (
+    pv_equation_coefficients[0][TemperatureName.pv.value] = (
         # Conductive heat transfer from the glass layer.
         physics_utils.conductive_heat_transfer_coefficient_with_gap(
             pvt_panel.air_gap_thickness
@@ -264,7 +264,7 @@ def _get_pv_equation_coefficients(
     )  # [W/K]
 
     # Compute the collector temperature term.
-    pv_equation_coefficients[0, 2] = -(
+    pv_equation_coefficients[0][TemperatureName.collector.value] = -(
         # Conductive heat transfer to the collector layer.
         pvt_panel.pv_to_collector_thermal_conductance  # [W/m^2*K]
         * pvt_panel.pv.area  # [m^2]
@@ -312,10 +312,10 @@ def _get_collector_equation_coefficients(
 
     """
 
-    collector_equation_coefficients = numpy.zeros([1, 6])
+    collector_equation_coefficients = numpy.zeros([1, len(TemperatureName)])
 
     # Compute the glass temperature term.
-    collector_equation_coefficients[0, 0] = -(
+    collector_equation_coefficients[0][TemperatureName.glass.value] = -(
         # Conductive heat transfer from the glass layer
         physics_utils.conductive_heat_transfer_coefficient_with_gap(
             pvt_panel.air_gap_thickness
@@ -334,14 +334,14 @@ def _get_collector_equation_coefficients(
     )
 
     # Compute the PV temperature term.
-    collector_equation_coefficients[0, 1] = -(
+    collector_equation_coefficients[0][TemperatureName.pv.value] = -(
         # Conductive heat transfer to the PV layer.
         pvt_panel.pv_to_collector_thermal_conductance  # [W/m^2*K]
         * pvt_panel.pv.area  # [m^2]
     )  # [W/K]
 
     # Compute the collector temperature term.
-    collector_equation_coefficients[0, 2] = (
+    collector_equation_coefficients[0][TemperatureName.collector.value] = (
         # Conductive heat transfer from the PV layer.
         pvt_panel.pv_to_collector_thermal_conductance  # [W/m^2*K]
         * pvt_panel.pv.area  # [m^2]
@@ -389,6 +389,32 @@ def _get_collector_equation_coefficients(
     return collector_equation_coefficients
 
 
+def _get_bulk_water_equation_coefficients() -> numpy.ndarray:
+    """
+    Calculates the coefficients for the equation for the bulk water
+
+    :return:
+        An array containing these coefficients.
+
+    """
+
+    collector_to_tank_pipe_equation_coefficients = numpy.zeros(
+        [1, len(TemperatureName)]
+    )
+
+    collector_to_tank_pipe_equation_coefficients[0][
+        TemperatureName.bulk_water.value
+    ] = 1
+    collector_to_tank_pipe_equation_coefficients[0][
+        TemperatureName.collector_input.value
+    ] = -0.5
+    collector_to_tank_pipe_equation_coefficients[0][
+        TemperatureName.collector_output.value
+    ] = -0.5
+
+    return collector_to_tank_pipe_equation_coefficients
+
+
 def _get_collector_htf_equation_coefficients(
     collector_to_htf_efficiency: float,
 ) -> numpy.ndarray:
@@ -406,16 +432,43 @@ def _get_collector_htf_equation_coefficients(
 
     """
 
-    collector_htf_equation_coefficients = numpy.zeros([1, 6])
+    collector_htf_equation_coefficients = numpy.zeros([1, len(TemperatureName)])
 
     # Collector temperature term.
-    collector_htf_equation_coefficients[0, 2] = collector_to_htf_efficiency
+    collector_htf_equation_coefficients[0][
+        TemperatureName.collector.value
+    ] = collector_to_htf_efficiency
     # Collector input temperature term.
-    # collector_htf_equation_coefficients[0, 3] = 1 - collector_to_htf_efficiency
+    collector_htf_equation_coefficients[0][TemperatureName.collector_input.value] = (
+        1 - collector_to_htf_efficiency
+    )
     # Collector output temperature term.
-    collector_htf_equation_coefficients[0, 4] = -1
+    collector_htf_equation_coefficients[0][TemperatureName.collector_output.value] = -1
 
     return collector_htf_equation_coefficients
+
+
+def _get_collector_to_tank_pipe_equation() -> numpy.ndarray:
+    """
+    Calculates the coefficients for the equation from the collector to the tank.
+
+    :return:
+        An array containing these coefficients.
+
+    """
+
+    collector_to_tank_pipe_equation_coefficients = numpy.zeros(
+        [1, len(TemperatureName)]
+    )
+
+    collector_to_tank_pipe_equation_coefficients[0][
+        TemperatureName.collector_output.value
+    ] = 1
+    collector_to_tank_pipe_equation_coefficients[0][
+        TemperatureName.tank_input.value
+    ] = -1
+
+    return collector_to_tank_pipe_equation_coefficients
 
 
 def _get_tank_htf_equation_coefficients(
@@ -443,24 +496,51 @@ def _get_tank_htf_equation_coefficients(
 
     """
 
-    tank_htf_equation_coefficients = numpy.zeros([1, 6])
+    tank_htf_equation_coefficients = numpy.zeros([1, len(TemperatureName)])
 
     # Coefficients for the case where heat should be added to the collector.
     if previous_collector_output_temperature > previous_tank_temperature:
         # Collector input temperature term.
-        tank_htf_equation_coefficients[0, 3] = -1
+        tank_htf_equation_coefficients[0][TemperatureName.tank_output.value] = -1
         # Collector output temperature term.
-        tank_htf_equation_coefficients[0, 4] = 1 - htf_to_tank_efficiency
+        tank_htf_equation_coefficients[0][TemperatureName.tank_input.value] = (
+            1 - htf_to_tank_efficiency
+        )
         # Tank temperature term.
-        tank_htf_equation_coefficients[0, 5] = htf_to_tank_efficiency
+        tank_htf_equation_coefficients[0][
+            TemperatureName.tank.value
+        ] = htf_to_tank_efficiency
     # Coefficients for the case where the fluid should pass straight through.
     else:
         # Collector input temperature term.
-        tank_htf_equation_coefficients[0, 3] = -1
+        tank_htf_equation_coefficients[0][TemperatureName.tank_output.value] = -1
         # Collector output temperature term.
-        tank_htf_equation_coefficients[0, 4] = 1
+        tank_htf_equation_coefficients[0][TemperatureName.tank_input.value] = 1
 
     return tank_htf_equation_coefficients
+
+
+def _get_tank_to_collector_pipe_equation_coefficients() -> numpy.ndarray:
+    """
+    Calculates the coefficients for the equation from the collector to the tank.
+
+    :return:
+        An array containing these coefficients.
+
+    """
+
+    tank_to_collector_pipe_equation_coefficients = numpy.zeros(
+        [1, len(TemperatureName)]
+    )
+
+    tank_to_collector_pipe_equation_coefficients[0][
+        TemperatureName.collector_input.value
+    ] = 1
+    tank_to_collector_pipe_equation_coefficients[0][
+        TemperatureName.tank_output.value
+    ] = -1
+
+    return tank_to_collector_pipe_equation_coefficients
 
 
 def _get_tank_equation_coefficients(
@@ -482,22 +562,22 @@ def _get_tank_equation_coefficients(
 
     """
 
-    tank_equation_coefficients = numpy.zeros([1, 6])
+    tank_equation_coefficients = numpy.zeros([1, len(TemperatureName)])
 
     heat_added_to_tank = (
-        previous_collector_output_temperature > previous_tank_temperature
+        previous_collector_output_temperature > previous_tank_temperature + 1
     )
 
     # Compute the output water temperature term.
     if heat_added_to_tank:
-        tank_equation_coefficients[0, 4] = -(
+        tank_equation_coefficients[0][TemperatureName.tank_input.value] = -(
             htf_to_tank_efficiency
             * mass_flow_rate  # [kg/s]
             * constants.HEAT_CAPACITY_OF_WATER  # [J/kg*K]
         )  # [W/K]
 
     # Compute the tank-temperature term.
-    tank_equation_coefficients[0, 5] = (
+    tank_equation_coefficients[0][TemperatureName.tank.value] = (
         # Heat addition
         htf_to_tank_efficiency
         * mass_flow_rate  # [kg/s]
@@ -567,20 +647,25 @@ def calculate_coefficient_matrix(
     """
 
     # Unpack the temperature vectors for the best guess time step and previous time step
-    (
-        best_guess_glass_temperature,
-        best_guess_pv_temperature,
-        best_guess_collector_temperature,
-        _,
-        best_guess_collector_output_temperature,
-        best_guess_tank_temperature,
-    ) = best_guess_temperature_vector
+    best_guess_glass_temperature = best_guess_temperature_vector[
+        TemperatureName.glass.value
+    ]
+    best_guess_pv_temperature = best_guess_temperature_vector[TemperatureName.pv.value]
+    best_guess_collector_temperature = best_guess_temperature_vector[
+        TemperatureName.collector.value
+    ]
+    best_guess_collector_output_temperature = best_guess_temperature_vector[
+        TemperatureName.collector_output.value
+    ]
+    best_guess_tank_temperature = best_guess_temperature_vector[
+        TemperatureName.tank.value
+    ]
 
     # Instantiate an empty array to represent the matrix.
-    coefficient_matrix = numpy.zeros([6, 6])
+    coefficient_matrix = numpy.zeros([len(TemperatureName), len(TemperatureName)])
 
     # Compute the glass-layer-equation coefficients.
-    coefficient_matrix[0] = _get_glass_equation_coefficients(
+    coefficient_matrix[TemperatureName.glass.value] = _get_glass_equation_coefficients(
         best_guess_collector_temperature,
         best_guess_glass_temperature,
         best_guess_pv_temperature,
@@ -590,7 +675,7 @@ def calculate_coefficient_matrix(
     )
 
     # Compute the PV-layer-equation coefficients.
-    coefficient_matrix[1] = _get_pv_equation_coefficients(
+    coefficient_matrix[TemperatureName.pv.value] = _get_pv_equation_coefficients(
         best_guess_glass_temperature,
         best_guess_pv_temperature,
         pvt_panel,
@@ -599,7 +684,9 @@ def calculate_coefficient_matrix(
     )
 
     # Compute the collector-layer-equation coefficients.
-    coefficient_matrix[2] = _get_collector_equation_coefficients(
+    coefficient_matrix[
+        TemperatureName.collector.value
+    ] = _get_collector_equation_coefficients(
         collector_to_htf_efficiency,
         best_guess_collector_temperature,
         best_guess_glass_temperature,
@@ -608,17 +695,27 @@ def calculate_coefficient_matrix(
         weather_conditions,
     )
 
-    coefficient_matrix[3] = _get_collector_htf_equation_coefficients(
-        collector_to_htf_efficiency
-    )
+    coefficient_matrix[
+        TemperatureName.bulk_water.value
+    ] = _get_bulk_water_equation_coefficients()
 
-    coefficient_matrix[4] = _get_tank_htf_equation_coefficients(
+    coefficient_matrix[
+        TemperatureName.collector_input.value
+    ] = _get_collector_htf_equation_coefficients(collector_to_htf_efficiency)
+
+    coefficient_matrix[
+        TemperatureName.collector_output.value
+    ] = _get_tank_htf_equation_coefficients(
         htf_to_tank_efficiency,
         best_guess_collector_output_temperature,
         best_guess_tank_temperature,
     )
 
-    coefficient_matrix[5] = _get_tank_equation_coefficients(
+    coefficient_matrix[
+        TemperatureName.tank_input.value
+    ] = _get_collector_to_tank_pipe_equation()
+
+    coefficient_matrix[TemperatureName.tank.value] = _get_tank_equation_coefficients(
         current_hot_water_load,
         hot_water_tank,
         pvt_panel.collector.htf_heat_capacity,
@@ -628,6 +725,10 @@ def calculate_coefficient_matrix(
         best_guess_tank_temperature,
         resolution,
     )
+
+    coefficient_matrix[
+        TemperatureName.tank_output.value
+    ] = _get_tank_to_collector_pipe_equation_coefficients()
 
     return coefficient_matrix
 
@@ -679,18 +780,14 @@ def calculate_resultant_vector(
 
     # Instantiate a vector to store the values computed and unpack the previous
     # temperatures
-    resultant_vector = numpy.zeros([6, 1])
-    (
-        previous_glass_temperature,
-        previous_pv_temperature,
-        previous_collector_temperature,
-        previous_collector_input_temperature,
-        _,
-        previous_tank_temperature,
-    ) = previous_temperature_vector
+    resultant_vector = numpy.zeros([len(TemperatureName), 1])
+    previous_collector_input_temperature = previous_temperature_vector[
+        TemperatureName.collector_input.value
+    ]
+    previous_tank_temperature = previous_temperature_vector[TemperatureName.tank.value]
 
     # Compute the glass-layer-equation value.
-    resultant_vector[0] = (
+    resultant_vector[TemperatureName.glass.value] = (
         # Radiative heat transfer to the sky
         physics_utils.radiative_heat_transfer_coefficient(
             destination_temperature=weather_conditions.sky_temperature,
@@ -716,7 +813,7 @@ def calculate_resultant_vector(
     )  # [W]
 
     # Compute the PV-layer-equation value.
-    resultant_vector[1] = (
+    resultant_vector[TemperatureName.pv.value] = (
         # Solar heat input
         physics_utils.transmissivity_absorptivity_product(
             diffuse_reflection_coefficient=pvt_panel.glass.diffuse_reflection_coefficient,
@@ -742,7 +839,7 @@ def calculate_resultant_vector(
     )  # [W]
 
     # Compute the collector-layer-equation value.
-    resultant_vector[2] = (
+    resultant_vector[TemperatureName.collector.value] = (
         # Solar heat input
         physics_utils.transmissivity_absorptivity_product(
             diffuse_reflection_coefficient=pvt_panel.glass.diffuse_reflection_coefficient,
@@ -774,11 +871,11 @@ def calculate_resultant_vector(
         * previous_collector_input_temperature  # [K]
     )  # [W]
 
-    resultant_vector[3] = (
-        collector_to_htf_efficiency - 1
-    ) * previous_collector_input_temperature  # [K]
+    # resultant_vector[TemperatureName.collector_input.value] = (
+    #     collector_to_htf_efficiency - 1
+    # ) * previous_collector_input_temperature  # [K]
 
-    resultant_vector[5] = (
+    resultant_vector[TemperatureName.tank.value] = (
         # Tank heat loss.
         # 573
         hot_water_tank.area  # [m^2]

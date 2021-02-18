@@ -33,7 +33,6 @@ from scipy import linalg  # type: ignore
 
 from . import (
     argparser,
-    constants,
     exchanger,
     load,
     mains_power,
@@ -46,7 +45,8 @@ from . import (
 from .pvt_panel import pvt
 
 from .constants import (
-    INITIAL_SYSTEM_TEMPERATURE_VECTOR,
+    CONVERGENT_SOLUTION_PRECISION,
+    INITIAL_SYSTEM_TEMPERATURE_MAPPING,
     ZERO_CELCIUS_OFFSET,
 )
 
@@ -59,6 +59,7 @@ from .__utils__ import (  # pylint: disable=unused-import
     MissingParametersError,
     ProgrammerJudgementFault,
     SystemData,
+    TemperatureName,
     time_iterator,
     TotalPowerData,
 )
@@ -288,7 +289,7 @@ def _solve_temperature_vector_convergence_method(
     run_one_temperature_vector: numpy.ndarray,
     weather_conditions: weather.WeatherConditions,
     convergence_run_number: int = 0,
-    run_one_temperature_difference: float = 5 * constants.ZERO_CELCIUS_OFFSET ** 2,
+    run_one_temperature_difference: float = 5 * ZERO_CELCIUS_OFFSET ** 2,
 ) -> numpy.ndarray:
     """
     Itteratively solves for the temperature vector to find a convergent solution.
@@ -410,7 +411,7 @@ def _solve_temperature_vector_convergence_method(
     )
 
     # If the solution has converged, return the temperature vector.
-    if run_two_temperature_difference < constants.CONVERGENT_SOLUTION_PRECISION:
+    if run_two_temperature_difference < CONVERGENT_SOLUTION_PRECISION:
         logger.info(
             "Date and time: %s; Run number: %s: Convergent solution found. "
             "Convergent difference: %s",
@@ -508,9 +509,15 @@ def main(args) -> None:
         load_system,
     )
 
+    # Generate a list from the mapping.
+    initial_system_temperature_vector = [
+        INITIAL_SYSTEM_TEMPERATURE_MAPPING[temperature_name]
+        for temperature_name in sorted(TemperatureName, key=lambda entry: entry.value)
+    ]
+
     # Initialise the PV-T panel.
     pvt_panel = process_pvt_system_data.pvt_panel_from_path(
-        INITIAL_SYSTEM_TEMPERATURE_VECTOR[3],
+        initial_system_temperature_vector[TemperatureName.bulk_water.value],
         parsed_args.portion_covered,
         parsed_args.pvt_data_file,
         parsed_args.unglazed,
@@ -528,8 +535,8 @@ def main(args) -> None:
     logger.info("Hot-water tank successfully instantiated: %s", hot_water_tank)
 
     # Instantiate the two pipes used to store input and output temperature values.
-    # collector_to_tank_pipe = pipe.Pipe(temperature=INITIAL_SYSTEM_TEMPERATURE_VECTOR[3])
-    # tank_to_collector_pipe = pipe.Pipe(temperature=INITIAL_SYSTEM_TEMPERATURE_VECTOR[3])
+    # collector_to_tank_pipe = pipe.Pipe(temperature=initial_system_temperature_vector[3])
+    # tank_to_collector_pipe = pipe.Pipe(temperature=initial_system_temperature_vector[3])
 
     # Instnatiate the hot-water pump.
     # htf_pump = process_pvt_system_data.pump_from_path(parsed_args.pump_data_file)
@@ -584,7 +591,7 @@ def main(args) -> None:
     )
 
     previous_run_temperature_vector: numpy.ndarray = numpy.asarray(  # type: ignore
-        INITIAL_SYSTEM_TEMPERATURE_VECTOR
+        initial_system_temperature_vector
     )
     time_iterator_step = relativedelta(seconds=parsed_args.resolution)
 
@@ -598,25 +605,37 @@ def main(args) -> None:
     system_data[0] = SystemData(
         date=initial_date_and_time.strftime("%d/%m/%Y"),
         time=initial_date_and_time.strftime("%H:%M:%S"),
-        glass_temperature=previous_run_temperature_vector[0] - ZERO_CELCIUS_OFFSET,
-        pv_temperature=previous_run_temperature_vector[1] - ZERO_CELCIUS_OFFSET,
-        collector_temperature=previous_run_temperature_vector[2] - ZERO_CELCIUS_OFFSET,
-        collector_input_temperature=previous_run_temperature_vector[3]
+        glass_temperature=previous_run_temperature_vector[TemperatureName.glass.value]
         - ZERO_CELCIUS_OFFSET,
-        collector_output_temperature=previous_run_temperature_vector[4]
+        pv_temperature=previous_run_temperature_vector[TemperatureName.pv.value]
         - ZERO_CELCIUS_OFFSET,
-        bulk_water_temperature=(
-            previous_run_temperature_vector[3] + previous_run_temperature_vector[4]
-        )
-        / 2
+        collector_temperature=previous_run_temperature_vector[
+            TemperatureName.collector.value
+        ]
+        - ZERO_CELCIUS_OFFSET,
+        collector_input_temperature=previous_run_temperature_vector[
+            TemperatureName.collector_input.value
+        ]
+        - ZERO_CELCIUS_OFFSET,
+        collector_output_temperature=previous_run_temperature_vector[
+            TemperatureName.collector_output.value
+        ]
+        - ZERO_CELCIUS_OFFSET,
+        bulk_water_temperature=previous_run_temperature_vector[
+            TemperatureName.bulk_water.value
+        ]
         - ZERO_CELCIUS_OFFSET,
         ambient_temperature=weather_conditions.ambient_temperature
         - ZERO_CELCIUS_OFFSET,
-        exchanger_temperature_drop=previous_run_temperature_vector[3]
-        - previous_run_temperature_vector[4]
-        if previous_run_temperature_vector[4] > previous_run_temperature_vector[5]
+        exchanger_temperature_drop=previous_run_temperature_vector[
+            TemperatureName.tank_output.value
+        ]
+        - previous_run_temperature_vector[TemperatureName.tank_input.value]
+        if previous_run_temperature_vector[TemperatureName.tank_output.value]
+        > previous_run_temperature_vector[TemperatureName.tank.value]
         else 0,
-        tank_temperature=previous_run_temperature_vector[5] - ZERO_CELCIUS_OFFSET,
+        tank_temperature=previous_run_temperature_vector[TemperatureName.tank.value]
+        - ZERO_CELCIUS_OFFSET,
         sky_temperature=weather_conditions.sky_temperature - ZERO_CELCIUS_OFFSET,
     )
 
@@ -677,26 +696,39 @@ def main(args) -> None:
                 + next_date_and_time.hour
             )
             + next_date_and_time.strftime("%H:%M:%S")[2:],
-            glass_temperature=current_run_temperature_vector[0] - ZERO_CELCIUS_OFFSET,
-            pv_temperature=current_run_temperature_vector[1] - ZERO_CELCIUS_OFFSET,
-            collector_temperature=current_run_temperature_vector[2]
+            glass_temperature=previous_run_temperature_vector[
+                TemperatureName.glass.value
+            ]
             - ZERO_CELCIUS_OFFSET,
-            collector_input_temperature=current_run_temperature_vector[3]
+            pv_temperature=previous_run_temperature_vector[TemperatureName.pv.value]
             - ZERO_CELCIUS_OFFSET,
-            collector_output_temperature=current_run_temperature_vector[4]
+            collector_temperature=previous_run_temperature_vector[
+                TemperatureName.collector.value
+            ]
             - ZERO_CELCIUS_OFFSET,
-            bulk_water_temperature=(
-                previous_run_temperature_vector[3] + current_run_temperature_vector[4]
-            )
-            / 2
+            collector_input_temperature=previous_run_temperature_vector[
+                TemperatureName.collector_input.value
+            ]
+            - ZERO_CELCIUS_OFFSET,
+            collector_output_temperature=previous_run_temperature_vector[
+                TemperatureName.collector_output.value
+            ]
+            - ZERO_CELCIUS_OFFSET,
+            bulk_water_temperature=previous_run_temperature_vector[
+                TemperatureName.bulk_water.value
+            ]
             - ZERO_CELCIUS_OFFSET,
             ambient_temperature=weather_conditions.ambient_temperature
             - ZERO_CELCIUS_OFFSET,
-            exchanger_temperature_drop=current_run_temperature_vector[3]
-            - current_run_temperature_vector[4]
-            if current_run_temperature_vector[4] > current_run_temperature_vector[5]
+            exchanger_temperature_drop=previous_run_temperature_vector[
+                TemperatureName.tank_output.value
+            ]
+            - previous_run_temperature_vector[TemperatureName.tank_input.value]
+            if previous_run_temperature_vector[TemperatureName.tank_output.value]
+            > previous_run_temperature_vector[TemperatureName.tank.value]
             else 0,
-            tank_temperature=current_run_temperature_vector[5] - ZERO_CELCIUS_OFFSET,
+            tank_temperature=previous_run_temperature_vector[TemperatureName.tank.value]
+            - ZERO_CELCIUS_OFFSET,
             sky_temperature=weather_conditions.sky_temperature - ZERO_CELCIUS_OFFSET,
         )
 

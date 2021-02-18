@@ -49,6 +49,7 @@ __all__ = (
     "PVParameters",
     "read_yaml",
     "SystemData",
+    "TemperatureName",
     "time_iterator",
     "TotalPowerData",
     "UtilityType",
@@ -507,6 +508,23 @@ class SystemData:
     time: str
     collector_input_temperature: Optional[float] = None
     collector_output_temperature: Optional[float] = None
+
+
+class TemperatureName(enum.Enum):
+    """
+    Used for indexing the type of temperature value being used.
+
+    """
+
+    glass = 0
+    pv = 1
+    collector = 2
+    bulk_water = 3
+    collector_input = 4
+    collector_output = 5
+    tank = 6
+    tank_input = 7
+    tank_output = 8
 
 
 @dataclass
