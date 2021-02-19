@@ -1,0 +1,96 @@
+########################################################################################
+# weather.yaml - Location-specific weather data
+#
+# Copyright 2020, Ben Winchester
+########################################################################################
+
+# Cloud-cover data obtained from
+# https://weatherspark.com/y/45062/Average-Weather-in-London-United-Kingdom-Year-Round,
+# units are the probability (between 0 and 1) that any given day is cloudy. IE: The
+# proportion of days that, on average, are cloudy in the month.
+#
+# Rainy-day data obtained from
+# https://www.weather-atlas.com/en/united-kingdom/london-climate#rainfall_days,
+# units are "average number of days with rain per month".
+#
+# Average day- and night-time temperature obtained from
+# https://www.weather-atlas.com/en/united-kingdom/london-climate#rainfall_days,
+# units are "degrees Celcius".
+#
+
+# The solar insolation is measured in Watts per meter squared.
+solar_insolation: 540
+mains_water_temp: 12
+average_ambient_household_temperature: 20
+jan:
+  num_days: 31
+  cloud_cover: 0.55
+  rainy_days: 11.1
+  day_temp: 8.1
+  night_temp: 2.3
+feb:
+  num_days: 28.25
+  cloud_cover: 0.5
+  rainy_days: 8.5
+  day_temp: 8.4
+  night_temp: 2.1
+mar:
+  num_days: 31
+  cloud_cover: 0.48
+  rainy_days: 9.3
+  day_temp: 11.3
+  night_temp: 3.9
+apr:
+  num_days: 30
+  cloud_cover: 0.43
+  rainy_days: 9.1
+  day_temp: 14.2
+  night_temp: 5.5
+may:
+  num_days: 31
+  cloud_cover: 0.38
+  rainy_days: 8.8
+  day_temp: 17.9
+  night_temp: 8.7
+jun:
+  num_days: 30
+  cloud_cover: 0.36
+  rainy_days: 8.2
+  day_temp: 21
+  night_temp: 11.7
+jul:
+  num_days: 31
+  cloud_cover: 0.32
+  rainy_days: 7.7
+  day_temp: 23.5
+  night_temp: 13.9
+aug:
+  num_days: 31
+  cloud_cover: 0.34
+  rainy_days: 7.5
+  day_temp: 23.2
+  night_temp: 13.7
+sep:
+  num_days: 30
+  cloud_cover: 0.36
+  rainy_days: 8.1
+  day_temp: 19.9
+  night_temp: 11.4
+oct:
+  num_days: 31
+  cloud_cover: 0.44
+  rainy_days: 10.8
+  day_temp: 15.5
+  night_temp: 8.4
+nov:
+  num_days: 30
+  cloud_cover: 0.53
+  rainy_days: 10.3
+  day_temp: 11.1
+  night_temp: 4.9
+dec:
+  num_days: 31
+  cloud_cover: 0.56
+  rainy_days: 10.2
+  day_temp: 8.3
+  night_temp: 2.7
