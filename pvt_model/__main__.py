@@ -361,7 +361,6 @@ def _solve_temperature_vector_convergence_method(
 
     coefficient_matrix = matrix.calculate_coefficient_matrix(
         run_one_temperature_vector,
-        collector_to_htf_efficiency,
         current_hot_water_load,
         hot_water_tank,
         heat_exchanger.efficiency,
@@ -372,7 +371,6 @@ def _solve_temperature_vector_convergence_method(
 
     resultant_vector = matrix.calculate_resultant_vector(
         run_one_temperature_vector[0],
-        collector_to_htf_efficiency,
         current_hot_water_load,
         hot_water_tank,
         previous_run_temperature_vector,
@@ -423,22 +421,24 @@ def _solve_temperature_vector_convergence_method(
 
     # If the solution has diverged, raise an Exception.
     if run_two_temperature_difference > run_one_temperature_difference:
-        logger.error(
-            "The temperature solutions at the next time step diverged. "
-            "See %s for more details.",
-            LOGGER_NAME,
-        )
-        logger.info(
-            "Local variables at the time of the dump:\n%s",
-            "\n".join([f"{key}: {value}" for key, value in locals().items()]),
-        )
-        raise DivergentSolutionError(
-            convergence_run_number,
-            run_one_temperature_difference,
-            run_one_temperature_vector,
-            run_two_temperature_difference,
-            run_two_temperature_vector,
-        )
+        if convergence_run_number > 2:
+            logger.error(
+                "The temperature solutions at the next time step diverged. "
+                "See %s for more details.",
+                LOGGER_NAME,
+            )
+            logger.info(
+                "Local variables at the time of the dump:\n%s",
+                "\n".join([f"{key}: {value}" for key, value in locals().items()]),
+            )
+            raise DivergentSolutionError(
+                convergence_run_number,
+                run_one_temperature_difference,
+                run_one_temperature_vector,
+                run_two_temperature_difference,
+                run_two_temperature_vector,
+            )
+        logger.info("Continuing as fewer than two runs have been attempted...")
 
     # Otherwise, continue to solve until the prevision is reached.
     return _solve_temperature_vector_convergence_method(
@@ -696,38 +696,38 @@ def main(args) -> None:
                 + next_date_and_time.hour
             )
             + next_date_and_time.strftime("%H:%M:%S")[2:],
-            glass_temperature=previous_run_temperature_vector[
+            glass_temperature=current_run_temperature_vector[
                 TemperatureName.glass.value
             ]
             - ZERO_CELCIUS_OFFSET,
-            pv_temperature=previous_run_temperature_vector[TemperatureName.pv.value]
+            pv_temperature=current_run_temperature_vector[TemperatureName.pv.value]
             - ZERO_CELCIUS_OFFSET,
-            collector_temperature=previous_run_temperature_vector[
+            collector_temperature=current_run_temperature_vector[
                 TemperatureName.collector.value
             ]
             - ZERO_CELCIUS_OFFSET,
-            collector_input_temperature=previous_run_temperature_vector[
+            collector_input_temperature=current_run_temperature_vector[
                 TemperatureName.collector_input.value
             ]
             - ZERO_CELCIUS_OFFSET,
-            collector_output_temperature=previous_run_temperature_vector[
+            collector_output_temperature=current_run_temperature_vector[
                 TemperatureName.collector_output.value
             ]
             - ZERO_CELCIUS_OFFSET,
-            bulk_water_temperature=previous_run_temperature_vector[
+            bulk_water_temperature=current_run_temperature_vector[
                 TemperatureName.bulk_water.value
             ]
             - ZERO_CELCIUS_OFFSET,
             ambient_temperature=weather_conditions.ambient_temperature
             - ZERO_CELCIUS_OFFSET,
-            exchanger_temperature_drop=previous_run_temperature_vector[
+            exchanger_temperature_drop=current_run_temperature_vector[
                 TemperatureName.tank_output.value
             ]
-            - previous_run_temperature_vector[TemperatureName.tank_input.value]
-            if previous_run_temperature_vector[TemperatureName.tank_output.value]
-            > previous_run_temperature_vector[TemperatureName.tank.value]
+            - current_run_temperature_vector[TemperatureName.tank_input.value]
+            if current_run_temperature_vector[TemperatureName.tank_output.value]
+            > current_run_temperature_vector[TemperatureName.tank.value]
             else 0,
-            tank_temperature=previous_run_temperature_vector[TemperatureName.tank.value]
+            tank_temperature=current_run_temperature_vector[TemperatureName.tank.value]
             - ZERO_CELCIUS_OFFSET,
             sky_temperature=weather_conditions.sky_temperature - ZERO_CELCIUS_OFFSET,
         )

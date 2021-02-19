@@ -445,9 +445,18 @@ class WeatherForecaster:
                 weather_data.override_irradiance_profile = list(
                     weather_data.solar_irradiance_profiles.values()
                 )[0]
-            weather_data.average_temperature_profile = monthly_temperature_profiles[
-                Date(1, month)
-            ]
+            try:
+                weather_data.average_temperature_profile = monthly_temperature_profiles[
+                    Date(1, month)
+                ]
+            except KeyError as e:
+                logger.debug(
+                    "Unable to set average temperature profile for month %s; "
+                    "data not present: %s",
+                    month,
+                    str(e),
+                )
+                continue
 
     def __repr__(self) -> str:
         """
@@ -584,7 +593,7 @@ class WeatherForecaster:
         else:
             # Cycle through the various profile files, opening the profiles and storing as a
             # mapping.
-            monthly_irradiance_profiles = dict()
+            monthly_irradiance_profiles: Dict[Date, _DailyProfile] = dict()
             for filename in solar_irradiance_filenames:
                 with open(filename, "r") as f:
                     filedata = json.load(f)
@@ -615,51 +624,51 @@ class WeatherForecaster:
                 }
             )
 
-        # @@@ For now, the solar irradiance profiles and temperature profiles for the
-        # @@@ missing months are filled in here.
-        monthly_irradiance_profiles[Date(1, 2)] = monthly_irradiance_profiles[
-            Date(1, 1)
-        ]
-        monthly_irradiance_profiles[Date(1, 3)] = monthly_irradiance_profiles[
-            Date(1, 4)
-        ]
-        monthly_irradiance_profiles[Date(1, 5)] = monthly_irradiance_profiles[
-            Date(1, 4)
-        ]
-        monthly_irradiance_profiles[Date(1, 6)] = monthly_irradiance_profiles[
-            Date(1, 8)
-        ]
-        monthly_irradiance_profiles[Date(1, 7)] = _DailyProfile(
-            {
-                key: (
-                    monthly_irradiance_profiles[Date(1, 8)].profile[key] * 3
-                    + monthly_irradiance_profiles[Date(1, 4)].profile[key]
-                )
-                / 4
-                for key in monthly_irradiance_profiles[Date(1, 8)].profile.keys()
-            }
-        )
-        monthly_irradiance_profiles[Date(1, 9)] = monthly_irradiance_profiles[
-            Date(1, 4)
-        ]
-        monthly_irradiance_profiles[Date(1, 10)] = monthly_irradiance_profiles[
-            Date(1, 4)
-        ]
-        monthly_irradiance_profiles[Date(1, 11)] = monthly_irradiance_profiles[
-            Date(1, 1)
-        ]
-        monthly_irradiance_profiles[Date(1, 12)] = monthly_irradiance_profiles[
-            Date(1, 1)
-        ]
+        # # @@@ For now, the solar irradiance profiles and temperature profiles for the
+        # # @@@ missing months are filled in here.
+        # monthly_irradiance_profiles[Date(1, 2)] = monthly_irradiance_profiles[
+        #     Date(1, 1)
+        # ]
+        # monthly_irradiance_profiles[Date(1, 3)] = monthly_irradiance_profiles[
+        #     Date(1, 4)
+        # ]
+        # monthly_irradiance_profiles[Date(1, 5)] = monthly_irradiance_profiles[
+        #     Date(1, 4)
+        # ]
+        # monthly_irradiance_profiles[Date(1, 6)] = monthly_irradiance_profiles[
+        #     Date(1, 8)
+        # ]
+        # monthly_irradiance_profiles[Date(1, 7)] = _DailyProfile(
+        #     {
+        #         key: (
+        #             monthly_irradiance_profiles[Date(1, 8)].profile[key] * 3
+        #             + monthly_irradiance_profiles[Date(1, 4)].profile[key]
+        #         )
+        #         / 4
+        #         for key in monthly_irradiance_profiles[Date(1, 8)].profile.keys()
+        #     }
+        # )
+        # monthly_irradiance_profiles[Date(1, 9)] = monthly_irradiance_profiles[
+        #     Date(1, 4)
+        # ]
+        # monthly_irradiance_profiles[Date(1, 10)] = monthly_irradiance_profiles[
+        #     Date(1, 4)
+        # ]
+        # monthly_irradiance_profiles[Date(1, 11)] = monthly_irradiance_profiles[
+        #     Date(1, 1)
+        # ]
+        # monthly_irradiance_profiles[Date(1, 12)] = monthly_irradiance_profiles[
+        #     Date(1, 1)
+        # ]
 
-        temperature_profiles[Date(1, 2)] = temperature_profiles[Date(1, 1)]
-        temperature_profiles[Date(1, 3)] = temperature_profiles[Date(1, 4)]
-        temperature_profiles[Date(1, 5)] = temperature_profiles[Date(1, 4)]
-        temperature_profiles[Date(1, 6)] = temperature_profiles[Date(1, 7)]
-        temperature_profiles[Date(1, 9)] = temperature_profiles[Date(1, 4)]
-        temperature_profiles[Date(1, 10)] = temperature_profiles[Date(1, 4)]
-        temperature_profiles[Date(1, 11)] = temperature_profiles[Date(1, 1)]
-        temperature_profiles[Date(1, 12)] = temperature_profiles[Date(1, 1)]
+        # temperature_profiles[Date(1, 2)] = temperature_profiles[Date(1, 1)]
+        # temperature_profiles[Date(1, 3)] = temperature_profiles[Date(1, 4)]
+        # temperature_profiles[Date(1, 5)] = temperature_profiles[Date(1, 4)]
+        # temperature_profiles[Date(1, 6)] = temperature_profiles[Date(1, 7)]
+        # temperature_profiles[Date(1, 9)] = temperature_profiles[Date(1, 4)]
+        # temperature_profiles[Date(1, 10)] = temperature_profiles[Date(1, 4)]
+        # temperature_profiles[Date(1, 11)] = temperature_profiles[Date(1, 1)]
+        # temperature_profiles[Date(1, 12)] = temperature_profiles[Date(1, 1)]
 
         # Instantiate and return a Weather Forecaster based off of this weather data.
         return cls(

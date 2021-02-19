@@ -1,0 +1,15 @@
+########################################################################################
+# my_first_hot_water_tank.yaml - Data about the hot-water tank
+#
+# Copyright 2020, Ben Winchester
+########################################################################################
+
+# Physical dimensions
+area: 1.9 # [m^2]
+diameter: 0.36 # [m]
+height: 1.5 # [m]
+mass: 150 # [kg]
+
+# Heat transfer related parameters
+heat_loss_coefficient: 1.9 # [W/m^2*K]
+heat_transfer_coefficient: "{heat_loss_coefficient} * {area}"

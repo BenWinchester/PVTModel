@@ -274,7 +274,6 @@ def _get_pv_equation_coefficients(
 
 
 def _get_collector_equation_coefficients(
-    collector_to_htf_efficiency: float,
     best_guess_collector_temperature: float,
     best_guess_glass_temperature: float,
     pvt_panel: pvt.PVT,
@@ -283,10 +282,6 @@ def _get_collector_equation_coefficients(
 ) -> numpy.ndarray:
     """
     Calculates the coefficient for the row representing the collector-layer equation.
-
-    :param collector_to_htf_efficiency:
-        The efficiency of the heat transfer process between the thermal collector layer
-        and the HTF in the collector tubes.
 
     :param best_guess_collector_temperature:
         The temperature of the collector layer at the previous time step, measured in
@@ -361,9 +356,8 @@ def _get_collector_equation_coefficients(
         * pvt_panel.area  # [m^2]
         * (1 - pvt_panel.portion_covered)
         # Heat transfer to the HTF.
-        + collector_to_htf_efficiency
-        * pvt_panel.collector.mass_flow_rate  # [kg/s]
-        * pvt_panel.collector.htf_heat_capacity  # [J/kg*K]
+        + pvt_panel.collector.convective_heat_transfer_coefficient_of_water  # [W/m^2*K]
+        * pvt_panel.collector.htf_surface_area  # [m^2]
         # Back plate heat loss.
         + pvt_panel.back_plate.conductance  # [W/m^2*K]
         * pvt_panel.area  # [m^2]
@@ -379,12 +373,11 @@ def _get_collector_equation_coefficients(
         # / resolution  # [s]
     )  # [W/K]
 
-    # Compute the collector input temperature term.
-    # collector_equation_coefficients[0, 3] = -(
-    #     collector_to_htf_efficiency
-    #     * pvt_panel.collector.mass_flow_rate  # [kg/s]
-    #     * pvt_panel.collector.htf_heat_capacity  # [J/kg*K]
-    # )  # [W/K]
+    collector_equation_coefficients[0][TemperatureName.bulk_water.value] = -(
+        # Heat transfer to the HTF.
+        pvt_panel.collector.convective_heat_transfer_coefficient_of_water  # [W/m^2*K]
+        * pvt_panel.collector.htf_surface_area  # [m^2]
+    )
 
     return collector_equation_coefficients
 
@@ -416,14 +409,13 @@ def _get_bulk_water_equation_coefficients() -> numpy.ndarray:
 
 
 def _get_collector_htf_equation_coefficients(
-    collector_to_htf_efficiency: float,
+    pvt_panel: pvt.PVT,
 ) -> numpy.ndarray:
     """
     Calculates the coefficient for the row representing the collector's htf equation.
 
-    :param collector_to_htf_efficiency:
-        The efficiency of the heat transfer process between the thermal collector layer
-        and the HTF in the collector tubes.
+    :param pvt_panel:
+        A :class:`pvt.PVT` instance representing the PVT panel being simulated.
 
     :return:
         An :class:`numpy.ndarray` containing the coefficients for the row in the matrix
@@ -435,15 +427,25 @@ def _get_collector_htf_equation_coefficients(
     collector_htf_equation_coefficients = numpy.zeros([1, len(TemperatureName)])
 
     # Collector temperature term.
-    collector_htf_equation_coefficients[0][
-        TemperatureName.collector.value
-    ] = collector_to_htf_efficiency
+    collector_htf_equation_coefficients[0][TemperatureName.collector.value] = (
+        pvt_panel.collector.convective_heat_transfer_coefficient_of_water  # [W/m^2*K]
+        * pvt_panel.collector.htf_surface_area  # [m^2]
+    )  # [W/K]
+    # Bulk water temperature term.
+    collector_htf_equation_coefficients[0][TemperatureName.bulk_water.value] = -(
+        pvt_panel.collector.convective_heat_transfer_coefficient_of_water  # [W/m^2*K]
+        * pvt_panel.collector.htf_surface_area  # [m^2]
+    )  # [W/K]
+    # Collector output temperature term.
+    collector_htf_equation_coefficients[0][TemperatureName.collector_output.value] = -(
+        pvt_panel.collector.mass_flow_rate  # [kg/s]
+        * pvt_panel.collector.htf_heat_capacity  # [J/kg*K]
+    )  # [W/K]
     # Collector input temperature term.
     collector_htf_equation_coefficients[0][TemperatureName.collector_input.value] = (
-        1 - collector_to_htf_efficiency
-    )
-    # Collector output temperature term.
-    collector_htf_equation_coefficients[0][TemperatureName.collector_output.value] = -1
+        pvt_panel.collector.mass_flow_rate  # [kg/s]
+        * pvt_panel.collector.htf_heat_capacity  # [J/kg*K]
+    )  # [W/K]
 
     return collector_htf_equation_coefficients
 
@@ -600,7 +602,6 @@ def _get_tank_equation_coefficients(
 
 def calculate_coefficient_matrix(
     best_guess_temperature_vector: numpy.ndarray,
-    collector_to_htf_efficiency: float,
     current_hot_water_load: float,
     hot_water_tank: tank.Tank,
     htf_to_tank_efficiency: float,
@@ -616,10 +617,6 @@ def calculate_coefficient_matrix(
         the time step being computed. The radiative heat transfer, for instance, depends
         in a non-linear way on the temperatures at the next time step. In order to
         estimate these values well, a best guess is needed.
-
-    :param collector_to_htf_efficiency:
-        The efficiency of the heat transfer process between the thermal collector layer
-        and the HTF passing through the collector.
 
     :param current_hot_water_load:
         The current hot water load, measured in kilograms (or litres) per second.
@@ -687,7 +684,6 @@ def calculate_coefficient_matrix(
     coefficient_matrix[
         TemperatureName.collector.value
     ] = _get_collector_equation_coefficients(
-        collector_to_htf_efficiency,
         best_guess_collector_temperature,
         best_guess_glass_temperature,
         pvt_panel,
@@ -701,7 +697,7 @@ def calculate_coefficient_matrix(
 
     coefficient_matrix[
         TemperatureName.collector_input.value
-    ] = _get_collector_htf_equation_coefficients(collector_to_htf_efficiency)
+    ] = _get_collector_htf_equation_coefficients(pvt_panel)
 
     coefficient_matrix[
         TemperatureName.collector_output.value
@@ -735,7 +731,6 @@ def calculate_coefficient_matrix(
 
 def calculate_resultant_vector(
     best_guess_glass_temperature: float,
-    collector_to_htf_efficiency: float,
     current_hot_water_load: float,
     hot_water_tank: tank.Tank,
     previous_temperature_vector: numpy.ndarray,
@@ -748,10 +743,6 @@ def calculate_resultant_vector(
 
     :best_guess_glass_temperature:
         The best guess for the temperature of the glass layer at the current time step.
-
-    :param collector_to_htf_efficiency:
-        The efficiency of the heat transfer process between the thermal collector layer
-        and the HTF passing through the collector.
 
     :param current_hot_water_load:
         The current hot-water load, measured in kilograms per second.
@@ -781,9 +772,6 @@ def calculate_resultant_vector(
     # Instantiate a vector to store the values computed and unpack the previous
     # temperatures
     resultant_vector = numpy.zeros([len(TemperatureName), 1])
-    previous_collector_input_temperature = previous_temperature_vector[
-        TemperatureName.collector_input.value
-    ]
     previous_tank_temperature = previous_temperature_vector[TemperatureName.tank.value]
 
     # Compute the glass-layer-equation value.
@@ -864,16 +852,7 @@ def calculate_resultant_vector(
         * pvt_panel.area  # [m^2]
         * (1 - pvt_panel.portion_covered)
         * weather_conditions.ambient_temperature  # [K]
-        # Compute the collector-input-htf temperature term.
-        + collector_to_htf_efficiency
-        * pvt_panel.collector.mass_flow_rate  # [kg/s]
-        * pvt_panel.collector.htf_heat_capacity  # [J/kg*K]
-        * previous_collector_input_temperature  # [K]
     )  # [W]
-
-    # resultant_vector[TemperatureName.collector_input.value] = (
-    #     collector_to_htf_efficiency - 1
-    # ) * previous_collector_input_temperature  # [K]
 
     resultant_vector[TemperatureName.tank.value] = (
         # Tank heat loss.

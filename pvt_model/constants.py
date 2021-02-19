@@ -45,7 +45,7 @@ NUMBER_OF_COLLECTORS = 1
 ZERO_CELCIUS_OFFSET: float = 273.15
 
 # The precision at which to calculate the convergent solution.
-CONVERGENT_SOLUTION_PRECISION = 0.001
+CONVERGENT_SOLUTION_PRECISION = 0.1
 # The density of water, measured in kilograms per meter cubed.
 DENSITY_OF_WATER: int = 1000
 # The free convective, heat-transfer coefficient of air. This varies, and potentially
@@ -59,15 +59,15 @@ HEAT_CAPACITY_OF_WATER: int = 4182
 # The `tuple` contains the glass, pv, collector, bulk-water, and tank initial
 # temperatures.
 INITIAL_SYSTEM_TEMPERATURE_MAPPING = {
-    TemperatureName.glass: ZERO_CELCIUS_OFFSET + 12.8723,  # [K]
-    TemperatureName.pv: ZERO_CELCIUS_OFFSET + 14.70344,  # [K]
-    TemperatureName.collector: ZERO_CELCIUS_OFFSET + 14.736747,  # [K]
-    TemperatureName.bulk_water: ZERO_CELCIUS_OFFSET + 15.102505,  # [K]
-    TemperatureName.collector_input: ZERO_CELCIUS_OFFSET + 15.102505,  # [K]
-    TemperatureName.collector_output: ZERO_CELCIUS_OFFSET + 15.102505,  # [K]
-    TemperatureName.tank: ZERO_CELCIUS_OFFSET + 26.144,  # [K]
-    TemperatureName.tank_input: ZERO_CELCIUS_OFFSET + 15.102505,  # [K]
-    TemperatureName.tank_output: ZERO_CELCIUS_OFFSET + 15.102505,  # [K]
+    TemperatureName.glass: ZERO_CELCIUS_OFFSET + 12.666635157834548,  # [K]
+    TemperatureName.pv: ZERO_CELCIUS_OFFSET + 14.18921695518992,  # [K]
+    TemperatureName.collector: ZERO_CELCIUS_OFFSET + 14.217132445885738,  # [K]
+    TemperatureName.bulk_water: ZERO_CELCIUS_OFFSET + 14.217132445885682,  # [K]
+    TemperatureName.collector_input: ZERO_CELCIUS_OFFSET + 14.217132445885568,  # [K]
+    TemperatureName.collector_output: ZERO_CELCIUS_OFFSET + 14.217132445885625,  # [K]
+    TemperatureName.tank: ZERO_CELCIUS_OFFSET + 25,  # [K]
+    TemperatureName.tank_input: ZERO_CELCIUS_OFFSET + 14.217132445885625,  # [K]
+    TemperatureName.tank_output: ZERO_CELCIUS_OFFSET + 14.217132445885568,  # [K]
 }  # [K]
 # The initial temperature of the hot-water tank, at which it should be instantiated,
 # measured in Kelvin.
