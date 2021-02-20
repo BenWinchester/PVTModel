@@ -1,13 +1,15 @@
-########################################################################################
+---
+################################################################################
 # weather.yaml - Location-specific weather data
 #
-# Copyright 2020, Ben Winchester
-########################################################################################
+# Copyright 2021, Ben Winchester
+################################################################################
 
 # Cloud-cover data obtained from
+# yamllint disable-line rule:line-length
 # https://weatherspark.com/y/45062/Average-Weather-in-London-United-Kingdom-Year-Round,
-# units are the probability (between 0 and 1) that any given day is cloudy. IE: The
-# proportion of days that, on average, are cloudy in the month.
+# units are the probability (between 0 and 1) that any given day is cloudy. IE:
+# The proportion of days that, on average, are cloudy in the month.
 #
 # Rainy-day data obtained from
 # https://www.weather-atlas.com/en/united-kingdom/london-climate#rainfall_days,

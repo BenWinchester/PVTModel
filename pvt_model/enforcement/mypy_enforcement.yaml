@@ -1,3 +1,4 @@
+---
 ########################################################################################
 # enforcement/mypy_enforcement.yaml - "type:ignore" enforcement file
 #
@@ -13,11 +14,11 @@
   line: 32
   usage: "from scipy import linalg"
 - file: pvt_model/pvt_system_model/__main__.py
-  justification: "FIXME: Dictionary update method requires better type-checking and use of other modules."
+  justification: "FIXME: Dictionary update method requires better type-checking"
   line: 252
   usage: "system_data_dict.update(dataclasses.asdict(total_power_data))"
 - file: pvt_model/pvt_system_model/__main__.py
-  justification: "FIXME: Dictionary update method requires better type-checking and use of other modules."
+  justification: "FIXME: Dictionary update method requires better type-checking"
   line: 254
   usage: "system_data_dict.update(dataclasses.asdict(carbon_emissions))"
 - file: pvt_model/pvt_system_model/__main__.py
@@ -32,7 +33,7 @@
   justification: "Type annotations not needed in the analysis module."
   line: 2
   usage: ""
-  whole_file: True
+  whole_file: true
 - file: pvt_model/pvt_system_model/weather.py
   justification: "Internal __add__ method cannot reference the class name."
   line: 76

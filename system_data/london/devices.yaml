@@ -1,8 +1,9 @@
-########################################################################################
+---
+################################################################################
 # devices.yaml - Location-specific device data
 #
 # Copyright 2020, Ben Winchester
-########################################################################################
+################################################################################
 
 # The structure for entries are as follows:
 # <device_name>:
@@ -10,7 +11,7 @@
 #   weekday: <probability of use during a given weekday>
 #   weeknight: <probability of use during a given weeknight>
 #   weekend_day: <probability of use during a given weekend during the daytime>
-#   weekend_night: <probability of use during a given weekend during the nighttime>
+#   weekend_night: <probability of use during a given weekend at night>
 
 house:
   # Houshold load data obtained from

@@ -1,24 +1,26 @@
-########################################################################################
-# my_first_panel.yaml - Data about the PV-T panel
+---
+################################################################################
+# ilarias_panel.yaml - Data about the PV-T panel
 #
-# Copyright 2020, Ben Winchester
-########################################################################################
+# Copyright 2021, Ben Winchester
+################################################################################
 
 # Some properties obtained from
 # Trinuruk, P., Sorapipatana, C., et al.,
-# "Effects of Air Gap Spacing between a Photovoltaic Panel and Building Envelope on
-# Electricity Generation and Heat Gains through a Building";
+# "Effects of Air Gap Spacing between a Photovoltaic Panel and Building Envelope
+# on Electricity Generation and Heat Gains through a Building";
+# yamllint disable-line rule:line-length
 # https://www.researchgate.net/figure/Physical-properties-of-photovoltaic-components-and-building-materials-11-12-13-and-14_tbl1_242288788
 #
 # PV Absorptivity data for a PV layer in a PV-T system obtained from
 # Santbergen, R., van Zolingen, R. J. C.;
-# The absorption factor of crystalline silicon PV cells: A numerical and experimental
-# study
+# The absorption factor of crystalline silicon PV cells: A numerical and
+# experimental study
 # https://www.sciencedirect.com/science/article/pii/S0927024807004023
 #
 # The remaining parameters were taken from Maria's paper,
-# A UK-based assessment of hybrid PV and solar-thermal systems for domestic heating and
-# power System performance;
+# A UK-based assessment of hybrid PV and solar-thermal systems for domestic
+# heating and power System performance;
 # downloaded and stored in Google Drive.
 
 pvt_system:
@@ -26,8 +28,8 @@ pvt_system:
   longitude: 0.0098 # [deg]
   # The timezone offset in Hours from UTC.
   timezone: 0 # [hours]
-  # The conductance, measured in Watts per meter squared Kelvin, between the PV layer
-  # and collector layers of the panel.
+  # The conductance, measured in Watts per meter squared Kelvin, between the PV
+  # laye and collector layers of the panel.
   pv_to_collector_conductance: 500 # [W/m^2*K]
   # The length of the collector is measured in meters.
   length: 1.66 # [m]
@@ -37,8 +39,8 @@ pvt_system:
   # All angles are measured in degrees
   tilt: 35 # [deg]
   azimuthal_orientation: 180 # [deg]
-  horizontal_tracking: False
-  vertical_tracking: False
+  horizontal_tracking: false
+  vertical_tracking: false
 glass:
   # @@@ Value NOT taken from Maria's paper.
   absorptivity: 0.1 # [unitless]
