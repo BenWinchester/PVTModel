@@ -15,7 +15,6 @@ This module represents the back plate of a PV-T panel.
 
 from .__utils__ import Layer
 from ..__utils__ import (
-    BackLayerParameters,
     LayerParameters,
 )
 from ..constants import FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR
@@ -32,44 +31,6 @@ class BackPlate(Layer):
         the surroundings.
 
     """
-
-    def __init__(self, back_params: BackLayerParameters) -> None:
-        """
-        Instantiate a back layer instance.
-
-        :param back_params:
-            The parameters needed to instantiate the back layer of the panel.
-
-        """
-
-        super().__init__(
-            LayerParameters(
-                back_params.mass,
-                back_params.heat_capacity,
-                back_params.area,
-                back_params.thickness,
-            )
-        )
-
-        self.conductivity = back_params.conductivity
-
-    def __repr__(self) -> str:
-        """
-        Returns a nice representation of the layer.
-
-        :return:
-            A `str` giving a nice representation of the layer.
-
-        """
-        return (
-            "BackPlate("
-            f"area: {self.area}, "
-            f"conductivity: {self.conductivity}, "
-            f"heat_capacity: {self.heat_capacity}, "
-            f"mass: {self.mass}, "
-            f"thickness: {self.thickness}"
-            ")"
-        )
 
     @property
     def conductance(self) -> float:

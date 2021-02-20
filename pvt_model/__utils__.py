@@ -18,6 +18,7 @@ import logging
 import os
 
 __all__ = (
+    "fourier_number",
     "get_logger",
     "LOGGER_NAME",
 )
@@ -26,6 +27,53 @@ __all__ = (
 LOGGER_DIRECTORY = "logs`"
 # The name used for the internal logger.
 LOGGER_NAME = "pvt_model"
+
+
+def fourier_number(
+    conductive_length_scale: float,
+    conductivity: float,
+    density: float,
+    heat_capacity: float,
+    time_scale: float,
+) -> float:
+    """
+    Calculates the Fourier coefficients based off the parameters passed in.
+
+    The Fourier number is computed by:
+        fourier_number = (
+            conductivity * time_scale
+        ) / (
+            conductivy_length_scale ^ 2 * density * heat_capacity
+        )
+
+    :param conductive_length_scale:
+        The length scale over which conduction occurs, measured in meters.
+
+    :param conductivity:
+        The thermal conductivity of the material, measured in Watts per meter Kelvin.
+
+    :param density:
+        The density of the medium, measured in kilograms per meter cubed.
+
+    :param heat_capacity:
+        The heat capcity of the conductive medium, measured in Joules per kilogram
+        Kelvin.
+
+    :param time_scale:
+        The time scale of the simulation being run, measured in seconds.
+
+    :return:
+        The Fourier number based on these values.
+
+    """
+
+    f_num: float = (conductivity * time_scale) / (  # [W/m*K] * [s]
+        heat_capacity  # [J/kg*K]
+        * density  # [kg/m^3]
+        * conductive_length_scale ** 2  # [m]^2
+    )
+
+    return f_num
 
 
 def get_logger(logger_name: str) -> logging.Logger:

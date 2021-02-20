@@ -26,7 +26,7 @@ from . import back_plate, collector, glass, pv
 from ..__utils__ import (
     MissingParametersError,
     ProgrammerJudgementFault,
-    BackLayerParameters,
+    LayerParameters,
     CollectorParameters,
     OpticalLayerParameters,
     PVParameters,
@@ -105,7 +105,7 @@ class PVT:
         self,
         air_gap_thickness: float,
         area: float,
-        back_params: BackLayerParameters,
+        back_params: LayerParameters,
         collector_parameters: CollectorParameters,
         diffuse_reflection_coefficient: float,
         glass_parameters: OpticalLayerParameters,

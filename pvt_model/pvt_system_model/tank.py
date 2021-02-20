@@ -57,6 +57,9 @@ class Tank:
     .. attribute:: area
         The surface area of the tank, measured in meters squared.
 
+    .. attribute:: diameter
+        The diameter of the tank, measured in meters.
+
     .. attribute:: heat_capacity
         The heat capacity of the water, measured in Joules per kilogram Kelvin.
 
@@ -71,6 +74,7 @@ class Tank:
     def __init__(
         self,
         area: float,
+        diameter: float,
         heat_capacity: float,
         heat_loss_coefficient: float,
         mass: float,
@@ -80,6 +84,9 @@ class Tank:
 
         :param area:
             The surface area of the tank, measured in meters squared.
+
+        :param diameter:
+            The diameter of the hot-water tank being mnodelled, measured in meters.
 
         :param heat_capacity:
             The heat capacity of water within the tank, measured in Joules per kilogram
@@ -94,6 +101,7 @@ class Tank:
         """
 
         self.area = area
+        self.diameter = diameter
         self.heat_capacity = heat_capacity
         self.heat_loss_coefficient = heat_loss_coefficient
         self.mass = mass
@@ -110,6 +118,7 @@ class Tank:
         return (
             "Tank("
             f"area: {self.area}m^2, "
+            f"diameter: {self.diameter}m, "
             f"heat_capacity: {self.heat_capacity}J/kg*K, "
             f"heat_loss_coefficient: {self.heat_loss_coefficient}W/m^2*K, "
             f"mass: {self.mass}kg, "

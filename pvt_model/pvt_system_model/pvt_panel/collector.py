@@ -79,9 +79,11 @@ class Collector(OpticalLayer):
 
         super().__init__(
             OpticalLayerParameters(
-                collector_params.mass,  # [kg]
-                collector_params.heat_capacity,
                 collector_params.area,
+                collector_params.conductivity,
+                collector_params.density,
+                collector_params.heat_capacity,
+                collector_params.mass,  # [kg]
                 collector_params.thickness,
                 collector_params.transmissivity,
                 collector_params.absorptivity,

@@ -45,6 +45,7 @@ class TestProperties(unittest.TestCase):
         super().setUp()
 
         collector_parameters = CollectorParameters(
+            conductivity=140,
             mass=100,
             heat_capacity=4000,
             area=15,

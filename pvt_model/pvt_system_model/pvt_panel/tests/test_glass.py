@@ -35,9 +35,11 @@ class _BaseTest(unittest.TestCase):
         super().setUp()
 
         self.glass_parameters = OpticalLayerParameters(
-            mass=150,
-            heat_capacity=4000,
             area=100,
+            conductivity=140,
+            density=2500,
+            heat_capacity=4000,
+            mass=150,
             thickness=0.015,
             transmissivity=0.9,
             absorptivity=0.88,

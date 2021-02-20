@@ -30,9 +30,9 @@ from .constants import (
     HEAT_CAPACITY_OF_WATER,
 )
 from .__utils__ import (
-    BackLayerParameters,
     CollectorParameters,
     InvalidDataError,
+    LayerParameters,
     MissingDataError,
     MissingParametersError,
     OpticalLayerParameters,
@@ -104,6 +104,7 @@ def hot_water_tank_from_path(tank_data_file: str) -> tank.Tank:
     try:
         return tank.Tank(
             float(tank_data["area"]),  # [m^2]
+            float(tank_data["diameter"]) if "diameter" in tank_data else None,  # [m]
             HEAT_CAPACITY_OF_WATER,  # [J/kg*K]
             float(tank_data["heat_loss_coefficient"]),  # [W/m^2*K]
             float(tank_data["mass"]),  # [kg]
@@ -159,11 +160,9 @@ def pump_from_path(pump_data_file: str) -> pump.Pump:
 ##################
 
 
-def _back_params_from_data(
-    area: float, back_data: Dict[str, Any]
-) -> BackLayerParameters:
+def _back_params_from_data(area: float, back_data: Dict[str, Any]) -> LayerParameters:
     """
-    Generate a :class:`BackLayerParameters` containing back-layer info from data.
+    Generate a :class:`LayerParameters` containing back-layer info from data.
 
     :param area:
         The area of the PV-T system, measured in meters squared.
@@ -172,22 +171,23 @@ def _back_params_from_data(
         The raw back data extracted from the YAML data file.
 
     :return:
-        The back data, as a :class:`__utils__.BackLayerParameters`, ready to
+        The back data, as a :class:`__utils__.LayerParameters`, ready to
         instantiate a :class:`pvt.BackPlater` layer instance.
 
     """
 
     try:
-        return BackLayerParameters(
+        return LayerParameters(
+            area,  # [m^2]
+            back_data["thermal_conductivity"],  # [W/m*K]
+            back_data["density"],  # [kg/m^3]
+            back_data["heat_capacity"],  # [J/kg*K]
+            back_data["thickness"],  # [m]
             back_data["mass"]  # [kg]
             if "mass" in back_data
             else back_data["density"]  # [kg/m^3]
             * area  # [m^2]
             * back_data["thickness"],  # [m]
-            back_data["heat_capacity"],  # [J/kg*K]
-            area,  # [m^2]
-            back_data["thickness"],  # [m]
-            back_data["thermal_conductivity"],  # [W/m*K]
         )
     except KeyError as e:
         raise MissingDataError(
@@ -229,6 +229,10 @@ def _collector_params_from_data(
 
     try:
         return CollectorParameters(
+            conductivity=collector_data["thermal_conductivity"]
+            if "thermal_conductivity" in collector_data
+            else None,
+            density=collector_data["density"] if "density" in collector_data else None,
             mass=collector_data["mass"]  # [kg]
             if "mass" in collector_data
             else (
@@ -291,13 +295,17 @@ def _glass_params_from_data(
         return (
             glass_data["diffuse_reflection_coefficient"],
             OpticalLayerParameters(
+                area,  # [m^2]
+                glass_data["thermal_conductivity"]
+                if "thermal_conductivity" in glass_data
+                else None,
+                glass_data["density"],  # [kg/m^3]
+                glass_data["heat_capacity"],  # [J/kg*K]
                 glass_data["mass"]  # [kg]
                 if "mass" in glass_data
                 else glass_data["density"]  # [kg/m^3]
                 * glass_data["thickness"]  # [m]
                 * area,  # [m^2]
-                glass_data["heat_capacity"],  # [J/kg*K]
-                area,  # [m^2]
                 glass_data["thickness"],  # [m]
                 glass_data["transmissivity"],  # [unitless]
                 glass_data["absorptivity"],  # [unitless]
@@ -330,13 +338,17 @@ def _pv_params_from_data(area: float, pv_data: Dict[str, Any]) -> PVParameters:
 
     try:
         return PVParameters(
+            area,  # [m^2]
+            pv_data["thermal_conductivity"]
+            if "thermal_conductivity" in pv_data
+            else None,
+            pv_data["density"] if "density" in pv_data else None,  # [kg/m^3]
+            pv_data["heat_capacity"],  # [J/kg*K]
             pv_data["mass"]  # [kg]
             if "mass" in pv_data
             else pv_data["density"]  # [kg/m^3]
             * area  # [m^2]
             * pv_data["thickness"],  # [m]
-            pv_data["heat_capacity"],  # [J/kg*K]
-            area,  # [m^2]
             pv_data["thickness"],  # [m]
             pv_data["transmissivity"],  # [unitless]
             pv_data["absorptivity"],  # [unitless]

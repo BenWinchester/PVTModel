@@ -32,6 +32,12 @@ class Layer:
     .. attribute:: area
         The area of the layer, measured in meters squared.
 
+    .. attribute:: conductivity
+        The conductivity of the layer, measured in Watts per meter Kelvin.
+
+    .. attribute:: density
+        The desntiy of the layer, measured in kilograms per meter cubed.
+
     .. attribute:: heat_capacity
       The heat capacity of the layer, measured in Joules per kilogram Kelvin.
 
@@ -49,9 +55,11 @@ class Layer:
 
         """
 
-        self.mass = layer_params.mass  # [kg]
         self.area = layer_params.area
+        self.conductivity = layer_params.conductivity
+        self.density = layer_params.density
         self.heat_capacity = layer_params.heat_capacity  # [J/kg*K]
+        self.mass = layer_params.mass  # [kg]
         self.thickness = layer_params.thickness
 
 
@@ -88,9 +96,11 @@ class OpticalLayer(Layer):
 
         super().__init__(
             LayerParameters(
-                optical_params.mass,  # [kg]
-                optical_params.heat_capacity,
                 optical_params.area,
+                optical_params.conductivity,
+                optical_params.density,
+                optical_params.heat_capacity,
+                optical_params.mass,  # [kg]
                 optical_params.thickness,
             )
         )

@@ -45,12 +45,18 @@ class TestInstantiate(unittest.TestCase):
 
         super().setUp()
         self.layer_params = LayerParameters(
-            mass=100, heat_capacity=200, area=15, thickness=0.001
+            mass=100,
+            heat_capacity=200,
+            area=15,
+            thickness=0.001,
+            density=2500,
         )
         self.optical_layer_params = OpticalLayerParameters(
-            mass=self.layer_params.mass,
-            heat_capacity=self.layer_params.heat_capacity,
             area=self.layer_params.area,
+            conductivity=self.layer_params.conductivity,
+            density=self.layer_params.density,
+            heat_capacity=self.layer_params.heat_capacity,
+            mass=self.layer_params.mass,
             thickness=self.layer_params.thickness,
             transmissivity=0.9,
             absorptivity=0.8,

@@ -34,4 +34,19 @@ def parse_args(args) -> argparse.Namespace:
 
     parser = argparse.ArgumentParser()
 
+    parser.add_argument(
+        "--dynamic",
+        default=False,
+        action="store_true",
+        help="If specified, Fourier number calculation will be skipped and a dynamic "
+        "model will be used for the run.",
+    )
+    parser.add_argument(
+        "--quasi-steady",
+        default=False,
+        action="store_true",
+        help="If specified, Fourier number calculation will be skipped and a quasi-"
+        "steady model will be used for the run.",
+    )
+
     return parser.parse_known_args(args)

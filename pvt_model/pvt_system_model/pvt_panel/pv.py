@@ -56,9 +56,11 @@ class PV(OpticalLayer):
 
         super().__init__(
             OpticalLayerParameters(
-                pv_params.mass,
-                pv_params.heat_capacity,
                 pv_params.area,
+                pv_params.conductivity,
+                pv_params.density,
+                pv_params.heat_capacity,
+                pv_params.mass,
                 pv_params.thickness,
                 pv_params.transmissivity,
                 pv_params.absorptivity,

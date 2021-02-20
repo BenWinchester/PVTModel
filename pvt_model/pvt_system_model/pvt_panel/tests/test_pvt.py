@@ -21,8 +21,8 @@ from typing import Optional
 from unittest import mock
 
 from ...__utils__ import (
-    BackLayerParameters,
     CollectorParameters,
+    LayerParameters,
     MissingParametersError,
     OpticalLayerParameters,
     ProgrammerJudgementFault,
@@ -73,10 +73,17 @@ def _pvt(
 
     """
 
-    back_layer_parameters = BackLayerParameters(
-        mass=100, heat_capacity=2500, area=15, thickness=0.15, conductivity=500
+    back_layer_parameters = LayerParameters(
+        mass=100,
+        heat_capacity=2500,
+        area=15,
+        thickness=0.15,
+        conductivity=500,
+        density=2500,
     )
     collector_parameters = CollectorParameters(
+        conductivity=140,
+        density=2500,
         mass=100,
         heat_capacity=4000,
         area=15,
@@ -93,18 +100,21 @@ def _pvt(
         pipe_diameter=0.05,
     )
     glass_parameters = OpticalLayerParameters(
-        mass=150,
-        heat_capacity=4000,
         area=100,
+        conductivity=140,
+        density=2500,
+        heat_capacity=4000,
+        mass=150,
         thickness=0.015,
         transmissivity=0.9,
         absorptivity=0.88,
         emissivity=0.5,
     )
     pv_parameters = PVParameters(
-        mass=150,
-        heat_capacity=4000,
         area=100,
+        conductivity=140,
+        heat_capacity=4000,
+        mass=150,
         thickness=0.015,
         transmissivity=0.9,
         absorptivity=0.88,

@@ -18,7 +18,7 @@ import unittest
 
 import pytest
 
-from ...__utils__ import BackLayerParameters
+from ...__utils__ import LayerParameters
 from ...constants import FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR
 from .. import back_plate
 from .test_utils import PYTEST_PRECISION
@@ -69,7 +69,8 @@ class TestProperties(unittest.TestCase):
         self.assertEqual(FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR, 25)
 
         test_back_plate = back_plate.BackPlate(
-            BackLayerParameters(
+            LayerParameters(
+                density=2500,
                 mass=100,
                 heat_capacity=4000,
                 area=15,

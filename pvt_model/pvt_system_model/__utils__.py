@@ -29,9 +29,7 @@ import yaml
 
 from ..__utils__ import LOGGER_NAME
 
-
 __all__ = (
-    "BackLayerParameters",
     "BaseDailyProfile",
     "CarbonEmissions",
     "CollectorParameters",
@@ -706,38 +704,32 @@ class LayerParameters:
     """
     Contains parameters needed to instantiate a layer within the PV-T panel.
 
-    .. attribute:: mass
-        The mass of the layer, measured in Kelvin.
+    .. attribute:: area
+        The area of the layer, measured in meters squared.
+
+    .. attribute:: conductivity
+        The conductivity of the layer, measured in Watts per meter Kelvin.
+
+    .. attribute:: density
+        The density of the layer, measured in kilograms per meter cubed.
 
     .. attribute:: heat_capacity
         The heat capacity of the layer, measured in Joules per kilogram Kelvin.
 
-    .. attribute:: area
-        The area of the layer, measured in meters squared.
+    .. attribute:: mass
+        The mass of the layer, measured in Kelvin.
 
     .. attribute:: thickness
         The thickness of the layer, measured in meters.
 
     """
 
-    mass: float
-    heat_capacity: float
     area: float
+    conductivity: Optional[float]
+    density: Optional[float]
+    heat_capacity: float
+    mass: float
     thickness: float
-
-
-@dataclass
-class BackLayerParameters(LayerParameters):
-    """
-    Contains parameters needed to instantiate the back layer of the PV-T panel.
-
-    .. attribute:: conductance
-        The conductance of layer (to the environment/its surroundings), measured in
-        Watts per meter squared Kelvin.
-
-    """
-
-    conductivity: float
 
 
 @dataclass

@@ -130,7 +130,6 @@ def parse_args(args) -> argparse.Namespace:
     parser.add_argument(
         "--return-system-data",
         help=argparse.SUPPRESS,
-        type=bool,
         default=False,
         action="store_true",
     )
