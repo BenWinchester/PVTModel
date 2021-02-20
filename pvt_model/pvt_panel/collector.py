@@ -13,6 +13,7 @@ This module represents a thermal collector within a PV-T panel.
 
 """
 
+import logging
 import math
 
 import numpy
@@ -21,7 +22,6 @@ from .. import constants
 
 from ..__utils__ import (
     CollectorParameters,
-    get_logger,
     LOGGER_NAME,
     OpticalLayerParameters,
 )
@@ -38,7 +38,7 @@ from .__utils__ import (
 __all__ = ("Collector",)
 
 # Get the logger for the run.
-logger = get_logger(LOGGER_NAME)
+logger = logging.getLogger(LOGGER_NAME)
 
 
 class Collector(OpticalLayer):
