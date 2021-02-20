@@ -19,3 +19,4 @@ echo -e "\e[1mRunning pytest...\e[0m"
 pytest pvt_model/pvt_system_model
 echo -e "\e[1mRunning enforcement scripts...\e[0m"
 /usr/bin/python3.7 pvt_model/enforcement/mypy_enforcement.py
+echo -e "\e[1mTest suite complete: see above stdout for details.\e[0m"
