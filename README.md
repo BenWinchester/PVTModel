@@ -32,5 +32,10 @@ For help with the arguments needed in order to run the model, use the inbuilt he
 ## Running the Analysis Module
 The analysis module can also be run from the command-line interface. This should be executed as a python module: `py -m pvt_model.analysis -df <output_file_path_with_extension>`.
 
+## Creating a Pull Request
+All pull requests need to be approved by a repository administrator and need to pass a series of automated tests.
+
+To confirm that your code will pass, run the scritp `test-pvt-model.sh` from the root of the repository to ensure that your code confirms to the standards required of the repository (regarding formatting and type annotations etc.), that all automated tests are passing, and that all `type: ignore` and `pylint: disable` flags are dedclared.
+
 ### Copyright
 Copyright Benedict Winchester, 2021

@@ -24,7 +24,9 @@ import yaml
 # String required in all enforcement entries.
 JUSTIFICATION_STRING = "justification"
 # Path to the YAML enforcement file.
-YAML_ENFORCEMENT_FILE = os.path.join("enforcement", "mypy_enforcement.yaml")
+YAML_ENFORCEMENT_FILE = os.path.join(
+    "pvt_model", "enforcement", "mypy_enforcement.yaml"
+)
 
 
 class EnforcementError(Exception):
