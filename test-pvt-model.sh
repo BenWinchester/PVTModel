@@ -13,6 +13,8 @@ echo -e "\e[1mRunning mypy...\e[0m"
 mypy pvt_model/pvt_system_model
 echo -e "\e[1mRunning pylint...\e[0m"
 pylint pvt_model/pvt_system_model
+echo -e "\e[1mRunning yamllint...\e[0m"
+yamllint -c .yamllint-config.yaml system_data/
 echo -e "\e[1mRunning pytest...\e[0m"
 pytest pvt_model/pvt_system_model
 echo -e "\e[1mRunning enforcement scripts...\e[0m"
