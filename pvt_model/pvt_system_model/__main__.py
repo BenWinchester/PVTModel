@@ -739,8 +739,12 @@ def main(args) -> Optional[Dict[int, SystemData]]:
 
         previous_run_temperature_vector = current_run_temperature_vector
 
-    # Save the output data from the run.
-    _save_data(FileType.JSON, parsed_args.output, system_data)
+    # If system data is required, return this.
+    if parsed_args.return_system_data:
+        return system_data
+    # Otherwise, save the output data from the run.
+    else:
+        _save_data(FileType.JSON, parsed_args.output, system_data)
 
 
 if __name__ == "__main__":
