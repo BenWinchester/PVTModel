@@ -67,6 +67,12 @@ def parse_args(args) -> argparse.Namespace:
         "int. The default is 1, corresponding to January.",
     )
     parser.add_argument(
+        "--initial-system-temperature-vector",
+        nargs="+",
+        help="If specified, this will override the internal initial system "
+        "temperature vector.",
+    )
+    parser.add_argument(
         "--input-water-temperature",
         "-it",
         help="The input water temperature to instantiate the system, measured in "
@@ -100,13 +106,6 @@ def parse_args(args) -> argparse.Namespace:
         help="The output file to save data to. This should be of JSON format.",
     )
     parser.add_argument(
-        "--resolution",
-        "-r",
-        help="The resolution, in seconds, used to solve the panel temperatures.",
-        type=int,
-        default=1,
-    )
-    parser.add_argument(
         "--portion-covered",
         "-pc",
         type=float,
@@ -120,6 +119,20 @@ def parse_args(args) -> argparse.Namespace:
     )
     parser.add_argument(
         "--pvt-data-file", "-p", help="The location of the PV-T system YAML data file."
+    )
+    parser.add_argument(
+        "--resolution",
+        "-r",
+        help="The resolution, in seconds, used to solve the panel temperatures.",
+        type=int,
+        default=1,
+    )
+    parser.add_argument(
+        "--return-system-data",
+        help=argparse.SUPPRESS,
+        type=bool,
+        default=False,
+        action="store_true",
     )
     parser.add_argument(
         "--start-time",

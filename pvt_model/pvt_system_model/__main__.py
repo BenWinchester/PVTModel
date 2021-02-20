@@ -17,6 +17,7 @@ processing the command-line arguments that define the scope of the model run.
 
 import dataclasses
 import datetime
+import logging
 import os
 import sys
 
@@ -50,12 +51,13 @@ from .constants import (
     ZERO_CELCIUS_OFFSET,
 )
 
+from ..__utils__ import (
+    LOGGER_NAME,
+)
 from .__utils__ import (  # pylint: disable=unused-import
     CarbonEmissions,
     DivergentSolutionError,
     FileType,
-    get_logger,
-    LOGGER_NAME,
     MissingParametersError,
     ProgrammerJudgementFault,
     SystemData,
@@ -73,7 +75,7 @@ DEFAULT_INITIAL_DATE_AND_TIME = datetime.datetime(2005, 1, 1, 0, 0, tzinfo=pytz.
 # household, measured in Kelvin.
 INTERNAL_HOUSEHOLD_AMBIENT_TEMPERATURE = ZERO_CELCIUS_OFFSET + 20  # [K]
 # Get the logger for the component.
-logger = get_logger(LOGGER_NAME)
+logger = logging.getLogger(LOGGER_NAME)
 # Folder containing the solar irradiance profiles
 SOLAR_IRRADIANCE_FOLDERNAME = "solar_irradiance_profiles"
 # Folder containing the temperature profiles
@@ -457,12 +459,15 @@ def _solve_temperature_vector_convergence_method(
     )
 
 
-def main(args) -> None:
+def main(args) -> Optional[Dict[int, SystemData]]:
     """
     The main module for the code.
 
     :param args:
         The command-line arguments passed into the component.
+
+    :return:
+        If requested, the system data is returned.
 
     """
 

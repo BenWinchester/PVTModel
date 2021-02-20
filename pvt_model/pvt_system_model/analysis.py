@@ -27,8 +27,9 @@ import re
 from matplotlib import pyplot as plt
 
 try:
+    from ..__utils__ import get_logger
     from .constants import HEAT_CAPACITY_OF_WATER  # pylint: disable=unused-import
-    from .__utils__ import GraphDetail, get_logger
+    from .__utils__ import GraphDetail
 except ModuleNotFoundError:
     import logging
 

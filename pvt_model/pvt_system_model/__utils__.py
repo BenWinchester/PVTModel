@@ -27,6 +27,9 @@ from dateutil.relativedelta import relativedelta
 import numpy
 import yaml
 
+from ..__utils__ import LOGGER_NAME
+
+
 __all__ = (
     "BackLayerParameters",
     "BaseDailyProfile",
@@ -35,11 +38,9 @@ __all__ = (
     "Date",
     "DivergentSolutionError",
     "FileType",
-    "get_logger",
     "GraphDetail",
     "InternalError",
     "InvalidDataError",
-    "LOGGER_NAME",
     "MissingDataError",
     "MissingParametersError",
     "ResolutionMismatchError",
@@ -60,12 +61,6 @@ __all__ = (
 #############
 # Constants #
 #############
-
-
-# The directory for storing the logs.
-LOGGER_DIRECTORY = "logs`"
-# The name used for the internal logger.
-LOGGER_NAME = "pvt_model"
 
 
 ##############
@@ -840,49 +835,6 @@ class PVParameters(OpticalLayerParameters):
 ####################
 # Helper functions #
 ####################
-
-
-def get_logger(logger_name: str) -> logging.Logger:
-    """
-    Set-up and return a logger.
-
-    :param logger_name:
-        The name of the logger to instantiate.
-
-    :return:
-        The logger for the component.
-
-    """
-
-    # Create a logger with the current component name.
-    logger = logging.getLogger(logger_name)
-    logger.setLevel(logging.DEBUG)
-    # Create the logging directory if it doesn't exist.
-    if not os.path.isdir(LOGGER_DIRECTORY):
-        os.mkdir(LOGGER_DIRECTORY)
-    # Create a file handler which logs even debug messages.
-    if os.path.exists(os.path.join(LOGGER_DIRECTORY, f"{logger_name}.log")):
-        os.rename(
-            os.path.join(LOGGER_DIRECTORY, f"{logger_name}.log"),
-            os.path.join(LOGGER_DIRECTORY, f"{logger_name}.log.1"),
-        )
-    fh = logging.FileHandler(os.path.join(LOGGER_DIRECTORY, f"{logger_name}.log"))
-    fh.setLevel(logging.DEBUG)
-    # Create a console handler with a higher log level.
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.ERROR)
-    # Create a formatter and add it to the handlers.
-    formatter = logging.Formatter(
-        "%(asctime)s: %(name)s: %(levelname)s: %(message)s",
-        datefmt="%d/%m/%Y %I:%M:%S %p",
-    )
-    fh.setFormatter(formatter)
-    ch.setFormatter(formatter)
-    # add the handlers to the logger
-    logger.addHandler(fh)
-    logger.addHandler(ch)
-
-    return logger
 
 
 def read_yaml(yaml_file_path: str) -> Dict[Any, Any]:
