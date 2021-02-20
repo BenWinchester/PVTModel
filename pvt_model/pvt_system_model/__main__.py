@@ -22,7 +22,7 @@ import os
 import sys
 
 from argparse import Namespace
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import json
 import numpy
@@ -514,11 +514,25 @@ def main(args) -> Optional[Dict[int, SystemData]]:
         load_system,
     )
 
-    # Generate a list from the mapping.
-    initial_system_temperature_vector = [
-        INITIAL_SYSTEM_TEMPERATURE_MAPPING[temperature_name]
-        for temperature_name in sorted(TemperatureName, key=lambda entry: entry.value)
-    ]
+    # Generate a list from the mapping or the CLI args if supplied.
+    if parsed_args.initial_system_temperature_vector is not None:
+        initial_system_temperature_vector: List[float] = [
+            float(entry) for entry in parsed_args.initial_system_temperature_vector
+        ]
+        if len(initial_system_temperature_vector) != len(
+            INITIAL_SYSTEM_TEMPERATURE_MAPPING
+        ):
+            raise ProgrammerJudgementFault(
+                "The initial system temperature vector passed in does not match the "
+                "required number of system temperature values."
+            )
+    else:
+        initial_system_temperature_vector = [
+            INITIAL_SYSTEM_TEMPERATURE_MAPPING[temperature_name]
+            for temperature_name in sorted(
+                TemperatureName, key=lambda entry: entry.value
+            )
+        ]
 
     # Initialise the PV-T panel.
     pvt_panel = process_pvt_system_data.pvt_panel_from_path(

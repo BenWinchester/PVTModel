@@ -164,7 +164,20 @@ def main(args) -> None:
 
     # Determine the initial conditions for the run via iteration until the initial and
     # final temperatures for the day match up.
-    # system_data = pvt_system_model_main(unknown_args.append("--return-system-data"))
+    import pdb
+
+    pdb.set_trace()
+    initial_system_temperature_vector = [
+        INITIAL_SYSTEM_TEMPERATURE_MAPPING[temperature_name]
+        for temperature_name in sorted(TemperatureName, key=lambda entry: entry.value)
+    ]
+    unknown_args.append("--return-system-data")
+    unknown_args.extend(
+        ["--initial-system-temperature-vector"].extend(
+            initial_system_temperature_vector
+        )
+    )
+    system_data = pvt_system_model_main(unknown_args)
 
 
 if __name__ == "__main__":
