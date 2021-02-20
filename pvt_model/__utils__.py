@@ -62,8 +62,10 @@ __all__ = (
 #############
 
 
+# The directory for storing the logs.
+LOGGER_DIRECTORY = "logs`"
 # The name used for the internal logger.
-LOGGER_NAME = "my_first_pvt_model"
+LOGGER_NAME = "pvt_model"
 
 
 ##############
@@ -855,10 +857,16 @@ def get_logger(logger_name: str) -> logging.Logger:
     # Create a logger with the current component name.
     logger = logging.getLogger(logger_name)
     logger.setLevel(logging.DEBUG)
+    # Create the logging directory if it doesn't exist.
+    if not os.path.isdir(LOGGER_DIRECTORY):
+        os.mkdir(LOGGER_DIRECTORY)
     # Create a file handler which logs even debug messages.
-    if os.path.exists(f"{logger_name}.log"):
-        os.rename(f"{logger_name}.log", f"{logger_name}.log.1")
-    fh = logging.FileHandler(f"{logger_name}.log")
+    if os.path.exists(os.path.join(LOGGER_DIRECTORY, f"{logger_name}.log")):
+        os.rename(
+            os.path.join(LOGGER_DIRECTORY, f"{logger_name}.log"),
+            os.path.join(LOGGER_DIRECTORY, f"{logger_name}.log.1"),
+        )
+    fh = logging.FileHandler(os.path.join(LOGGER_DIRECTORY, f"{logger_name}.log"))
     fh.setLevel(logging.DEBUG)
     # Create a console handler with a higher log level.
     ch = logging.StreamHandler()
