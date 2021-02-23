@@ -1,0 +1,11 @@
+---
+################################################################################
+# my_first_exchanger.yaml - Data about the heat-exchanger
+#
+# Copyright 2020, Ben Winchester
+################################################################################
+
+# The efficiency is a dimensionless constant defined between 0 and 1.
+efficiency: 0.4 # [unitless]
+# The number of heat-transfer units in the exchanger.
+number_of_transfer_units: 4 # [unitless]

@@ -1,7 +1,7 @@
 #!/usr/bin/python3.7
 ########################################################################################
-# __init__.py - The init module for this PVT model. No functionality here.
+# __init__.py - The init module for the PVT model component.
 #
 # Author: Ben Winchester
-# Copyright: Ben Winchester, 2021
+# Copyright: Ben Winchester, 2020
 ########################################################################################

@@ -3,6 +3,7 @@
 *.diff*
 *.diff.*
 # Ignore model outputs
+**/logs
 *.log*
 *.jpg*
 # Ignore VSCode files
