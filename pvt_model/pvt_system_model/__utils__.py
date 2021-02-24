@@ -27,7 +27,7 @@ from dateutil.relativedelta import relativedelta
 import numpy
 import yaml
 
-from ..__utils__ import LOGGER_NAME
+from ..__utils__ import LOGGER_NAME, ProgrammerJudgementFault
 
 __all__ = (
     "BaseDailyProfile",
