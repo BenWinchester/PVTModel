@@ -131,7 +131,6 @@ def _determine_fourier_numbers(logger: Logger, parsed_args: Namespace) -> None:
         INITIAL_SYSTEM_TEMPERATURE_MAPPING[TemperatureName.htf],
         parsed_args.portion_covered,
         parsed_args.pvt_data_file,
-        parsed_args.unglazed,
     )
 
     # Instantiate a hot-water tank instance based on the data.

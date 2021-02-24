@@ -15,7 +15,39 @@ This module represents a single segment within a PV-T panel.
 
 from dataclasses import dataclass
 
-__all__ = ("Segment",)
+__all__ = (
+    "Segment",
+    "SegmentCoordinates",
+)
+
+
+class SegmentCoordinates:
+    """
+    Represents the coordinates of the segment.
+
+    .. attribute:: x_index
+        The x index of the coordinate.
+
+    .. attribute:: y_index
+        The y_index of the coordinate.
+
+    """
+
+    x_index: int
+    y_index: int
+
+    def __hash__(self) -> int:
+        """
+        Returns a unique hash based on the two coordinates.
+
+        :return:
+            A unique number representing the two coordiantes.
+
+        """
+
+        return (
+            (self.x_index + self.y_index) * (self.x_index + self.y_index + 1) / 2
+        ) + self.x_index
 
 
 @dataclass
@@ -57,3 +89,15 @@ class Segment:
     wdith: float
     x_index: float
     y_index: float
+
+    @property
+    def coordinates(self) -> SegmentCoordinates:
+        """
+        Returns the coordinates of the segment as a segment coordinates object.
+
+        :return:
+            The segment coordinates.
+
+        """
+
+        return SegmentCoordinates(self.x_index, self.y_index)

@@ -81,6 +81,9 @@ class PVT:
         The thermal conductance, in Watts per meter squared Kelvin, between the PV layer
         and collector layer of the panel.
 
+    .. attribute:: segments
+        A mapping between segment coordinates and the segment.
+
     .. attribute:: timezone
         The timezone that the PVT system is based in.
 
@@ -105,7 +108,6 @@ class PVT:
         self,
         air_gap_thickness: float,
         area: float,
-        back_params: LayerParameters,
         collector_parameters: CollectorParameters,
         diffuse_reflection_coefficient: float,
         glass_parameters: OpticalLayerParameters,
@@ -129,9 +131,6 @@ class PVT:
 
         :param area:
             The area of the panel, measured in meters squared.
-
-        :param back_params:
-            Parameters used to instantiate the back layer.
 
         :param collector_parameters:
             Parametsrs used to instantiate the collector layer.
@@ -204,14 +203,14 @@ class PVT:
                 "orientation must be given.",
             )
 
-        # Instantiate the collector layer.
+        # Instantiate the layers.
         self.collector = collector.Collector(collector_parameters)
-        # Instantiate the glass layer.
         self.glass: glass.Glass = glass.Glass(
             diffuse_reflection_coefficient, glass_parameters
         )
-        # Instantiate the PV layer.
         self.pv: pv.PV = pv.PV(pv_parameters)
+
+        # * Instantiate and store the segments on the class.
 
     def __repr__(self) -> str:
         """

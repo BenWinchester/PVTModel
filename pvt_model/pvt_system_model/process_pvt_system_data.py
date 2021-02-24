@@ -26,6 +26,8 @@ import numpy
 
 from .pvt_panel import pvt
 from . import exchanger, tank, pump
+
+from ..__utils__ import MissingParametersError
 from .constants import (
     HEAT_CAPACITY_OF_WATER,
 )
@@ -34,7 +36,6 @@ from .__utils__ import (
     InvalidDataError,
     LayerParameters,
     MissingDataError,
-    MissingParametersError,
     OpticalLayerParameters,
     PVParameters,
     read_yaml,
@@ -369,7 +370,6 @@ def pvt_panel_from_path(
     initial_collector_htf_tempertaure: float,
     portion_covered: float,
     pvt_data_file: str,
-    unglazed: bool,
 ) -> pvt.PVT:
     """
     Generate a :class:`pvt.PVT` instance based on the path to the data file.
@@ -379,10 +379,6 @@ def pvt_panel_from_path(
 
     :param pvt_data_file:
         The path to the pvt data file.
-
-    :param ungalzed:
-        Whether or not a glass layer (ie, glazing) is included in the panel. If set to
-        `True`, then no glass layer is used.
 
     :return:
         A :class:`pvt.PVT` instance representing the PVT panel.
@@ -418,7 +414,6 @@ def pvt_panel_from_path(
             collector_parameters=collector_parameters,
             diffuse_reflection_coefficient=diffuse_reflection_coefficient,
             glass_parameters=glass_parameters,
-            glazed=not unglazed,
             latitude=pvt_data["pvt_system"]["latitude"],  # [deg]
             longitude=pvt_data["pvt_system"]["longitude"],  # [deg]
             portion_covered=portion_covered,  # [unitless]
