@@ -13,17 +13,35 @@ The model is run from here for several runs as determined by command-line argume
 
 """
 
+import dataclasses
+import os
 import sys
 
-from typing import Dict
+from argparse import Namespace
+from logging import Logger
+from typing import Any, Dict, Optional
+
+import json
+import yaml
 
 from . import argparser
-from .pvt_system_model import argparser as pvt_system_argparser
+
+from .__utils__ import (
+    CarbonEmissions,
+    FileType,
+    fourier_number,
+    get_logger,
+    MissingParametersError,
+    LOGGER_NAME,
+    SystemData,
+    TemperatureName,
+    TotalPowerData,
+)
+
 from .pvt_system_model import tank
 from .pvt_system_model.pvt_panel import pvt
-
 from .pvt_system_model.__main__ import main as pvt_system_model_main
-from .pvt_system_model.__utils__ import TemperatureName
+
 from .pvt_system_model.constants import (
     DENSITY_OF_WATER,
     HEAT_CAPACITY_OF_WATER,
@@ -34,8 +52,6 @@ from .pvt_system_model.process_pvt_system_data import (
     hot_water_tank_from_path,
     pvt_panel_from_path,
 )
-
-from .__utils__ import fourier_number, get_logger, LOGGER_NAME
 
 
 def _get_system_fourier_numbers(
@@ -99,6 +115,153 @@ def _get_system_fourier_numbers(
     return fourier_number_map
 
 
+def _determine_fourier_numbers(logger: Logger, parsed_args: Namespace) -> None:
+    """
+    Determines, prints, and logs the various Fourier numbers.
+
+    :param logger:
+        The logger being used for the run.
+
+    :param parsed_args:
+        The parsed commnand-line arguments.
+
+    """
+
+    pvt_panel = pvt_panel_from_path(
+        INITIAL_SYSTEM_TEMPERATURE_MAPPING[TemperatureName.bulk_water],
+        parsed_args.portion_covered,
+        parsed_args.pvt_data_file,
+        parsed_args.unglazed,
+    )
+
+    # Instantiate a hot-water tank instance based on the data.
+    hot_water_tank = hot_water_tank_from_path(parsed_args.tank_data_file)
+
+    # Determine the Fourier numbers.
+    fourier_number_map = _get_system_fourier_numbers(
+        hot_water_tank, pvt_panel, parsed_args.resolution
+    )
+
+    logger.info(
+        "Fourier numbers determined:\n%s\n%s",
+        "|".join(
+            [
+                "{}{}".format(
+                    key.name,
+                    " "
+                    * (max([key.name for key in fourier_number_map]) - len(key.name)),
+                )
+                for key in fourier_number_map
+            ]
+        ),
+        "|".join(
+            [
+                "{}{}".format(
+                    value,
+                    " "
+                    * (max([key.name for key in fourier_number_map]) - len(str(value))),
+                )
+                for value in fourier_number_map.values()
+            ]
+        ),
+    )
+    print(
+        "Fourier numbers determined:\n{}\n{}".format(
+            "|".join(
+                [
+                    "{}{}".format(
+                        key.name,
+                        " "
+                        * (
+                            max([key.name for key in fourier_number_map])
+                            - len(key.name)
+                        ),
+                    )
+                    for key in fourier_number_map
+                ]
+            ),
+            "|".join(
+                [
+                    "{}{}".format(
+                        value,
+                        " "
+                        * (
+                            max([key.name for key in fourier_number_map])
+                            - len(str(value))
+                        ),
+                    )
+                    for value in fourier_number_map.values()
+                ]
+            ),
+        )
+    )
+
+
+def _save_data(
+    file_type: FileType,
+    output_file_name: str,
+    system_data: Dict[int, SystemData],
+    carbon_emissions: Optional[CarbonEmissions] = None,
+    total_power_data: Optional[TotalPowerData] = None,
+) -> None:
+    """
+    Save data when called. The data entry should be appended to the file.
+    :param file_type:
+        The file type that's being saved.
+    :param output_file_name:
+        The destination file name.
+    :param system_data:
+        The data to save.
+    :param carbon_emissions:
+        The carbon emissions data for the run.
+    :param total_power_data:
+        The total power data for the run.
+    """
+
+    # Convert the system data entry to JSON-readable format
+    system_data_dict: Dict[int, Dict[str, Any]] = {
+        key: dataclasses.asdict(value) for key, value in system_data.items()
+    }
+
+    # If we're saving YAML data part-way through, then append to the file.
+    if file_type == FileType.YAML:
+        with open(f"{output_file_name}.yaml", "a") as output_yaml_file:
+            yaml.dump(
+                system_data_dict,
+                output_yaml_file,
+            )
+
+    # If we're dumping JSON, open the file, and append to it.
+    if file_type == FileType.JSON:
+        # Append the total power and emissions data for the run.
+        if total_power_data is not None:
+            system_data_dict.update(dataclasses.asdict(total_power_data))  # type: ignore
+        if carbon_emissions is not None:
+            system_data_dict.update(dataclasses.asdict(carbon_emissions))  # type: ignore
+
+        # Save the data
+        # If this is the initial dump, then create the file.
+        if not os.path.isfile(f"{output_file_name}.json"):
+            with open(f"{output_file_name}.json", "w") as output_json_file:
+                json.dump(
+                    system_data_dict,
+                    output_json_file,
+                    indent=4,
+                )
+        else:
+            with open(f"{output_file_name}.json", "r+") as output_json_file:
+                # Read the data and append the current update.
+                filedata = json.load(output_json_file)
+                filedata.update(system_data_dict)
+                # Overwrite the file with the updated data.
+                output_json_file.seek(0)
+                json.dump(
+                    filedata,
+                    output_json_file,
+                    indent=4,
+                )
+
+
 def main(args) -> None:
     """
     The main module for the code.
@@ -116,68 +279,44 @@ def main(args) -> None:
     print("PVT model instantiated.")
 
     # Parse the arguments passed in.
-    parsed_args, unknown_args = argparser.parse_args(args)
+    parsed_args = argparser.parse_args(args)
+
+    # Check that the output file is specified, and that it doesn't already exist.
+    if parsed_args.output is None or parsed_args.output == "":
+        logger.error(
+            "An output filename must be provided on the command-line interface."
+        )
+        raise MissingParametersError(
+            "Command-Line Interface", "An output file name must be provided."
+        )
+    if parsed_args.output.endswith(".yaml") or parsed_args.output.endswith(".json"):
+        logger.error("The output filename must be irrespective of data type..")
+        raise Exception(
+            "The output file must be irrespecitve of file extension/data type."
+        )
+    if os.path.isfile(f"{parsed_args.output}.yaml"):
+        logger.info("The output YAML file specified already exists. Moving...")
+        os.rename(f"{parsed_args.output}.yaml", f"{parsed_args.output}.yaml.1")
+        logger.info("Output file successfully moved.")
+    if os.path.isfile(f"{parsed_args.output}.json"):
+        logger.info("The output YAML file specified already exists. Moving...")
+        os.rename(f"{parsed_args.output}.json", f"{parsed_args.output}.json.1")
+        logger.info("Output file successfully moved.")
 
     # Determine the Fourier number for the PV-T panel.
-    if parsed_args.dynamic or parsed_args.quasi_steady:
-        logger.info("Skipping Fourier number calculation.")
-    else:
-        logger.info("Beginning Fourier number calculation.")
-        # Determine the arguments needed for instantiating the PVT system model.
-        parsed_pvt_system_args = pvt_system_argparser.parse_args(unknown_args)
-
-        # Instantiate a PVT panel instance based on the data.
-        pvt_panel = pvt_panel_from_path(
-            INITIAL_SYSTEM_TEMPERATURE_MAPPING[TemperatureName.bulk_water],
-            parsed_pvt_system_args.portion_covered,
-            parsed_pvt_system_args.pvt_data_file,
-            parsed_pvt_system_args.unglazed,
-        )
-
-        # Instantiate a hot-water tank instance based on the data.
-        hot_water_tank = hot_water_tank_from_path(parsed_pvt_system_args.tank_data_file)
-
-        # Determine the Fourier numbers.
-        fourier_number_map = _get_system_fourier_numbers(
-            hot_water_tank, pvt_panel, parsed_pvt_system_args.resolution
-        )
-
-        logger.info(
-            "Fourier numbers determined:\n%s",
-            "\n".join(
-                [
-                    f"Fourier number of {key.name}: {value}"
-                    for key, value in fourier_number_map.items()
-                ]
-            ),
-        )
-        print(
-            "Fourier numbers determined:\n{}".format(
-                "\n".join(
-                    [
-                        f"Fourier number of {key.name}: {value}"
-                        for key, value in fourier_number_map.items()
-                    ]
-                )
-            )
-        )
+    logger.info("Beginning Fourier number calculation.")
+    # Instantiate a PVT panel instance based on the data.
+    _determine_fourier_numbers(logger, parsed_args)
 
     # Determine the initial conditions for the run via iteration until the initial and
     # final temperatures for the day match up.
-    import pdb
+    # * Iterate to determine the initial conditions for the run.
 
-    pdb.set_trace()
-    initial_system_temperature_vector = [
-        INITIAL_SYSTEM_TEMPERATURE_MAPPING[temperature_name]
-        for temperature_name in sorted(TemperatureName, key=lambda entry: entry.value)
-    ]
-    unknown_args.append("--return-system-data")
-    unknown_args.extend(
-        ["--initial-system-temperature-vector"].extend(
-            initial_system_temperature_vector
-        )
-    )
-    system_data = pvt_system_model_main(unknown_args)
+    # * Run the model at this higher resolution.
+
+    # * Save the data ouputted by the model.
+
+    # * Conduct analysis of the data.
 
 
 if __name__ == "__main__":

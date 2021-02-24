@@ -15,25 +15,19 @@ processing the command-line arguments that define the scope of the model run.
 
 """
 
-import dataclasses
 import datetime
 import logging
 import os
-import sys
 
-from argparse import Namespace
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
-import json
 import numpy
 import pytz
-import yaml
 
 from dateutil.relativedelta import relativedelta
 from scipy import linalg  # type: ignore
 
 from . import (
-    argparser,
     exchanger,
     load,
     mains_power,
@@ -52,18 +46,15 @@ from .constants import (
 )
 
 from ..__utils__ import (
+    CarbonEmissions,
     LOGGER_NAME,
+    SystemData,
+    TotalPowerData,
 )
 from .__utils__ import (  # pylint: disable=unused-import
-    CarbonEmissions,
     DivergentSolutionError,
-    FileType,
-    MissingParametersError,
     ProgrammerJudgementFault,
-    SystemData,
-    TemperatureName,
     time_iterator,
-    TotalPowerData,
 )
 
 
@@ -214,80 +205,15 @@ def _get_weather_forecaster(
     return weather_forecaster
 
 
-def _save_data(
-    file_type: FileType,
-    output_file_name: str,
-    system_data: Dict[int, SystemData],
-    carbon_emissions: Optional[CarbonEmissions] = None,
-    total_power_data: Optional[TotalPowerData] = None,
-) -> None:
-    """
-    Save data when called. The data entry should be appended to the file.
-    :param file_type:
-        The file type that's being saved.
-    :param output_file_name:
-        The destination file name.
-    :param system_data:
-        The data to save.
-    :param carbon_emissions:
-        The carbon emissions data for the run.
-    :param total_power_data:
-        The total power data for the run.
-    """
-
-    # Convert the system data entry to JSON-readable format
-    system_data_dict: Dict[int, Dict[str, Any]] = {
-        key: dataclasses.asdict(value) for key, value in system_data.items()
-    }
-
-    # If we're saving YAML data part-way through, then append to the file.
-    if file_type == FileType.YAML:
-        with open(f"{output_file_name}.yaml", "a") as output_yaml_file:
-            yaml.dump(
-                system_data_dict,
-                output_yaml_file,
-            )
-
-    # If we're dumping JSON, open the file, and append to it.
-    if file_type == FileType.JSON:
-        # Append the total power and emissions data for the run.
-        if total_power_data is not None:
-            system_data_dict.update(dataclasses.asdict(total_power_data))  # type: ignore
-        if carbon_emissions is not None:
-            system_data_dict.update(dataclasses.asdict(carbon_emissions))  # type: ignore
-
-        # Save the data
-        # If this is the initial dump, then create the file.
-        if not os.path.isfile(f"{output_file_name}.json"):
-            with open(f"{output_file_name}.json", "w") as output_json_file:
-                json.dump(
-                    system_data_dict,
-                    output_json_file,
-                    indent=4,
-                )
-        else:
-            with open(f"{output_file_name}.json", "r+") as output_json_file:
-                # Read the data and append the current update.
-                filedata = json.load(output_json_file)
-                filedata.update(system_data_dict)
-                # Overwrite the file with the updated data.
-                output_json_file.seek(0)
-                json.dump(
-                    filedata,
-                    output_json_file,
-                    indent=4,
-                )
-
-
 def _solve_temperature_vector_convergence_method(
     collector_to_htf_efficiency: float,
     current_hot_water_load: float,
     heat_exchanger: exchanger.Exchanger,
     hot_water_tank: tank.Tank,
     next_date_and_time: datetime.datetime,
-    parsed_args: Namespace,
     previous_run_temperature_vector: numpy.ndarray,
     pvt_panel: pvt.PVT,
+    resolution: int,
     run_one_temperature_vector: numpy.ndarray,
     weather_conditions: weather.WeatherConditions,
     convergence_run_number: int = 0,
@@ -328,14 +254,14 @@ def _solve_temperature_vector_convergence_method(
     :param next_date_and_time:
         The date and time at the time step being solved.
 
-    :param parsed_args:
-        The parsed command-line arguments.
-
     :param previous_run_temperature_vector:
         The temperatures at the previous time step.
 
     :param pvt_panel:
         A :class:`pvt.PVT` instance representing the PVT panel being modelled.
+
+    :param resolution:
+        The resolution used for the run, measured in seconds.
 
     :param run_one_temperature_vector:
         The temperature vector at the last run of the convergent solver.
@@ -367,7 +293,7 @@ def _solve_temperature_vector_convergence_method(
         hot_water_tank,
         heat_exchanger.efficiency,
         pvt_panel,
-        parsed_args.resolution,
+        resolution,
         weather_conditions,
     )
 
@@ -377,7 +303,7 @@ def _solve_temperature_vector_convergence_method(
         hot_water_tank,
         previous_run_temperature_vector,
         pvt_panel,
-        parsed_args.resolution,
+        resolution,
         weather_conditions,
     )
 
@@ -449,9 +375,9 @@ def _solve_temperature_vector_convergence_method(
         heat_exchanger=heat_exchanger,
         hot_water_tank=hot_water_tank,
         next_date_and_time=next_date_and_time,
-        parsed_args=parsed_args,
         previous_run_temperature_vector=previous_run_temperature_vector,
         pvt_panel=pvt_panel,
+        resolution=resolution,
         run_one_temperature_vector=run_two_temperature_vector,
         weather_conditions=weather_conditions,
         convergence_run_number=convergence_run_number + 1,
@@ -459,65 +385,100 @@ def _solve_temperature_vector_convergence_method(
     )
 
 
-def main(args) -> Optional[Dict[int, SystemData]]:
+def main(
+    average_irradiance: bool,
+    cloud_efficacy_factor: float,
+    days: int,
+    exchanger_data_file: str,
+    initial_month: int,
+    initial_system_temperature_vector: Optional[Tuple[float, ...]],
+    location: str,
+    months: int,
+    portion_covered: float,
+    pvt_data_file: str,
+    resolution: int,
+    start_time: int,
+    tank_data_file: str,
+    unglazed: bool,
+    use_pvgis: bool,
+) -> Optional[Dict[int, SystemData]]:
     """
-    The main module for the code.
+    The main module for the code. Calling this method executes a run of the simulation.
 
-    :param args:
-        The command-line arguments passed into the component.
+    :param average_irradiance:
+        Whether to use an average irradiance profile for the month.
+
+    :param cloud_efficiacy_factor:
+        The extent to which cloud cover influences the solar irradiance.
+
+    :param days:
+        The number of days for which the simulation is being run.
+
+    :param exchanger_data_file:
+        The path to the data file containing information about the heat exchanger being
+        modelled in the run.
+
+    :param initial_month:
+        The initial month for the run, given between 1 (January) and 12 (December).
+
+    :param initial_system_temperature_vector:
+        The vector of initial temperatures used to model the system.
+
+    :param location:
+        The location at which the PVT system is installed and for which location data
+        should be used.
+
+    :param months:
+        The number of months for which to run the simulation.
+
+    :param portion_covered:
+        The portion of the collector which is covered with PV cells.
+
+    :param pvt_data_file:
+        The path to the data file containing information about the PVT system being
+        modelled.
+
+    :param resolution:
+        The temporal resolution at which to run the simulation.
+
+    :param start_time:
+        The time of day at which to start the simulation, specified between 0 and 23.
+
+    :param tank_data_file:
+        The path to the data file containing information about the hot-water tank used
+        in the model.
+
+    :param unglazed:
+        If specified, the glass cover is not included in the model.
+
+    :param use_pvgis:
+        Whether the data obtained from the PVGIS system should be used.
 
     :return:
         If requested, the system data is returned.
 
     """
 
-    logger.info("Beginning run of PVT model.\nCommand: %s", " ".join(args))
-
-    # Parse the system arguments from the commandline.
-    parsed_args = argparser.parse_args(args)
-
     # Set up numpy printing style.
     numpy.set_printoptions(formatter={"float": "{: 0.3f}".format})
 
-    # Check that the output file is specified, and that it doesn't already exist.
-    if parsed_args.output is None or parsed_args.output == "":
-        logger.error(
-            "An output filename must be provided on the command-line interface."
-        )
-        raise MissingParametersError(
-            "Command-Line Interface", "An output file name must be provided."
-        )
-    if parsed_args.output.endswith(".yaml") or parsed_args.output.endswith(".json"):
-        logger.error("The output filename must be irrespective of data type..")
-        raise Exception(
-            "The output file must be irrespecitve of file extension/data type."
-        )
-    if os.path.isfile(f"{parsed_args.output}.yaml"):
-        logger.info("The output YAML file specified already exists. Moving...")
-        os.rename(f"{parsed_args.output}.yaml", f"{parsed_args.output}.yaml.1")
-        logger.info("Output file successfully moved.")
-    if os.path.isfile(f"{parsed_args.output}.json"):
-        logger.info("The output YAML file specified already exists. Moving...")
-        os.rename(f"{parsed_args.output}.json", f"{parsed_args.output}.json.1")
-        logger.info("Output file successfully moved.")
-
     # Set up the weather module.
     weather_forecaster = _get_weather_forecaster(
-        parsed_args.average_irradiance, parsed_args.location, parsed_args.use_pvgis
+        average_irradiance, location, use_pvgis
     )
     logger.info("Weather forecaster successfully instantiated: %s", weather_forecaster)
 
     # Set up the load module.
-    load_system = _get_load_system(parsed_args.location)
+    load_system = _get_load_system(location)
     logger.info(
         "Load system successfully instantiated: %s",
         load_system,
     )
 
     # Generate a list from the mapping or the CLI args if supplied.
-    if parsed_args.initial_system_temperature_vector is not None:
+    if initial_system_temperature_vector is not None:
         initial_system_temperature_vector: List[float] = [
-            float(entry) for entry in parsed_args.initial_system_temperature_vector
+            float(entry) for entry in initial_system_temperature_vector
         ]
         if len(initial_system_temperature_vector) != len(
             INITIAL_SYSTEM_TEMPERATURE_MAPPING
@@ -527,30 +488,26 @@ def main(args) -> Optional[Dict[int, SystemData]]:
                 "required number of system temperature values."
             )
     else:
-        initial_system_temperature_vector = [
-            INITIAL_SYSTEM_TEMPERATURE_MAPPING[temperature_name]
-            for temperature_name in sorted(
-                TemperatureName, key=lambda entry: entry.value
-            )
-        ]
+        raise ProgrammerJudgementFault(
+            "Not initial system temperature vector was supplied. This is necessary "
+            "when calling the pvt model."
+        )
 
     # Initialise the PV-T panel.
     pvt_panel = process_pvt_system_data.pvt_panel_from_path(
         initial_system_temperature_vector[TemperatureName.bulk_water.value],
-        parsed_args.portion_covered,
-        parsed_args.pvt_data_file,
-        parsed_args.unglazed,
+        portion_covered,
+        pvt_data_file,
+        unglazed,
     )
     logger.info("PV-T panel successfully instantiated: %s", pvt_panel)
 
     # Instantiate the rest of the PVT system.
     heat_exchanger = process_pvt_system_data.heat_exchanger_from_path(
-        parsed_args.exchanger_data_file
+        exchanger_data_file
     )
     logger.info("Heat exchanger successfully instantiated: %s", heat_exchanger)
-    hot_water_tank = process_pvt_system_data.hot_water_tank_from_path(
-        parsed_args.tank_data_file
-    )
+    hot_water_tank = process_pvt_system_data.hot_water_tank_from_path(tank_data_file)
     logger.info("Hot-water tank successfully instantiated: %s", hot_water_tank)
 
     # Instantiate the two pipes used to store input and output temperature values.
@@ -558,36 +515,32 @@ def main(args) -> Optional[Dict[int, SystemData]]:
     # tank_to_collector_pipe = pipe.Pipe(temperature=initial_system_temperature_vector[3])
 
     # Instnatiate the hot-water pump.
-    # htf_pump = process_pvt_system_data.pump_from_path(parsed_args.pump_data_file)
+    # htf_pump = process_pvt_system_data.pump_from_path(pump_data_file)
 
     # Intiailise the mains supply system.
     mains_supply = mains_power.MainsSupply.from_yaml(
-        os.path.join(parsed_args.location, "utilities.yaml")
+        os.path.join(location, "utilities.yaml")
     )
     logger.info("Mains supply successfully instantiated: %s", mains_supply)
 
     # Set up the time iterator.
     num_months = (
-        (parsed_args.initial_month if parsed_args.initial_month is not None else 1)
-        - 1
-        + parsed_args.months
+        (initial_month if initial_month is not None else 1) - 1 + months
     )  # [months]
     start_month = (
-        parsed_args.initial_month
-        if 1 <= parsed_args.initial_month <= 12
+        initial_month
+        if 1 <= initial_month <= 12
         else DEFAULT_INITIAL_DATE_AND_TIME.month
     )  # [months]
     initial_date_and_time = DEFAULT_INITIAL_DATE_AND_TIME.replace(
-        hour=parsed_args.start_time, month=start_month
+        hour=start_time, month=start_month
     )
-    if parsed_args.days is None:
+    if days is None:
         final_date_and_time = initial_date_and_time + relativedelta(
             months=num_months % 12, years=num_months // 12
         )
     else:
-        final_date_and_time = initial_date_and_time + relativedelta(
-            days=parsed_args.days
-        )
+        final_date_and_time = initial_date_and_time + relativedelta(days=days)
 
     # Set up a holder for information about the system.
     system_data: Dict[int, SystemData] = dict()
@@ -612,13 +565,13 @@ def main(args) -> Optional[Dict[int, SystemData]]:
     previous_run_temperature_vector: numpy.ndarray = numpy.asarray(  # type: ignore
         initial_system_temperature_vector
     )
-    time_iterator_step = relativedelta(seconds=parsed_args.resolution)
+    time_iterator_step = relativedelta(seconds=resolution)
 
     # Save the initial system data.
     weather_conditions = weather_forecaster.get_weather(
         pvt_panel.latitude,
         pvt_panel.longitude,
-        parsed_args.cloud_efficacy_factor,
+        cloud_efficacy_factor,
         initial_date_and_time,
     )
     system_data[0] = SystemData(
@@ -662,7 +615,7 @@ def main(args) -> Optional[Dict[int, SystemData]]:
         time_iterator(
             first_time=initial_date_and_time,
             last_time=final_date_and_time,
-            resolution=parsed_args.resolution,
+            resolution=resolution,
             timezone=pvt_panel.timezone,
         )
     ):
@@ -691,7 +644,7 @@ def main(args) -> Optional[Dict[int, SystemData]]:
         weather_conditions = weather_forecaster.get_weather(
             pvt_panel.latitude,
             pvt_panel.longitude,
-            parsed_args.cloud_efficacy_factor,
+            cloud_efficacy_factor,
             next_date_and_time,
         )
 
@@ -701,9 +654,9 @@ def main(args) -> Optional[Dict[int, SystemData]]:
             heat_exchanger=heat_exchanger,
             hot_water_tank=hot_water_tank,
             next_date_and_time=next_date_and_time,
-            parsed_args=parsed_args,
             previous_run_temperature_vector=previous_run_temperature_vector,
             pvt_panel=pvt_panel,
+            resolution=resolution,
             run_one_temperature_vector=previous_run_temperature_vector,
             weather_conditions=weather_conditions,
         )
@@ -753,13 +706,15 @@ def main(args) -> Optional[Dict[int, SystemData]]:
 
         previous_run_temperature_vector = current_run_temperature_vector
 
-    # If system data is required, return this.
-    if parsed_args.return_system_data:
-        return system_data
-    # Otherwise, save the output data from the run.
-    else:
-        _save_data(FileType.JSON, parsed_args.output, system_data)
+    return system_data
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    logging.error(
+        "Calling the internal `pvt_system_model` from the command-line is no longer "
+        "supported."
+    )
+    raise ProgrammerJudgementFault(
+        "Calling the internal `pvt_system_model` from the command-line interface is no "
+        "longer supported."
+    )

@@ -1,7 +1,7 @@
 #!/usr/bin/python3.7
 # type: ignore
 ########################################################################################
-# analysis.py - The analysis module for the model.
+# analysis.py - The analysis component for the model.
 #
 # Author: Ben Winchester
 # Copyright: Ben Winchester, 2021
@@ -9,9 +9,9 @@
 """
 Used for analysis of the output of the model runs.
 
-NOTE: The mypy type checker is instructed to ignore this module. This is done due to the
-lower standards applied to the analysis code, and the failure of mypy to correctly type-
-check the external matplotlib.pyplot module.
+NOTE: The mypy type checker is instructed to ignore this component. This is done due to
+the lower standards applied to the analysis code, and the failure of mypy to correctly
+type-check the external matplotlib.pyplot module.
 
 """
 
@@ -28,7 +28,9 @@ from matplotlib import pyplot as plt
 
 try:
     from ..__utils__ import get_logger
-    from .constants import HEAT_CAPACITY_OF_WATER  # pylint: disable=unused-import
+    from ..pvt_system_model.constants import (  # pylint: disable=unused-import
+        HEAT_CAPACITY_OF_WATER,
+    )
     from .__utils__ import GraphDetail
 except ModuleNotFoundError:
     import logging

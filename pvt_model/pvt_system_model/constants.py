@@ -14,7 +14,7 @@ panel.
 
 """
 
-from .__utils__ import TemperatureName
+from ..__utils__ import TemperatureName
 
 __all__ = (
     "CONVERGENT_SOLUTION_PRECISION",
@@ -62,12 +62,14 @@ INITIAL_SYSTEM_TEMPERATURE_MAPPING = {
     TemperatureName.glass: ZERO_CELCIUS_OFFSET + 12.666635157834548,  # [K]
     TemperatureName.pv: ZERO_CELCIUS_OFFSET + 14.18921695518992,  # [K]
     TemperatureName.collector: ZERO_CELCIUS_OFFSET + 14.217132445885738,  # [K]
-    TemperatureName.bulk_water: ZERO_CELCIUS_OFFSET + 14.217132445885682,  # [K]
-    TemperatureName.collector_input: ZERO_CELCIUS_OFFSET + 14.217132445885568,  # [K]
-    TemperatureName.collector_output: ZERO_CELCIUS_OFFSET + 14.217132445885625,  # [K]
+    TemperatureName.htf: ZERO_CELCIUS_OFFSET + 14.217132445885682,  # [K]
+    TemperatureName.htf_in: ZERO_CELCIUS_OFFSET + 14.217132445885682,  # [K]
+    TemperatureName.htf_out: ZERO_CELCIUS_OFFSET + 14.217132445885682,  # [K]
+    TemperatureName.collector_in: ZERO_CELCIUS_OFFSET + 14.217132445885568,  # [K]
+    TemperatureName.collector_out: ZERO_CELCIUS_OFFSET + 14.217132445885625,  # [K]
+    TemperatureName.tank_in: ZERO_CELCIUS_OFFSET + 14.217132445885625,  # [K]
+    TemperatureName.tank_out: ZERO_CELCIUS_OFFSET + 14.217132445885568,  # [K]
     TemperatureName.tank: ZERO_CELCIUS_OFFSET + 25,  # [K]
-    TemperatureName.tank_input: ZERO_CELCIUS_OFFSET + 14.217132445885625,  # [K]
-    TemperatureName.tank_output: ZERO_CELCIUS_OFFSET + 14.217132445885568,  # [K]
 }  # [K]
 # The initial temperature of the hot-water tank, at which it should be instantiated,
 # measured in Kelvin.
