@@ -23,9 +23,9 @@ from typing import Optional, Tuple
 
 from . import back_plate, collector, glass, pv
 
+from ...__utils__ import MissingParametersError, ProgrammerJudgementFault
+
 from ..__utils__ import (
-    MissingParametersError,
-    ProgrammerJudgementFault,
     LayerParameters,
     CollectorParameters,
     OpticalLayerParameters,
@@ -58,11 +58,11 @@ class PVT:
         measured in meters.
 
     .. attribute:: collector
-      Represents the lower (thermal-collector) layer of the panel.
+        Represents the lower (thermal-collector) layer of the panel.
 
     .. attribute:: glass
-      Represents the upper (glass) layer of the panel. This is set to `None` if the
-      panel is unglazed.
+        Represents the upper (glass) layer of the panel. This is set to `None` if the
+        panel is unglazed.
 
     .. attribute:: latitude
         The latitude of the panel, measured in degrees.
@@ -72,6 +72,14 @@ class PVT:
 
     .. attribute:: portion_covered
         The portion of the PV-T panel which is covered with PV.
+
+    .. attribute:: pv
+         Represents the middle (pv) layer of the panel. Can be set to `None` if not
+        present in the panel.
+
+    .. attribute:: pv_to_collector_thermal_conductance
+        The thermal conductance, in Watts per meter squared Kelvin, between the PV layer
+        and collector layer of the panel.
 
     .. attribute:: timezone
         The timezone that the PVT system is based in.
@@ -85,14 +93,6 @@ class PVT:
     #
     # .. attribute:: _horizontal_tracking
     #   A `bool` giving whether or not the panel tracks horizontally.
-    #
-    # .. attribute:: pv
-    #   Represents the middle (pv) layer of the panel. Can be set to `None` if not
-    #   present in the panel.
-    #
-    # .. attribute:: pv_to_collector_thermal_conductance
-    #   The thermal conductance, in Watts per meter squared Kelvin, between the PV layer
-    #   and collector layer of the panel.
     #
     # .. attribute:: _tilt
     #   The angle between the normal to the panel's surface and the horizontal.
