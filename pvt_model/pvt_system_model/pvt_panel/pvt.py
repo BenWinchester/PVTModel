@@ -21,7 +21,7 @@ import math
 from typing import Optional, Tuple
 
 
-from . import back_plate, collector, glass, pv
+from . import collector, glass, pv
 
 from ...__utils__ import MissingParametersError, ProgrammerJudgementFault
 
@@ -109,7 +109,6 @@ class PVT:
         collector_parameters: CollectorParameters,
         diffuse_reflection_coefficient: float,
         glass_parameters: OpticalLayerParameters,
-        glazed: bool,
         latitude: float,
         longitude: float,
         portion_covered: float,
@@ -142,9 +141,6 @@ class PVT:
 
         :param glass_parameters:
             Parameters used to instantiate the glass layer.
-
-        :param glazed:
-            Whether the panel is glazed. I.E., whether the panel has a glass layer.
 
         :param latitude:
             The latitude of the PV-T system, defined in degrees relative to the equator
@@ -208,16 +204,6 @@ class PVT:
                 "orientation must be given.",
             )
 
-        # Instantiate the glass layer.
-        if glazed:
-            self.glass: glass.Glass = glass.Glass(
-                diffuse_reflection_coefficient, glass_parameters
-            )
-        else:
-            raise ProgrammerJudgementFault(
-                "A glass layer is required in the current set up."
-            )
-
         # Instantiate the PV layer.
         if portion_covered != 0 and pv_parameters is not None:
             pv_parameters.area *= portion_covered
@@ -235,9 +221,10 @@ class PVT:
 
         # Instantiate the collector layer.
         self.collector = collector.Collector(collector_parameters)
-
-        # Instantiate the back_plate layer.
-        self.back_plate = back_plate.BackPlate(back_params)
+        # Instantiate the glass layer.
+        self.glass: glass.Glass = glass.Glass(
+            diffuse_reflection_coefficient, glass_parameters
+        )
 
     def __repr__(self) -> str:
         """
@@ -250,7 +237,6 @@ class PVT:
 
         return (
             "PVT("
-            f"back_plate: {self.back_plate}_"
             f"collector: {self.collector}, "
             f"glass: {self.glass}, "
             f"pv: {self.pv}, "
