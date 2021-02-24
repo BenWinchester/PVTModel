@@ -478,11 +478,9 @@ class LayerParameters:
 
     """
 
-    area: float
     conductivity: Optional[float]
     density: Optional[float]
     heat_capacity: float
-    mass: float
     thickness: float
 
 

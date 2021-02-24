@@ -79,11 +79,9 @@ class Collector(OpticalLayer):
 
         super().__init__(
             OpticalLayerParameters(
-                collector_params.area,
                 collector_params.conductivity,
                 collector_params.density,
                 collector_params.heat_capacity,
-                collector_params.mass,  # [kg]
                 collector_params.thickness,
                 collector_params.transmissivity,
                 collector_params.absorptivity,
@@ -110,11 +108,9 @@ class Collector(OpticalLayer):
 
         return (
             "Collector("
-            f"area: {self.area}m^2, "
             f"bulk_water_temperature: {self.bulk_water_temperature}, "
             f"heat_capacity: {self.heat_capacity}J/kg*K, "
             f"htf_heat_capacity: {self.htf_heat_capacity}J/kg*K, "
-            f"mass: {self.mass}kg, "
             f"mass_flow_rate: {self.mass_flow_rate}kg/s, "
             f"output_temperature: {self.output_water_temperature}K, "
             f"thickness: {self.thickness}m"

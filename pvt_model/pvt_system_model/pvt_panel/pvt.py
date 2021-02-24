@@ -204,27 +204,14 @@ class PVT:
                 "orientation must be given.",
             )
 
-        # Instantiate the PV layer.
-        if portion_covered != 0 and pv_parameters is not None:
-            pv_parameters.area *= portion_covered
-            self.pv: pv.PV = pv.PV(pv_parameters)
-        # If the PV layer parameters have not been specified, then raise an error.
-        elif portion_covered != 0 and pv_parameters is None:
-            raise MissingParametersError(
-                "PVT",
-                "PV-layer parameters must be provided if including a PV layer.",
-            )
-        else:
-            raise ProgrammerJudgementFault(
-                "A PV layer is required in the current set up."
-            )
-
         # Instantiate the collector layer.
         self.collector = collector.Collector(collector_parameters)
         # Instantiate the glass layer.
         self.glass: glass.Glass = glass.Glass(
             diffuse_reflection_coefficient, glass_parameters
         )
+        # Instantiate the PV layer.
+        self.pv: pv.PV = pv.PV(pv_parameters)
 
     def __repr__(self) -> str:
         """
