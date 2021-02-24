@@ -27,6 +27,7 @@ __all__ = (
     "index_from_pipe_coordinates",
     "index_from_segment_coordinates",
     "index_from_temperature_name",
+    "num_temperatures",
 )
 
 
@@ -286,3 +287,28 @@ def index_from_temperature_name(temperature_name: TemperatureName) -> int:
     """
 
     _get_index(temperature_name)
+
+
+def num_temperatures(
+    number_of_pipes: int,
+    number_of_x_segments: int,
+    number_of_y_segments: int,
+) -> int:
+    """
+    Returns the number of temperature variables being modelled.
+
+    :param number_of_pipes:
+        The number of pipes in the collector.
+
+    :param number_of_x_segments:
+        The number of x segments in the collector.
+
+    :param number_of_y_segments:
+        The number of y segments in the collector.
+
+    :return:
+        The total number of temperatures being modelled.
+
+    """
+
+    return (3 * number_of_x_segments + 4 * number_of_pipes) * number_of_y_segments + 4
