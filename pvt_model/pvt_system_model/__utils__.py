@@ -40,7 +40,6 @@ __all__ = (
     "ResolutionMismatchError",
     "LayerParameters",
     "OpticalLayerParameters",
-    "ProgrammerJudgementFault",
     "PVParameters",
     "read_yaml",
     "time_iterator",
@@ -158,24 +157,6 @@ class MissingDataError(Exception):
         super().__init__(
             "Data requested from a class could not be found: {}".format(message)
         )
-
-
-class ProgrammerJudgementFault(Exception):
-    """
-    Raised when an error is hit due to poor programming.
-
-    """
-
-    def __init__(self, message: str) -> None:
-        """
-        Instantiate a programmer judgement fault error.
-
-        :param message:
-            A message to append when displaying the error to the user.
-
-        """
-
-        super().__init__(f"A programmer judgement fault has occurred: {message}")
 
 
 class ResolutionMismatchError(Exception):

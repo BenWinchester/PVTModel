@@ -26,6 +26,7 @@ __all__ = (
     "fourier_number",
     "get_logger",
     "LOGGER_NAME",
+    "ProgrammerJudgementFault",
     "MissingParametersError",
     "SystemData",
     "TotalPowerData",
@@ -189,6 +190,24 @@ class MissingParametersError(Exception):
         super().__init__(
             f"Missing parameters when initialising a '{class_name}' class: {message}."
         )
+
+
+class ProgrammerJudgementFault(Exception):
+    """
+    Raised when an error is hit due to poor programming.
+
+    """
+
+    def __init__(self, message: str) -> None:
+        """
+        Instantiate a programmer judgement fault error.
+
+        :param message:
+            A message to append when displaying the error to the user.
+
+        """
+
+        super().__init__(f"A programmer judgement fault has occurred: {message}")
 
 
 @dataclass

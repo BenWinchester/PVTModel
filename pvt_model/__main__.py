@@ -97,7 +97,7 @@ def _get_system_fourier_numbers(
         pvt_panel.pv.heat_capacity,
         resolution,
     )
-    fourier_number_map[TemperatureName.bulk_water] = fourier_number(
+    fourier_number_map[TemperatureName.htf] = fourier_number(
         pvt_panel.collector.pipe_diameter,
         THERMAL_CONDUCTIVITY_OF_WATER,
         DENSITY_OF_WATER,
@@ -128,7 +128,7 @@ def _determine_fourier_numbers(logger: Logger, parsed_args: Namespace) -> None:
     """
 
     pvt_panel = pvt_panel_from_path(
-        INITIAL_SYSTEM_TEMPERATURE_MAPPING[TemperatureName.bulk_water],
+        INITIAL_SYSTEM_TEMPERATURE_MAPPING[TemperatureName.htf],
         parsed_args.portion_covered,
         parsed_args.pvt_data_file,
         parsed_args.unglazed,
