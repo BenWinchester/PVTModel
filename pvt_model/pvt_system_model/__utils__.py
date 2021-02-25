@@ -41,6 +41,7 @@ __all__ = (
     "LayerParameters",
     "OpticalLayerParameters",
     "PVParameters",
+    "PVT_SYSTEM_MODEL_LOGGER_NAME",
     "read_yaml",
     "time_iterator",
     "UtilityType",
@@ -52,6 +53,7 @@ __all__ = (
 # Constants #
 #############
 
+PVT_SYSTEM_MODEL_LOGGER_NAME = "pvt_model.pvt_system_model"
 
 ##############
 # Exceptions #

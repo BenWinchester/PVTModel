@@ -173,5 +173,19 @@ def parse_args(args) -> argparse.Namespace:
         action="store_true",
         default=False,
     )
+    parser.add_argument(
+        "--x-resolution",
+        "-x",
+        help="The number of segments to include in the x direction (across the panel) "
+        "for the simulation.",
+        type=int,
+    )
+    parser.add_argument(
+        "--y-resolution",
+        "-y",
+        help="The number of segments to include in the y direction (along the length of "
+        "the panel) for the simulation.",
+        type=int,
+    )
 
     return parser.parse_args(args)

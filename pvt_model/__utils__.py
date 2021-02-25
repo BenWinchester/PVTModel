@@ -23,8 +23,10 @@ from typing import Optional
 
 __all__ = (
     "CarbonEmissions",
+    "COARSE_RUN_RESOLUTION",
     "fourier_number",
     "get_logger",
+    "INITIAL_CONDITION_PRECISION",
     "LOGGER_NAME",
     "ProgrammerJudgementFault",
     "MissingParametersError",
@@ -32,6 +34,10 @@ __all__ = (
     "TotalPowerData",
 )
 
+# The resolution in seconds for determining the initial conditions.
+COARSE_RUN_RESOLUTION: int = 1800
+# The prevision to reach when searching for consistent initial temperatures.
+INITIAL_CONDITION_PRECISION: float = 1
 # The directory for storing the logs.
 LOGGER_DIRECTORY = "logs`"
 # The name used for the internal logger.

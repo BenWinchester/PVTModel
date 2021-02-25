@@ -19,7 +19,7 @@ import sys
 
 from argparse import Namespace
 from logging import Logger
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 import json
 import yaml
@@ -28,9 +28,11 @@ from . import argparser
 
 from .__utils__ import (
     CarbonEmissions,
+    COARSE_RUN_RESOLUTION,
     FileType,
     fourier_number,
     get_logger,
+    INITIAL_CONDITION_PRECISION,
     MissingParametersError,
     LOGGER_NAME,
     SystemData,
@@ -38,15 +40,17 @@ from .__utils__ import (
     TotalPowerData,
 )
 
-from .pvt_system_model import tank
+from .analysis import analysis
+
+from .pvt_system_model import index, tank
 from .pvt_system_model.pvt_panel import pvt
 from .pvt_system_model.__main__ import main as pvt_system_model_main
 
 from .pvt_system_model.constants import (
+    DEFAULT_SYSTEM_TEMPERATURE,
     DENSITY_OF_WATER,
     HEAT_CAPACITY_OF_WATER,
     THERMAL_CONDUCTIVITY_OF_WATER,
-    INITIAL_SYSTEM_TEMPERATURE_MAPPING,
 )
 from .pvt_system_model.process_pvt_system_data import (
     hot_water_tank_from_path,
@@ -115,9 +119,17 @@ def _get_system_fourier_numbers(
     return fourier_number_map
 
 
-def _determine_fourier_numbers(logger: Logger, parsed_args: Namespace) -> None:
+def _determine_fourier_numbers(
+    hot_water_tank: tank.Tank,
+    logger: Logger,
+    parsed_args: Namespace,
+    pvt_panel: pvt.PVT,
+) -> None:
     """
     Determines, prints, and logs the various Fourier numbers.
+
+    :param hot_water_tank:
+        A :class:`tank.Tank` instance representing the hot-water tank being modelled.
 
     :param logger:
         The logger being used for the run.
@@ -125,16 +137,10 @@ def _determine_fourier_numbers(logger: Logger, parsed_args: Namespace) -> None:
     :param parsed_args:
         The parsed commnand-line arguments.
 
+    :param pvt_panel:
+        The pvt panel, represented as a :class:`pvt_panel.pvt.PVT` instance.
+
     """
-
-    pvt_panel = pvt_panel_from_path(
-        INITIAL_SYSTEM_TEMPERATURE_MAPPING[TemperatureName.htf],
-        parsed_args.portion_covered,
-        parsed_args.pvt_data_file,
-    )
-
-    # Instantiate a hot-water tank instance based on the data.
-    hot_water_tank = hot_water_tank_from_path(parsed_args.tank_data_file)
 
     # Determine the Fourier numbers.
     fourier_number_map = _get_system_fourier_numbers(
@@ -193,6 +199,99 @@ def _determine_fourier_numbers(logger: Logger, parsed_args: Namespace) -> None:
                 ]
             ),
         )
+    )
+
+
+def _determine_initial_conditions(
+    number_of_pipes: int,
+    logger: Logger,
+    parsed_args: Namespace,
+    resolution: int = COARSE_RUN_RESOLUTION,
+    run_depth: int = 1,
+    running_system_temperature_vector: Optional[Tuple[float, ...]] = None,
+) -> Tuple[float, ...]:
+    """
+    Determines the initial system temperatures for the run.
+
+    :param number_of_pipes:
+        The number of pipes on the base of the hot-water collector.
+
+    :param logger:
+        The logger for the run.
+
+    :param parsed_args:
+        The parsed command-line arguments.
+
+    :param resolution:
+        The resolution for the run, measured in seconds.
+
+    :param run_depth:
+        The depth of the recursion.
+
+    :param running_system_temperature_vector:
+        The current vector for the system temperatures, used to commence a run and
+        compare with the previous run.
+
+    :return:
+        The initial system temperature which fits within the desired resolution.
+
+    """
+
+    # Fetch the initial temperature conditions if not passed in:
+    if running_system_temperature_vector is None:
+        running_system_temperature_vector = (
+            DEFAULT_SYSTEM_TEMPERATURE,
+        ) * index.num_temperatures(
+            number_of_pipes,
+            parsed_args.x_resolution,
+            parsed_args.y_resolution,
+        )
+
+    # Call the model to generate the output of the run.
+    logger.info("Running the model. Run number %s.", run_depth)
+    final_temperature_vector, _ = pvt_system_model_main(
+        parsed_args.average_irradiance,
+        parsed_args.cloud_efficacy_factor,
+        parsed_args.days,
+        parsed_args.exchanger_data_file,
+        parsed_args.initial_month,
+        running_system_temperature_vector,
+        parsed_args.location,
+        parsed_args.months,
+        parsed_args.portion_covered,
+        parsed_args.pvt_data_file,
+        resolution,
+        parsed_args.start_time,
+        parsed_args.tank_data_file,
+        parsed_args.unglazed,
+        parsed_args.use_pvgis,
+        parsed_args.x_resolution,
+        parsed_args.y_resolution,
+    )
+
+    # If all the temperatures are within the desired limit, return the temperatures.
+    if all(
+        final_temperature_vector - running_system_temperature_vector
+        <= INITIAL_CONDITION_PRECISION
+    ):
+        logger.info(
+            "Initial temperatures consistent. Max difference: %sK",
+            max(abs(final_temperature_vector - running_system_temperature_vector)),
+        )
+        return final_temperature_vector
+
+    logger.info(
+        "Initial temperatures not consistent. Max difference: %sK",
+        max(abs(final_temperature_vector - running_system_temperature_vector)),
+    )
+    # Otherwise, call the method recursively.
+    return _determine_initial_conditions(
+        number_of_pipes,
+        logger,
+        parsed_args,
+        resolution,
+        run_depth + 1,
+        final_temperature_vector,
     )
 
 
@@ -302,20 +401,67 @@ def main(args) -> None:
         os.rename(f"{parsed_args.output}.json", f"{parsed_args.output}.json.1")
         logger.info("Output file successfully moved.")
 
+    # Parse the PVT system information and generate a PVT panel based on the args.
+    pvt_panel = pvt_panel_from_path(
+        DEFAULT_SYSTEM_TEMPERATURE,
+        parsed_args.portion_covered,
+        parsed_args.pvt_data_file,
+        parsed_args.x_resolution,
+        parsed_args.y_resolution,
+    )
+    # Instantiate a hot-water tank instance based on the data.
+    hot_water_tank = hot_water_tank_from_path(parsed_args.tank_data_file)
+    logger.info(
+        "PVT system information successfully parsed:\n%s\n%s",
+        str(pvt_panel),
+        str(hot_water_tank),
+    )
+
     # Determine the Fourier number for the PV-T panel.
     logger.info("Beginning Fourier number calculation.")
-    # Instantiate a PVT panel instance based on the data.
-    _determine_fourier_numbers(logger, parsed_args)
+    _determine_fourier_numbers(hot_water_tank, logger, parsed_args, pvt_panel)
 
-    # Determine the initial conditions for the run via iteration until the initial and
-    # final temperatures for the day match up.
-    # * Iterate to determine the initial conditions for the run.
+    # Iterate to determine the initial conditions for the run.
+    logger.info("Determining consistent initial conditions.")
+    initial_system_temperature_vector = _determine_initial_conditions(
+        pvt_panel.collector.number_of_pipes, logger, parsed_args
+    )
+    logger.info(
+        "Initial system temperatures successfully determined to %sK precision.",
+        INITIAL_CONDITION_PRECISION,
+    )
 
-    # * Run the model at this higher resolution.
+    logger.info(
+        "Running the model at the CLI resolution of %ss.", parsed_args.resolution
+    )
+    # Run the model at this higher resolution.
+    _, system_data = pvt_system_model_main(
+        parsed_args.average_irradiance,
+        parsed_args.cloud_efficacy_factor,
+        parsed_args.days,
+        parsed_args.exchanger_data_file,
+        parsed_args.initial_month,
+        initial_system_temperature_vector,
+        parsed_args.location,
+        parsed_args.months,
+        parsed_args.portion_covered,
+        parsed_args.pvt_data_file,
+        parsed_args.resolution,
+        parsed_args.start_time,
+        parsed_args.tank_data_file,
+        parsed_args.unglazed,
+        parsed_args.use_pvgis,
+        parsed_args.x_resolution,
+        parsed_args.y_resolution,
+    )
 
-    # * Save the data ouputted by the model.
+    # Save the data ouputted by the model.
+    logger.info("Saving output data to: %s.json.", parsed_args.output)
+    _save_data(FileType.JSON, parsed_args.output, system_data)
 
-    # * Conduct analysis of the data.
+    # Conduct analysis of the data.
+    logger.info("Conducting analysis.")
+    analysis.analyse(f"{parsed_args.output}.json")
 
 
 if __name__ == "__main__":

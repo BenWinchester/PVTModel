@@ -14,14 +14,11 @@ panel.
 
 """
 
-from ..__utils__ import TemperatureName
-
 __all__ = (
     "CONVERGENT_SOLUTION_PRECISION",
     "DENSITY_OF_WATER",
     "FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR",
     "HEAT_CAPACITY_OF_WATER",
-    "INITIAL_SYSTEM_TEMPERATURE_MAPPING",
     "NUMBER_OF_COLLECTORS",
     "NUSSELT_NUMBER",
     "STEFAN_BOLTZMAN_CONSTANT",
@@ -46,6 +43,8 @@ ZERO_CELCIUS_OFFSET: float = 273.15
 
 # The precision at which to calculate the convergent solution.
 CONVERGENT_SOLUTION_PRECISION = 0.1
+# The default system temperature, used for instantiating runs.
+DEFAULT_SYSTEM_TEMPERATURE = ZERO_CELCIUS_OFFSET + 30  # [K]
 # The density of water, measured in kilograms per meter cubed.
 DENSITY_OF_WATER: int = 1000
 # The free convective, heat-transfer coefficient of air. This varies, and potentially
@@ -55,22 +54,6 @@ DENSITY_OF_WATER: int = 1000
 FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR: int = 25
 # The heat capacity of water, measured in Joules per kilogram Kelvin.
 HEAT_CAPACITY_OF_WATER: int = 4182
-# The initial temperature for the system to be instantiated at, measured in Kelvin.
-# The `tuple` contains the glass, pv, collector, bulk-water, and tank initial
-# temperatures.
-INITIAL_SYSTEM_TEMPERATURE_MAPPING = {
-    TemperatureName.glass: ZERO_CELCIUS_OFFSET + 12.666635157834548,  # [K]
-    TemperatureName.pv: ZERO_CELCIUS_OFFSET + 14.18921695518992,  # [K]
-    TemperatureName.collector: ZERO_CELCIUS_OFFSET + 14.217132445885738,  # [K]
-    TemperatureName.htf: ZERO_CELCIUS_OFFSET + 14.217132445885682,  # [K]
-    TemperatureName.htf_in: ZERO_CELCIUS_OFFSET + 14.217132445885682,  # [K]
-    TemperatureName.htf_out: ZERO_CELCIUS_OFFSET + 14.217132445885682,  # [K]
-    TemperatureName.collector_in: ZERO_CELCIUS_OFFSET + 14.217132445885568,  # [K]
-    TemperatureName.collector_out: ZERO_CELCIUS_OFFSET + 14.217132445885625,  # [K]
-    TemperatureName.tank_in: ZERO_CELCIUS_OFFSET + 14.217132445885625,  # [K]
-    TemperatureName.tank_out: ZERO_CELCIUS_OFFSET + 14.217132445885568,  # [K]
-    TemperatureName.tank: ZERO_CELCIUS_OFFSET + 25,  # [K]
-}  # [K]
 # The initial temperature of the hot-water tank, at which it should be instantiated,
 # measured in Kelvin.
 INITIAL_TANK_TEMPERATURE = ZERO_CELCIUS_OFFSET + 34.75  # [K]

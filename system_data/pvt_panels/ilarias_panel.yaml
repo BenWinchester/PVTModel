@@ -113,12 +113,6 @@ collector:
   thermal_conductivity: 310 # [W/m*K]
   thickness: 0.00012 # [m]
   transmissivity: 0.9 # [unitless]
-# Quantities for the back plate taken as those for Tedlar.
-back:
-  density: 2330 # [kg/m^3]
-  thickness: 0.00017 # [m]
-  heat_capacity: 1130 # [J/kg*K]
-  thermal_conductivity: 0.14 # [W/m*K]
 insulation:
   thickness: 0.02 # [m]
   thermal_conductivity: 0.035 # [W/m*K]

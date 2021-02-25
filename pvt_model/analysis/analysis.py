@@ -19,6 +19,7 @@ import argparse
 import os
 import sys
 
+from logging import Logger
 from typing import Any, List, Dict, Optional, Tuple, Union
 
 import json
@@ -39,6 +40,8 @@ except ModuleNotFoundError:
         "Incorrect module import. Try running with `python3.7 -m pvt_model.analysis`"
     )
     raise
+
+__all__ = ("analyse",)
 
 # The directory into which which should be saved
 NEW_FIGURES_DIRECTORY: str = "figures"
@@ -96,7 +99,9 @@ def _resolution_from_graph_detail(
 
 
 def _reduce_data(
-    data_to_reduce: Dict[str, Dict[Any, Any]], graph_detail: GraphDetail
+    data_to_reduce: Dict[str, Dict[Any, Any]],
+    graph_detail: GraphDetail,
+    logger: Logger,
 ) -> Dict[Union[int, str], Dict[Any, Any]]:
     """
     This processes the data, using sums to reduce the resolution so it can be plotted.
@@ -106,6 +111,9 @@ def _reduce_data(
 
     :param graph_detail:
         The level of detail required in the graph.
+
+    :param logger:
+        The logger being used in the run.
 
     :return:
         The cropped/summed up data, returned at a lower resolution as specified by the
@@ -582,18 +590,23 @@ def plot_figure(
     save_figure(figure_name)
 
 
-if __name__ == "__main__":
+def analyse(data_file_name: str) -> None:
+    """
+    The main method for the analysis module.
 
-    parsed_args = _parse_args(sys.argv[1:])
+    :param data_file_name:
+        The path to the data file to analyse.
+
+    """
 
     # * Set up the logger
     logger = get_logger("pvt_analysis")
 
     # * Extract the data.
-    data = load_model_data(parsed_args.data_file_name)
+    data = load_model_data(data_file_name)
 
     # * Reduce the resolution of the data.
-    data = _reduce_data(data, GRAPH_DETAIL)
+    data = _reduce_data(data, GRAPH_DETAIL, logger)
 
     # * Create new data values where needed.
     data = _post_process_data(data)
@@ -850,3 +863,8 @@ if __name__ == "__main__":
     # * Plotting the tank temperature, collector temperature, and heat inputted into the
     # * tank.
     """  # pylint: disable=pointless-string-statement
+
+
+if __name__ == "__main__":
+    parsed_args = _parse_args(sys.argv[1:])
+    analyse(parsed_args.data_file_name)

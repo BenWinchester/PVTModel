@@ -41,19 +41,19 @@ from .pvt_panel import pvt
 
 from .constants import (
     CONVERGENT_SOLUTION_PRECISION,
-    INITIAL_SYSTEM_TEMPERATURE_MAPPING,
     ZERO_CELCIUS_OFFSET,
 )
 
 from ..__utils__ import (
     CarbonEmissions,
-    LOGGER_NAME,
+    get_logger,
     SystemData,
     TotalPowerData,
 )
 from .__utils__ import (  # pylint: disable=unused-import
     DivergentSolutionError,
     ProgrammerJudgementFault,
+    PVT_SYSTEM_MODEL_LOGGER_NAME,
     time_iterator,
 )
 
@@ -66,7 +66,7 @@ DEFAULT_INITIAL_DATE_AND_TIME = datetime.datetime(2005, 1, 1, 0, 0, tzinfo=pytz.
 # household, measured in Kelvin.
 INTERNAL_HOUSEHOLD_AMBIENT_TEMPERATURE = ZERO_CELCIUS_OFFSET + 20  # [K]
 # Get the logger for the component.
-logger = logging.getLogger(LOGGER_NAME)
+logger = get_logger(PVT_SYSTEM_MODEL_LOGGER_NAME)
 # Folder containing the solar irradiance profiles
 SOLAR_IRRADIANCE_FOLDERNAME = "solar_irradiance_profiles"
 # Folder containing the temperature profiles
@@ -353,7 +353,7 @@ def _solve_temperature_vector_convergence_method(
             logger.error(
                 "The temperature solutions at the next time step diverged. "
                 "See %s for more details.",
-                LOGGER_NAME,
+                PVT_SYSTEM_MODEL_LOGGER_NAME,
             )
             logger.info(
                 "Local variables at the time of the dump:\n%s",
@@ -401,7 +401,9 @@ def main(
     tank_data_file: str,
     unglazed: bool,
     use_pvgis: bool,
-) -> Optional[Dict[int, SystemData]]:
+    x_resolution: int,
+    y_resolution: int,
+) -> Tuple[Tuple[float, ...], Dict[int, SystemData]]:
     """
     The main module for the code. Calling this method executes a run of the simulation.
 
@@ -454,8 +456,14 @@ def main(
     :param use_pvgis:
         Whether the data obtained from the PVGIS system should be used.
 
+    :param x_resolution:
+        The x resolution of the simulation being run.
+
+    :param y_resolution:
+        The y resolution of the simulation being run.
+
     :return:
-        If requested, the system data is returned.
+        The system data is returned.
 
     """
 
@@ -499,6 +507,8 @@ def main(
         portion_covered,
         pvt_data_file,
         unglazed,
+        x_resolution,
+        y_resolution,
     )
     logger.info("PV-T panel successfully instantiated: %s", pvt_panel)
 
@@ -706,7 +716,7 @@ def main(
 
         previous_run_temperature_vector = current_run_temperature_vector
 
-    return system_data
+    return current_run_temperature_vector, system_data
 
 
 if __name__ == "__main__":

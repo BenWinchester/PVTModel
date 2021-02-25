@@ -18,20 +18,21 @@ increasing time steps, and the code here aims to emaulate this.
 import datetime
 import math
 
-from typing import Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 
 from . import collector, glass, pv
 
-from ...__utils__ import MissingParametersError, ProgrammerJudgementFault
+from ...__utils__ import MissingParametersError
 
 from ..__utils__ import (
-    LayerParameters,
     CollectorParameters,
     OpticalLayerParameters,
     PVParameters,
     WeatherConditions,
 )
+
+from .segment import Segment, SegmentCoordinates
 
 __all__ = ("PVT",)
 
@@ -114,8 +115,9 @@ class PVT:
         latitude: float,
         longitude: float,
         portion_covered: float,
-        pv_parameters: Optional[PVParameters],
+        pv_parameters: PVParameters,
         pv_to_collector_thermal_conductance: float,
+        segments: Dict[SegmentCoordinates, Segment],
         timezone: datetime.timezone,
         *,
         azimuthal_orientation: Optional[float] = None,
@@ -159,6 +161,13 @@ class PVT:
         :param pv_parameters:
             Parameters used to instantiate the PV layer.
 
+        :param segments:
+            A mapping between segment coordinate and segment for all segments to be
+            included in the layer.
+
+        :param timezone:
+            The timezone in which the PV-T system is installed.
+
         :param azimuthal_orientation:
             The orientation of the surface of the panel, defined relative to True North,
             measured in degrees.
@@ -177,16 +186,17 @@ class PVT:
 
         """
 
-        self.air_gap_thickness = air_gap_thickness
         self._azimuthal_orientation = azimuthal_orientation
         self._horizontal_tracking = horizontal_tracking
+        self._tilt = tilt
+        self._vertical_tracking = vertical_tracking
+        self.air_gap_thickness = air_gap_thickness
+        self.area = area
         self.latitude = latitude
         self.longitude = longitude
         self.portion_covered = portion_covered
         self.pv_to_collector_thermal_conductance = pv_to_collector_thermal_conductance
-        self._vertical_tracking = vertical_tracking
-        self._tilt = tilt
-        self.area = area
+        self.segments = segments
         self.timezone = timezone
 
         # If the orientation parameters have not been specified correctly, then raise an

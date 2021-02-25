@@ -20,11 +20,12 @@ happens within this module.
 
 import datetime
 
+from math import ceil
 from typing import Any, Dict, Tuple
 
 import numpy
 
-from .pvt_panel import pvt
+from .pvt_panel import pvt, segment
 from . import exchanger, tank, pump
 
 from ..__utils__ import MissingParametersError
@@ -366,10 +367,48 @@ def _pv_params_from_data(area: float, pv_data: Dict[str, Any]) -> PVParameters:
         ) from None
 
 
+def _x_coordinate(index: int, x_resolution: int) -> int:
+    """
+    Returns the x coordinate for the segment being processed from the index.
+
+    :param index:
+        The segment index being processed.
+
+    :param x_resolution:
+        The x resolution of the simulation being run.
+
+    :return:
+        The x corodinate of the segment.
+
+    """
+
+    return index % x_resolution
+
+
+def _y_coordinate(index: int, x_resolution: int) -> int:
+    """
+    Returns the y coordinate for the segment being processed from the index.
+
+    :param index:
+        The segment index being processed.
+
+    :param x_resolution:
+        The x resolution of the simulation being run.
+
+    :return:
+        The y corodinate of the segment.
+
+    """
+
+    return index // x_resolution
+
+
 def pvt_panel_from_path(
     initial_collector_htf_tempertaure: float,
     portion_covered: float,
     pvt_data_file: str,
+    x_resolution: int,
+    y_resolution: int,
 ) -> pvt.PVT:
     """
     Generate a :class:`pvt.PVT` instance based on the path to the data file.
@@ -380,14 +419,19 @@ def pvt_panel_from_path(
     :param pvt_data_file:
         The path to the pvt data file.
 
+    :param x_resolution:
+        The x resolution of the simulation being run.
+
+    :param y_resolution:
+        The y resolution of the simulation being run.
+
     :return:
         A :class:`pvt.PVT` instance representing the PVT panel.
 
     """
 
-    # Set up the PVT module
+    # Parse the data file into the various data classes.
     pvt_data = read_yaml(pvt_data_file)
-
     diffuse_reflection_coefficient, glass_parameters = _glass_params_from_data(
         pvt_data["pvt_system"]["area"], pvt_data["glass"]
     )
@@ -402,15 +446,37 @@ def pvt_panel_from_path(
         initial_collector_htf_tempertaure,  # [K]
         pvt_data["collector"],
     )
-    back_parameters = _back_params_from_data(
-        pvt_data["pvt_system"]["area"], pvt_data["back"]
+
+    # Construct the segmented array based on the arguments.
+    pipe_positions = list(
+        range(
+            x_resolution // (pvt_data["collector"]["number_of_pipes"] + 1),
+            x_resolution,
+            ceil(x_resolution / (pvt_data["collector"]["number_of_pipes"] + 1)),
+        )
     )
+    pv_coordinate_cutoff = int(y_resolution * portion_covered)
+    segments = {
+        segment.SegmentCoordinates(
+            _x_coordinate(segment_number, x_resolution),
+            _y_coordinate(segment_number, x_resolution),
+        ): segment.Segment(
+            True,
+            True,
+            pvt_data["length"] / x_resolution,
+            _x_coordinate(segment_number, x_resolution) in pipe_positions,
+            _y_coordinate(segment_number, x_resolution) <= pv_coordinate_cutoff,
+            pvt_data["width"] / y_resolution,
+            _x_coordinate(segment_number, x_resolution),
+            _y_coordinate(segment_number, x_resolution),
+        )
+        for segment_number in range(x_resolution * y_resolution)
+    }
 
     try:
         pvt_panel = pvt.PVT(
             air_gap_thickness=pvt_data["air_gap"]["thickness"],  # [m]
             area=pvt_data["pvt_system"]["area"],  # [m^2]
-            back_params=back_parameters,
             collector_parameters=collector_parameters,
             diffuse_reflection_coefficient=diffuse_reflection_coefficient,
             glass_parameters=glass_parameters,
@@ -421,6 +487,7 @@ def pvt_panel_from_path(
             pv_to_collector_thermal_conductance=pvt_data["pvt_system"][
                 "pv_to_collector_conductance"
             ],  # [W/m^2*K]
+            segments=segments,
             timezone=datetime.timezone(
                 datetime.timedelta(hours=int(pvt_data["pvt_system"]["timezone"]))
             ),
