@@ -41,6 +41,7 @@ from .__utils__ import (
     PVParameters,
     read_yaml,
 )
+from .index import x_coordinate, y_coordinate
 
 
 __all__ = (
@@ -367,42 +368,6 @@ def _pv_params_from_data(area: float, pv_data: Dict[str, Any]) -> PVParameters:
         ) from None
 
 
-def _x_coordinate(index: int, x_resolution: int) -> int:
-    """
-    Returns the x coordinate for the segment being processed from the index.
-
-    :param index:
-        The segment index being processed.
-
-    :param x_resolution:
-        The x resolution of the simulation being run.
-
-    :return:
-        The x corodinate of the segment.
-
-    """
-
-    return index % x_resolution
-
-
-def _y_coordinate(index: int, x_resolution: int) -> int:
-    """
-    Returns the y coordinate for the segment being processed from the index.
-
-    :param index:
-        The segment index being processed.
-
-    :param x_resolution:
-        The x resolution of the simulation being run.
-
-    :return:
-        The y corodinate of the segment.
-
-    """
-
-    return index // x_resolution
-
-
 def pvt_panel_from_path(
     initial_collector_htf_tempertaure: float,
     portion_covered: float,
@@ -458,17 +423,17 @@ def pvt_panel_from_path(
     pv_coordinate_cutoff = int(y_resolution * portion_covered)
     segments = {
         segment.SegmentCoordinates(
-            _x_coordinate(segment_number, x_resolution),
-            _y_coordinate(segment_number, x_resolution),
+            x_coordinate(segment_number, x_resolution),
+            y_coordinate(segment_number, x_resolution),
         ): segment.Segment(
             True,
             True,
             pvt_data["length"] / x_resolution,
-            _x_coordinate(segment_number, x_resolution) in pipe_positions,
-            _y_coordinate(segment_number, x_resolution) <= pv_coordinate_cutoff,
+            x_coordinate(segment_number, x_resolution) in pipe_positions,
+            y_coordinate(segment_number, x_resolution) <= pv_coordinate_cutoff,
             pvt_data["width"] / y_resolution,
-            _x_coordinate(segment_number, x_resolution),
-            _y_coordinate(segment_number, x_resolution),
+            x_coordinate(segment_number, x_resolution),
+            y_coordinate(segment_number, x_resolution),
         )
         for segment_number in range(x_resolution * y_resolution)
     }

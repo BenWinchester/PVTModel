@@ -28,6 +28,8 @@ __all__ = (
     "index_from_segment_coordinates",
     "index_from_temperature_name",
     "num_temperatures",
+    "x_coordinate",
+    "y_coordinate",
 )
 
 
@@ -312,3 +314,39 @@ def num_temperatures(
     """
 
     return (3 * number_of_x_segments + 4 * number_of_pipes) * number_of_y_segments + 4
+
+
+def x_coordinate(index: int, x_resolution: int) -> int:
+    """
+    Returns the x coordinate for the segment being processed from the index.
+
+    :param index:
+        The segment index being processed.
+
+    :param x_resolution:
+        The x resolution of the simulation being run.
+
+    :return:
+        The x corodinate of the segment.
+
+    """
+
+    return index % x_resolution
+
+
+def y_coordinate(index: int, x_resolution: int) -> int:
+    """
+    Returns the y coordinate for the segment being processed from the index.
+
+    :param index:
+        The segment index being processed.
+
+    :param x_resolution:
+        The x resolution of the simulation being run.
+
+    :return:
+        The y corodinate of the segment.
+
+    """
+
+    return index // x_resolution

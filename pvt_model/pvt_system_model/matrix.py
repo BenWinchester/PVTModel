@@ -34,6 +34,7 @@ import numpy
 
 from . import index
 from .pvt_panel import pvt
+from .pvt_panel.segment import Segment
 
 from ..__utils__ import TemperatureName
 from .__utils__ import WeatherConditions
@@ -48,6 +49,9 @@ __all__ = ("calculate_matrix_equation",)
 
 def _absorber_equation(
     number_of_temperatures: int,
+    number_of_x_segments: int,
+    number_of_y_segments: int,
+    segment: Segment,
 ) -> Tuple[numpy.ndarray, Tuple[float, ...]]:
     """
     Returns a matrix row and resultant vector value representing the absorber equation.
@@ -61,10 +65,6 @@ def _absorber_equation(
         - and the corresponding value in the resultant method.
 
     """
-
-    # * Compute the row equation
-
-    # * Compute the resultant vector value.
 
 
 def _fluid_continuity_equation(
@@ -90,6 +90,12 @@ def _fluid_continuity_equation(
 
 def _glass_equation(
     number_of_temperatures: int,
+    number_of_x_segments: int,
+    number_of_y_segments: int,
+    pvt_panel: pvt.PVT,
+    resolution: int,
+    segment: Segment,
+    weather_conditions: WeatherConditions
 ) -> Tuple[numpy.ndarray, Tuple[float, ...]]:
     """
     Returns a matrix row and resultant vector value representing the glass equation.
@@ -104,7 +110,46 @@ def _glass_equation(
 
     """
 
-    # * Compute the row equation
+    # Compute the row equation
+    row_equation = [0] * number_of_temperatures
+    row_equation[
+        index.index_from_segment_coordinates(
+            number_of_x_segments,
+            number_of_y_segments,
+            TemperatureName.glass,
+            segment.x_index,
+            segment.y_index,
+        )
+    ] = (
+        # Internal heat change.
+        segment.width  # [m]
+        * segment.length  # [m]
+        * pvt_panel.collector.thickness  # [m]
+        * pvt_panel.collector.density  # [kg/m^3]
+        * pvt_panel.collector.heat_capacity  # [J/kg*K]
+        / resolution  # [s]
+        # X-wise conduction within the glass layer
+        + (2 if segment.x_index not in [0, number_of_x_segments - 1] else 1)
+        * pvt_panel.collector.conductivity  # [W/m*K]
+        * pvt_panel.collector.thickness  # [m]
+        * segment.length  # [m]
+        / segment.width  # [m]
+        # Y-wise conduction within the glass layer
+        + (2 if segment.y_index not in [0, number_of_y_segments - 1] else 1)
+        * pvt_panel.collector.conductivity  # [W/m*K]
+        * pvt_panel.collector.thickness  # [m]
+        * segment.width  # [m]
+        / segment.length  # [m]
+        # Conduction to the air.
+        + segment.width  # [m]
+        * segment.length  # [m]
+        * weather_conditions.wind_heat_transfer_coefficient  # [W/m^2*K]
+        # Radiation to the sky.
+        + segment.width  # [m]
+        * segment.length  # [m]
+        * pvt_panel.glass.emissivity
+        * 
+    )
 
     # * Compute the resultant vector value.
 

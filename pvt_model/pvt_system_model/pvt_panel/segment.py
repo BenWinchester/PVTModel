@@ -86,7 +86,7 @@ class Segment:
     length: float
     pipe: bool
     pv: bool
-    wdith: float
+    width: float
     x_index: float
     y_index: float
 
