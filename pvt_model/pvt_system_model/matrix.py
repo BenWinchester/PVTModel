@@ -892,7 +892,13 @@ def _tank_equation(
 ##################
 
 
-def calculate_matrix_equation() -> Tuple[numpy.ndarray, Tuple[float, ...]]:
+def calculate_matrix_equation(
+    best_guess_temperature_vector: Tuple[float, ...],
+    previous_temperature_vector: Tuple[float, ...],
+    pvt_panel: pvt.PVT,
+    resolution: int,
+    weather_conditions: WeatherConditions,
+) -> Tuple[numpy.ndarray, Tuple[float, ...]]:
     """
     Calculates and returns both the matrix and resultant vector for the matrix equation.
 
@@ -902,20 +908,54 @@ def calculate_matrix_equation() -> Tuple[numpy.ndarray, Tuple[float, ...]]:
 
     """
 
-    # * Set up an index for tracking the equation number.
+    # Set up an index for tracking the equation number.
+    equation_index: int = 0
 
-    # * Instantiate an empty matrix and array based on the number of temperatures
-    # * present.
+    # Determine the number of temperatures being modelled.
+    number_of_pipes = len({segment.pipe_index for segment in pvt_panel.segments})
+    number_of_x_segments = len({segment.x_index for segment in pvt_panel.segments})
+    number_of_y_segments = len({segment.y_index for segment in pvt_panel.segments})
+    number_of_temperatures = index.num_temperatures(
+        number_of_pipes, number_of_x_segments, number_of_y_segments
+    )
 
-    # * Determine the number of temperatures being modelled.
+    # Instantiate an empty matrix and array based on the number of temperatures present.
+    matrix = numpy.zeros([number_of_temperatures, number_of_temperatures])
+    reslutant_vector = numpy.zeros([number_of_temperatures, 1])
 
     # * Iterate through and generate...
 
-    # * the glass equations,
+    # Calculate the glass equations.
+    for segment in pvt_panel.segments:
+        matrix[equation_index], reslutant_vector[equation_index] = _glass_equation(
+            best_guess_temperature_vector,
+            number_of_temperatures,
+            number_of_x_segments,
+            number_of_y_segments,
+            previous_temperature_vector,
+            pvt_panel,
+            resolution,
+            segment,
+            weather_conditions,
+        )
+        equation_index += 1
 
-    # * the pv equations,
+    # Calculate the pv equations.
+    for segment in pvt_panel.segments:
+        matrix[equation_index], reslutant_vector[equation_index] = _pv_equation(
+            best_guess_temperature_vector,
+            number_of_temperatures,
+            number_of_x_segments,
+            number_of_y_segments,
+            previous_temperature_vector,
+            pvt_panel,
+            resolution,
+            segment,
+            weather_conditions,
+        )
+        equation_index += 1
 
-    # * the absorber-layer eqations,
+    # Calculate the absorber-layer eqations.
 
     # * and the pipe equations;
 
