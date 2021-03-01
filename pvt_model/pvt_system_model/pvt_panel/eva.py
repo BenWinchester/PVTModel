@@ -13,12 +13,12 @@ This module represents a eva layer within a PV-T panel.
 
 """
 
-from .__utils__ import OpticalLayer
+from .__utils__ import MicroLayer
 
 __all__ = ("EVA",)
 
 
-class EVA(OpticalLayer):
+class EVA(MicroLayer):
     """
     Represents an EVA layer within the panel.
 

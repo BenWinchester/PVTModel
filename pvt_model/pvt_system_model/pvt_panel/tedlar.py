@@ -13,12 +13,12 @@ This module represents a tedlar layer within a PV-T panel.
 
 """
 
-from .__utils__ import OpticalLayer
+from .__utils__ import MicroLayer
 
 __all__ = ("Tedlar",)
 
 
-class Tedlar(OpticalLayer):
+class Tedlar(MicroLayer):
     """
     Represents an Tedlar layer within the panel.
 

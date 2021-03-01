@@ -14,6 +14,7 @@ This module represents a single segment within a PV-T panel.
 """
 
 from dataclasses import dataclass
+from typing import Optional
 
 __all__ = (
     "Segment",
@@ -79,6 +80,9 @@ class Segment:
     .. attribute:: y_index
         The y index for this segment.
 
+    .. attribute:: pipe_index
+        The index of the attached pipe.
+
     """
 
     collector: bool
@@ -89,6 +93,7 @@ class Segment:
     width: float
     x_index: float
     y_index: float
+    pipe_index: Optional[int] = None
 
     @property
     def coordinates(self) -> SegmentCoordinates:

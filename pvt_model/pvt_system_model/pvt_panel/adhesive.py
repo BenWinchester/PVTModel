@@ -16,12 +16,12 @@ layer placed in direct contact with the upper surface of the PV module.
 
 """
 
-from .__utils__ import OpticalLayer
+from .__utils__ import MicroLayer
 
 __all__ = ("Adhesive",)
 
 
-class Adhesive(OpticalLayer):
+class Adhesive(MicroLayer):
     """
     Represents an Adhesive layer within the panel.
 

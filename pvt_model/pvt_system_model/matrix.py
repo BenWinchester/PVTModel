@@ -36,7 +36,7 @@ from . import index
 from .pvt_panel import pvt
 from .pvt_panel.segment import Segment
 
-from ..__utils__ import TemperatureName
+from ..__utils__ import TemperatureName, ProgrammerJudgementFault
 from .__utils__ import WeatherConditions
 from .constants import STEFAN_BOLTZMAN_CONSTANT
 from .physics_utils import (
@@ -53,10 +53,15 @@ __all__ = ("calculate_matrix_equation",)
 
 
 def _absorber_equation(
+    number_of_pipes: int,
     number_of_temperatures: int,
     number_of_x_segments: int,
     number_of_y_segments: int,
+    previous_temperature_vector: Tuple[float, ...],
+    pvt_panel: pvt.PVT,
+    resolution: int,
     segment: Segment,
+    weather_conditions: WeatherConditions,
 ) -> Tuple[numpy.ndarray, Tuple[float, ...]]:
     """
     Returns a matrix row and resultant vector value representing the absorber equation.
@@ -70,6 +75,193 @@ def _absorber_equation(
         - and the corresponding value in the resultant method.
 
     """
+
+    # Compute the row equation
+    row_equation = [0] * number_of_temperatures
+
+    # Compute the T_A(i, j) term
+    row_equation[
+        index.index_from_segment_coordinates(
+            number_of_x_segments,
+            number_of_y_segments,
+            TemperatureName.collector,
+            segment.x_index,
+            segment.y_index,
+        )
+    ] = (
+        # Internal heat change.
+        segment.width  # [m]
+        * segment.length  # [m]
+        * pvt_panel.collector.thickness  # [m]
+        * pvt_panel.collector.density  # [kg/m^3]
+        * pvt_panel.collector.heat_capacity  # [J/kg*K]
+        / resolution  # [s]
+        # X-wise conduction within the glass layer
+        + (2 if segment.x_index not in [0, number_of_x_segments - 1] else 1)
+        * pvt_panel.collector.conductivity  # [W/m*K]
+        * pvt_panel.collector.thickness  # [m]
+        * segment.length  # [m]
+        / segment.width  # [m]
+        # Y-wise conduction within the glass layer
+        + (2 if segment.y_index not in [0, number_of_y_segments - 1] else 1)
+        * pvt_panel.collector.conductivity  # [W/m*K]
+        * pvt_panel.collector.thickness  # [m]
+        * segment.width  # [m]
+        / segment.length  # [m]
+        # Conduction from the PV layer
+        + segment.width * segment.length / pvt_panel.pv_to_collector_thermal_resistance
+        # Conduction to the pipe, if present.
+        + (
+            segment.width  # [m]
+            * segment.length  # [m]
+            * pvt_panel.bond.conductivity  # [W/m*K]
+            / pvt_panel.bond.thickness  # [m]
+        )
+        if segment.pipe
+        else 0
+        # Loss through the back if no pipe is present.
+        + (segment.width * segment.length * pvt_panel.insulation_thermal_resistance)
+        if not segment.pipe
+        else 0
+    )
+
+    # Compute the T_A(i+1, j) term provided that that segment exists.
+    if segment.x_index + 1 < number_of_x_segments:
+        row_equation[
+            index.index_from_segment_coordinates(
+                number_of_x_segments,
+                number_of_y_segments,
+                TemperatureName.collector,
+                segment.x_index + 1,
+                segment.y_index,
+            )
+        ] = (
+            -1
+            * pvt_panel.collector.conductivity  # [W/m*K]
+            * pvt_panel.collector.thickness  # [m]
+            * segment.height
+            / segment.width
+        )
+
+    # Compute the T_A(i-1, j) term provided that that segment exists.
+    if segment.x_index > 0:
+        row_equation[
+            index.index_from_segment_coordinates(
+                number_of_x_segments,
+                number_of_y_segments,
+                TemperatureName.collector,
+                segment.x_index - 1,
+                segment.y_index,
+            )
+        ] = (
+            -1
+            * pvt_panel.collector.conductivity  # [W/m*K]
+            * pvt_panel.collector.thickness  # [m]
+            * segment.height
+            / segment.width
+        )
+
+    # Compute the T_A(i, j+1) term provided that that segment exists.
+    if segment.y_index + 1 < number_of_y_segments:
+        row_equation[
+            index.index_from_segment_coordinates(
+                number_of_x_segments,
+                number_of_y_segments,
+                TemperatureName.collector,
+                segment.x_index,
+                segment.y_index + 1,
+            )
+        ] = (
+            -1
+            * pvt_panel.collector.conductivity  # [W/m*K]
+            * pvt_panel.collector.thickness  # [m]
+            * segment.height
+            / segment.width
+        )
+
+    # Compute the T_A(i, j-1) term provided that that segment exists.
+    if segment.y_index > 0:
+        row_equation[
+            index.index_from_segment_coordinates(
+                number_of_x_segments,
+                number_of_y_segments,
+                TemperatureName.collector,
+                segment.x_index,
+                segment.y_index - 1,
+            )
+        ] = (
+            -1
+            * pvt_panel.collector.conductivity  # [W/m*K]
+            * pvt_panel.collector.thickness  # [m]
+            * segment.height
+            / segment.width
+        )
+
+    # Compute the T_pv(i, j) term provided that there is a collector layer present.
+    if segment.pv:
+        row_equation[
+            index.index_from_segment_coordinates(
+                number_of_x_segments,
+                number_of_y_segments,
+                TemperatureName.pv,
+                segment.x_index,
+                segment.y_index,
+            )
+        ] = -1 * (
+            segment.width  # [m]
+            * segment.length  # [m]
+            / pvt_panel.pv_to_collector_thermal_resistance
+        )
+
+    # Compute the T_P(pipe_number, j) term provided that there is a pipe present.
+    if segment.pipe:
+        try:
+            row_equation[
+                index.index_from_pipe_coordinates(
+                    number_of_pipes, TemperatureName.pipe, segment.pipe_index
+                )
+            ] = (
+                segment.width  # [m]
+                * segment.length  # [m]
+                * pvt_panel.bond.conductivity  # [W/m*K]
+                / pvt_panel.bond.thickness  # [m]
+            )
+        except ProgrammerJudgementFault as e:
+            raise ProgrammerJudgementFault(
+                "Error determining pipe temperature term. "
+                f"Likely that pipe index was not specified: {str(e)}"
+            ) from None
+
+    # Compute the resultant vector value.
+    resultant_vector_value = (
+        # Internal heat change term.
+        segment.width  # [m]
+        * segment.length  # [m]
+        * pvt_panel.collector.thickness  # [m]
+        * pvt_panel.collector.density  # [kg/m^3]
+        * pvt_panel.collector.heat_capacity  # [J/kg*K]
+        * previous_temperature_vector[
+            index.index_from_segment_coordinates(
+                number_of_x_segments,
+                number_of_y_segments,
+                TemperatureName.collector,
+                segment.x_index,
+                segment.y_index,
+            )
+        ]
+        / resolution  # [s]
+        # Ambient temperature term.
+        + (
+            segment.width  # [m]
+            * segment.length  # [m]
+            * weather_conditions.ambient_temperature  # [K]
+            / pvt_panel.insulation_thermal_resistance  # [m^2*K/W]
+        )
+        if not segment.pipe
+        else 0
+    )
+
+    return row_equation, resultant_vector_value
 
 
 def _fluid_continuity_equation(
@@ -425,8 +617,6 @@ def _pv_equation(
 
     """
 
-    # * Compute the row equation
-
     # Compute the row equation
     row_equation = [0] * number_of_temperatures
 
@@ -639,14 +829,20 @@ def _pv_equation(
             layer_absorptivity=pvt_panel.pv.absorptivity,
         )
         * weather_conditions.irradiance
-    )  # [W/m^2]
-    * segment.width  # [m]
-    * segment.length  # [m]
-    * (
-        1
-        - pvt_panel.pv.reference_efficiency
-        * (1 + pvt_panel.pv.thermal_coefficient * pvt_panel.pv.reference_temperature)
+        # [W/m^2]
+        + segment.width  # [m]
+        * segment.length  # [m]
+        * (
+            1
+            - pvt_panel.pv.reference_efficiency
+            * (
+                1
+                + pvt_panel.pv.thermal_coefficient * pvt_panel.pv.reference_temperature
+            )
+        )
     )
+
+    return row_equation, resultant_vector_value
 
 
 def _system_continuity_equations(

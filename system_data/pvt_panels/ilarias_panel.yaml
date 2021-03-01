@@ -42,8 +42,7 @@ pvt_system:
   horizontal_tracking: false
   vertical_tracking: false
 glass:
-  # @@@ Value NOT taken from Maria's paper.
-  absorptivity: 0.1 # [unitless]
+  absorptivity: 0.01 # [unitless]
   # @@@ Value NOT taken from Maria's paper.
   # density: 2270 # [kg/m^3]
   # @@@ Value updated from online search.
@@ -104,7 +103,7 @@ collector:
   length: 1.66 # [m]
   mass_flow_rate: 108 # [L/h]
   maximum_operating_pressure: 3.5 # [bar]
-  number_of_pipes: 14 # [pipes]
+  number_of_pipes: 1 # [pipes]
   pipe_diameter: 0.008 # [m]
   pipe_spacing: 0.095 # [m]
   recommended_flow_pressure_drop: 0.15 # [bar]
@@ -113,6 +112,9 @@ collector:
   thermal_conductivity: 310 # [W/m*K]
   thickness: 0.00012 # [m]
   transmissivity: 0.9 # [unitless]
+bond:
+  thermal_conductivity: 2.3 # [W/m*K]
+  thickness: 0.003 # [m]
 insulation:
   thickness: 0.02 # [m]
   thermal_conductivity: 0.035 # [W/m*K]

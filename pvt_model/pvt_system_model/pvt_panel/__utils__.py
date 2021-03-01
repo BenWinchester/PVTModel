@@ -14,6 +14,8 @@ various modules throughout the PVT panel component.
 
 """
 
+from dataclasses import dataclass
+
 from ..__utils__ import (
     LayerParameters,
     OpticalLayerParameters,
@@ -55,27 +57,44 @@ class Layer:
         self.thickness = layer_params.thickness
 
 
+@dataclass
+class MicroLayer:
+    """
+    Represents a layer within the panel which is small enough to ignore dynamic terms.
+
+    Such layers, such as the adhesive between two layers, are too small to be treated in
+    the same way as actual layers as their dynamic (heat capacity) terms are too small
+    to warrant consideration.
+
+    .. attribute:: conductivity
+        The conductivity of the layer, measured in Watts per meter Kelvin.
+
+    .. attribute:: thickenss
+        The thickness (depth) of the layer, measured in meters.
+
+    """
+
+    conductivity: float
+    thickness: float
+
+
 class OpticalLayer(Layer):
     """
     Represents a layer within the PV-T panel that has optical properties.
+
+    .. attribute:: absorptivity
+        The absorptivity of the layer: a dimensionless number between 0 (nothing is
+        absorbed by the layer) and 1 (all light is absorbed).
 
     .. attribute:: emissivity
         The emissivity of the layer; a dimensionless number between 0 (nothing is
         emitted by the layer) and 1 (the layer re-emits all incident light).
 
+    .. attribute:: transmissivity
+        The transmissivity of the layer: a dimensionless number between 0 (nothing is
+        transmitted through the layer) and 1 (all light is transmitted).
+
     """
-
-    # Private Attributes:
-    #
-    # .. attribute:: _absorptivity
-    #   The absorptivity of the layer: a dimensionless number between 0 (nothing is
-    #   absorbed by the layer) and 1 (all light is absorbed).
-    #
-
-    # .. attribute:: _transmissivity
-    #   The transmissivity of the layer: a dimensionless number between 0 (nothing is
-    #   transmitted through the layer) and 1 (all light is transmitted).
-    #
 
     def __init__(self, optical_params: OpticalLayerParameters) -> None:
         """
