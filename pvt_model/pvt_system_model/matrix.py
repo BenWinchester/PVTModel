@@ -38,6 +38,8 @@ from .pvt_panel.segment import Segment
 
 from ..__utils__ import TemperatureName
 from .__utils__ import WeatherConditions
+from .constants import STEFAN_BOLTZMAN_CONSTANT
+from .physics_utils import radiative_heat_transfer_coefficient
 
 __all__ = ("calculate_matrix_equation",)
 
@@ -89,13 +91,15 @@ def _fluid_continuity_equation(
 
 
 def _glass_equation(
+    best_guess_temperature_vector: Tuple[float, ...],
     number_of_temperatures: int,
     number_of_x_segments: int,
     number_of_y_segments: int,
+    previous_temperature_vector: Tuple[float, ...],
     pvt_panel: pvt.PVT,
     resolution: int,
     segment: Segment,
-    weather_conditions: WeatherConditions
+    weather_conditions: WeatherConditions,
 ) -> Tuple[numpy.ndarray, Tuple[float, ...]]:
     """
     Returns a matrix row and resultant vector value representing the glass equation.
@@ -112,6 +116,8 @@ def _glass_equation(
 
     # Compute the row equation
     row_equation = [0] * number_of_temperatures
+
+    # Compute the T_g(i, j) term
     row_equation[
         index.index_from_segment_coordinates(
             number_of_x_segments,
@@ -124,20 +130,20 @@ def _glass_equation(
         # Internal heat change.
         segment.width  # [m]
         * segment.length  # [m]
-        * pvt_panel.collector.thickness  # [m]
-        * pvt_panel.collector.density  # [kg/m^3]
-        * pvt_panel.collector.heat_capacity  # [J/kg*K]
+        * pvt_panel.glass.thickness  # [m]
+        * pvt_panel.glass.density  # [kg/m^3]
+        * pvt_panel.glass.heat_capacity  # [J/kg*K]
         / resolution  # [s]
         # X-wise conduction within the glass layer
         + (2 if segment.x_index not in [0, number_of_x_segments - 1] else 1)
-        * pvt_panel.collector.conductivity  # [W/m*K]
-        * pvt_panel.collector.thickness  # [m]
+        * pvt_panel.glass.conductivity  # [W/m*K]
+        * pvt_panel.glass.thickness  # [m]
         * segment.length  # [m]
         / segment.width  # [m]
         # Y-wise conduction within the glass layer
         + (2 if segment.y_index not in [0, number_of_y_segments - 1] else 1)
-        * pvt_panel.collector.conductivity  # [W/m*K]
-        * pvt_panel.collector.thickness  # [m]
+        * pvt_panel.glass.conductivity  # [W/m*K]
+        * pvt_panel.glass.thickness  # [m]
         * segment.width  # [m]
         / segment.length  # [m]
         # Conduction to the air.
@@ -147,11 +153,207 @@ def _glass_equation(
         # Radiation to the sky.
         + segment.width  # [m]
         * segment.length  # [m]
-        * pvt_panel.glass.emissivity
-        * 
+        * radiative_heat_transfer_coefficient(
+            destination_temperature=weather_conditions.sky_temperature,
+            radiating_to_sky=True,
+            source_emissivity=pvt_panel.glass.emissivity,
+            source_temperature=best_guess_temperature_vector[
+                index.index_from_segment_coordinates(
+                    number_of_x_segments,
+                    number_of_y_segments,
+                    TemperatureName.glass,
+                    segment.x_index,
+                    segment.y_index,
+                )
+            ],
+        )
+        # Radiation to the PV layer
+        + segment.width
+        * segment.length
+        * radiative_heat_transfer_coefficient(
+            destination_emissivity=pvt_panel.pv.emissivity,
+            destination_temperature=best_guess_temperature_vector[
+                index.index_from_segment_coordinates(
+                    number_of_x_segments,
+                    number_of_y_segments,
+                    TemperatureName.pv,
+                    segment.x_index,
+                    segment.y_index,
+                )
+            ],
+            source_emissivity=pvt_panel.glass.emissivity,
+            source_temperature=best_guess_temperature_vector[
+                index.index_from_segment_coordinates(
+                    number_of_x_segments,
+                    number_of_y_segments,
+                    TemperatureName.glass,
+                    segment.x_index,
+                    segment.y_index,
+                )
+            ],
+        )
+        # Conduction to the PV layer
+        + segment.width * segment.length / pvt_panel.air_gap_resistance
     )
 
-    # * Compute the resultant vector value.
+    # Compute the T_g(i+1, j) term provided that that segment exists.
+    if segment.x_index + 1 < number_of_x_segments:
+        row_equation[
+            index.index_from_segment_coordinates(
+                number_of_x_segments,
+                number_of_y_segments,
+                TemperatureName.glass,
+                segment.x_index + 1,
+                segment.y_index,
+            )
+        ] = (
+            -1
+            * pvt_panel.glass.conductivity  # [W/m*K]
+            * pvt_panel.glass.thickness  # [m]
+            * segment.height
+            / segment.width
+        )
+
+    # Compute the T_g(i-1, j) term provided that that segment exists.
+    if segment.x_index > 0:
+        row_equation[
+            index.index_from_segment_coordinates(
+                number_of_x_segments,
+                number_of_y_segments,
+                TemperatureName.glass,
+                segment.x_index - 1,
+                segment.y_index,
+            )
+        ] = (
+            -1
+            * pvt_panel.glass.conductivity  # [W/m*K]
+            * pvt_panel.glass.thickness  # [m]
+            * segment.height
+            / segment.width
+        )
+
+    # Compute the T_g(i, j+1) term provided that that segment exists.
+    if segment.y_index + 1 < number_of_y_segments:
+        row_equation[
+            index.index_from_segment_coordinates(
+                number_of_x_segments,
+                number_of_y_segments,
+                TemperatureName.glass,
+                segment.x_index,
+                segment.y_index + 1,
+            )
+        ] = (
+            -1
+            * pvt_panel.glass.conductivity  # [W/m*K]
+            * pvt_panel.glass.thickness  # [m]
+            * segment.height
+            / segment.width
+        )
+
+    # Compute the T_g(i, j-1) term provided that that segment exists.
+    if segment.y_index > 0:
+        row_equation[
+            index.index_from_segment_coordinates(
+                number_of_x_segments,
+                number_of_y_segments,
+                TemperatureName.glass,
+                segment.x_index,
+                segment.y_index - 1,
+            )
+        ] = (
+            -1
+            * pvt_panel.glass.conductivity  # [W/m*K]
+            * pvt_panel.glass.thickness  # [m]
+            * segment.height
+            / segment.width
+        )
+
+    # Compute the T_pv(i, j) term provided that there is a PV layer present.
+    if segment.pv:
+        row_equation[
+            index.index_from_segment_coordinates(
+                number_of_x_segments,
+                number_of_y_segments,
+                TemperatureName.pv,
+                segment.x_index,
+                segment.y_index,
+            )
+        ] = -1 * (
+            segment.width  # [m]
+            * segment.length  # [m]
+            * (
+                # Radiative term
+                radiative_heat_transfer_coefficient(
+                    destination_emissivity=pvt_panel.pv.emissivity,
+                    destination_temperature=best_guess_temperature_vector[
+                        index.index_from_segment_coordinates(
+                            number_of_x_segments,
+                            number_of_y_segments,
+                            TemperatureName.pv,
+                            segment.x_index,
+                            segment.y_index,
+                        )
+                    ],
+                    source_emissivity=pvt_panel.glass.emissivity,
+                    source_temperature=best_guess_temperature_vector[
+                        index.index_from_segment_coordinates(
+                            number_of_x_segments,
+                            number_of_y_segments,
+                            TemperatureName.glass,
+                            segment.x_index,
+                            segment.y_index,
+                        )
+                    ],
+                )
+                # Conductive term
+                + 1 / pvt_panel.air_gap_resistance
+            )
+        )
+
+    # Compute the resultant vector value.
+    resultant_vector_value = (
+        # Previous glass temperature term.
+        segment.width  # [m]
+        * segment.length  # [m]
+        * pvt_panel.glass.thickness  # [m]
+        * pvt_panel.glass.density  # [kg/m^3]
+        * pvt_panel.glass.heat_capacity  # [J/kg*K]
+        * previous_temperature_vector[
+            index.index_from_segment_coordinates(
+                number_of_x_segments,
+                number_of_y_segments,
+                TemperatureName.glass,
+                segment.x_index,
+                segment.y_index,
+            )
+        ]
+        / resolution
+        # Ambient temperature term.
+        + segment.width  # [m]
+        * segment.length  # [m]
+        * weather_conditions.wind_heat_transfer_coefficient  # [W/m^2*K]
+        * weather_conditions.ambient_temperature
+        # Sky temperature term.
+        + segment.width  # [m]
+        * segment.length  # [m]
+        * radiative_heat_transfer_coefficient(
+            destination_temperature=weather_conditions.sky_temperature,
+            radiating_to_sky=True,
+            source_emissivity=pvt_panel.glass.emissivity,
+            source_temperature=best_guess_temperature_vector[
+                index.index_from_segment_coordinates(
+                    number_of_x_segments,
+                    number_of_y_segments,
+                    TemperatureName.glass,
+                    segment.x_index,
+                    segment.y_index,
+                )
+            ],
+        )
+        * weather_conditions.sky_temperature  # [K]
+    )
+
+    return row_equation, resultant_vector_value
 
 
 def _htf_equation(
@@ -197,7 +399,15 @@ def _pipe_equation(
 
 
 def _pv_equation(
+    best_guess_temperature_vector: Tuple[float, ...],
     number_of_temperatures: int,
+    number_of_x_segments: int,
+    number_of_y_segments: int,
+    previous_temperature_vector: Tuple[float, ...],
+    pvt_panel: pvt.PVT,
+    resolution: int,
+    segment: Segment,
+    weather_conditions: WeatherConditions,
 ) -> Tuple[numpy.ndarray, Tuple[float, ...]]:
     """
     Returns a matrix row and resultant vector value representing the pv equation.
@@ -213,6 +423,181 @@ def _pv_equation(
     """
 
     # * Compute the row equation
+
+    # Compute the row equation
+    row_equation = [0] * number_of_temperatures
+
+    # Compute the T_g(i, j) term
+    row_equation[
+        index.index_from_segment_coordinates(
+            number_of_x_segments,
+            number_of_y_segments,
+            TemperatureName.pv,
+            segment.x_index,
+            segment.y_index,
+        )
+    ] = (
+        # Internal heat change.
+        segment.width  # [m]
+        * segment.length  # [m]
+        * pvt_panel.pv.thickness  # [m]
+        * pvt_panel.pv.density  # [kg/m^3]
+        * pvt_panel.pv.heat_capacity  # [J/kg*K]
+        / resolution  # [s]
+        # X-wise conduction within the glass layer
+        + (2 if segment.x_index not in [0, number_of_x_segments - 1] else 1)
+        * pvt_panel.pv.conductivity  # [W/m*K]
+        * pvt_panel.pv.thickness  # [m]
+        * segment.length  # [m]
+        / segment.width  # [m]
+        # Y-wise conduction within the glass layer
+        + (2 if segment.y_index not in [0, number_of_y_segments - 1] else 1)
+        * pvt_panel.pv.conductivity  # [W/m*K]
+        * pvt_panel.pv.thickness  # [m]
+        * segment.width  # [m]
+        / segment.length  # [m]
+        # Radiation to the glass layer
+        + segment.width
+        * segment.length
+        * radiative_heat_transfer_coefficient(
+            destination_emissivity=pvt_panel.glass.emissivity,
+            destination_temperature=best_guess_temperature_vector[
+                index.index_from_segment_coordinates(
+                    number_of_x_segments,
+                    number_of_y_segments,
+                    TemperatureName.glass,
+                    segment.x_index,
+                    segment.y_index,
+                )
+            ],
+            source_emissivity=pvt_panel.pv.emissivity,
+            source_temperature=best_guess_temperature_vector[
+                index.index_from_segment_coordinates(
+                    number_of_x_segments,
+                    number_of_y_segments,
+                    TemperatureName.pv,
+                    segment.x_index,
+                    segment.y_index,
+                )
+            ],
+        )
+        # Conduction to the glass layer
+        + segment.width * segment.length / pvt_panel.air_gap_resistance
+    )
+
+    # Compute the T_g(i+1, j) term provided that that segment exists.
+    if segment.x_index + 1 < number_of_x_segments:
+        row_equation[
+            index.index_from_segment_coordinates(
+                number_of_x_segments,
+                number_of_y_segments,
+                TemperatureName.pv,
+                segment.x_index + 1,
+                segment.y_index,
+            )
+        ] = (
+            -1
+            * pvt_panel.pv.conductivity  # [W/m*K]
+            * pvt_panel.pv.thickness  # [m]
+            * segment.height
+            / segment.width
+        )
+
+    # Compute the T_g(i-1, j) term provided that that segment exists.
+    if segment.x_index > 0:
+        row_equation[
+            index.index_from_segment_coordinates(
+                number_of_x_segments,
+                number_of_y_segments,
+                TemperatureName.pv,
+                segment.x_index - 1,
+                segment.y_index,
+            )
+        ] = (
+            -1
+            * pvt_panel.pv.conductivity  # [W/m*K]
+            * pvt_panel.pv.thickness  # [m]
+            * segment.height
+            / segment.width
+        )
+
+    # Compute the T_g(i, j+1) term provided that that segment exists.
+    if segment.y_index + 1 < number_of_y_segments:
+        row_equation[
+            index.index_from_segment_coordinates(
+                number_of_x_segments,
+                number_of_y_segments,
+                TemperatureName.pv,
+                segment.x_index,
+                segment.y_index + 1,
+            )
+        ] = (
+            -1
+            * pvt_panel.pv.conductivity  # [W/m*K]
+            * pvt_panel.pv.thickness  # [m]
+            * segment.height
+            / segment.width
+        )
+
+    # Compute the T_g(i, j-1) term provided that that segment exists.
+    if segment.y_index > 0:
+        row_equation[
+            index.index_from_segment_coordinates(
+                number_of_x_segments,
+                number_of_y_segments,
+                TemperatureName.pv,
+                segment.x_index,
+                segment.y_index - 1,
+            )
+        ] = (
+            -1
+            * pvt_panel.pv.conductivity  # [W/m*K]
+            * pvt_panel.pv.thickness  # [m]
+            * segment.height
+            / segment.width
+        )
+
+    # Compute the T_g(i, j) term provided that there is a glass layer present.
+    if segment.glass:
+        row_equation[
+            index.index_from_segment_coordinates(
+                number_of_x_segments,
+                number_of_y_segments,
+                TemperatureName.pv,
+                segment.x_index,
+                segment.y_index,
+            )
+        ] = -1 * (
+            segment.width  # [m]
+            * segment.length  # [m]
+            * (
+                # Radiative term
+                radiative_heat_transfer_coefficient(
+                    destination_emissivity=pvt_panel.glass.emissivity,
+                    destination_temperature=best_guess_temperature_vector[
+                        index.index_from_segment_coordinates(
+                            number_of_x_segments,
+                            number_of_y_segments,
+                            TemperatureName.glass,
+                            segment.x_index,
+                            segment.y_index,
+                        )
+                    ],
+                    source_emissivity=pvt_panel.pv.emissivity,
+                    source_temperature=best_guess_temperature_vector[
+                        index.index_from_segment_coordinates(
+                            number_of_x_segments,
+                            number_of_y_segments,
+                            TemperatureName.pv,
+                            segment.x_index,
+                            segment.y_index,
+                        )
+                    ],
+                )
+                # Conductive term
+                + 1 / pvt_panel.air_gap_resistance
+            )
+        )
 
     # * Compute the resultant vector value.
 

@@ -40,8 +40,8 @@ def _get_index(
     number_of_x_segments: Optional[int] = None,
     number_of_y_segments: Optional[int] = None,
     pipe_number: Optional[int] = None,
-    x_coordinate: Optional[int] = None,
-    y_coordinate: Optional[int] = None
+    x_coord: Optional[int] = None,
+    y_coord: Optional[int] = None
 ) -> int:
     """
     Returns a unique index based on the inputs.
@@ -61,10 +61,10 @@ def _get_index(
     :param pipe_number:
         The pipe number for which a coordinate should be returned.
 
-    :param x_coordinate:
+    :param x_coord:
         The x coordinate of the segment whose index is being determined.
 
-    :param y_coordinate:
+    :param y_coord:
         The y coordinate of the segment whose index is being determined.
 
     :return:
@@ -78,7 +78,7 @@ def _get_index(
 
     if temperature_name == TemperatureName.glass:
         try:
-            return number_of_x_segments * y_coordinate + x_coordinate
+            return number_of_x_segments * y_coord + x_coord
         except TypeError:
             raise ProgrammerJudgementFault(
                 "Not all parameters needed were passed in to uniquely determine a "
@@ -86,10 +86,7 @@ def _get_index(
             ) from None
     if temperature_name == TemperatureName.pv:
         try:
-            return (
-                number_of_x_segments * (number_of_y_segments + y_coordinate)
-                + x_coordinate
-            )
+            return number_of_x_segments * (number_of_y_segments + y_coord) + x_coord
         except TypeError:
             raise ProgrammerJudgementFault(
                 "Not all parameters needed were passed in to uniquely determine a "
@@ -97,10 +94,7 @@ def _get_index(
             ) from None
     if temperature_name == TemperatureName.collector:
         try:
-            return (
-                number_of_x_segments * (2 * number_of_y_segments + y_coordinate)
-                + x_coordinate
-            )
+            return number_of_x_segments * (2 * number_of_y_segments + y_coord) + x_coord
         except TypeError:
             raise ProgrammerJudgementFault(
                 "Not all parameters needed were passed in to uniquely determine an "
@@ -109,7 +103,7 @@ def _get_index(
     if temperature_name == TemperatureName.pipe:
         try:
             return (
-                number_of_x_segments * (3 * number_of_y_segments + y_coordinate)
+                number_of_x_segments * (3 * number_of_y_segments + y_coord)
                 + pipe_number
             )
         except TypeError:
@@ -121,7 +115,7 @@ def _get_index(
         try:
             return (
                 number_of_x_segments
-                * (3 * number_of_y_segments + number_of_pipes + y_coordinate)
+                * (3 * number_of_y_segments + number_of_pipes + y_coord)
                 + pipe_number
             )
         except TypeError:
@@ -133,7 +127,7 @@ def _get_index(
         try:
             return (
                 number_of_x_segments
-                * (3 * number_of_y_segments + 2 * number_of_pipes + y_coordinate)
+                * (3 * number_of_y_segments + 2 * number_of_pipes + y_coord)
                 + pipe_number
             )
         except TypeError:
@@ -145,7 +139,7 @@ def _get_index(
         try:
             return (
                 number_of_x_segments
-                * (3 * number_of_y_segments + 3 * number_of_pipes + y_coordinate)
+                * (3 * number_of_y_segments + 3 * number_of_pipes + y_coord)
                 + pipe_number
             )
         except TypeError:
@@ -241,8 +235,8 @@ def index_from_segment_coordinates(
     number_of_x_segments: int,
     number_of_y_segments: int,
     temperature_name: TemperatureName,
-    x_coordinate: int,
-    y_coordinate: int,
+    x_coord: int,
+    y_coord: int,
 ) -> int:
     """
     Computes an index for a segmented layer based on the coordinates of the segment.
@@ -256,10 +250,10 @@ def index_from_segment_coordinates(
     :param temperature_name:
         The name of the layer/temperature type being computed.
 
-    :param x_coordinate:
+    :param x_coord:
         The x coordinate of the segment.
 
-    :param y_coordinate:
+    :param y_coord:
         The y coordinate of the segment.
 
     :return:
@@ -271,8 +265,8 @@ def index_from_segment_coordinates(
         temperature_name,
         number_of_x_segments=number_of_x_segments,
         number_of_y_segments=number_of_y_segments,
-        x_coordinate=x_coordinate,
-        y_coordinate=y_coordinate,
+        x_coord=x_coord,
+        y_coord=y_coord,
     )
 
 

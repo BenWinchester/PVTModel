@@ -21,7 +21,7 @@ import math
 from typing import Dict, Optional, Tuple
 
 
-from . import collector, glass, pv
+from . import eva, collector, glass, pv, tedlar
 
 from ...__utils__ import MissingParametersError
 
@@ -31,6 +31,7 @@ from ..__utils__ import (
     PVParameters,
     WeatherConditions,
 )
+from ..constants import THERMAL_CONDUCTIVITY_OF_AIR
 
 from .segment import Segment, SegmentCoordinates
 
@@ -111,6 +112,7 @@ class PVT:
         area: float,
         collector_parameters: CollectorParameters,
         diffuse_reflection_coefficient: float,
+        eva_parameters: OpticalLayerParameters,
         glass_parameters: OpticalLayerParameters,
         latitude: float,
         longitude: float,
@@ -118,6 +120,7 @@ class PVT:
         pv_parameters: PVParameters,
         pv_to_collector_thermal_conductance: float,
         segments: Dict[SegmentCoordinates, Segment],
+        tedlar_parameters: OpticalLayerParameters,
         timezone: datetime.timezone,
         *,
         azimuthal_orientation: Optional[float] = None,
@@ -139,6 +142,9 @@ class PVT:
 
         :param diffuse_reflection_coefficient:
             The coefficient of diffuse reflectivity of the upper layer.
+
+        :param eva_parameters:
+            Parameters used to instantiate the EVA layer.
 
         :param glass_parameters:
             Parameters used to instantiate the glass layer.
@@ -164,6 +170,9 @@ class PVT:
         :param segments:
             A mapping between segment coordinate and segment for all segments to be
             included in the layer.
+
+        :param tedlar_parameters:
+            Parameters used to instantiate the tedlar layer.
 
         :param timezone:
             The timezone in which the PV-T system is installed.
@@ -215,10 +224,12 @@ class PVT:
 
         # Instantiate the layers.
         self.collector = collector.Collector(collector_parameters)
+        self.eva = eva.EVA(eva_parameters)
         self.glass: glass.Glass = glass.Glass(
             diffuse_reflection_coefficient, glass_parameters
         )
         self.pv: pv.PV = pv.PV(pv_parameters)
+        self.tedlar = tedlar.Tedlar(tedlar_parameters)
 
         # * Instantiate and store the segments on the class.
 
@@ -232,13 +243,16 @@ class PVT:
         """
 
         return (
-            "PVT("
-            f"collector: {self.collector}, "
-            f"glass: {self.glass}, "
-            f"pv: {self.pv}, "
-            f"azimuthal_orientation: {self._azimuthal_orientation}, "
+            "PVT(\n"
+            f"  collector: {self.collector},\n"
+            f"  glass: {self.glass},\n"
+            f"  eva: {self.eva},\n"
+            f"  tedlar: {self.tedlar}\n"
+            f"  pv: {self.pv},\n"
+            f"  azimuthal_orientation: {self._azimuthal_orientation}, "
             f"coordinates: {self.latitude}N {self.longitude}E, "
-            f"tilt: {self._tilt}deg, "
+            f"tilt: {self._tilt}deg"
+            ")"
         )
 
     def _get_solar_orientation_diff(
@@ -281,6 +295,45 @@ class PVT:
                 math.cos(math.radians(horizontal_diff))
                 * math.cos(math.radians(vertical_diff))
             )
+        )
+
+    @property
+    def air_gap_heat_transfer_coefficient(self) -> float:
+        """
+        Gives the heat-transfer coefficient for heat transfer across the air gap.
+
+        :return:
+            The heat transfer coefficient across the air gap, measured in Watts per
+            meter Kelvin.
+
+        """
+
+        return (
+            THERMAL_CONDUCTIVITY_OF_AIR
+            / self.air_gap_thickness
+            * (
+                1
+                # @@@ FIXME - Additional code needed here to more accurately match
+                # Ilaria's model. See page 75 of the equation specification.
+            )
+        )
+
+    @property
+    def air_gap_resistance(self) -> float:
+        """
+        Returns the thermal resistance of the air gap between the PV and glass layers.
+
+        :return:
+            The thermal resistance, measured in Kelvin meter squared per Watt.
+
+        """
+
+        return (
+            self.eva.thickness / self.eva.conductivity
+            + self.glass.thickness / self.glass.conductivity
+            + self.pv.thickness / (2 * self.pv.conductivity)
+            + self.glass.thickness / (2 * self.glass.conductivity)
+            + 1 / self.air_gap_heat_transfer_coefficient
         )
 
     @property
