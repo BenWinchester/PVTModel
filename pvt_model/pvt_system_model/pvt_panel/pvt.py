@@ -21,7 +21,7 @@ import math
 from typing import Dict, Optional, Tuple
 
 
-from . import eva, collector, glass, pv, tedlar
+from . import adhesive, eva, collector, glass, pv, tedlar
 
 from ...__utils__ import MissingParametersError
 
@@ -108,6 +108,7 @@ class PVT:
 
     def __init__(
         self,
+        adhesive_parameters: OpticalLayerParameters,
         air_gap_thickness: float,
         area: float,
         collector_parameters: CollectorParameters,
@@ -130,6 +131,9 @@ class PVT:
     ) -> None:
         """
         Instantiate an instance of the PV-T collector class.
+
+        :param adhesive_parameters:
+            Parameters used to instantiate the adhesive layer.
 
         :param air_gap_thickness:
             The thickness, in meters, of the air gap between the PV and glass layers.
@@ -223,6 +227,7 @@ class PVT:
             )
 
         # Instantiate the layers.
+        self.adhesive = adhesive.Adhesive(adhesive_parameters)
         self.collector = collector.Collector(collector_parameters)
         self.eva = eva.EVA(eva_parameters)
         self.glass: glass.Glass = glass.Glass(
@@ -246,9 +251,10 @@ class PVT:
             "PVT(\n"
             f"  collector: {self.collector},\n"
             f"  glass: {self.glass},\n"
-            f"  eva: {self.eva},\n"
-            f"  tedlar: {self.tedlar}\n"
             f"  pv: {self.pv},\n"
+            f"  eva: {self.eva},\n"
+            f"  adhesive: {self.adhesive}\n"
+            f"  tedlar: {self.tedlar}\n"
             f"  azimuthal_orientation: {self._azimuthal_orientation}, "
             f"coordinates: {self.latitude}N {self.longitude}E, "
             f"tilt: {self._tilt}deg"
@@ -415,3 +421,20 @@ class PVT:
         # >>> Beginning of Maria's profile fetching.
         return weather_conditions.irradiance
         # <<< End of Maria's profile fetching.
+
+    @property
+    def pv_to_collector_thermal_resistance(self) -> float:
+        """
+        Returns the thermal resistance between the PV and collector layers.
+
+        :return:
+            The thermal resistance, in meters squared Kelvin per Watt, between the PV
+            and collector layers.
+
+        """
+
+        return (
+            self.eva.thickness / self.eva.conductivity
+            + self.tedlar.thickness / self.tedlar.conductivity
+            + self.adhesive.thickness / self.adhesive.conductivity
+        )

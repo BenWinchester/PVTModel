@@ -39,7 +39,10 @@ from .pvt_panel.segment import Segment
 from ..__utils__ import TemperatureName
 from .__utils__ import WeatherConditions
 from .constants import STEFAN_BOLTZMAN_CONSTANT
-from .physics_utils import radiative_heat_transfer_coefficient
+from .physics_utils import (
+    radiative_heat_transfer_coefficient,
+    transmissivity_absorptivity_product,
+)
 
 __all__ = ("calculate_matrix_equation",)
 
@@ -427,7 +430,7 @@ def _pv_equation(
     # Compute the row equation
     row_equation = [0] * number_of_temperatures
 
-    # Compute the T_g(i, j) term
+    # Compute the T_pv(i, j) term
     row_equation[
         index.index_from_segment_coordinates(
             number_of_x_segments,
@@ -483,9 +486,22 @@ def _pv_equation(
         )
         # Conduction to the glass layer
         + segment.width * segment.length / pvt_panel.air_gap_resistance
+        # Conduction to the absorber layer
+        + segment.width * segment.length / pvt_panel.pv_to_collector_thermal_resistance
+        # Solar thermal absorption
+        - transmissivity_absorptivity_product(
+            diffuse_reflection_coefficient=pvt_panel.glass.diffuse_reflection_coefficient,
+            glass_transmissivity=pvt_panel.glass.transmissivity,
+            layer_absorptivity=pvt_panel.pv.absorptivity,
+        )
+        * weather_conditions.irradiance  # [W/m^2]
+        * segment.width  # [m]
+        * segment.length  # [m]
+        * pvt_panel.pv.reference_efficiency
+        * pvt_panel.pv.thermal_coefficient
     )
 
-    # Compute the T_g(i+1, j) term provided that that segment exists.
+    # Compute the T_pv(i+1, j) term provided that that segment exists.
     if segment.x_index + 1 < number_of_x_segments:
         row_equation[
             index.index_from_segment_coordinates(
@@ -503,7 +519,7 @@ def _pv_equation(
             / segment.width
         )
 
-    # Compute the T_g(i-1, j) term provided that that segment exists.
+    # Compute the T_pv(i-1, j) term provided that that segment exists.
     if segment.x_index > 0:
         row_equation[
             index.index_from_segment_coordinates(
@@ -521,7 +537,7 @@ def _pv_equation(
             / segment.width
         )
 
-    # Compute the T_g(i, j+1) term provided that that segment exists.
+    # Compute the T_pv(i, j+1) term provided that that segment exists.
     if segment.y_index + 1 < number_of_y_segments:
         row_equation[
             index.index_from_segment_coordinates(
@@ -539,7 +555,7 @@ def _pv_equation(
             / segment.width
         )
 
-    # Compute the T_g(i, j-1) term provided that that segment exists.
+    # Compute the T_pv(i, j-1) term provided that that segment exists.
     if segment.y_index > 0:
         row_equation[
             index.index_from_segment_coordinates(
@@ -599,7 +615,38 @@ def _pv_equation(
             )
         )
 
-    # * Compute the resultant vector value.
+    # Compute the T_A(i, j) term provided that there is a collector layer present.
+    if segment.collector:
+        row_equation[
+            index.index_from_segment_coordinates(
+                number_of_x_segments,
+                number_of_y_segments,
+                TemperatureName.collector,
+                segment.x_index,
+                segment.y_index,
+            )
+        ] = -1 * (
+            segment.width  # [m]
+            * segment.length  # [m]
+            / pvt_panel.pv_to_collector_thermal_resistance
+        )
+
+    # Compute the resultant vector value.
+    resultant_vector_value = (
+        transmissivity_absorptivity_product(
+            diffuse_reflection_coefficient=pvt_panel.glass.diffuse_reflection_coefficient,
+            glass_transmissivity=pvt_panel.glass.transmissivity,
+            layer_absorptivity=pvt_panel.pv.absorptivity,
+        )
+        * weather_conditions.irradiance
+    )  # [W/m^2]
+    * segment.width  # [m]
+    * segment.length  # [m]
+    * (
+        1
+        - pvt_panel.pv.reference_efficiency
+        * (1 + pvt_panel.pv.thermal_coefficient * pvt_panel.pv.reference_temperature)
+    )
 
 
 def _system_continuity_equations(
