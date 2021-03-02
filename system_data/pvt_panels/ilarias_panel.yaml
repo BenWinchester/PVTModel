@@ -100,11 +100,12 @@ collector:
   emissivity: 0.05 # [unitless]
   # @@@ Value NOT taken from Maria's paper.
   heat_capacity: 386 # [J/kg*K]
+  inner_pipe_diameter: 0.0074 #[m]
   length: 1.66 # [m]
   mass_flow_rate: 108 # [L/h]
   maximum_operating_pressure: 3.5 # [bar]
   number_of_pipes: 1 # [pipes]
-  pipe_diameter: 0.008 # [m]
+  outer_pipe_diameter: 0.008 # [m]
   pipe_spacing: 0.095 # [m]
   recommended_flow_pressure_drop: 0.15 # [bar]
   recommended_mass_flow_rate: 108 # [L/h]

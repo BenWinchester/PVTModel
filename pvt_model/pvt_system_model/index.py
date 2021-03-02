@@ -207,7 +207,10 @@ def _get_index(
 
 
 def index_from_pipe_coordinates(
-    number_of_pipes: int, temperature_name: TemperatureName, pipe_number: int
+    number_of_pipes: int,
+    temperature_name: TemperatureName,
+    pipe_number: int,
+    y_coord: int,
 ) -> int:
     """
     Computes an index for a segmented pipe based on the coordinates of the segment.
@@ -221,13 +224,19 @@ def index_from_pipe_coordinates(
     :param pipe_number:
         The number of the pipe.
 
+    :param y_coord:
+        The y coordinate of the segment.
+
     :return:
         The index describing teh pipe and segment uniquely.
 
     """
 
     return _get_index(
-        temperature_name, number_of_pipes=number_of_pipes, pipe_number=pipe_number
+        temperature_name,
+        number_of_pipes=number_of_pipes,
+        pipe_number=pipe_number,
+        y_coord=y_coord,
     )
 
 

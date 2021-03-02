@@ -515,13 +515,12 @@ class CollectorParameters(OpticalLayerParameters):
     """
     Contains parameters needed to instantiate a collector layer within the PV-T panel.
 
-    .. attribute:: bulk_water_temperature
-        The temperature of the bulk water within the collector, I.E., the temperature of
-        the heat-transfer fluid within the collector. This is measured in Kelvin.
-
     .. attribute:: htf_heat_capacity
         The heat capacity of the heat-transfer fluid through the collector, measured in
         Joules per kilogram Kelvin.
+
+    .. attribute:: inner_pipe_diameter
+        The diameter of the inner wall of the pipes, in meters.
 
     .. attribute:: length
         The legnth of the collector, measured in meters.
@@ -537,21 +536,17 @@ class CollectorParameters(OpticalLayerParameters):
         multiple pipes flow linearly down the length of the collector, with the HTF
         taking a single pass through the collector.
 
-    .. attribute:: output_water_temperature
-        The temperature, in Kelvin, of water outputted by the layer.
-
-    .. attribute:: pipe_diameter
-        The diameter of the pipe, in meters.
+    .. attribute:: outer_pipe_diameter
+        The diameter of the outer wall of the pipes, in meters.
 
     """
 
-    bulk_water_temperature: float
     htf_heat_capacity: float
+    inner_pipe_diameter: float
     length: float
     mass_flow_rate: float
     number_of_pipes: float
-    output_water_temperature: float
-    pipe_diameter: float
+    outer_pipe_diameter: float
 
 
 @dataclass

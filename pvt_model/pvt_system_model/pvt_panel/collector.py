@@ -89,13 +89,12 @@ class Collector(OpticalLayer):
             )
         )
 
+        self.htf_heat_capacity = collector_params.htf_heat_capacity
+        self.inner_pipe_diameter = collector_params.inner_pipe_diameter
         self.length = collector_params.length
         self._mass_flow_rate = collector_params.mass_flow_rate
         self.number_of_pipes = collector_params.number_of_pipes
-        self.pipe_diameter = collector_params.pipe_diameter
-        self.bulk_water_temperature = collector_params.bulk_water_temperature
-        self.htf_heat_capacity = collector_params.htf_heat_capacity
-        self.output_water_temperature = collector_params.output_water_temperature
+        self.outer_pipe_diameter = collector_params.pipe_diameter
 
     def __repr__(self) -> str:
         """
@@ -108,58 +107,20 @@ class Collector(OpticalLayer):
 
         return (
             "Collector("
-            f"bulk_water_temperature: {self.bulk_water_temperature}, "
+            f"absorptivity: {self.absorptivity}, "
+            f"conductivity: {self.conductivity}W/m^2*K, "
+            f"desntiy: {self.density}kg/m^3, "
+            f"emissivity: {self.emissivity}, "
             f"heat_capacity: {self.heat_capacity}J/kg*K, "
             f"htf_heat_capacity: {self.htf_heat_capacity}J/kg*K, "
+            f"inner_pipe_diameter: {self.inner_pipe_diameter}m, "
+            f"length: {self.length}m, "
             f"mass_flow_rate: {self.mass_flow_rate}kg/s, "
-            f"output_temperature: {self.output_water_temperature}K, "
-            f"thickness: {self.thickness}m"
+            f"outer_pipe_diameter: {self.outer_pipe_diameter}m, "
+            f"thickness: {self.thickness}m, "
+            f"transmissivity: {self.transmissivity}"
             ")"
         )
-
-    @property
-    def collector_to_htf_efficiency(self) -> float:
-        """
-        Computes the efficiency using an NTU method between the collector and the HTF.
-
-        :return:
-            The efficiency of the heat transfer process between the collector and the HTF.
-
-        """
-        # Compute the required collector to HTF efficiency
-        collector_to_htf_efficiency = 1 - numpy.exp(
-            -constants.NUMBER_OF_COLLECTORS
-            * (
-                (
-                    1
-                    / (
-                        self.convective_heat_transfer_coefficient_of_water  # [W/m^2*K]
-                        * numpy.pi
-                        * self.pipe_diameter  # [m]
-                        * self.length  # [m]
-                        * self.number_of_pipes
-                    )  # [W/K]
-                    + 0.001
-                    / (
-                        385
-                        * 0.2
-                        * self.pipe_diameter  # [m]
-                        * self.length  # [m]
-                        * self.number_of_pipes
-                    )  # [m^2]
-                    + 1 / 500
-                )
-                ** (
-                    -1
-                    / (
-                        self.mass_flow_rate  # [kg/s]
-                        * self.htf_heat_capacity  # [J/kg*K]
-                    )  # [W/K]
-                )
-            )
-        )
-
-        return collector_to_htf_efficiency
 
     @property
     def convective_heat_transfer_coefficient_of_water(self) -> float:
@@ -176,12 +137,7 @@ class Collector(OpticalLayer):
         # @@@ Maria here used a value of 259, irrespective of these properties.
         # @@@ For temporary consistency, this value is used.
 
-        # return 259
-
-        convective_heat_transfer_coefficient = (
-            NUSSELT_NUMBER * THERMAL_CONDUCTIVITY_OF_WATER / self.pipe_diameter
-        )
-        return convective_heat_transfer_coefficient
+        return 259
 
     @property
     def htf_surface_area(self) -> float:
@@ -199,7 +155,7 @@ class Collector(OpticalLayer):
         return (
             self.number_of_pipes  # [pipes]
             * math.pi
-            * self.pipe_diameter  # [m]
+            * self.inner_pipe_diameter  # [m]
             * self.length  # [m]
         )
 
@@ -216,7 +172,7 @@ class Collector(OpticalLayer):
         return (
             self.number_of_pipes  # [pipes]
             * math.pi
-            * (self.pipe_diameter / 2) ** 2  # [m^2]
+            * (self.inner_pipe_diameter / 2) ** 2  # [m^2]
             * self.length
         )
 
