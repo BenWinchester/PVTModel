@@ -16,21 +16,11 @@ This module represents a thermal collector within a PV-T panel.
 import logging
 import math
 
-import numpy
-
-from .. import constants
-
 from ..__utils__ import (
     CollectorParameters,
     LOGGER_NAME,
     OpticalLayerParameters,
 )
-
-from ..constants import (
-    NUSSELT_NUMBER,
-    THERMAL_CONDUCTIVITY_OF_WATER,
-)
-
 from .__utils__ import (
     OpticalLayer,
 )
@@ -94,7 +84,7 @@ class Collector(OpticalLayer):
         self.length = collector_params.length
         self._mass_flow_rate = collector_params.mass_flow_rate
         self.number_of_pipes = collector_params.number_of_pipes
-        self.outer_pipe_diameter = collector_params.pipe_diameter
+        self.outer_pipe_diameter = collector_params.outer_pipe_diameter
 
     def __repr__(self) -> str:
         """

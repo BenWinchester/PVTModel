@@ -32,15 +32,17 @@ from typing import Any, Dict, Optional, Set, Tuple, Union
 import json
 import pysolar
 
+from ..__utils__ import MissingParametersError
+
+
 from .constants import ZERO_CELCIUS_OFFSET
 from .__utils__ import (
-    LOGGER_NAME,
-    MissingParametersError,
-    ProgrammerJudgementFault,
     BaseDailyProfile,
     Date,
-    WeatherConditions,
+    LOGGER_NAME,
+    ProgrammerJudgementFault,
     read_yaml,
+    WeatherConditions,
 )
 
 __all__ = ("WeatherForecaster",)
@@ -593,7 +595,7 @@ class WeatherForecaster:
         else:
             # Cycle through the various profile files, opening the profiles and storing as a
             # mapping.
-            monthly_irradiance_profiles: Dict[Date, _DailyProfile] = dict()
+            monthly_irradiance_profiles = dict()
             for filename in solar_irradiance_filenames:
                 with open(filename, "r") as f:
                     filedata = json.load(f)

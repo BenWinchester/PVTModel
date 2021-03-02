@@ -28,7 +28,7 @@ The temperatures represented in the vector T are:
 
 """
 
-from typing import Set, Tuple
+from typing import List, Set, Tuple
 
 import numpy
 
@@ -57,12 +57,12 @@ def _absorber_equation(
     number_of_temperatures: int,
     number_of_x_segments: int,
     number_of_y_segments: int,
-    previous_temperature_vector: Tuple[float, ...],
+    previous_temperature_vector: List[float],
     pvt_panel: pvt.PVT,
     resolution: int,
     segment: Segment,
     weather_conditions: WeatherConditions,
-) -> Tuple[Tuple[float, ...], float]:
+) -> Tuple[List[float], float]:
     """
     Returns a matrix row and resultant vector value representing the absorber equation.
 
@@ -77,7 +77,7 @@ def _absorber_equation(
     """
 
     # Compute the row equation
-    row_equation = [0] * number_of_temperatures
+    row_equation: List[float] = [0] * number_of_temperatures
 
     # Compute the T_A(i, j) term
     row_equation[
@@ -139,7 +139,7 @@ def _absorber_equation(
             -1
             * pvt_panel.collector.conductivity  # [W/m*K]
             * pvt_panel.collector.thickness  # [m]
-            * segment.height
+            * segment.length
             / segment.width
         )
 
@@ -157,7 +157,7 @@ def _absorber_equation(
             -1
             * pvt_panel.collector.conductivity  # [W/m*K]
             * pvt_panel.collector.thickness  # [m]
-            * segment.height
+            * segment.length
             / segment.width
         )
 
@@ -175,7 +175,7 @@ def _absorber_equation(
             -1
             * pvt_panel.collector.conductivity  # [W/m*K]
             * pvt_panel.collector.thickness  # [m]
-            * segment.height
+            * segment.length
             / segment.width
         )
 
@@ -193,7 +193,7 @@ def _absorber_equation(
             -1
             * pvt_panel.collector.conductivity  # [W/m*K]
             * pvt_panel.collector.thickness  # [m]
-            * segment.height
+            * segment.length
             / segment.width
         )
 
@@ -215,6 +215,11 @@ def _absorber_equation(
 
     # Compute the T_P(pipe_number, j) term provided that there is a pipe present.
     if segment.pipe:
+        if segment.pipe_index is None:
+            raise ProgrammerJudgementFault(
+                "A segment specifies a pipe is present yet no pipe index is supplied. "
+                f"Segment: {str(segment)}"
+            )
         try:
             row_equation[
                 index.index_from_pipe_coordinates(
@@ -271,7 +276,7 @@ def _boundary_condition_equations(
     number_of_temperatures: int,
     number_of_x_segments: int,
     number_of_y_segments: int,
-) -> Set[Tuple[Tuple[float, ...], float]]:
+) -> Set[Tuple[List[float], float]]:
     """
     Returns matrix rows and resultant vector values representing boundary conditions.
 
@@ -295,7 +300,7 @@ def _boundary_condition_equations(
 
     """
 
-    equations = set()
+    equations: Set[Tuple[List[float], float]] = set()
 
     # Work through each layer, applying the boundary conditions.
     for temperature_name in {
@@ -306,7 +311,7 @@ def _boundary_condition_equations(
         # Work along both "left" and "right" edges, applying the boundary conditions.
         for y_coord in range(number_of_y_segments):
             # Equation 1: Zero temperature gradient at x=0.
-            row_equation = [0] * number_of_temperatures
+            row_equation: List[float] = [0] * number_of_temperatures
             row_equation[
                 index.index_from_segment_coordinates(
                     number_of_x_segments,
@@ -400,7 +405,7 @@ def _fluid_continuity_equation(
     number_of_pipes: int,
     number_of_temperatures: int,
     segment: Segment,
-) -> Tuple[Tuple[float, ...], float]:
+) -> Tuple[List[float], float]:
     """
     Returns a matrix row and resultant vector value representing continuity of the htf.
 
@@ -415,14 +420,14 @@ def _fluid_continuity_equation(
     """
 
     # Compute the row equation
-    row_equation = [0] * number_of_temperatures
+    row_equation: List[float] = [0] * number_of_temperatures
 
     # Compute the T_f,out(#, j) term.
     row_equation[
         index.index_from_pipe_coordinates(
             number_of_pipes,
             TemperatureName.htf_out,
-            segment.pipe_index,
+            segment.pipe_index,  # type: ignore
             segment.y_index,
         )
     ] = -1
@@ -431,7 +436,7 @@ def _fluid_continuity_equation(
         index.index_from_pipe_coordinates(
             number_of_pipes,
             TemperatureName.htf_in,
-            segment.pipe_index,
+            segment.pipe_index,  # type: ignore
             segment.y_index + 1,
         )
     ] = 1
@@ -440,16 +445,16 @@ def _fluid_continuity_equation(
 
 
 def _glass_equation(
-    best_guess_temperature_vector: Tuple[float, ...],
+    best_guess_temperature_vector: List[float],
     number_of_temperatures: int,
     number_of_x_segments: int,
     number_of_y_segments: int,
-    previous_temperature_vector: Tuple[float, ...],
+    previous_temperature_vector: List[float],
     pvt_panel: pvt.PVT,
     resolution: int,
     segment: Segment,
     weather_conditions: WeatherConditions,
-) -> Tuple[Tuple[float, ...], float]:
+) -> Tuple[List[float], float]:
     """
     Returns a matrix row and resultant vector value representing the glass equation.
 
@@ -464,7 +469,7 @@ def _glass_equation(
     """
 
     # Compute the row equation
-    row_equation = [0] * number_of_temperatures
+    row_equation: List[float] = [0] * number_of_temperatures
 
     # Compute the T_g(i, j) term
     row_equation[
@@ -559,7 +564,7 @@ def _glass_equation(
             -1
             * pvt_panel.glass.conductivity  # [W/m*K]
             * pvt_panel.glass.thickness  # [m]
-            * segment.height
+            * segment.length
             / segment.width
         )
 
@@ -577,7 +582,7 @@ def _glass_equation(
             -1
             * pvt_panel.glass.conductivity  # [W/m*K]
             * pvt_panel.glass.thickness  # [m]
-            * segment.height
+            * segment.length
             / segment.width
         )
 
@@ -595,7 +600,7 @@ def _glass_equation(
             -1
             * pvt_panel.glass.conductivity  # [W/m*K]
             * pvt_panel.glass.thickness  # [m]
-            * segment.height
+            * segment.length
             / segment.width
         )
 
@@ -613,7 +618,7 @@ def _glass_equation(
             -1
             * pvt_panel.glass.conductivity  # [W/m*K]
             * pvt_panel.glass.thickness  # [m]
-            * segment.height
+            * segment.length
             / segment.width
         )
 
@@ -708,11 +713,11 @@ def _glass_equation(
 def _htf_equation(
     number_of_pipes: int,
     number_of_temperatures: int,
-    previous_temperature_vector: Tuple[float, ...],
+    previous_temperature_vector: List[float],
     pvt_panel: pvt.PVT,
     resolution: int,
     segment: Segment,
-) -> Tuple[Tuple[float, ...], float]:
+) -> Tuple[List[float], float]:
     """
     Returns a matrix row and resultant vector value representing the glass equation.
 
@@ -727,12 +732,15 @@ def _htf_equation(
     """
 
     # Compute the row equation
-    row_equation = [0] * number_of_temperatures
+    row_equation: List[float] = [0] * number_of_temperatures
 
     # Compute the T_f(#, j) term.
     row_equation[
         index.index_from_pipe_coordinates(
-            number_of_pipes, TemperatureName.htf, segment.pipe_index, segment.y_index
+            number_of_pipes,
+            TemperatureName.htf,
+            segment.pipe_index,  # type: ignore
+            segment.y_index,
         )
     ] = (
         # Internal heat change.
@@ -752,7 +760,10 @@ def _htf_equation(
     # Compute the T_f,in(#, j) term.
     row_equation[
         index.index_from_pipe_coordinates(
-            number_of_pipes, TemperatureName.htf_in, segment.pipe_index, segment.y_index
+            number_of_pipes,
+            TemperatureName.htf_in,
+            segment.pipe_index,  # type: ignore
+            segment.y_index,
         )
     ] = -1 * (
         pvt_panel.collector.mass_flow_rate  # [kg/s]
@@ -764,7 +775,7 @@ def _htf_equation(
         index.index_from_pipe_coordinates(
             number_of_pipes,
             TemperatureName.htf_out,
-            segment.pipe_index,
+            segment.pipe_index,  # type: ignore
             segment.y_index,
         )
     ] = (
@@ -775,7 +786,10 @@ def _htf_equation(
     # Compute the T_P(#, j) term.
     row_equation[
         index.index_from_pipe_coordinates(
-            number_of_pipes, TemperatureName.pipe, segment.pipe_index, segment.y_index
+            number_of_pipes,
+            TemperatureName.pipe,
+            segment.pipe_index,  # type: ignore
+            segment.y_index,
         )
     ] = -1 * (
         # Heat transfer from the pipe.
@@ -797,7 +811,7 @@ def _htf_equation(
             index.index_from_pipe_coordinates(
                 number_of_pipes,
                 TemperatureName.htf,
-                segment.pipe_index,
+                segment.pipe_index,  # type: ignore
                 segment.y_index,
             )
         ]
@@ -812,12 +826,12 @@ def _pipe_equation(
     number_of_temperatures: int,
     number_of_x_segments: int,
     number_of_y_segments: int,
-    previous_temperature_vector: Tuple[float, ...],
+    previous_temperature_vector: List[float],
     pvt_panel: pvt.PVT,
     resolution: int,
     segment: Segment,
     weather_conditions: WeatherConditions,
-) -> Tuple[Tuple[float, ...], float]:
+) -> Tuple[List[float], float]:
     """
     Returns a matrix row and resultant vector value representing the pipe equation.
 
@@ -832,12 +846,15 @@ def _pipe_equation(
     """
 
     # Compute the row equation
-    row_equation = [0] * number_of_temperatures
+    row_equation: List[float] = [0] * number_of_temperatures
 
     # Compute the T_P(#, j) term.
     row_equation[
         index.index_from_pipe_coordinates(
-            number_of_pipes, TemperatureName.pipe, segment.pipe_index, segment.y_index
+            number_of_pipes,
+            TemperatureName.pipe,
+            segment.pipe_index,  # type: ignore
+            segment.y_index,
         )
     ] = (
         # Internal heat change.
@@ -885,7 +902,10 @@ def _pipe_equation(
     # Compute the T_f(#, j) term.
     row_equation[
         index.index_from_pipe_coordinates(
-            number_of_pipes, TemperatureName.htf, segment.pipe_index, segment.y_index
+            number_of_pipes,
+            TemperatureName.htf,
+            segment.pipe_index,  # type: ignore
+            segment.y_index,
         )
     ] = -1 * (
         # Heat transfer from the pipe.
@@ -910,7 +930,7 @@ def _pipe_equation(
             index.index_from_pipe_coordinates(
                 number_of_pipes,
                 TemperatureName.pipe,
-                segment.pipe_index,
+                segment.pipe_index,  # type: ignore
                 segment.y_index,
             )
         ]
@@ -926,16 +946,16 @@ def _pipe_equation(
 
 
 def _pv_equation(
-    best_guess_temperature_vector: Tuple[float, ...],
+    best_guess_temperature_vector: List[float],
     number_of_temperatures: int,
     number_of_x_segments: int,
     number_of_y_segments: int,
-    previous_temperature_vector: Tuple[float, ...],
+    previous_temperature_vector: List[float],
     pvt_panel: pvt.PVT,
     resolution: int,
     segment: Segment,
     weather_conditions: WeatherConditions,
-) -> Tuple[Tuple[float, ...], float]:
+) -> Tuple[List[float], float]:
     """
     Returns a matrix row and resultant vector value representing the pv equation.
 
@@ -950,7 +970,7 @@ def _pv_equation(
     """
 
     # Compute the row equation
-    row_equation = [0] * number_of_temperatures
+    row_equation: List[float] = [0] * number_of_temperatures
 
     # Compute the T_pv(i, j) term
     row_equation[
@@ -1037,7 +1057,7 @@ def _pv_equation(
             -1
             * pvt_panel.pv.conductivity  # [W/m*K]
             * pvt_panel.pv.thickness  # [m]
-            * segment.height
+            * segment.length
             / segment.width
         )
 
@@ -1055,7 +1075,7 @@ def _pv_equation(
             -1
             * pvt_panel.pv.conductivity  # [W/m*K]
             * pvt_panel.pv.thickness  # [m]
-            * segment.height
+            * segment.length
             / segment.width
         )
 
@@ -1073,7 +1093,7 @@ def _pv_equation(
             -1
             * pvt_panel.pv.conductivity  # [W/m*K]
             * pvt_panel.pv.thickness  # [m]
-            * segment.height
+            * segment.length
             / segment.width
         )
 
@@ -1091,7 +1111,7 @@ def _pv_equation(
             -1
             * pvt_panel.pv.conductivity  # [W/m*K]
             * pvt_panel.pv.thickness  # [m]
-            * segment.height
+            * segment.length
             / segment.width
         )
 
@@ -1197,7 +1217,7 @@ def _system_continuity_equations(
     number_of_pipes: int,
     number_of_temperatures: int,
     number_of_y_segments: int,
-) -> Set[Tuple[Tuple[float, ...], float]]:
+) -> Set[Tuple[List[float], float]]:
     """
     Returns matrix rows and resultant vector values representing system continuities.
 
@@ -1221,11 +1241,11 @@ def _system_continuity_equations(
 
     """
 
-    equations = set()
+    equations: Set[Tuple[List[float], float]] = set()
 
     # Equation 1: Continuity of fluid entering the collector.
     for pipe_number in range(number_of_pipes):
-        row_equation = [0] * number_of_temperatures
+        row_equation: List[float] = [0] * number_of_temperatures
         row_equation[
             index.index_from_pipe_coordinates(
                 number_of_pipes, TemperatureName.htf_in, pipe_number, 0
@@ -1267,10 +1287,10 @@ def _system_continuity_equations(
 
 
 def _tank_continuity_equation(
-    best_guess_temperature_vector: Tuple[float, ...],
+    best_guess_temperature_vector: List[float],
     heat_exchanger: exchanger.Exchanger,
     number_of_temperatures: int,
-) -> Tuple[Tuple[float, ...], float]:
+) -> Tuple[List[float], float]:
     """
     Returns a matrix row and resultant vector value representing the tank continuity.
 
@@ -1288,7 +1308,7 @@ def _tank_continuity_equation(
     """
 
     # Compute the row equation
-    row_equation = [0] * number_of_temperatures
+    row_equation: List[float] = [0] * number_of_temperatures
 
     # If the flow is through the tank heat exchanger:
     if (
@@ -1315,16 +1335,16 @@ def _tank_continuity_equation(
 
 
 def _tank_equation(
-    best_guess_temperature_vector: Tuple[float, ...],
+    best_guess_temperature_vector: List[float],
     heat_exchanger: exchanger.Exchanger,
     hot_water_load: float,
     hot_water_tank: tank.Tank,
     number_of_temperatures: int,
-    previous_temperature_vector: Tuple[float, ...],
+    previous_temperature_vector: List[float],
     pvt_panel: pvt.PVT,
     resolution: int,
     weather_conditions: WeatherConditions,
-) -> Tuple[Tuple[float, ...], float]:
+) -> Tuple[List[float], float]:
     """
     Returns a matrix row and resultant vector value representing the tank equation.
 
@@ -1339,7 +1359,7 @@ def _tank_equation(
     """
 
     # Compute the row equation
-    row_equation = [0] * number_of_temperatures
+    row_equation: List[float] = [0] * number_of_temperatures
 
     # Compute the T_t term
     row_equation[index.index_from_temperature_name(TemperatureName.tank)] = (
@@ -1414,15 +1434,15 @@ def _tank_equation(
 
 
 def calculate_matrix_equation(
-    best_guess_temperature_vector: Tuple[float, ...],
+    best_guess_temperature_vector: List[float],
     heat_exchanger: exchanger.Exchanger,
     hot_water_load: float,
     hot_water_tank: tank.Tank,
-    previous_temperature_vector: Tuple[float, ...],
+    previous_temperature_vector: List[float],
     pvt_panel: pvt.PVT,
     resolution: int,
     weather_conditions: WeatherConditions,
-) -> Tuple[numpy.ndarray, Tuple[float, ...]]:
+) -> Tuple[numpy.ndarray, numpy.ndarray]:
     """
     Calculates and returns both the matrix and resultant vector for the matrix equation.
 
@@ -1436,9 +1456,15 @@ def calculate_matrix_equation(
     equation_index: int = 0
 
     # Determine the number of temperatures being modelled.
-    number_of_pipes = len({segment.pipe_index for segment in pvt_panel.segments})
-    number_of_x_segments = len({segment.x_index for segment in pvt_panel.segments})
-    number_of_y_segments = len({segment.y_index for segment in pvt_panel.segments})
+    number_of_pipes = len(
+        {segment.pipe_index for segment in pvt_panel.segments.values()}
+    )
+    number_of_x_segments = len(
+        {segment.x_index for segment in pvt_panel.segments.values()}
+    )
+    number_of_y_segments = len(
+        {segment.y_index for segment in pvt_panel.segments.values()}
+    )
     number_of_temperatures = index.num_temperatures(
         number_of_pipes, number_of_x_segments, number_of_y_segments
     )
@@ -1448,7 +1474,7 @@ def calculate_matrix_equation(
     reslutant_vector = numpy.zeros([number_of_temperatures, 1])
 
     # Calculate the glass equations.
-    for segment in pvt_panel.segments:
+    for segment in pvt_panel.segments.values():
         matrix[equation_index], reslutant_vector[equation_index] = _glass_equation(
             best_guess_temperature_vector,
             number_of_temperatures,
@@ -1463,7 +1489,7 @@ def calculate_matrix_equation(
         equation_index += 1
 
     # Calculate the pv equations.
-    for segment in pvt_panel.segments:
+    for segment in pvt_panel.segments.values():
         matrix[equation_index], reslutant_vector[equation_index] = _pv_equation(
             best_guess_temperature_vector,
             number_of_temperatures,
@@ -1478,7 +1504,7 @@ def calculate_matrix_equation(
         equation_index += 1
 
     # Calculate the absorber-layer eqations.
-    for segment in pvt_panel.segments:
+    for segment in pvt_panel.segments.values():
         matrix[equation_index], reslutant_vector[equation_index] = _absorber_equation(
             number_of_pipes,
             number_of_temperatures,
@@ -1493,7 +1519,13 @@ def calculate_matrix_equation(
         equation_index += 1
 
     # Determine a sub-set of sections that have pipes attached.
-    segments_with_pipes = [segment for segment in pvt_panel.segments if segment.pipe]
+    segments_with_pipes = [
+        segment for segment in pvt_panel.segments.values() if segment.pipe
+    ]
+    if any([segment.pipe_index is None for segment in segments_with_pipes]):
+        raise ProgrammerJudgementFault(
+            "A segment specifies a pipe is present yet no pipe index is supplied. "
+        )
 
     # Calculate the pipe equations.
     for segment in segments_with_pipes:
@@ -1598,3 +1630,5 @@ def calculate_matrix_equation(
     ] = boundary_condition_resultant_values
 
     equation_index += len(boundary_condition_equations)
+
+    return matrix, reslutant_vector

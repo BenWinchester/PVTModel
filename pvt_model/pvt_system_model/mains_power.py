@@ -19,11 +19,14 @@ system being modelled.
 from dataclasses import dataclass
 from typing import Any
 
-from .__utils__ import (
+from ..__utils__ import (
     CarbonEmissions,
     TotalPowerData,
-    UtilityType,
+)
+
+from .__utils__ import (
     read_yaml,
+    UtilityType,
 )
 
 

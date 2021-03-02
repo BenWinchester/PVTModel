@@ -21,11 +21,9 @@ happens within this module.
 import datetime
 
 from math import ceil
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Optional, Tuple
 
-import numpy
-
-from .pvt_panel import pvt, segment
+from .pvt_panel import adhesive, eva, pvt, segment, tedlar
 from . import exchanger, tank, pump
 
 from ..__utils__ import MissingParametersError
@@ -35,13 +33,13 @@ from .constants import (
 from .__utils__ import (
     CollectorParameters,
     InvalidDataError,
-    LayerParameters,
     MissingDataError,
     OpticalLayerParameters,
     PVParameters,
     read_yaml,
 )
 from .index import x_coordinate, y_coordinate
+from .pvt_panel.__utils__ import MicroLayer
 
 
 __all__ = (
@@ -107,7 +105,7 @@ def hot_water_tank_from_path(tank_data_file: str) -> tank.Tank:
     try:
         return tank.Tank(
             float(tank_data["area"]),  # [m^2]
-            float(tank_data["diameter"]) if "diameter" in tank_data else None,  # [m]
+            float(tank_data["diameter"]),  # [m]
             HEAT_CAPACITY_OF_WATER,  # [J/kg*K]
             float(tank_data["heat_loss_coefficient"]),  # [W/m^2*K]
             float(tank_data["mass"]),  # [kg]
@@ -163,47 +161,8 @@ def pump_from_path(pump_data_file: str) -> pump.Pump:
 ##################
 
 
-def _back_params_from_data(area: float, back_data: Dict[str, Any]) -> LayerParameters:
-    """
-    Generate a :class:`LayerParameters` containing back-layer info from data.
-
-    :param area:
-        The area of the PV-T system, measured in meters squared.
-
-    :param back_data:
-        The raw back data extracted from the YAML data file.
-
-    :return:
-        The back data, as a :class:`__utils__.LayerParameters`, ready to
-        instantiate a :class:`pvt.BackPlater` layer instance.
-
-    """
-
-    try:
-        return LayerParameters(
-            area,  # [m^2]
-            back_data["thermal_conductivity"],  # [W/m*K]
-            back_data["density"],  # [kg/m^3]
-            back_data["heat_capacity"],  # [J/kg*K]
-            back_data["thickness"],  # [m]
-            back_data["mass"]  # [kg]
-            if "mass" in back_data
-            else back_data["density"]  # [kg/m^3]
-            * area  # [m^2]
-            * back_data["thickness"],  # [m]
-        )
-    except KeyError as e:
-        raise MissingDataError(
-            "Not all needed back-layer data provided. Potential problem: back-layer"
-            "mass must be specified, either as 'mass' or 'density' and 'area' and "
-            f"'thickness' params. Missing param: {str(e)}"
-        ) from None
-
-
 def _collector_params_from_data(
-    area: float,
     length: float,
-    initial_collector_htf_tempertaure: float,
     collector_data: Dict[str, Any],
 ) -> CollectorParameters:
     """
@@ -232,41 +191,23 @@ def _collector_params_from_data(
 
     try:
         return CollectorParameters(
+            absorptivity=collector_data["absorptivity"],  # [unitless]
             conductivity=collector_data["thermal_conductivity"]
             if "thermal_conductivity" in collector_data
             else None,
             density=collector_data["density"] if "density" in collector_data else None,
-            mass=collector_data["mass"]  # [kg]
-            if "mass" in collector_data
-            else (
-                # Main collector body area.
-                area  # [m^2]
-                * collector_data["density"]  # [kg/m^3]
-                * collector_data["thickness"]  # [m]
-                # Collector pipe area
-                + (
-                    numpy.pi
-                    * collector_data["pipe_diameter"]  # [m]
-                    * collector_data["length"]  # [m]
-                )
-                * collector_data["density"]  # [kg/m^3]
-                * collector_data["thickness"]  # [m]
-            ),
-            heat_capacity=collector_data["heat_capacity"],  # [J/kg*K]
-            area=area,  # [m^2]
-            thickness=collector_data["thickness"],  # [m]
-            transmissivity=collector_data["transmissivity"],  # [unitless]
-            absorptivity=collector_data["absorptivity"],  # [unitless]
             emissivity=collector_data["emissivity"],  # [unitless]
-            bulk_water_temperature=initial_collector_htf_tempertaure,  # [K]
+            heat_capacity=collector_data["heat_capacity"],  # [J/kg*K]
             htf_heat_capacity=collector_data["htf_heat_capacity"]  # [J/kg*K]
             if "htf_heat_capacity" in collector_data
             else HEAT_CAPACITY_OF_WATER,  # [J/kg*K]
+            inner_pipe_diameter=collector_data["inner_pipe_diameter"],  # [m]
             length=length,  # [m]
             mass_flow_rate=collector_data["mass_flow_rate"],  # [Litres/hour]
             number_of_pipes=collector_data["number_of_pipes"],  # [pipes]
-            output_water_temperature=initial_collector_htf_tempertaure,  # [K]
-            pipe_diameter=collector_data["pipe_diameter"],  # [m]
+            outer_pipe_diameter=collector_data["outer_pipe_diameter"],  # [m]
+            thickness=collector_data["thickness"],  # [m]
+            transmissivity=collector_data["transmissivity"],  # [unitless]
         )
     except KeyError as e:
         raise MissingDataError(
@@ -277,7 +218,7 @@ def _collector_params_from_data(
 
 
 def _glass_params_from_data(
-    area: float, glass_data: Dict[str, Any]
+    glass_data: Dict[str, Any]
 ) -> Tuple[float, OpticalLayerParameters]:
     """
     Generate a :class:`OpticalLayerParameters` containing glass-layer info from data.
@@ -298,21 +239,15 @@ def _glass_params_from_data(
         return (
             glass_data["diffuse_reflection_coefficient"],
             OpticalLayerParameters(
-                area,  # [m^2]
-                glass_data["thermal_conductivity"]
+                absorptivity=glass_data["absorptivity"],  # [unitless]
+                conductivity=glass_data["thermal_conductivity"]
                 if "thermal_conductivity" in glass_data
                 else None,
-                glass_data["density"],  # [kg/m^3]
-                glass_data["heat_capacity"],  # [J/kg*K]
-                glass_data["mass"]  # [kg]
-                if "mass" in glass_data
-                else glass_data["density"]  # [kg/m^3]
-                * glass_data["thickness"]  # [m]
-                * area,  # [m^2]
-                glass_data["thickness"],  # [m]
-                glass_data["transmissivity"],  # [unitless]
-                glass_data["absorptivity"],  # [unitless]
-                glass_data["emissivity"],  # [unitless]
+                density=glass_data["density"],  # [kg/m^3]
+                emissivity=glass_data["emissivity"],  # [unitless]
+                heat_capacity=glass_data["heat_capacity"],  # [J/kg*K]
+                thickness=glass_data["thickness"],  # [m]
+                transmissivity=glass_data["transmissivity"],  # [unitless]
             ),
         )
     except KeyError as e:
@@ -323,7 +258,7 @@ def _glass_params_from_data(
         ) from None
 
 
-def _pv_params_from_data(area: float, pv_data: Dict[str, Any]) -> PVParameters:
+def _pv_params_from_data(pv_data: Optional[Dict[str, Any]]) -> PVParameters:
     """
     Generate a :class:`PVParameters` containing PV-layer info from data.
 
@@ -339,26 +274,25 @@ def _pv_params_from_data(area: float, pv_data: Dict[str, Any]) -> PVParameters:
 
     """
 
+    if pv_data is None:
+        raise MissingParametersError(
+            "PV", "PV parameters must be specified in the PVT YAML file."
+        )
+
     try:
         return PVParameters(
-            area,  # [m^2]
-            pv_data["thermal_conductivity"]
+            conductivity=pv_data["thermal_conductivity"]
             if "thermal_conductivity" in pv_data
             else None,
-            pv_data["density"] if "density" in pv_data else None,  # [kg/m^3]
-            pv_data["heat_capacity"],  # [J/kg*K]
-            pv_data["mass"]  # [kg]
-            if "mass" in pv_data
-            else pv_data["density"]  # [kg/m^3]
-            * area  # [m^2]
-            * pv_data["thickness"],  # [m]
-            pv_data["thickness"],  # [m]
-            pv_data["transmissivity"],  # [unitless]
-            pv_data["absorptivity"],  # [unitless]
-            pv_data["emissivity"],  # [unitless]
-            pv_data["reference_efficiency"],  # [unitless]
-            pv_data["reference_temperature"],  # [K]
-            pv_data["thermal_coefficient"],  # [K^-1]
+            density=pv_data["density"] if "density" in pv_data else None,  # [kg/m^3]
+            heat_capacity=pv_data["heat_capacity"],  # [J/kg*K]
+            thickness=pv_data["thickness"],  # [m]
+            transmissivity=pv_data["transmissivity"],  # [unitless]
+            absorptivity=pv_data["absorptivity"],  # [unitless]
+            emissivity=pv_data["emissivity"],  # [unitless]
+            reference_efficiency=pv_data["reference_efficiency"],  # [unitless]
+            reference_temperature=pv_data["reference_temperature"],  # [K]
+            thermal_coefficient=pv_data["thermal_coefficient"],  # [K^-1]
         )
     except KeyError as e:
         raise MissingDataError(
@@ -369,7 +303,6 @@ def _pv_params_from_data(area: float, pv_data: Dict[str, Any]) -> PVParameters:
 
 
 def pvt_panel_from_path(
-    initial_collector_htf_tempertaure: float,
     portion_covered: float,
     pvt_data_file: str,
     x_resolution: int,
@@ -398,17 +331,11 @@ def pvt_panel_from_path(
     # Parse the data file into the various data classes.
     pvt_data = read_yaml(pvt_data_file)
     diffuse_reflection_coefficient, glass_parameters = _glass_params_from_data(
-        pvt_data["pvt_system"]["area"], pvt_data["glass"]
+        pvt_data["glass"]
     )
-    pv_parameters = (
-        _pv_params_from_data(pvt_data["pvt_system"]["area"], pvt_data["pv"])
-        if "pv" in pvt_data
-        else None
-    )
+    pv_parameters = _pv_params_from_data(pvt_data["pv"] if "pv" in pvt_data else None)
     collector_parameters = _collector_params_from_data(
-        pvt_data["pvt_system"]["area"],  # [m^2]
         pvt_data["pvt_system"]["length"],  # [m]
-        initial_collector_htf_tempertaure,  # [K]
         pvt_data["collector"],
     )
 
@@ -440,19 +367,33 @@ def pvt_panel_from_path(
 
     try:
         pvt_panel = pvt.PVT(
+            adhesive=adhesive.Adhesive(
+                pvt_data["adhesive"]["conductivity"], pvt_data["adhesive"]["thickness"]
+            ),
             air_gap_thickness=pvt_data["air_gap"]["thickness"],  # [m]
             area=pvt_data["pvt_system"]["area"],  # [m^2]
+            bond=MicroLayer(
+                pvt_data["bond"]["conductivity"], pvt_data["bond"]["thickness"]
+            ),
             collector_parameters=collector_parameters,
             diffuse_reflection_coefficient=diffuse_reflection_coefficient,
+            eva=eva.EVA(pvt_data["eva"]["conductivity"], pvt_data["eva"]["thickness"]),
             glass_parameters=glass_parameters,
+            insulation=MicroLayer(
+                pvt_data["insulation"]["conductivity"],
+                pvt_data["insulation"]["thickness"],
+            ),
             latitude=pvt_data["pvt_system"]["latitude"],  # [deg]
             longitude=pvt_data["pvt_system"]["longitude"],  # [deg]
             portion_covered=portion_covered,  # [unitless]
-            pv_parameters=pv_parameters if portion_covered != 0 else None,
+            pv_parameters=pv_parameters,
             pv_to_collector_thermal_conductance=pvt_data["pvt_system"][
                 "pv_to_collector_conductance"
             ],  # [W/m^2*K]
             segments=segments,
+            tedlar=tedlar.Tedlar(
+                pvt_data["tedlar"]["conductivity"], pvt_data["tedlar"]["thickness"]
+            ),
             timezone=datetime.timezone(
                 datetime.timedelta(hours=int(pvt_data["pvt_system"]["timezone"]))
             ),

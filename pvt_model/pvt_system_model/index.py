@@ -78,7 +78,7 @@ def _get_index(
 
     if temperature_name == TemperatureName.glass:
         try:
-            return number_of_x_segments * y_coord + x_coord
+            return int(number_of_x_segments * y_coord + x_coord)
         except TypeError:
             raise ProgrammerJudgementFault(
                 "Not all parameters needed were passed in to uniquely determine a "
@@ -86,7 +86,9 @@ def _get_index(
             ) from None
     if temperature_name == TemperatureName.pv:
         try:
-            return number_of_x_segments * (number_of_y_segments + y_coord) + x_coord
+            return int(
+                number_of_x_segments * (number_of_y_segments + y_coord) + x_coord
+            )
         except TypeError:
             raise ProgrammerJudgementFault(
                 "Not all parameters needed were passed in to uniquely determine a "
@@ -94,7 +96,9 @@ def _get_index(
             ) from None
     if temperature_name == TemperatureName.collector:
         try:
-            return number_of_x_segments * (2 * number_of_y_segments + y_coord) + x_coord
+            return int(
+                number_of_x_segments * (2 * number_of_y_segments + y_coord) + x_coord
+            )
         except TypeError:
             raise ProgrammerJudgementFault(
                 "Not all parameters needed were passed in to uniquely determine an "
@@ -102,9 +106,11 @@ def _get_index(
             ) from None
     if temperature_name == TemperatureName.pipe:
         try:
-            return (
-                number_of_x_segments * (3 * number_of_y_segments + y_coord)
-                + pipe_number
+            return int(
+                (
+                    number_of_x_segments * (3 * number_of_y_segments + y_coord)
+                    + pipe_number
+                )
             )
         except TypeError:
             raise ProgrammerJudgementFault(
@@ -113,10 +119,12 @@ def _get_index(
             ) from None
     if temperature_name == TemperatureName.htf:
         try:
-            return (
-                number_of_x_segments
-                * (3 * number_of_y_segments + number_of_pipes + y_coord)
-                + pipe_number
+            return int(
+                (
+                    number_of_x_segments
+                    * (3 * number_of_y_segments + number_of_pipes + y_coord)
+                    + pipe_number
+                )
             )
         except TypeError:
             raise ProgrammerJudgementFault(
@@ -125,10 +133,12 @@ def _get_index(
             ) from None
     if temperature_name == TemperatureName.htf_in:
         try:
-            return (
-                number_of_x_segments
-                * (3 * number_of_y_segments + 2 * number_of_pipes + y_coord)
-                + pipe_number
+            return int(
+                (
+                    number_of_x_segments
+                    * (3 * number_of_y_segments + 2 * number_of_pipes + y_coord)
+                    + pipe_number
+                )
             )
         except TypeError:
             raise ProgrammerJudgementFault(
@@ -137,10 +147,12 @@ def _get_index(
             ) from None
     if temperature_name == TemperatureName.htf_out:
         try:
-            return (
-                number_of_x_segments
-                * (3 * number_of_y_segments + 3 * number_of_pipes + y_coord)
-                + pipe_number
+            return int(
+                (
+                    number_of_x_segments
+                    * (3 * number_of_y_segments + 3 * number_of_pipes + y_coord)
+                    + pipe_number
+                )
             )
         except TypeError:
             raise ProgrammerJudgementFault(
@@ -149,8 +161,8 @@ def _get_index(
             ) from None
     if temperature_name == TemperatureName.collector_in:
         try:
-            return number_of_x_segments * (
-                3 * number_of_y_segments + 4 * number_of_pipes
+            return int(
+                number_of_x_segments * (3 * number_of_y_segments + 4 * number_of_pipes)
             )
         except TypeError:
             raise ProgrammerJudgementFault(
@@ -159,9 +171,12 @@ def _get_index(
             ) from None
     if temperature_name == TemperatureName.collector_out:
         try:
-            return (
-                number_of_x_segments * (3 * number_of_y_segments + 4 * number_of_pipes)
-                + 1
+            return int(
+                (
+                    number_of_x_segments
+                    * (3 * number_of_y_segments + 4 * number_of_pipes)
+                    + 1
+                )
             )
         except TypeError:
             raise ProgrammerJudgementFault(
@@ -170,9 +185,12 @@ def _get_index(
             ) from None
     if temperature_name == TemperatureName.tank:
         try:
-            return (
-                number_of_x_segments * (3 * number_of_y_segments + 4 * number_of_pipes)
-                + 2
+            return int(
+                (
+                    number_of_x_segments
+                    * (3 * number_of_y_segments + 4 * number_of_pipes)
+                    + 2
+                )
             )
         except TypeError:
             raise ProgrammerJudgementFault(
@@ -181,9 +199,12 @@ def _get_index(
             ) from None
     if temperature_name == TemperatureName.tank_in:
         try:
-            return (
-                number_of_x_segments * (3 * number_of_y_segments + 4 * number_of_pipes)
-                + 3
+            return int(
+                (
+                    number_of_x_segments
+                    * (3 * number_of_y_segments + 4 * number_of_pipes)
+                    + 3
+                )
             )
         except TypeError:
             raise ProgrammerJudgementFault(
@@ -192,9 +213,12 @@ def _get_index(
             ) from None
     if temperature_name == TemperatureName.tank_out:
         try:
-            return (
-                number_of_x_segments * (3 * number_of_y_segments + 4 * number_of_pipes)
-                + 4
+            return int(
+                (
+                    number_of_x_segments
+                    * (3 * number_of_y_segments + 4 * number_of_pipes)
+                    + 4
+                )
             )
         except TypeError:
             raise ProgrammerJudgementFault(

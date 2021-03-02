@@ -156,7 +156,7 @@ def main() -> None:
         [
             TypeIgnoreUsage(
                 entry.split(":")[0],
-                entry.split(":")[1],
+                int(entry.split(":")[1]),
                 ":".join(entry.split(":")[2:]).strip(),
             )
             for entry in type_ignore_uses

@@ -22,6 +22,7 @@ __all__ = (
 )
 
 
+@dataclass
 class SegmentCoordinates:
     """
     Represents the coordinates of the segment.
@@ -46,9 +47,10 @@ class SegmentCoordinates:
 
         """
 
-        return (
-            (self.x_index + self.y_index) * (self.x_index + self.y_index + 1) / 2
-        ) + self.x_index
+        return int(
+            ((self.x_index + self.y_index) * (self.x_index + self.y_index + 1) / 2)
+            + self.x_index
+        )
 
 
 @dataclass
@@ -91,8 +93,8 @@ class Segment:
     pipe: bool
     pv: bool
     width: float
-    x_index: float
-    y_index: float
+    x_index: int
+    y_index: int
     pipe_index: Optional[int] = None
 
     @property

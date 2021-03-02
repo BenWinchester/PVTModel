@@ -157,7 +157,7 @@ def main() -> None:
             PylintDisable(
                 entry.split(":")[0],
                 ":".join(entry.split(":")[2:]).split("=")[1],
-                entry.split(":")[1],
+                int(entry.split(":")[1]),
             )
             for entry in pylint_disable_uses
         ]
