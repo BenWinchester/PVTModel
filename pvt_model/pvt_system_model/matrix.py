@@ -1266,7 +1266,11 @@ def _system_continuity_equations(
     return equations
 
 
-def _tank_continuity_equation() -> Tuple[Tuple[float, ...], float]:
+def _tank_continuity_equation(
+    best_guess_temperature_vector: Tuple[float, ...],
+    heat_exchanger: exchanger.Exchanger,
+    number_of_temperatures: int,
+) -> Tuple[Tuple[float, ...], float]:
     """
     Returns a matrix row and resultant vector value representing the tank continuity.
 
@@ -1282,6 +1286,32 @@ def _tank_continuity_equation() -> Tuple[Tuple[float, ...], float]:
         - and the corresponding value in the resultant method.
 
     """
+
+    # Compute the row equation
+    row_equation = [0] * number_of_temperatures
+
+    # If the flow is through the tank heat exchanger:
+    if (
+        best_guess_temperature_vector[
+            index.index_from_temperature_name(TemperatureName.tank_in)
+        ]
+        > best_guess_temperature_vector[
+            index.index_from_temperature_name(TemperatureName.tank)
+        ]
+    ):
+        row_equation[index.index_from_temperature_name(TemperatureName.tank)] = (
+            -1 * heat_exchanger.efficiency
+        )
+        row_equation[index.index_from_temperature_name(TemperatureName.tank_in)] = (
+            heat_exchanger.efficiency - 1
+        )
+        row_equation[index.index_from_temperature_name(TemperatureName.tank_out)] = 1
+        return row_equation, 0
+
+    # Otherwise, the flow is diverted back into the collector.
+    row_equation[index.index_from_temperature_name(TemperatureName.tank_in)] = -1
+    row_equation[index.index_from_temperature_name(TemperatureName.tank_out)] = 1
+    return row_equation, 0
 
 
 def _tank_equation(
@@ -1507,6 +1537,13 @@ def calculate_matrix_equation(
     equation_index += 1
 
     # Calculate the tank continuity equation.
+    (
+        matrix[equation_index],
+        reslutant_vector[equation_index],
+    ) = _tank_continuity_equation(
+        best_guess_temperature_vector, heat_exchanger, number_of_temperatures
+    )
+    equation_index += 1
 
     # Compute the fluid continuity equations - there will be "N_y - 1" equations.
     for segment in [
