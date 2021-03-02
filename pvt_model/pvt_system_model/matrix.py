@@ -1285,6 +1285,7 @@ def _tank_continuity_equation() -> Tuple[Tuple[float, ...], float]:
 
 
 def _tank_equation(
+    best_guess_temperature_vector: Tuple[float, ...],
     heat_exchanger: exchanger.Exchanger,
     hot_water_load: float,
     hot_water_tank: tank.Tank,
@@ -1322,9 +1323,18 @@ def _tank_equation(
         + hot_water_tank.heat_loss_coefficient  # [W/kg*K]
         * hot_water_tank.area  # [m^2]
         # Heat input
-        + pvt_panel.collector.mass_flow_rate  # [kg/s]
-        * pvt_panel.collector.htf_heat_capacity  # [J/kg*K]
-        * heat_exchanger.efficiency
+        + (
+            pvt_panel.collector.mass_flow_rate  # [kg/s]
+            * pvt_panel.collector.htf_heat_capacity  # [J/kg*K]
+            * heat_exchanger.efficiency
+        )
+        if best_guess_temperature_vector[
+            index.index_from_temperature_name(TemperatureName.tank)
+        ]
+        > best_guess_temperature_vector[
+            index.index_from_temperature_name(TemperatureName.tank_in)
+        ]
+        else 0
     )
 
     # Compute the T_c,out term
@@ -1332,9 +1342,18 @@ def _tank_equation(
         index.index_from_temperature_name(TemperatureName.collector_out)
     ] = -1 * (
         # Heat input
-        pvt_panel.collector.mass_flow_rate  # [kg/s]
-        * pvt_panel.collector.htf_heat_capacity  # [J/kg*K]
-        * heat_exchanger.efficiency
+        (
+            pvt_panel.collector.mass_flow_rate  # [kg/s]
+            * pvt_panel.collector.htf_heat_capacity  # [J/kg*K]
+            * heat_exchanger.efficiency
+        )
+        if best_guess_temperature_vector[
+            index.index_from_temperature_name(TemperatureName.tank)
+        ]
+        > best_guess_temperature_vector[
+            index.index_from_temperature_name(TemperatureName.tank_in)
+        ]
+        else 0
     )
 
     # Compute the resultant vector value.
@@ -1397,8 +1416,6 @@ def calculate_matrix_equation(
     # Instantiate an empty matrix and array based on the number of temperatures present.
     matrix = numpy.zeros([number_of_temperatures, number_of_temperatures])
     reslutant_vector = numpy.zeros([number_of_temperatures, 1])
-
-    # Iterate through and generate...
 
     # Calculate the glass equations.
     for segment in pvt_panel.segments:
@@ -1477,6 +1494,7 @@ def calculate_matrix_equation(
 
     # Calculate the tank equations.
     matrix[equation_index], reslutant_vector[equation_index] = _tank_equation(
+        best_guess_temperature_vector,
         heat_exchanger,
         hot_water_load,
         hot_water_tank,
@@ -1486,6 +1504,9 @@ def calculate_matrix_equation(
         resolution,
         weather_conditions,
     )
+    equation_index += 1
+
+    # Calculate the tank continuity equation.
 
     # Compute the fluid continuity equations - there will be "N_y - 1" equations.
     for segment in [
