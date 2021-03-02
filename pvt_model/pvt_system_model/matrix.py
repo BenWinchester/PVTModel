@@ -32,13 +32,13 @@ from typing import Set, Tuple
 
 import numpy
 
-from . import index
+from . import exchanger, index, tank
 from .pvt_panel import pvt
 from .pvt_panel.segment import Segment
 
 from ..__utils__ import TemperatureName, ProgrammerJudgementFault
 from .__utils__ import WeatherConditions
-from .constants import DENSITY_OF_WATER
+from .constants import DENSITY_OF_WATER, HEAT_CAPACITY_OF_WATER
 from .physics_utils import (
     radiative_heat_transfer_coefficient,
     transmissivity_absorptivity_product,
@@ -218,7 +218,10 @@ def _absorber_equation(
         try:
             row_equation[
                 index.index_from_pipe_coordinates(
-                    number_of_pipes, TemperatureName.pipe, segment.pipe_index
+                    number_of_pipes,
+                    TemperatureName.pipe,
+                    segment.pipe_index,
+                    segment.y_index,
                 )
             ] = (
                 segment.width  # [m]
@@ -834,7 +837,7 @@ def _pipe_equation(
     # Compute the T_P(#, j) term.
     row_equation[
         index.index_from_pipe_coordinates(
-            number_of_pipes, TemperatureName.pipe, segment.pipe_index
+            number_of_pipes, TemperatureName.pipe, segment.pipe_index, segment.y_index
         )
     ] = (
         # Internal heat change.
@@ -1263,8 +1266,33 @@ def _system_continuity_equations(
     return equations
 
 
+def _tank_continuity_equation() -> Tuple[Tuple[float, ...], float]:
+    """
+    Returns a matrix row and resultant vector value representing the tank continuity.
+
+    The HTF flowing through the heat exchanger in the hot-water tank needs to have its
+    output temperature computed. The continuity of this fluid is expressed here.
+
+    :param number_of_temperatures:
+        The number of temperatures being modelled in the system.
+
+    :return:
+        A `tuple` containing:
+        - the equation represented as a row in the matrix,
+        - and the corresponding value in the resultant method.
+
+    """
+
+
 def _tank_equation(
+    heat_exchanger: exchanger.Exchanger,
+    hot_water_load: float,
+    hot_water_tank: tank.Tank,
     number_of_temperatures: int,
+    previous_temperature_vector: Tuple[float, ...],
+    pvt_panel: pvt.PVT,
+    resolution: int,
+    weather_conditions: WeatherConditions,
 ) -> Tuple[Tuple[float, ...], float]:
     """
     Returns a matrix row and resultant vector value representing the tank equation.
@@ -1279,9 +1307,56 @@ def _tank_equation(
 
     """
 
-    # * Compute the row equation
+    # Compute the row equation
+    row_equation = [0] * number_of_temperatures
 
-    # * Compute the resultant vector value.
+    # Compute the T_t term
+    row_equation[index.index_from_temperature_name(TemperatureName.tank)] = (
+        # Internal heat change
+        hot_water_tank.mass  # [kg]
+        * hot_water_tank.heat_capacity  # [J/kg*K]
+        / resolution  # [s]
+        # Hot-water load
+        + hot_water_load * HEAT_CAPACITY_OF_WATER  # [kg]  # [J/kg*K]
+        # Heat loss
+        + hot_water_tank.heat_loss_coefficient  # [W/kg*K]
+        * hot_water_tank.area  # [m^2]
+        # Heat input
+        + pvt_panel.collector.mass_flow_rate  # [kg/s]
+        * pvt_panel.collector.htf_heat_capacity  # [J/kg*K]
+        * heat_exchanger.efficiency
+    )
+
+    # Compute the T_c,out term
+    row_equation[
+        index.index_from_temperature_name(TemperatureName.collector_out)
+    ] = -1 * (
+        # Heat input
+        pvt_panel.collector.mass_flow_rate  # [kg/s]
+        * pvt_panel.collector.htf_heat_capacity  # [J/kg*K]
+        * heat_exchanger.efficiency
+    )
+
+    # Compute the resultant vector value.
+    resultant_vector_value = (
+        # Internal heat change
+        hot_water_tank.mass  # [kg]
+        * hot_water_tank.heat_capacity  # [J/kg*K]
+        * previous_temperature_vector[
+            index.index_from_temperature_name(TemperatureName.tank)
+        ]  # [K]
+        / resolution  # [s]
+        # Hot-water load.
+        + hot_water_load  # [kg/s]
+        * HEAT_CAPACITY_OF_WATER  # [J/kg*K]
+        * weather_conditions.mains_water_temperature  # [K]
+        # Heat loss
+        + hot_water_tank.heat_loss_coefficient  # [W/m^2*K]
+        * hot_water_tank.area  # [m^2]
+        * weather_conditions.ambient_tank_temperature  # [K]
+    )
+
+    return row_equation, resultant_vector_value
 
 
 ##################
@@ -1291,6 +1366,9 @@ def _tank_equation(
 
 def calculate_matrix_equation(
     best_guess_temperature_vector: Tuple[float, ...],
+    heat_exchanger: exchanger.Exchanger,
+    hot_water_load: float,
+    hot_water_tank: tank.Tank,
     previous_temperature_vector: Tuple[float, ...],
     pvt_panel: pvt.PVT,
     resolution: int,
@@ -1398,6 +1476,16 @@ def calculate_matrix_equation(
         equation_index += 1
 
     # Calculate the tank equations.
+    matrix[equation_index], reslutant_vector[equation_index] = _tank_equation(
+        heat_exchanger,
+        hot_water_load,
+        hot_water_tank,
+        number_of_temperatures,
+        previous_temperature_vector,
+        pvt_panel,
+        resolution,
+        weather_conditions,
+    )
 
     # Compute the fluid continuity equations - there will be "N_y - 1" equations.
     for segment in [
