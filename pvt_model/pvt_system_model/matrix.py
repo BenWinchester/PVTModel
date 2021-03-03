@@ -1216,6 +1216,7 @@ def _pv_equation(
 def _system_continuity_equations(
     number_of_pipes: int,
     number_of_temperatures: int,
+    number_of_x_segments: int,
     number_of_y_segments: int,
 ) -> Set[Tuple[List[float], float]]:
     """
@@ -1252,7 +1253,12 @@ def _system_continuity_equations(
             )
         ] = -1
         row_equation[
-            index.index_from_temperature_name(TemperatureName.collector_in)
+            index.index_from_temperature_name(
+                number_of_pipes,
+                number_of_x_segments,
+                number_of_y_segments,
+                TemperatureName.collector_in,
+            )
         ] = 1
         equations.add((row_equation, 0))
 
@@ -1268,19 +1274,52 @@ def _system_continuity_equations(
             )
         ] = -1
         row_equation[
-            index.index_from_temperature_name(TemperatureName.collector_out)
+            index.index_from_temperature_name(
+                number_of_pipes,
+                number_of_x_segments,
+                number_of_y_segments,
+                TemperatureName.collector_out,
+            )
         ] = 1
         equations.add((row_equation, 0))
 
     # Equation 3: Fluid leaving the collector enters the tank without losses.
     row_equation = [0] * number_of_temperatures
-    row_equation[index.index_from_temperature_name(TemperatureName.collector_out)] = -1
-    row_equation[index.index_from_temperature_name(TemperatureName.tank_in)] = 1
+    row_equation[
+        index.index_from_temperature_name(
+            number_of_pipes,
+            number_of_x_segments,
+            number_of_y_segments,
+            TemperatureName.collector_out,
+        )
+    ] = -1
+    row_equation[
+        index.index_from_temperature_name(
+            number_of_pipes,
+            number_of_x_segments,
+            number_of_y_segments,
+            TemperatureName.tank_in,
+        )
+    ] = 1
     equations.add((row_equation, 0))
 
     row_equation = [0] * number_of_temperatures
-    row_equation[index.index_from_temperature_name(TemperatureName.tank_out)] = -1
-    row_equation[index.index_from_temperature_name(TemperatureName.collector_in)] = 1
+    row_equation[
+        index.index_from_temperature_name(
+            number_of_pipes,
+            number_of_x_segments,
+            number_of_y_segments,
+            TemperatureName.tank_out,
+        )
+    ] = -1
+    row_equation[
+        index.index_from_temperature_name(
+            number_of_pipes,
+            number_of_x_segments,
+            number_of_y_segments,
+            TemperatureName.collector_in,
+        )
+    ] = 1
     equations.add((row_equation, 0))
 
     return equations
@@ -1289,7 +1328,10 @@ def _system_continuity_equations(
 def _tank_continuity_equation(
     best_guess_temperature_vector: numpy.ndarray,
     heat_exchanger: exchanger.Exchanger,
+    number_of_pipes: int,
     number_of_temperatures: int,
+    number_of_x_segments: int,
+    number_of_y_segments: int,
 ) -> Tuple[List[float], float]:
     """
     Returns a matrix row and resultant vector value representing the tank continuity.
@@ -1313,24 +1355,69 @@ def _tank_continuity_equation(
     # If the flow is through the tank heat exchanger:
     if (
         best_guess_temperature_vector[
-            index.index_from_temperature_name(TemperatureName.tank_in)
+            index.index_from_temperature_name(
+                number_of_pipes,
+                number_of_x_segments,
+                number_of_y_segments,
+                TemperatureName.tank_in,
+            )
         ]
         > best_guess_temperature_vector[
-            index.index_from_temperature_name(TemperatureName.tank)
+            index.index_from_temperature_name(
+                number_of_pipes,
+                number_of_x_segments,
+                number_of_y_segments,
+                TemperatureName.tank,
+            )
         ]
     ):
-        row_equation[index.index_from_temperature_name(TemperatureName.tank)] = (
+        row_equation[
+            index.index_from_temperature_name(
+                number_of_pipes,
+                number_of_x_segments,
+                number_of_y_segments,
+                TemperatureName.tank,
+            )
+        ] = (
             -1 * heat_exchanger.efficiency
         )
-        row_equation[index.index_from_temperature_name(TemperatureName.tank_in)] = (
+        row_equation[
+            index.index_from_temperature_name(
+                number_of_pipes,
+                number_of_x_segments,
+                number_of_y_segments,
+                TemperatureName.tank_in,
+            )
+        ] = (
             heat_exchanger.efficiency - 1
         )
-        row_equation[index.index_from_temperature_name(TemperatureName.tank_out)] = 1
+        row_equation[
+            index.index_from_temperature_name(
+                number_of_pipes,
+                number_of_x_segments,
+                number_of_y_segments,
+                TemperatureName.tank_out,
+            )
+        ] = 1
         return row_equation, 0
 
     # Otherwise, the flow is diverted back into the collector.
-    row_equation[index.index_from_temperature_name(TemperatureName.tank_in)] = -1
-    row_equation[index.index_from_temperature_name(TemperatureName.tank_out)] = 1
+    row_equation[
+        index.index_from_temperature_name(
+            number_of_pipes,
+            number_of_x_segments,
+            number_of_y_segments,
+            TemperatureName.tank_in,
+        )
+    ] = -1
+    row_equation[
+        index.index_from_temperature_name(
+            number_of_pipes,
+            number_of_x_segments,
+            number_of_y_segments,
+            TemperatureName.tank_out,
+        )
+    ] = 1
     return row_equation, 0
 
 
@@ -1339,7 +1426,10 @@ def _tank_equation(
     heat_exchanger: exchanger.Exchanger,
     hot_water_load: float,
     hot_water_tank: tank.Tank,
+    number_of_pipes: int,
     number_of_temperatures: int,
+    number_of_x_segments: int,
+    number_of_y_segments: int,
     previous_temperature_vector: numpy.ndarray,
     pvt_panel: pvt.PVT,
     resolution: int,
@@ -1362,7 +1452,14 @@ def _tank_equation(
     row_equation: List[float] = [0] * number_of_temperatures
 
     # Compute the T_t term
-    row_equation[index.index_from_temperature_name(TemperatureName.tank)] = (
+    row_equation[
+        index.index_from_temperature_name(
+            number_of_pipes,
+            number_of_x_segments,
+            number_of_y_segments,
+            TemperatureName.tank,
+        )
+    ] = (
         # Internal heat change
         hot_water_tank.mass  # [kg]
         * hot_water_tank.heat_capacity  # [J/kg*K]
@@ -1379,17 +1476,32 @@ def _tank_equation(
             * heat_exchanger.efficiency
         )
         if best_guess_temperature_vector[
-            index.index_from_temperature_name(TemperatureName.tank)
+            index.index_from_temperature_name(
+                number_of_pipes,
+                number_of_x_segments,
+                number_of_y_segments,
+                TemperatureName.tank,
+            )
         ]
         > best_guess_temperature_vector[
-            index.index_from_temperature_name(TemperatureName.tank_in)
+            index.index_from_temperature_name(
+                number_of_pipes,
+                number_of_x_segments,
+                number_of_y_segments,
+                TemperatureName.tank_in,
+            )
         ]
         else 0
     )
 
     # Compute the T_c,out term
     row_equation[
-        index.index_from_temperature_name(TemperatureName.collector_out)
+        index.index_from_temperature_name(
+            number_of_pipes,
+            number_of_x_segments,
+            number_of_y_segments,
+            TemperatureName.collector_out,
+        )
     ] = -1 * (
         # Heat input
         (
@@ -1398,10 +1510,20 @@ def _tank_equation(
             * heat_exchanger.efficiency
         )
         if best_guess_temperature_vector[
-            index.index_from_temperature_name(TemperatureName.tank)
+            index.index_from_temperature_name(
+                number_of_pipes,
+                number_of_x_segments,
+                number_of_y_segments,
+                TemperatureName.tank,
+            )
         ]
         > best_guess_temperature_vector[
-            index.index_from_temperature_name(TemperatureName.tank_in)
+            index.index_from_temperature_name(
+                number_of_pipes,
+                number_of_x_segments,
+                number_of_y_segments,
+                TemperatureName.tank_in,
+            )
         ]
         else 0
     )
@@ -1412,7 +1534,12 @@ def _tank_equation(
         hot_water_tank.mass  # [kg]
         * hot_water_tank.heat_capacity  # [J/kg*K]
         * previous_temperature_vector[
-            index.index_from_temperature_name(TemperatureName.tank)
+            index.index_from_temperature_name(
+                number_of_pipes,
+                number_of_x_segments,
+                number_of_y_segments,
+                TemperatureName.tank,
+            )
         ]  # [K]
         / resolution  # [s]
         # Hot-water load.
@@ -1550,7 +1677,10 @@ def calculate_matrix_equation(
         heat_exchanger,
         hot_water_load,
         hot_water_tank,
+        number_of_pipes,
         number_of_temperatures,
+        number_of_x_segments,
+        number_of_y_segments,
         previous_temperature_vector,
         pvt_panel,
         resolution,
@@ -1563,7 +1693,12 @@ def calculate_matrix_equation(
         matrix[equation_index],
         reslutant_vector[equation_index],
     ) = _tank_continuity_equation(
-        best_guess_temperature_vector, heat_exchanger, number_of_temperatures
+        best_guess_temperature_vector,
+        heat_exchanger,
+        number_of_pipes,
+        number_of_temperatures,
+        number_of_x_segments,
+        number_of_y_segments,
     )
     equation_index += 1
 
@@ -1581,7 +1716,10 @@ def calculate_matrix_equation(
 
     # Compute the system continuity equations and assign en masse.
     system_continuity_equations = _system_continuity_equations(
-        number_of_pipes, number_of_temperatures, number_of_y_segments
+        number_of_pipes,
+        number_of_temperatures,
+        number_of_x_segments,
+        number_of_y_segments,
     )
 
     system_continuity_row_equations = [

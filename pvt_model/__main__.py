@@ -80,40 +80,55 @@ def _get_system_fourier_numbers(
 
     # Determine the Fourier coefficients of the panel's layers.
     fourier_number_map: Dict[TemperatureName, float] = dict()
-    fourier_number_map[TemperatureName.glass] = fourier_number(
-        pvt_panel.glass.thickness,
-        pvt_panel.glass.conductivity,
-        pvt_panel.glass.density,
-        pvt_panel.glass.heat_capacity,
-        resolution,
+    fourier_number_map[TemperatureName.glass] = round(
+        fourier_number(
+            pvt_panel.glass.thickness,
+            pvt_panel.glass.conductivity,
+            pvt_panel.glass.density,
+            pvt_panel.glass.heat_capacity,
+            resolution,
+        ),
+        2,
     )
-    fourier_number_map[TemperatureName.collector] = fourier_number(
-        pvt_panel.collector.thickness,
-        pvt_panel.collector.conductivity,
-        pvt_panel.collector.density,
-        pvt_panel.collector.heat_capacity,
-        resolution,
+    fourier_number_map[TemperatureName.collector] = round(
+        fourier_number(
+            pvt_panel.collector.thickness,
+            pvt_panel.collector.conductivity,
+            pvt_panel.collector.density,
+            pvt_panel.collector.heat_capacity,
+            resolution,
+        ),
+        2,
     )
-    fourier_number_map[TemperatureName.pv] = fourier_number(
-        pvt_panel.pv.thickness,
-        pvt_panel.pv.conductivity,
-        pvt_panel.pv.density,
-        pvt_panel.pv.heat_capacity,
-        resolution,
+    fourier_number_map[TemperatureName.pv] = round(
+        fourier_number(
+            pvt_panel.pv.thickness,
+            pvt_panel.pv.conductivity,
+            pvt_panel.pv.density,
+            pvt_panel.pv.heat_capacity,
+            resolution,
+        ),
+        2,
     )
-    fourier_number_map[TemperatureName.htf] = fourier_number(
-        pvt_panel.collector.inner_pipe_diameter,
-        THERMAL_CONDUCTIVITY_OF_WATER,
-        DENSITY_OF_WATER,
-        pvt_panel.collector.htf_heat_capacity,
-        resolution,
+    fourier_number_map[TemperatureName.htf] = round(
+        fourier_number(
+            pvt_panel.collector.inner_pipe_diameter,
+            THERMAL_CONDUCTIVITY_OF_WATER,
+            DENSITY_OF_WATER,
+            pvt_panel.collector.htf_heat_capacity,
+            resolution,
+        ),
+        2,
     )
-    fourier_number_map[TemperatureName.tank] = fourier_number(
-        hot_water_tank.diameter,
-        THERMAL_CONDUCTIVITY_OF_WATER,
-        DENSITY_OF_WATER,
-        HEAT_CAPACITY_OF_WATER,
-        resolution,
+    fourier_number_map[TemperatureName.tank] = round(
+        fourier_number(
+            hot_water_tank.diameter,
+            THERMAL_CONDUCTIVITY_OF_WATER,
+            DENSITY_OF_WATER,
+            HEAT_CAPACITY_OF_WATER,
+            resolution,
+        ),
+        5,
     )
 
     return fourier_number_map

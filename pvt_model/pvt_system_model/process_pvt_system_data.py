@@ -348,39 +348,47 @@ def pvt_panel_from_path(
         )
     )
     pv_coordinate_cutoff = int(y_resolution * portion_covered)
-    segments = {
-        segment.SegmentCoordinates(
-            x_coordinate(segment_number, x_resolution),
-            y_coordinate(segment_number, x_resolution),
-        ): segment.Segment(
-            True,
-            True,
-            pvt_data["length"] / x_resolution,
-            x_coordinate(segment_number, x_resolution) in pipe_positions,
-            y_coordinate(segment_number, x_resolution) <= pv_coordinate_cutoff,
-            pvt_data["width"] / y_resolution,
-            x_coordinate(segment_number, x_resolution),
-            y_coordinate(segment_number, x_resolution),
-        )
-        for segment_number in range(x_resolution * y_resolution)
-    }
+    try:
+        segments = {
+            segment.SegmentCoordinates(
+                x_coordinate(segment_number, x_resolution),
+                y_coordinate(segment_number, x_resolution),
+            ): segment.Segment(
+                True,
+                True,
+                pvt_data["pvt_system"]["length"] / x_resolution,
+                x_coordinate(segment_number, x_resolution) in pipe_positions,
+                y_coordinate(segment_number, x_resolution) <= pv_coordinate_cutoff,
+                pvt_data["pvt_system"]["width"] / y_resolution,
+                x_coordinate(segment_number, x_resolution),
+                y_coordinate(segment_number, x_resolution),
+            )
+            for segment_number in range(x_resolution * y_resolution)
+        }
+    except KeyError as e:
+        raise MissingParametersError(
+            "PVT", f"Missing parameters when instantiating the PV-T system: {str(e)}"
+        ) from None
 
     try:
         pvt_panel = pvt.PVT(
             adhesive=adhesive.Adhesive(
-                pvt_data["adhesive"]["conductivity"], pvt_data["adhesive"]["thickness"]
+                pvt_data["adhesive"]["thermal_conductivity"],
+                pvt_data["adhesive"]["thickness"],
             ),
             air_gap_thickness=pvt_data["air_gap"]["thickness"],  # [m]
             area=pvt_data["pvt_system"]["area"],  # [m^2]
             bond=MicroLayer(
-                pvt_data["bond"]["conductivity"], pvt_data["bond"]["thickness"]
+                pvt_data["bond"]["thermal_conductivity"], pvt_data["bond"]["thickness"]
             ),
             collector_parameters=collector_parameters,
             diffuse_reflection_coefficient=diffuse_reflection_coefficient,
-            eva=eva.EVA(pvt_data["eva"]["conductivity"], pvt_data["eva"]["thickness"]),
+            eva=eva.EVA(
+                pvt_data["eva"]["thermal_conductivity"], pvt_data["eva"]["thickness"]
+            ),
             glass_parameters=glass_parameters,
             insulation=MicroLayer(
-                pvt_data["insulation"]["conductivity"],
+                pvt_data["insulation"]["thermal_conductivity"],
                 pvt_data["insulation"]["thickness"],
             ),
             latitude=pvt_data["pvt_system"]["latitude"],  # [deg]
@@ -392,7 +400,8 @@ def pvt_panel_from_path(
             ],  # [W/m^2*K]
             segments=segments,
             tedlar=tedlar.Tedlar(
-                pvt_data["tedlar"]["conductivity"], pvt_data["tedlar"]["thickness"]
+                pvt_data["tedlar"]["thermal_conductivity"],
+                pvt_data["tedlar"]["thickness"],
             ),
             timezone=datetime.timezone(
                 datetime.timedelta(hours=int(pvt_data["pvt_system"]["timezone"]))

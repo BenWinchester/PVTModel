@@ -342,9 +342,23 @@ def index_from_segment_coordinates(
     )
 
 
-def index_from_temperature_name(temperature_name: TemperatureName) -> int:
+def index_from_temperature_name(
+    number_of_pipes: int,
+    number_of_x_segments: int,
+    number_of_y_segments: int,
+    temperature_name: TemperatureName,
+) -> int:
     """
     Computes an index for a body/temperature based solely on the name.
+
+    :param number_of_pipes:
+        The number of pipes in the collector.
+
+    :param number_of_x_segments:
+        The number of segments in the x direction along the panel.
+
+    :param number_of_y_segments:
+        The number of segments in the y direction along the panel.
 
     :param temperature_name:
         The name of the temperature/layer being computed.
@@ -354,7 +368,12 @@ def index_from_temperature_name(temperature_name: TemperatureName) -> int:
 
     """
 
-    return _get_index(temperature_name)
+    return _get_index(
+        number_of_pipes=number_of_pipes,
+        number_of_x_segments=number_of_x_segments,
+        number_of_y_segments=number_of_y_segments,
+        temperature_name=temperature_name,
+    )
 
 
 def num_temperatures(

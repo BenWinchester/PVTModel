@@ -444,9 +444,9 @@ class WeatherForecaster:
                 if date.month == month
             }
             if len(weather_data.solar_irradiance_profiles) == 1:
-                weather_data.override_irradiance_profile = list(
-                    weather_data.solar_irradiance_profiles.values()
-                )[0]
+                weather_data.override_irradiance_profile = next(
+                    iter(weather_data.solar_irradiance_profiles.values())
+                )
             try:
                 weather_data.average_temperature_profile = monthly_temperature_profiles[
                     Date(1, month)

@@ -694,31 +694,66 @@ def main(
         pv_temperature=average_pv_temperature - ZERO_CELCIUS_OFFSET,
         collector_temperature=average_collector_temperature - ZERO_CELCIUS_OFFSET,
         collector_input_temperature=previous_run_temperature_vector[
-            index.index_from_temperature_name(TemperatureName.collector_in)
+            index.index_from_temperature_name(
+                number_of_pipes,
+                number_of_x_segments,
+                number_of_y_segments,
+                TemperatureName.collector_in,
+            )
         ]
         - ZERO_CELCIUS_OFFSET,
         collector_output_temperature=previous_run_temperature_vector[
-            index.index_from_temperature_name(TemperatureName.collector_out)
+            index.index_from_temperature_name(
+                number_of_pipes,
+                number_of_x_segments,
+                number_of_y_segments,
+                TemperatureName.collector_out,
+            )
         ]
         - ZERO_CELCIUS_OFFSET,
         bulk_water_temperature=average_bulk_water_temperature - ZERO_CELCIUS_OFFSET,
         ambient_temperature=weather_conditions.ambient_temperature
         - ZERO_CELCIUS_OFFSET,
         exchanger_temperature_drop=previous_run_temperature_vector[
-            index.index_from_temperature_name(TemperatureName.tank_out)
+            index.index_from_temperature_name(
+                number_of_pipes,
+                number_of_x_segments,
+                number_of_y_segments,
+                TemperatureName.tank_out,
+            )
         ]
         - previous_run_temperature_vector[
-            index.index_from_temperature_name(TemperatureName.tank_in)
+            index.index_from_temperature_name(
+                number_of_pipes,
+                number_of_x_segments,
+                number_of_y_segments,
+                TemperatureName.tank_in,
+            )
         ]
         if previous_run_temperature_vector[
-            index.index_from_temperature_name(TemperatureName.tank_in)
+            index.index_from_temperature_name(
+                number_of_pipes,
+                number_of_x_segments,
+                number_of_y_segments,
+                TemperatureName.tank_in,
+            )
         ]
         > previous_run_temperature_vector[
-            index.index_from_temperature_name(TemperatureName.tank)
+            index.index_from_temperature_name(
+                number_of_pipes,
+                number_of_x_segments,
+                number_of_y_segments,
+                TemperatureName.tank,
+            )
         ]
         else 0,
         tank_temperature=previous_run_temperature_vector[
-            index.index_from_temperature_name(TemperatureName.tank)
+            index.index_from_temperature_name(
+                number_of_pipes,
+                number_of_x_segments,
+                number_of_y_segments,
+                TemperatureName.tank,
+            )
         ]
         - ZERO_CELCIUS_OFFSET,
         sky_temperature=weather_conditions.sky_temperature - ZERO_CELCIUS_OFFSET,
@@ -816,31 +851,66 @@ def main(
             pv_temperature=average_pv_temperature - ZERO_CELCIUS_OFFSET,
             collector_temperature=average_collector_temperature - ZERO_CELCIUS_OFFSET,
             collector_input_temperature=current_run_temperature_vector[
-                index.index_from_temperature_name(TemperatureName.collector_in)
+                index.index_from_temperature_name(
+                    number_of_pipes,
+                    number_of_x_segments,
+                    number_of_y_segments,
+                    TemperatureName.collector_in,
+                )
             ]
             - ZERO_CELCIUS_OFFSET,
             collector_output_temperature=current_run_temperature_vector[
-                index.index_from_temperature_name(TemperatureName.collector_out)
+                index.index_from_temperature_name(
+                    number_of_pipes,
+                    number_of_x_segments,
+                    number_of_y_segments,
+                    TemperatureName.collector_out,
+                )
             ]
             - ZERO_CELCIUS_OFFSET,
             bulk_water_temperature=average_bulk_water_temperature - ZERO_CELCIUS_OFFSET,
             ambient_temperature=weather_conditions.ambient_temperature
             - ZERO_CELCIUS_OFFSET,
             exchanger_temperature_drop=current_run_temperature_vector[
-                index.index_from_temperature_name(TemperatureName.tank_out)
+                index.index_from_temperature_name(
+                    number_of_pipes,
+                    number_of_x_segments,
+                    number_of_y_segments,
+                    TemperatureName.tank_out,
+                )
             ]
             - current_run_temperature_vector[
-                index.index_from_temperature_name(TemperatureName.tank_in)
+                index.index_from_temperature_name(
+                    number_of_pipes,
+                    number_of_x_segments,
+                    number_of_y_segments,
+                    TemperatureName.tank_in,
+                )
             ]
             if current_run_temperature_vector[
-                index.index_from_temperature_name(TemperatureName.tank_in)
+                index.index_from_temperature_name(
+                    number_of_pipes,
+                    number_of_x_segments,
+                    number_of_y_segments,
+                    TemperatureName.tank_in,
+                )
             ]
             > current_run_temperature_vector[
-                index.index_from_temperature_name(TemperatureName.tank)
+                index.index_from_temperature_name(
+                    number_of_pipes,
+                    number_of_x_segments,
+                    number_of_y_segments,
+                    TemperatureName.tank,
+                )
             ]
             else 0,
             tank_temperature=current_run_temperature_vector[
-                index.index_from_temperature_name(TemperatureName.tank)
+                index.index_from_temperature_name(
+                    number_of_pipes,
+                    number_of_x_segments,
+                    number_of_y_segments,
+                    TemperatureName.tank,
+                )
             ]
             - ZERO_CELCIUS_OFFSET,
             sky_temperature=weather_conditions.sky_temperature - ZERO_CELCIUS_OFFSET,

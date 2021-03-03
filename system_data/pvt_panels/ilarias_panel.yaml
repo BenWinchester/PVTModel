@@ -24,23 +24,25 @@
 # downloaded and stored in Google Drive.
 
 pvt_system:
+  # The area is measured in meters squared.
+  area: 1.43 # [m^2]
+  azimuthal_orientation: 180 # [deg]
+  horizontal_tracking: false
   latitude: 51.4934 # [deg]
   longitude: 0.0098 # [deg]
-  # The timezone offset in Hours from UTC.
-  timezone: 0 # [hours]
+  # The length of the collector is measured in meters.
+  length: 1.66 # [m]
   # The conductance, measured in Watts per meter squared Kelvin, between the PV
   # laye and collector layers of the panel.
   pv_to_collector_conductance: 500 # [W/m^2*K]
-  # The length of the collector is measured in meters.
-  length: 1.66 # [m]
-  # The area is measured in meters squared.
-  area: 1.43 # [m^2]
   # These parameters set up how the panel is orientated.
   # All angles are measured in degrees
   tilt: 35 # [deg]
-  azimuthal_orientation: 180 # [deg]
-  horizontal_tracking: false
+  # The timezone offset in Hours from UTC.
+  timezone: 0 # [hours]
   vertical_tracking: false
+  # The width of the collector is measured in meters.
+  width: 0.86 #[m]
 glass:
   absorptivity: 0.01 # [unitless]
   # @@@ Value NOT taken from Maria's paper.
@@ -89,7 +91,7 @@ adhesive:
   thickness: 0.00005 # [m]
   thermal_conductivity: 0.85 # [W/m*K]
 tedlar:
-  thickenss: 0.0001 # [m]
+  thickness: 0.0001 # [m]
   thermal_conductivity: 0.2 # [W/m*K]
 collector:
   absorptivity: 0.95 # [unitless]
