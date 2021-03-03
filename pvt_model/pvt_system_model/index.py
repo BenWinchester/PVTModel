@@ -28,12 +28,13 @@ __all__ = (
     "index_from_segment_coordinates",
     "index_from_temperature_name",
     "num_temperatures",
+    "temperature_name_from_index",
     "x_coordinate",
     "y_coordinate",
 )
 
 
-def _get_index(  # pylint: disable=too-many-return-statements,too-many-branches
+def _get_index(  # pylint: disable=too-many-branches
     temperature_name: TemperatureName,
     *,
     number_of_pipes: Optional[int] = None,
@@ -76,13 +77,15 @@ def _get_index(  # pylint: disable=too-many-return-statements,too-many-branches
 
     """
 
+    index: Optional[int] = None
+
     if temperature_name == TemperatureName.glass:
         if number_of_x_segments is None or x_coord is None or y_coord is None:
             raise ProgrammerJudgementFault(
                 "Not all parameters needed were passed in to uniquely determine a "
                 "glass layer index."
             )
-        return int(number_of_x_segments * y_coord + x_coord)
+        index = int(number_of_x_segments * y_coord + x_coord)
     if temperature_name == TemperatureName.pv:
         if (
             number_of_x_segments is None
@@ -94,7 +97,7 @@ def _get_index(  # pylint: disable=too-many-return-statements,too-many-branches
                 "Not all parameters needed were passed in to uniquely determine a "
                 "pv layer index."
             )
-        return int(number_of_x_segments * (number_of_y_segments + y_coord) + x_coord)
+        index = int(number_of_x_segments * (number_of_y_segments + y_coord) + x_coord)
     if temperature_name == TemperatureName.collector:
         if (
             number_of_x_segments is None
@@ -106,7 +109,7 @@ def _get_index(  # pylint: disable=too-many-return-statements,too-many-branches
                 "Not all parameters needed were passed in to uniquely determine an "
                 "absorber layer index."
             )
-        return int(
+        index = int(
             number_of_x_segments * (2 * number_of_y_segments + y_coord) + x_coord
         )
     if temperature_name == TemperatureName.pipe:
@@ -120,7 +123,7 @@ def _get_index(  # pylint: disable=too-many-return-statements,too-many-branches
                 "Not all parameters needed were passed in to uniquely determine a "
                 "pipe index."
             )
-        return int(
+        index = int(
             (number_of_x_segments * (3 * number_of_y_segments + y_coord) + pipe_number)
         )
     if temperature_name == TemperatureName.htf:
@@ -135,7 +138,7 @@ def _get_index(  # pylint: disable=too-many-return-statements,too-many-branches
                 "Not all parameters needed were passed in to uniquely determine an "
                 "htf index."
             )
-        return int(
+        index = int(
             (
                 number_of_x_segments
                 * (3 * number_of_y_segments + number_of_pipes + y_coord)
@@ -154,7 +157,7 @@ def _get_index(  # pylint: disable=too-many-return-statements,too-many-branches
                 "Not all parameters needed were passed in to uniquely determine an "
                 "htf-input index."
             )
-        return int(
+        index = int(
             (
                 number_of_x_segments
                 * (3 * number_of_y_segments + 2 * number_of_pipes + y_coord)
@@ -173,7 +176,7 @@ def _get_index(  # pylint: disable=too-many-return-statements,too-many-branches
                 "Not all parameters needed were passed in to uniquely determine an "
                 "htf-output index."
             )
-        return int(
+        index = int(
             (
                 number_of_x_segments
                 * (3 * number_of_y_segments + 3 * number_of_pipes + y_coord)
@@ -190,7 +193,7 @@ def _get_index(  # pylint: disable=too-many-return-statements,too-many-branches
                 "Not all parameters needed were passed in to uniquely determine the "
                 "collector input index."
             )
-        return int(
+        index = int(
             number_of_x_segments * (3 * number_of_y_segments + 4 * number_of_pipes)
         )
     if temperature_name == TemperatureName.collector_out:
@@ -203,7 +206,7 @@ def _get_index(  # pylint: disable=too-many-return-statements,too-many-branches
                 "Not all parameters needed were passed in to uniquely determine the "
                 "collector output index."
             )
-        return int(
+        index = int(
             (
                 number_of_x_segments * (3 * number_of_y_segments + 4 * number_of_pipes)
                 + 1
@@ -219,7 +222,7 @@ def _get_index(  # pylint: disable=too-many-return-statements,too-many-branches
                 "Not all parameters needed were passed in to uniquely determine the "
                 "tank index."
             )
-        return int(
+        index = int(
             (
                 number_of_x_segments * (3 * number_of_y_segments + 4 * number_of_pipes)
                 + 2
@@ -235,7 +238,7 @@ def _get_index(  # pylint: disable=too-many-return-statements,too-many-branches
                 "Not all parameters needed were passed in to uniquely determine the "
                 "tank input index."
             )
-        return int(
+        index = int(
             (
                 number_of_x_segments * (3 * number_of_y_segments + 4 * number_of_pipes)
                 + 3
@@ -251,12 +254,16 @@ def _get_index(  # pylint: disable=too-many-return-statements,too-many-branches
                 "Not all parameters needed were passed in to uniquely determine the "
                 "tank output index."
             )
-        return int(
+        index = int(
             (
                 number_of_x_segments * (3 * number_of_y_segments + 4 * number_of_pipes)
                 + 4
             )
         )
+
+    # Return the index if assigned, else, raise an error.
+    if index is not None:
+        return index
     raise ProgrammerJudgementFault(
         "An attempt was made to fetch an index using an undefined method."
     )
@@ -373,6 +380,92 @@ def num_temperatures(
     """
 
     return (3 * number_of_x_segments + 4 * number_of_pipes) * number_of_y_segments + 4
+
+
+def temperature_name_from_index(  # pylint: disable=too-many-branches
+    index: int,
+    number_of_pipes: int,
+    number_of_x_segments: int,
+    number_of_y_segments: int,
+) -> TemperatureName:
+    """
+    Returns the temperature name from the index.
+
+    This method carries out a similar function in reverse to the `_get_index` method
+    such that the temperature name, stored as a :class:`TemperatureName` instance, is
+    returned based on the index passed in.
+
+    :param index:
+        The index of the temperature for which to return the temperature name.
+
+    :param number_of_pipes:
+        The number of HTF pipes in the collector.
+
+    :param number_of_x_segments:
+        The number of segments in the x direction for the collector model being run.
+
+    :param number_of_y_segments:
+        The number of segments in the y direction for the collector model being run.
+
+    :return:
+        The temperature name, as a :class:`TemperatureName` instance, based on the index
+        passed in.
+
+    :raises: LookupError
+        Raised when an index is passed in for which no temperature name has been
+        assigned in this function.
+
+    """
+
+    temperature_name: Optional[TemperatureName] = None
+    if index < number_of_x_segments * number_of_y_segments:
+        temperature_name = TemperatureName.glass
+    if index < 2 * number_of_x_segments * number_of_y_segments:
+        temperature_name = TemperatureName.pv
+    if index < 3 * number_of_x_segments * number_of_y_segments:
+        temperature_name = TemperatureName.collector
+    if index < ((3 * number_of_x_segments + number_of_pipes) * number_of_y_segments):
+        temperature_name = TemperatureName.pipe
+    if index < (
+        (3 * number_of_x_segments + 2 * number_of_pipes) * number_of_y_segments
+    ):
+        temperature_name = TemperatureName.htf
+    if index < (
+        (3 * number_of_x_segments + 3 * number_of_pipes) * number_of_y_segments
+    ):
+        temperature_name = TemperatureName.htf_in
+    if index < (
+        (3 * number_of_x_segments + 4 * number_of_pipes) * number_of_y_segments
+    ):
+        temperature_name = TemperatureName.htf_out
+    if index == (
+        (3 * number_of_x_segments + 4 * number_of_pipes) * number_of_y_segments
+    ):
+        temperature_name = TemperatureName.collector_in
+    if index == (
+        (3 * number_of_x_segments + 4 * number_of_pipes) * number_of_y_segments + 1
+    ):
+        temperature_name = TemperatureName.collector_out
+    if index == (
+        (3 * number_of_x_segments + 4 * number_of_pipes) * number_of_y_segments + 2
+    ):
+        temperature_name = TemperatureName.tank
+    if index == (
+        (3 * number_of_x_segments + 4 * number_of_pipes) * number_of_y_segments + 3
+    ):
+        temperature_name = TemperatureName.tank_in
+    if index == (
+        (3 * number_of_x_segments + 4 * number_of_pipes) * number_of_y_segments + 4
+    ):
+        temperature_name = TemperatureName.tank_out
+
+    # Return the temperature name if assigned, else, return an error.
+    if temperature_name is not None:
+        return temperature_name
+    raise LookupError(
+        "A reverse lookup of the temperature name from the index was attempted: no "
+        "matching temperature name was found."
+    )
 
 
 def x_coordinate(index: int, x_resolution: int) -> int:
