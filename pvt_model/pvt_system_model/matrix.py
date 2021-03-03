@@ -57,7 +57,7 @@ def _absorber_equation(
     number_of_temperatures: int,
     number_of_x_segments: int,
     number_of_y_segments: int,
-    previous_temperature_vector: List[float],
+    previous_temperature_vector: numpy.ndarray,
     pvt_panel: pvt.PVT,
     resolution: int,
     segment: Segment,
@@ -445,11 +445,11 @@ def _fluid_continuity_equation(
 
 
 def _glass_equation(
-    best_guess_temperature_vector: List[float],
+    best_guess_temperature_vector: numpy.ndarray,
     number_of_temperatures: int,
     number_of_x_segments: int,
     number_of_y_segments: int,
-    previous_temperature_vector: List[float],
+    previous_temperature_vector: numpy.ndarray,
     pvt_panel: pvt.PVT,
     resolution: int,
     segment: Segment,
@@ -713,7 +713,7 @@ def _glass_equation(
 def _htf_equation(
     number_of_pipes: int,
     number_of_temperatures: int,
-    previous_temperature_vector: List[float],
+    previous_temperature_vector: numpy.ndarray,
     pvt_panel: pvt.PVT,
     resolution: int,
     segment: Segment,
@@ -826,7 +826,7 @@ def _pipe_equation(
     number_of_temperatures: int,
     number_of_x_segments: int,
     number_of_y_segments: int,
-    previous_temperature_vector: List[float],
+    previous_temperature_vector: numpy.ndarray,
     pvt_panel: pvt.PVT,
     resolution: int,
     segment: Segment,
@@ -946,11 +946,11 @@ def _pipe_equation(
 
 
 def _pv_equation(
-    best_guess_temperature_vector: List[float],
+    best_guess_temperature_vector: numpy.ndarray,
     number_of_temperatures: int,
     number_of_x_segments: int,
     number_of_y_segments: int,
-    previous_temperature_vector: List[float],
+    previous_temperature_vector: numpy.ndarray,
     pvt_panel: pvt.PVT,
     resolution: int,
     segment: Segment,
@@ -1287,7 +1287,7 @@ def _system_continuity_equations(
 
 
 def _tank_continuity_equation(
-    best_guess_temperature_vector: List[float],
+    best_guess_temperature_vector: numpy.ndarray,
     heat_exchanger: exchanger.Exchanger,
     number_of_temperatures: int,
 ) -> Tuple[List[float], float]:
@@ -1335,12 +1335,12 @@ def _tank_continuity_equation(
 
 
 def _tank_equation(
-    best_guess_temperature_vector: List[float],
+    best_guess_temperature_vector: numpy.ndarray,
     heat_exchanger: exchanger.Exchanger,
     hot_water_load: float,
     hot_water_tank: tank.Tank,
     number_of_temperatures: int,
-    previous_temperature_vector: List[float],
+    previous_temperature_vector: numpy.ndarray,
     pvt_panel: pvt.PVT,
     resolution: int,
     weather_conditions: WeatherConditions,
@@ -1434,11 +1434,15 @@ def _tank_equation(
 
 
 def calculate_matrix_equation(
-    best_guess_temperature_vector: List[float],
+    best_guess_temperature_vector: numpy.ndarray,
     heat_exchanger: exchanger.Exchanger,
     hot_water_load: float,
     hot_water_tank: tank.Tank,
-    previous_temperature_vector: List[float],
+    number_of_pipes: int,
+    number_of_temperatures: int,
+    number_of_x_segments: int,
+    number_of_y_segments: int,
+    previous_temperature_vector: numpy.ndarray,
     pvt_panel: pvt.PVT,
     resolution: int,
     weather_conditions: WeatherConditions,
@@ -1454,20 +1458,6 @@ def calculate_matrix_equation(
 
     # Set up an index for tracking the equation number.
     equation_index: int = 0
-
-    # Determine the number of temperatures being modelled.
-    number_of_pipes = len(
-        {segment.pipe_index for segment in pvt_panel.segments.values()}
-    )
-    number_of_x_segments = len(
-        {segment.x_index for segment in pvt_panel.segments.values()}
-    )
-    number_of_y_segments = len(
-        {segment.y_index for segment in pvt_panel.segments.values()}
-    )
-    number_of_temperatures = index.num_temperatures(
-        number_of_pipes, number_of_x_segments, number_of_y_segments
-    )
 
     # Instantiate an empty matrix and array based on the number of temperatures present.
     matrix = numpy.zeros([number_of_temperatures, number_of_temperatures])

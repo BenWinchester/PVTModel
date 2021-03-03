@@ -19,7 +19,7 @@ import datetime
 import logging
 import os
 
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Set, Tuple
 
 import numpy
 import pytz
@@ -29,6 +29,7 @@ from scipy import linalg  # type: ignore
 
 from . import (
     exchanger,
+    index,
     load,
     mains_power,
     matrix,
@@ -44,13 +45,14 @@ from .constants import (
     ZERO_CELCIUS_OFFSET,
 )
 
-from ..__utils__ import (
+from ..__utils__ import (  # pylint: disable=unused-import
     CarbonEmissions,
     get_logger,
     SystemData,
+    TemperatureName,
     TotalPowerData,
 )
-from .__utils__ import (  # pylint: disable=unused-import
+from .__utils__ import (
     DivergentSolutionError,
     ProgrammerJudgementFault,
     PVT_SYSTEM_MODEL_LOGGER_NAME,
@@ -73,6 +75,57 @@ SOLAR_IRRADIANCE_FOLDERNAME = "solar_irradiance_profiles"
 TEMPERATURE_FOLDERNAME = "temperature_profiles"
 # Name of the weather data file.
 WEATHER_DATA_FILENAME = "weather.yaml"
+
+
+def _average_layer_temperature(
+    number_of_pipes: int,
+    number_of_x_segments: int,
+    number_of_y_segments: int,
+    temperature_name: TemperatureName,
+    temperature_vector: numpy.ndarray,
+) -> float:
+    """
+    Determines the average temperature for a layer.
+
+    :param number_of_pipes:
+        The number of pipes in the collector.
+
+    :param number_of_x_segments:
+        The number of segments in a single row of the collector.
+
+    :param number_of_y_segments:
+        The number of y segments in a single row of the collector.
+
+    :param temperature_name:
+        The name of the temperature for which to determine the average.
+
+    :param temperature_vector:
+        The temperature vector from which the average temperature of the given layer
+        should be extracted.
+
+    :return:
+        The average temperature of the layer.
+
+    """
+
+    layer_temperatures: Set[float] = {
+        value
+        for value_index, value in enumerate(temperature_vector)
+        if index.temperature_name_from_index(
+            value_index, number_of_pipes, number_of_x_segments, number_of_y_segments
+        )
+        == temperature_name
+    }
+
+    try:
+        average_temperature: float = sum(layer_temperatures) / len(layer_temperatures)
+    except ZeroDivisionError as e:
+        raise ProgrammerJudgementFault(
+            "An attempt was made to compute the average temperature of a layer where "
+            "no temperatures in the temperature vector matched the given temperatrure "
+            f"name: {str(e)}"
+        ) from None
+    return average_temperature
 
 
 def _calculate_vector_difference(
@@ -206,11 +259,14 @@ def _get_weather_forecaster(
 
 
 def _solve_temperature_vector_convergence_method(
-    collector_to_htf_efficiency: float,
     current_hot_water_load: float,
     heat_exchanger: exchanger.Exchanger,
     hot_water_tank: tank.Tank,
     next_date_and_time: datetime.datetime,
+    number_of_pipes: int,
+    number_of_temperatures: int,
+    number_of_x_segments: int,
+    number_of_y_segments: int,
     previous_run_temperature_vector: numpy.ndarray,
     pvt_panel: pvt.PVT,
     resolution: int,
@@ -236,10 +292,6 @@ def _solve_temperature_vector_convergence_method(
         - If the solution is converging, but has not yet converged, then the function
           runs through again.
 
-    :param collector_to_htf_efficiency:
-        The efficiency of the heat transfer process between the thermal collector and
-        the HTF.
-
     :param current_hot_water_load:
         The current hot-water load placed on the system, measured in kilograms per
         second.
@@ -253,6 +305,20 @@ def _solve_temperature_vector_convergence_method(
 
     :param next_date_and_time:
         The date and time at the time step being solved.
+
+    :param number_of_pipes:
+        The nmber of pipes on the PVT panel.
+
+    :param number_of_temperatures:
+        The number of unique temperature values to determine for the model.
+
+    :param number_of_x_segments:
+        The number of segments in one "row" of the panel, i.e., which have the same y
+        coordinate
+
+    :param number_of_y_segments:
+        The number of segments in one "column" of the panel, i.e., which have the same x
+        coordiante.
 
     :param previous_run_temperature_vector:
         The temperatures at the previous time step.
@@ -287,20 +353,15 @@ def _solve_temperature_vector_convergence_method(
         convergence_run_number,
     )
 
-    coefficient_matrix = matrix.calculate_coefficient_matrix(
+    coefficient_matrix, resultant_vector = matrix.calculate_matrix_equation(
         run_one_temperature_vector,
+        heat_exchanger,
         current_hot_water_load,
         hot_water_tank,
-        heat_exchanger.efficiency,
-        pvt_panel,
-        resolution,
-        weather_conditions,
-    )
-
-    resultant_vector = matrix.calculate_resultant_vector(
-        run_one_temperature_vector[0],
-        current_hot_water_load,
-        hot_water_tank,
+        number_of_pipes,
+        number_of_temperatures,
+        number_of_x_segments,
+        number_of_y_segments,
         previous_run_temperature_vector,
         pvt_panel,
         resolution,
@@ -370,11 +431,14 @@ def _solve_temperature_vector_convergence_method(
 
     # Otherwise, continue to solve until the prevision is reached.
     return _solve_temperature_vector_convergence_method(
-        collector_to_htf_efficiency=collector_to_htf_efficiency,
         current_hot_water_load=current_hot_water_load,
         heat_exchanger=heat_exchanger,
         hot_water_tank=hot_water_tank,
         next_date_and_time=next_date_and_time,
+        number_of_pipes=number_of_pipes,
+        number_of_temperatures=number_of_temperatures,
+        number_of_x_segments=number_of_x_segments,
+        number_of_y_segments=number_of_y_segments,
         previous_run_temperature_vector=previous_run_temperature_vector,
         pvt_panel=pvt_panel,
         resolution=resolution,
@@ -391,7 +455,7 @@ def main(
     days: int,
     exchanger_data_file: str,
     initial_month: int,
-    initial_system_temperature_vector: Optional[Tuple[float, ...]],
+    initial_system_temperature_vector: Tuple[float, ...],
     location: str,
     months: int,
     portion_covered: float,
@@ -399,11 +463,10 @@ def main(
     resolution: int,
     start_time: int,
     tank_data_file: str,
-    unglazed: bool,
     use_pvgis: bool,
     x_resolution: int,
     y_resolution: int,
-) -> Tuple[Tuple[float, ...], Dict[int, SystemData]]:
+) -> Tuple[numpy.ndarray, Dict[int, SystemData]]:
     """
     The main module for the code. Calling this method executes a run of the simulation.
 
@@ -483,19 +546,8 @@ def main(
         load_system,
     )
 
-    # Generate a list from the mapping or the CLI args if supplied.
-    if initial_system_temperature_vector is not None:
-        initial_system_temperature_vector: List[float] = [
-            float(entry) for entry in initial_system_temperature_vector
-        ]
-        if len(initial_system_temperature_vector) != len(
-            INITIAL_SYSTEM_TEMPERATURE_MAPPING
-        ):
-            raise ProgrammerJudgementFault(
-                "The initial system temperature vector passed in does not match the "
-                "required number of system temperature values."
-            )
-    else:
+    # Raise an exception if no initial system temperature vector was supplied.
+    if initial_system_temperature_vector is None:
         raise ProgrammerJudgementFault(
             "Not initial system temperature vector was supplied. This is necessary "
             "when calling the pvt model."
@@ -503,10 +555,8 @@ def main(
 
     # Initialise the PV-T panel.
     pvt_panel = process_pvt_system_data.pvt_panel_from_path(
-        initial_system_temperature_vector[TemperatureName.bulk_water.value],
         portion_covered,
         pvt_data_file,
-        unglazed,
         x_resolution,
         y_resolution,
     )
@@ -519,6 +569,27 @@ def main(
     logger.info("Heat exchanger successfully instantiated: %s", heat_exchanger)
     hot_water_tank = process_pvt_system_data.hot_water_tank_from_path(tank_data_file)
     logger.info("Hot-water tank successfully instantiated: %s", hot_water_tank)
+
+    # Determine the number of temperatures being modelled.
+    number_of_pipes = len(
+        {segment.pipe_index for segment in pvt_panel.segments.values()}
+    )
+    number_of_x_segments = len(
+        {segment.x_index for segment in pvt_panel.segments.values()}
+    )
+    number_of_y_segments = len(
+        {segment.y_index for segment in pvt_panel.segments.values()}
+    )
+    number_of_temperatures = index.num_temperatures(
+        number_of_pipes, number_of_x_segments, number_of_y_segments
+    )
+    logger.info(
+        "System consists of %s pipes, %s by %s segments, and %s temperatures in all.",
+        number_of_pipes,
+        number_of_x_segments,
+        number_of_y_segments,
+        number_of_temperatures,
+    )
 
     # Instantiate the two pipes used to store input and output temperature values.
     # collector_to_tank_pipe = pipe.Pipe(temperature=initial_system_temperature_vector[3])
@@ -584,39 +655,71 @@ def main(
         cloud_efficacy_factor,
         initial_date_and_time,
     )
+
+    # Determine the average temperatures for the layers in the PV-T system.
+    average_glass_temperature = _average_layer_temperature(
+        number_of_pipes,
+        number_of_x_segments,
+        number_of_y_segments,
+        TemperatureName.glass,
+        previous_run_temperature_vector,
+    )
+    average_pv_temperature = _average_layer_temperature(
+        number_of_pipes,
+        number_of_x_segments,
+        number_of_y_segments,
+        TemperatureName.pv,
+        previous_run_temperature_vector,
+    )
+    average_collector_temperature = _average_layer_temperature(
+        number_of_pipes,
+        number_of_x_segments,
+        number_of_y_segments,
+        TemperatureName.collector,
+        previous_run_temperature_vector,
+    )
+    average_bulk_water_temperature = _average_layer_temperature(
+        number_of_pipes,
+        number_of_x_segments,
+        number_of_y_segments,
+        TemperatureName.htf,
+        previous_run_temperature_vector,
+    )
+
+    # Save the system data.
     system_data[0] = SystemData(
         date=initial_date_and_time.strftime("%d/%m/%Y"),
         time=initial_date_and_time.strftime("%H:%M:%S"),
-        glass_temperature=previous_run_temperature_vector[TemperatureName.glass.value]
-        - ZERO_CELCIUS_OFFSET,
-        pv_temperature=previous_run_temperature_vector[TemperatureName.pv.value]
-        - ZERO_CELCIUS_OFFSET,
-        collector_temperature=previous_run_temperature_vector[
-            TemperatureName.collector.value
-        ]
-        - ZERO_CELCIUS_OFFSET,
+        glass_temperature=average_glass_temperature - ZERO_CELCIUS_OFFSET,
+        pv_temperature=average_pv_temperature - ZERO_CELCIUS_OFFSET,
+        collector_temperature=average_collector_temperature - ZERO_CELCIUS_OFFSET,
         collector_input_temperature=previous_run_temperature_vector[
-            TemperatureName.collector_input.value
+            index.index_from_temperature_name(TemperatureName.collector_in)
         ]
         - ZERO_CELCIUS_OFFSET,
         collector_output_temperature=previous_run_temperature_vector[
-            TemperatureName.collector_output.value
+            index.index_from_temperature_name(TemperatureName.collector_out)
         ]
         - ZERO_CELCIUS_OFFSET,
-        bulk_water_temperature=previous_run_temperature_vector[
-            TemperatureName.bulk_water.value
-        ]
-        - ZERO_CELCIUS_OFFSET,
+        bulk_water_temperature=average_bulk_water_temperature - ZERO_CELCIUS_OFFSET,
         ambient_temperature=weather_conditions.ambient_temperature
         - ZERO_CELCIUS_OFFSET,
         exchanger_temperature_drop=previous_run_temperature_vector[
-            TemperatureName.tank_output.value
+            index.index_from_temperature_name(TemperatureName.tank_out)
         ]
-        - previous_run_temperature_vector[TemperatureName.tank_input.value]
-        if previous_run_temperature_vector[TemperatureName.tank_output.value]
-        > previous_run_temperature_vector[TemperatureName.tank.value]
+        - previous_run_temperature_vector[
+            index.index_from_temperature_name(TemperatureName.tank_in)
+        ]
+        if previous_run_temperature_vector[
+            index.index_from_temperature_name(TemperatureName.tank_in)
+        ]
+        > previous_run_temperature_vector[
+            index.index_from_temperature_name(TemperatureName.tank)
+        ]
         else 0,
-        tank_temperature=previous_run_temperature_vector[TemperatureName.tank.value]
+        tank_temperature=previous_run_temperature_vector[
+            index.index_from_temperature_name(TemperatureName.tank)
+        ]
         - ZERO_CELCIUS_OFFSET,
         sky_temperature=weather_conditions.sky_temperature - ZERO_CELCIUS_OFFSET,
     )
@@ -635,9 +738,6 @@ def main(
             date_and_time.strftime("%d/%m/%Y %H:%M:%S"),
             previous_run_temperature_vector,
         )
-
-        # Determine the efficiency of the heat transfer from the collector to the HTF.
-        collector_to_htf_efficiency = pvt_panel.collector.collector_to_htf_efficiency
 
         # Determine the "i+1" time.
         next_date_and_time = date_and_time + time_iterator_step
@@ -659,11 +759,14 @@ def main(
         )
 
         current_run_temperature_vector = _solve_temperature_vector_convergence_method(
-            collector_to_htf_efficiency=collector_to_htf_efficiency,
             current_hot_water_load=current_hot_water_load,
             heat_exchanger=heat_exchanger,
             hot_water_tank=hot_water_tank,
             next_date_and_time=next_date_and_time,
+            number_of_pipes=number_of_pipes,
+            number_of_temperatures=number_of_temperatures,
+            number_of_x_segments=number_of_x_segments,
+            number_of_y_segments=number_of_y_segments,
             previous_run_temperature_vector=previous_run_temperature_vector,
             pvt_panel=pvt_panel,
             resolution=resolution,
@@ -671,6 +774,37 @@ def main(
             weather_conditions=weather_conditions,
         )
 
+        # Determine the average temperatures of the various PVT layers.
+        average_glass_temperature = _average_layer_temperature(
+            number_of_pipes,
+            number_of_x_segments,
+            number_of_y_segments,
+            TemperatureName.glass,
+            current_run_temperature_vector,
+        )
+        average_pv_temperature = _average_layer_temperature(
+            number_of_pipes,
+            number_of_x_segments,
+            number_of_y_segments,
+            TemperatureName.pv,
+            current_run_temperature_vector,
+        )
+        average_collector_temperature = _average_layer_temperature(
+            number_of_pipes,
+            number_of_x_segments,
+            number_of_y_segments,
+            TemperatureName.collector,
+            current_run_temperature_vector,
+        )
+        average_bulk_water_temperature = _average_layer_temperature(
+            number_of_pipes,
+            number_of_x_segments,
+            number_of_y_segments,
+            TemperatureName.htf,
+            current_run_temperature_vector,
+        )
+
+        # Save the system data.
         system_data[run_number + 1] = SystemData(
             date=next_date_and_time.strftime("%d/%m/%Y"),
             time=str(
@@ -678,38 +812,36 @@ def main(
                 + next_date_and_time.hour
             )
             + next_date_and_time.strftime("%H:%M:%S")[2:],
-            glass_temperature=current_run_temperature_vector[
-                TemperatureName.glass.value
-            ]
-            - ZERO_CELCIUS_OFFSET,
-            pv_temperature=current_run_temperature_vector[TemperatureName.pv.value]
-            - ZERO_CELCIUS_OFFSET,
-            collector_temperature=current_run_temperature_vector[
-                TemperatureName.collector.value
-            ]
-            - ZERO_CELCIUS_OFFSET,
+            glass_temperature=average_glass_temperature - ZERO_CELCIUS_OFFSET,
+            pv_temperature=average_pv_temperature - ZERO_CELCIUS_OFFSET,
+            collector_temperature=average_collector_temperature - ZERO_CELCIUS_OFFSET,
             collector_input_temperature=current_run_temperature_vector[
-                TemperatureName.collector_input.value
+                index.index_from_temperature_name(TemperatureName.collector_in)
             ]
             - ZERO_CELCIUS_OFFSET,
             collector_output_temperature=current_run_temperature_vector[
-                TemperatureName.collector_output.value
+                index.index_from_temperature_name(TemperatureName.collector_out)
             ]
             - ZERO_CELCIUS_OFFSET,
-            bulk_water_temperature=current_run_temperature_vector[
-                TemperatureName.bulk_water.value
-            ]
-            - ZERO_CELCIUS_OFFSET,
+            bulk_water_temperature=average_bulk_water_temperature - ZERO_CELCIUS_OFFSET,
             ambient_temperature=weather_conditions.ambient_temperature
             - ZERO_CELCIUS_OFFSET,
             exchanger_temperature_drop=current_run_temperature_vector[
-                TemperatureName.tank_output.value
+                index.index_from_temperature_name(TemperatureName.tank_out)
             ]
-            - current_run_temperature_vector[TemperatureName.tank_input.value]
-            if current_run_temperature_vector[TemperatureName.tank_output.value]
-            > current_run_temperature_vector[TemperatureName.tank.value]
+            - current_run_temperature_vector[
+                index.index_from_temperature_name(TemperatureName.tank_in)
+            ]
+            if current_run_temperature_vector[
+                index.index_from_temperature_name(TemperatureName.tank_in)
+            ]
+            > current_run_temperature_vector[
+                index.index_from_temperature_name(TemperatureName.tank)
+            ]
             else 0,
-            tank_temperature=current_run_temperature_vector[TemperatureName.tank.value]
+            tank_temperature=current_run_temperature_vector[
+                index.index_from_temperature_name(TemperatureName.tank)
+            ]
             - ZERO_CELCIUS_OFFSET,
             sky_temperature=weather_conditions.sky_temperature - ZERO_CELCIUS_OFFSET,
         )

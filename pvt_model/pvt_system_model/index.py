@@ -420,41 +420,41 @@ def temperature_name_from_index(  # pylint: disable=too-many-branches
     temperature_name: Optional[TemperatureName] = None
     if index < number_of_x_segments * number_of_y_segments:
         temperature_name = TemperatureName.glass
-    if index < 2 * number_of_x_segments * number_of_y_segments:
+    elif index < 2 * number_of_x_segments * number_of_y_segments:
         temperature_name = TemperatureName.pv
-    if index < 3 * number_of_x_segments * number_of_y_segments:
+    elif index < 3 * number_of_x_segments * number_of_y_segments:
         temperature_name = TemperatureName.collector
-    if index < ((3 * number_of_x_segments + number_of_pipes) * number_of_y_segments):
+    elif index < ((3 * number_of_x_segments + number_of_pipes) * number_of_y_segments):
         temperature_name = TemperatureName.pipe
-    if index < (
+    elif index < (
         (3 * number_of_x_segments + 2 * number_of_pipes) * number_of_y_segments
     ):
         temperature_name = TemperatureName.htf
-    if index < (
+    elif index < (
         (3 * number_of_x_segments + 3 * number_of_pipes) * number_of_y_segments
     ):
         temperature_name = TemperatureName.htf_in
-    if index < (
+    elif index < (
         (3 * number_of_x_segments + 4 * number_of_pipes) * number_of_y_segments
     ):
         temperature_name = TemperatureName.htf_out
-    if index == (
+    elif index == (
         (3 * number_of_x_segments + 4 * number_of_pipes) * number_of_y_segments
     ):
         temperature_name = TemperatureName.collector_in
-    if index == (
+    elif index == (
         (3 * number_of_x_segments + 4 * number_of_pipes) * number_of_y_segments + 1
     ):
         temperature_name = TemperatureName.collector_out
-    if index == (
+    elif index == (
         (3 * number_of_x_segments + 4 * number_of_pipes) * number_of_y_segments + 2
     ):
         temperature_name = TemperatureName.tank
-    if index == (
+    elif index == (
         (3 * number_of_x_segments + 4 * number_of_pipes) * number_of_y_segments + 3
     ):
         temperature_name = TemperatureName.tank_in
-    if index == (
+    elif index == (
         (3 * number_of_x_segments + 4 * number_of_pipes) * number_of_y_segments + 4
     ):
         temperature_name = TemperatureName.tank_out

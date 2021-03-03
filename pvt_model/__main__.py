@@ -263,7 +263,7 @@ def _determine_initial_conditions(
         resolution,
         parsed_args.start_time,
         parsed_args.tank_data_file,
-        parsed_args.unglazed,
+        # parsed_args.unglazed,
         parsed_args.use_pvgis,
         parsed_args.x_resolution,
         parsed_args.y_resolution,
