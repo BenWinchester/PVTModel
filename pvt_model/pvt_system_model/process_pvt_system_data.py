@@ -38,7 +38,7 @@ from .__utils__ import (
     PVParameters,
     read_yaml,
 )
-from .index import x_coordinate, y_coordinate
+from .index_handler import x_coordinate, y_coordinate
 from .pvt_panel.__utils__ import MicroLayer
 
 
@@ -362,6 +362,9 @@ def pvt_panel_from_path(
                 pvt_data["pvt_system"]["width"] / y_resolution,
                 x_coordinate(segment_number, x_resolution),
                 y_coordinate(segment_number, x_resolution),
+                pipe_positions.index(x_coordinate(segment_number, x_resolution))
+                if x_coordinate(segment_number, x_resolution) in pipe_positions
+                else None,
             )
             for segment_number in range(x_resolution * y_resolution)
         }

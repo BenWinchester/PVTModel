@@ -29,7 +29,7 @@ from scipy import linalg  # type: ignore
 
 from . import (
     exchanger,
-    index,
+    index_handler,
     load,
     mains_power,
     matrix,
@@ -111,7 +111,7 @@ def _average_layer_temperature(
     layer_temperatures: Set[float] = {
         value
         for value_index, value in enumerate(temperature_vector)
-        if index.temperature_name_from_index(
+        if index_handler.temperature_name_from_index(
             value_index, number_of_pipes, number_of_x_segments, number_of_y_segments
         )
         == temperature_name
@@ -375,15 +375,11 @@ def _solve_temperature_vector_convergence_method(
     )
 
     run_two_output = linalg.solve(a=coefficient_matrix, b=resultant_vector)
+    # run_two_output = linalg.lstsq(a=coefficient_matrix, b=resultant_vector)
     run_two_temperature_vector: numpy.ndarray = numpy.asarray(  # type: ignore
         [run_two_output[index][0] for index in range(len(run_two_output))]
     )
-
-    # import pdb
-
-    # pdb.set_trace(
-    #     header=f"{next_date_and_time.strftime('%H:%M')}: Run {convergence_run_number}"
-    # )
+    # run_two_temperature_vector = run_two_output[0]
 
     logger.info(
         "Date and time: %s; Run number: %s: "
@@ -572,7 +568,11 @@ def main(
 
     # Determine the number of temperatures being modelled.
     number_of_pipes = len(
-        {segment.pipe_index for segment in pvt_panel.segments.values()}
+        {
+            segment.pipe_index
+            for segment in pvt_panel.segments.values()
+            if segment.pipe_index is not None
+        }
     )
     number_of_x_segments = len(
         {segment.x_index for segment in pvt_panel.segments.values()}
@@ -580,7 +580,7 @@ def main(
     number_of_y_segments = len(
         {segment.y_index for segment in pvt_panel.segments.values()}
     )
-    number_of_temperatures = index.num_temperatures(
+    number_of_temperatures = index_handler.num_temperatures(
         number_of_pipes, number_of_x_segments, number_of_y_segments
     )
     logger.info(
@@ -694,7 +694,7 @@ def main(
         pv_temperature=average_pv_temperature - ZERO_CELCIUS_OFFSET,
         collector_temperature=average_collector_temperature - ZERO_CELCIUS_OFFSET,
         collector_input_temperature=previous_run_temperature_vector[
-            index.index_from_temperature_name(
+            index_handler.index_from_temperature_name(
                 number_of_pipes,
                 number_of_x_segments,
                 number_of_y_segments,
@@ -703,7 +703,7 @@ def main(
         ]
         - ZERO_CELCIUS_OFFSET,
         collector_output_temperature=previous_run_temperature_vector[
-            index.index_from_temperature_name(
+            index_handler.index_from_temperature_name(
                 number_of_pipes,
                 number_of_x_segments,
                 number_of_y_segments,
@@ -715,7 +715,7 @@ def main(
         ambient_temperature=weather_conditions.ambient_temperature
         - ZERO_CELCIUS_OFFSET,
         exchanger_temperature_drop=previous_run_temperature_vector[
-            index.index_from_temperature_name(
+            index_handler.index_from_temperature_name(
                 number_of_pipes,
                 number_of_x_segments,
                 number_of_y_segments,
@@ -723,7 +723,7 @@ def main(
             )
         ]
         - previous_run_temperature_vector[
-            index.index_from_temperature_name(
+            index_handler.index_from_temperature_name(
                 number_of_pipes,
                 number_of_x_segments,
                 number_of_y_segments,
@@ -731,7 +731,7 @@ def main(
             )
         ]
         if previous_run_temperature_vector[
-            index.index_from_temperature_name(
+            index_handler.index_from_temperature_name(
                 number_of_pipes,
                 number_of_x_segments,
                 number_of_y_segments,
@@ -739,7 +739,7 @@ def main(
             )
         ]
         > previous_run_temperature_vector[
-            index.index_from_temperature_name(
+            index_handler.index_from_temperature_name(
                 number_of_pipes,
                 number_of_x_segments,
                 number_of_y_segments,
@@ -748,7 +748,7 @@ def main(
         ]
         else 0,
         tank_temperature=previous_run_temperature_vector[
-            index.index_from_temperature_name(
+            index_handler.index_from_temperature_name(
                 number_of_pipes,
                 number_of_x_segments,
                 number_of_y_segments,
@@ -851,7 +851,7 @@ def main(
             pv_temperature=average_pv_temperature - ZERO_CELCIUS_OFFSET,
             collector_temperature=average_collector_temperature - ZERO_CELCIUS_OFFSET,
             collector_input_temperature=current_run_temperature_vector[
-                index.index_from_temperature_name(
+                index_handler.index_from_temperature_name(
                     number_of_pipes,
                     number_of_x_segments,
                     number_of_y_segments,
@@ -860,7 +860,7 @@ def main(
             ]
             - ZERO_CELCIUS_OFFSET,
             collector_output_temperature=current_run_temperature_vector[
-                index.index_from_temperature_name(
+                index_handler.index_from_temperature_name(
                     number_of_pipes,
                     number_of_x_segments,
                     number_of_y_segments,
@@ -872,7 +872,7 @@ def main(
             ambient_temperature=weather_conditions.ambient_temperature
             - ZERO_CELCIUS_OFFSET,
             exchanger_temperature_drop=current_run_temperature_vector[
-                index.index_from_temperature_name(
+                index_handler.index_from_temperature_name(
                     number_of_pipes,
                     number_of_x_segments,
                     number_of_y_segments,
@@ -880,7 +880,7 @@ def main(
                 )
             ]
             - current_run_temperature_vector[
-                index.index_from_temperature_name(
+                index_handler.index_from_temperature_name(
                     number_of_pipes,
                     number_of_x_segments,
                     number_of_y_segments,
@@ -888,7 +888,7 @@ def main(
                 )
             ]
             if current_run_temperature_vector[
-                index.index_from_temperature_name(
+                index_handler.index_from_temperature_name(
                     number_of_pipes,
                     number_of_x_segments,
                     number_of_y_segments,
@@ -896,7 +896,7 @@ def main(
                 )
             ]
             > current_run_temperature_vector[
-                index.index_from_temperature_name(
+                index_handler.index_from_temperature_name(
                     number_of_pipes,
                     number_of_x_segments,
                     number_of_y_segments,
@@ -905,7 +905,7 @@ def main(
             ]
             else 0,
             tank_temperature=current_run_temperature_vector[
-                index.index_from_temperature_name(
+                index_handler.index_from_temperature_name(
                     number_of_pipes,
                     number_of_x_segments,
                     number_of_y_segments,

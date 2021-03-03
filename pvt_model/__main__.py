@@ -42,7 +42,7 @@ from .__utils__ import (
 
 from .analysis import analysis
 
-from .pvt_system_model import index, tank
+from .pvt_system_model import index_handler, tank
 from .pvt_system_model.pvt_panel import pvt
 from .pvt_system_model.__main__ import main as pvt_system_model_main
 
@@ -262,10 +262,10 @@ def _determine_initial_conditions(
     if running_system_temperature_vector is None:
         running_system_temperature_vector = [
             DEFAULT_SYSTEM_TEMPERATURE
-        ] * index.num_temperatures(
+        ] * index_handler.num_temperatures(
             number_of_pipes,
-            parsed_args.x_resolution,
-            parsed_args.y_resolution,
+            (parsed_args.x_resolution),
+            (parsed_args.y_resolution),
         )
 
     # Call the model to generate the output of the run.

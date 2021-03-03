@@ -1,6 +1,6 @@
 #!/usr/bin/python3.7
 ########################################################################################
-# index.py - The index solver module for the PVT model component.
+# index_handler.py - The index solver module for the PVT model component.
 #
 # Author: Ben Winchester
 # Copyright: Ben Winchester, 2021
@@ -83,7 +83,7 @@ def _get_index(  # pylint: disable=too-many-branches
         if number_of_x_segments is None or x_coord is None or y_coord is None:
             raise ProgrammerJudgementFault(
                 "Not all parameters needed were passed in to uniquely determine a "
-                "glass layer index."
+                "glass layer index_handler."
             )
         index = int(number_of_x_segments * y_coord + x_coord)
     if temperature_name == TemperatureName.pv:
@@ -95,7 +95,7 @@ def _get_index(  # pylint: disable=too-many-branches
         ):
             raise ProgrammerJudgementFault(
                 "Not all parameters needed were passed in to uniquely determine a "
-                "pv layer index."
+                "pv layer index_handler."
             )
         index = int(number_of_x_segments * (number_of_y_segments + y_coord) + x_coord)
     if temperature_name == TemperatureName.collector:
@@ -107,7 +107,7 @@ def _get_index(  # pylint: disable=too-many-branches
         ):
             raise ProgrammerJudgementFault(
                 "Not all parameters needed were passed in to uniquely determine an "
-                "absorber layer index."
+                "absorber layer index_handler."
             )
         index = int(
             number_of_x_segments * (2 * number_of_y_segments + y_coord) + x_coord
@@ -121,10 +121,14 @@ def _get_index(  # pylint: disable=too-many-branches
         ):
             raise ProgrammerJudgementFault(
                 "Not all parameters needed were passed in to uniquely determine a "
-                "pipe index."
+                "pipe index_handler."
             )
         index = int(
-            (number_of_x_segments * (3 * number_of_y_segments + y_coord) + pipe_number)
+            (
+                number_of_x_segments * (3 * number_of_y_segments)
+                + number_of_pipes * y_coord
+                + pipe_number
+            )
         )
     if temperature_name == TemperatureName.htf:
         if (
@@ -136,12 +140,12 @@ def _get_index(  # pylint: disable=too-many-branches
         ):
             raise ProgrammerJudgementFault(
                 "Not all parameters needed were passed in to uniquely determine an "
-                "htf index."
+                "htf index_handler."
             )
         index = int(
             (
-                number_of_x_segments
-                * (3 * number_of_y_segments + number_of_pipes + y_coord)
+                number_of_x_segments * (3 * number_of_y_segments + number_of_pipes)
+                + number_of_pipes * y_coord
                 + pipe_number
             )
         )
@@ -155,12 +159,12 @@ def _get_index(  # pylint: disable=too-many-branches
         ):
             raise ProgrammerJudgementFault(
                 "Not all parameters needed were passed in to uniquely determine an "
-                "htf-input index."
+                "htf-input index_handler."
             )
         index = int(
             (
-                number_of_x_segments
-                * (3 * number_of_y_segments + 2 * number_of_pipes + y_coord)
+                number_of_x_segments * (3 * number_of_y_segments + 2 * number_of_pipes)
+                + number_of_pipes * y_coord
                 + pipe_number
             )
         )
@@ -174,12 +178,12 @@ def _get_index(  # pylint: disable=too-many-branches
         ):
             raise ProgrammerJudgementFault(
                 "Not all parameters needed were passed in to uniquely determine an "
-                "htf-output index."
+                "htf-output index_handler."
             )
         index = int(
             (
-                number_of_x_segments
-                * (3 * number_of_y_segments + 3 * number_of_pipes + y_coord)
+                number_of_x_segments * (3 * number_of_y_segments + 3 * number_of_pipes)
+                + number_of_pipes * y_coord
                 + pipe_number
             )
         )
@@ -191,7 +195,7 @@ def _get_index(  # pylint: disable=too-many-branches
         ):
             raise ProgrammerJudgementFault(
                 "Not all parameters needed were passed in to uniquely determine the "
-                "collector input index."
+                "collector input index_handler."
             )
         index = int(
             number_of_x_segments * (3 * number_of_y_segments + 4 * number_of_pipes)
@@ -204,7 +208,7 @@ def _get_index(  # pylint: disable=too-many-branches
         ):
             raise ProgrammerJudgementFault(
                 "Not all parameters needed were passed in to uniquely determine the "
-                "collector output index."
+                "collector output index_handler."
             )
         index = int(
             (
@@ -220,7 +224,7 @@ def _get_index(  # pylint: disable=too-many-branches
         ):
             raise ProgrammerJudgementFault(
                 "Not all parameters needed were passed in to uniquely determine the "
-                "tank index."
+                "tank index_handler."
             )
         index = int(
             (
@@ -236,7 +240,7 @@ def _get_index(  # pylint: disable=too-many-branches
         ):
             raise ProgrammerJudgementFault(
                 "Not all parameters needed were passed in to uniquely determine the "
-                "tank input index."
+                "tank input index_handler."
             )
         index = int(
             (
@@ -252,7 +256,7 @@ def _get_index(  # pylint: disable=too-many-branches
         ):
             raise ProgrammerJudgementFault(
                 "Not all parameters needed were passed in to uniquely determine the "
-                "tank output index."
+                "tank output index_handler."
             )
         index = int(
             (
@@ -271,6 +275,8 @@ def _get_index(  # pylint: disable=too-many-branches
 
 def index_from_pipe_coordinates(
     number_of_pipes: int,
+    number_of_x_segments: int,
+    number_of_y_segments: int,
     temperature_name: TemperatureName,
     pipe_number: int,
     y_coord: int,
@@ -280,6 +286,12 @@ def index_from_pipe_coordinates(
 
     :param number_of_pipes:
         The number of HTF pipes in the collector.
+
+    :param number_of_x_segments:
+        The number of segments in the x direction along the panel.
+
+    :param number_of_y_segments:
+        The number of segments in the y direction along the panel.
 
     :param temperature_name:
         The name of the layer/temperature type being computed.
@@ -298,6 +310,8 @@ def index_from_pipe_coordinates(
     return _get_index(
         temperature_name,
         number_of_pipes=number_of_pipes,
+        number_of_x_segments=number_of_x_segments,
+        number_of_y_segments=number_of_y_segments,
         pipe_number=pipe_number,
         y_coord=y_coord,
     )
@@ -398,7 +412,7 @@ def num_temperatures(
 
     """
 
-    return (3 * number_of_x_segments + 4 * number_of_pipes) * number_of_y_segments + 4
+    return number_of_x_segments * (3 * number_of_y_segments + 4 * number_of_pipes) + 5
 
 
 def temperature_name_from_index(  # pylint: disable=too-many-branches
@@ -408,7 +422,7 @@ def temperature_name_from_index(  # pylint: disable=too-many-branches
     number_of_y_segments: int,
 ) -> TemperatureName:
     """
-    Returns the temperature name from the index.
+    Returns the temperature name from the index_handler.
 
     This method carries out a similar function in reverse to the `_get_index` method
     such that the temperature name, stored as a :class:`TemperatureName` instance, is
@@ -489,7 +503,7 @@ def temperature_name_from_index(  # pylint: disable=too-many-branches
 
 def x_coordinate(index: int, x_resolution: int) -> int:
     """
-    Returns the x coordinate for the segment being processed from the index.
+    Returns the x coordinate for the segment being processed from the index_handler.
 
     :param index:
         The segment index being processed.
@@ -507,7 +521,7 @@ def x_coordinate(index: int, x_resolution: int) -> int:
 
 def y_coordinate(index: int, x_resolution: int) -> int:
     """
-    Returns the y coordinate for the segment being processed from the index.
+    Returns the y coordinate for the segment being processed from the index_handler.
 
     :param index:
         The segment index being processed.

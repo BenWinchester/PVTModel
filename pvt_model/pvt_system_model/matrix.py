@@ -28,11 +28,11 @@ The temperatures represented in the vector T are:
 
 """
 
-from typing import List, Set, Tuple
+from typing import List, Tuple
 
 import numpy
 
-from . import exchanger, index, tank
+from . import exchanger, index_handler, tank
 from .pvt_panel import pvt
 from .pvt_panel.segment import Segment
 
@@ -81,7 +81,7 @@ def _absorber_equation(
 
     # Compute the T_A(i, j) term
     row_equation[
-        index.index_from_segment_coordinates(
+        index_handler.index_from_segment_coordinates(
             number_of_x_segments,
             number_of_y_segments,
             TemperatureName.collector,
@@ -128,7 +128,7 @@ def _absorber_equation(
     # Compute the T_A(i+1, j) term provided that that segment exists.
     if segment.x_index + 1 < number_of_x_segments:
         row_equation[
-            index.index_from_segment_coordinates(
+            index_handler.index_from_segment_coordinates(
                 number_of_x_segments,
                 number_of_y_segments,
                 TemperatureName.collector,
@@ -146,7 +146,7 @@ def _absorber_equation(
     # Compute the T_A(i-1, j) term provided that that segment exists.
     if segment.x_index > 0:
         row_equation[
-            index.index_from_segment_coordinates(
+            index_handler.index_from_segment_coordinates(
                 number_of_x_segments,
                 number_of_y_segments,
                 TemperatureName.collector,
@@ -164,7 +164,7 @@ def _absorber_equation(
     # Compute the T_A(i, j+1) term provided that that segment exists.
     if segment.y_index + 1 < number_of_y_segments:
         row_equation[
-            index.index_from_segment_coordinates(
+            index_handler.index_from_segment_coordinates(
                 number_of_x_segments,
                 number_of_y_segments,
                 TemperatureName.collector,
@@ -182,7 +182,7 @@ def _absorber_equation(
     # Compute the T_A(i, j-1) term provided that that segment exists.
     if segment.y_index > 0:
         row_equation[
-            index.index_from_segment_coordinates(
+            index_handler.index_from_segment_coordinates(
                 number_of_x_segments,
                 number_of_y_segments,
                 TemperatureName.collector,
@@ -200,7 +200,7 @@ def _absorber_equation(
     # Compute the T_pv(i, j) term provided that there is a collector layer present.
     if segment.pv:
         row_equation[
-            index.index_from_segment_coordinates(
+            index_handler.index_from_segment_coordinates(
                 number_of_x_segments,
                 number_of_y_segments,
                 TemperatureName.pv,
@@ -222,8 +222,10 @@ def _absorber_equation(
             )
         try:
             row_equation[
-                index.index_from_pipe_coordinates(
+                index_handler.index_from_pipe_coordinates(
                     number_of_pipes,
+                    number_of_x_segments,
+                    number_of_y_segments,
                     TemperatureName.pipe,
                     segment.pipe_index,
                     segment.y_index,
@@ -249,7 +251,7 @@ def _absorber_equation(
         * pvt_panel.collector.density  # [kg/m^3]
         * pvt_panel.collector.heat_capacity  # [J/kg*K]
         * previous_temperature_vector[
-            index.index_from_segment_coordinates(
+            index_handler.index_from_segment_coordinates(
                 number_of_x_segments,
                 number_of_y_segments,
                 TemperatureName.collector,
@@ -276,7 +278,7 @@ def _boundary_condition_equations(
     number_of_temperatures: int,
     number_of_x_segments: int,
     number_of_y_segments: int,
-) -> Set[Tuple[List[float], float]]:
+) -> List[Tuple[List[float], float]]:
     """
     Returns matrix rows and resultant vector values representing boundary conditions.
 
@@ -294,13 +296,13 @@ def _boundary_condition_equations(
         The number of temperatures being modelled in the system.
 
     :return:
-        A `set` of `tuple`s containing:
+        A `list` of `tuple`s containing:
         - the equation represented as a row in the matrix,
         - and the corresponding value in the resultant method.
 
     """
 
-    equations: Set[Tuple[List[float], float]] = set()
+    equations: List[Tuple[List[float], float]] = list()
 
     # Work through each layer, applying the boundary conditions.
     for temperature_name in {
@@ -313,7 +315,7 @@ def _boundary_condition_equations(
             # Equation 1: Zero temperature gradient at x=0.
             row_equation: List[float] = [0] * number_of_temperatures
             row_equation[
-                index.index_from_segment_coordinates(
+                index_handler.index_from_segment_coordinates(
                     number_of_x_segments,
                     number_of_y_segments,
                     temperature_name,
@@ -322,7 +324,7 @@ def _boundary_condition_equations(
                 )
             ] = -1
             row_equation[
-                index.index_from_segment_coordinates(
+                index_handler.index_from_segment_coordinates(
                     number_of_x_segments,
                     number_of_y_segments,
                     temperature_name,
@@ -330,11 +332,11 @@ def _boundary_condition_equations(
                     y_coord,
                 )
             ] = 1
-            equations.add((row_equation, 0))
+            equations.append((row_equation, 0))
             # Equation 2: Zero temperature gradient at x=W.
             row_equation = [0] * number_of_temperatures
             row_equation[
-                index.index_from_segment_coordinates(
+                index_handler.index_from_segment_coordinates(
                     number_of_x_segments,
                     number_of_y_segments,
                     temperature_name,
@@ -343,7 +345,7 @@ def _boundary_condition_equations(
                 )
             ] = -1
             row_equation[
-                index.index_from_segment_coordinates(
+                index_handler.index_from_segment_coordinates(
                     number_of_x_segments,
                     number_of_y_segments,
                     temperature_name,
@@ -351,14 +353,14 @@ def _boundary_condition_equations(
                     y_coord,
                 )
             ] = 1
-            equations.add((row_equation, 0))
+            equations.append((row_equation, 0))
 
         # Work along both "top" and "bottom" edges, applying the boundary conditions.
         for x_coord in range(number_of_x_segments):
             # Equation 3: Zero temperature gradient at y=0.
             row_equation = [0] * number_of_temperatures
             row_equation[
-                index.index_from_segment_coordinates(
+                index_handler.index_from_segment_coordinates(
                     number_of_x_segments,
                     number_of_y_segments,
                     temperature_name,
@@ -367,7 +369,7 @@ def _boundary_condition_equations(
                 )
             ] = -1
             row_equation[
-                index.index_from_segment_coordinates(
+                index_handler.index_from_segment_coordinates(
                     number_of_x_segments,
                     number_of_y_segments,
                     temperature_name,
@@ -375,11 +377,11 @@ def _boundary_condition_equations(
                     1,
                 )
             ] = 1
-            equations.add((row_equation, 0))
+            equations.append((row_equation, 0))
             # Equation 4: Zero temperature gradient at y=H.
             row_equation = [0] * number_of_temperatures
             row_equation[
-                index.index_from_segment_coordinates(
+                index_handler.index_from_segment_coordinates(
                     number_of_x_segments,
                     number_of_y_segments,
                     temperature_name,
@@ -388,7 +390,7 @@ def _boundary_condition_equations(
                 )
             ] = -1
             row_equation[
-                index.index_from_segment_coordinates(
+                index_handler.index_from_segment_coordinates(
                     number_of_x_segments,
                     number_of_y_segments,
                     temperature_name,
@@ -396,13 +398,15 @@ def _boundary_condition_equations(
                     number_of_y_segments - 2,
                 )
             ] = 1
-            equations.add((row_equation, 0))
+            equations.append((row_equation, 0))
 
     return equations
 
 
 def _fluid_continuity_equation(
     number_of_pipes: int,
+    number_of_x_segments: int,
+    number_of_y_segments: int,
     number_of_temperatures: int,
     segment: Segment,
 ) -> Tuple[List[float], float]:
@@ -424,8 +428,10 @@ def _fluid_continuity_equation(
 
     # Compute the T_f,out(#, j) term.
     row_equation[
-        index.index_from_pipe_coordinates(
+        index_handler.index_from_pipe_coordinates(
             number_of_pipes,
+            number_of_x_segments,
+            number_of_y_segments,
             TemperatureName.htf_out,
             segment.pipe_index,  # type: ignore
             segment.y_index,
@@ -433,8 +439,10 @@ def _fluid_continuity_equation(
     ] = -1
 
     row_equation[
-        index.index_from_pipe_coordinates(
+        index_handler.index_from_pipe_coordinates(
             number_of_pipes,
+            number_of_x_segments,
+            number_of_y_segments,
             TemperatureName.htf_in,
             segment.pipe_index,  # type: ignore
             segment.y_index + 1,
@@ -473,7 +481,7 @@ def _glass_equation(
 
     # Compute the T_g(i, j) term
     row_equation[
-        index.index_from_segment_coordinates(
+        index_handler.index_from_segment_coordinates(
             number_of_x_segments,
             number_of_y_segments,
             TemperatureName.glass,
@@ -512,7 +520,7 @@ def _glass_equation(
             radiating_to_sky=True,
             source_emissivity=pvt_panel.glass.emissivity,
             source_temperature=best_guess_temperature_vector[
-                index.index_from_segment_coordinates(
+                index_handler.index_from_segment_coordinates(
                     number_of_x_segments,
                     number_of_y_segments,
                     TemperatureName.glass,
@@ -527,7 +535,7 @@ def _glass_equation(
         * radiative_heat_transfer_coefficient(
             destination_emissivity=pvt_panel.pv.emissivity,
             destination_temperature=best_guess_temperature_vector[
-                index.index_from_segment_coordinates(
+                index_handler.index_from_segment_coordinates(
                     number_of_x_segments,
                     number_of_y_segments,
                     TemperatureName.pv,
@@ -537,7 +545,7 @@ def _glass_equation(
             ],
             source_emissivity=pvt_panel.glass.emissivity,
             source_temperature=best_guess_temperature_vector[
-                index.index_from_segment_coordinates(
+                index_handler.index_from_segment_coordinates(
                     number_of_x_segments,
                     number_of_y_segments,
                     TemperatureName.glass,
@@ -553,7 +561,7 @@ def _glass_equation(
     # Compute the T_g(i+1, j) term provided that that segment exists.
     if segment.x_index + 1 < number_of_x_segments:
         row_equation[
-            index.index_from_segment_coordinates(
+            index_handler.index_from_segment_coordinates(
                 number_of_x_segments,
                 number_of_y_segments,
                 TemperatureName.glass,
@@ -571,7 +579,7 @@ def _glass_equation(
     # Compute the T_g(i-1, j) term provided that that segment exists.
     if segment.x_index > 0:
         row_equation[
-            index.index_from_segment_coordinates(
+            index_handler.index_from_segment_coordinates(
                 number_of_x_segments,
                 number_of_y_segments,
                 TemperatureName.glass,
@@ -589,7 +597,7 @@ def _glass_equation(
     # Compute the T_g(i, j+1) term provided that that segment exists.
     if segment.y_index + 1 < number_of_y_segments:
         row_equation[
-            index.index_from_segment_coordinates(
+            index_handler.index_from_segment_coordinates(
                 number_of_x_segments,
                 number_of_y_segments,
                 TemperatureName.glass,
@@ -607,7 +615,7 @@ def _glass_equation(
     # Compute the T_g(i, j-1) term provided that that segment exists.
     if segment.y_index > 0:
         row_equation[
-            index.index_from_segment_coordinates(
+            index_handler.index_from_segment_coordinates(
                 number_of_x_segments,
                 number_of_y_segments,
                 TemperatureName.glass,
@@ -625,7 +633,7 @@ def _glass_equation(
     # Compute the T_pv(i, j) term provided that there is a PV layer present.
     if segment.pv:
         row_equation[
-            index.index_from_segment_coordinates(
+            index_handler.index_from_segment_coordinates(
                 number_of_x_segments,
                 number_of_y_segments,
                 TemperatureName.pv,
@@ -640,7 +648,7 @@ def _glass_equation(
                 radiative_heat_transfer_coefficient(
                     destination_emissivity=pvt_panel.pv.emissivity,
                     destination_temperature=best_guess_temperature_vector[
-                        index.index_from_segment_coordinates(
+                        index_handler.index_from_segment_coordinates(
                             number_of_x_segments,
                             number_of_y_segments,
                             TemperatureName.pv,
@@ -650,7 +658,7 @@ def _glass_equation(
                     ],
                     source_emissivity=pvt_panel.glass.emissivity,
                     source_temperature=best_guess_temperature_vector[
-                        index.index_from_segment_coordinates(
+                        index_handler.index_from_segment_coordinates(
                             number_of_x_segments,
                             number_of_y_segments,
                             TemperatureName.glass,
@@ -673,7 +681,7 @@ def _glass_equation(
         * pvt_panel.glass.density  # [kg/m^3]
         * pvt_panel.glass.heat_capacity  # [J/kg*K]
         * previous_temperature_vector[
-            index.index_from_segment_coordinates(
+            index_handler.index_from_segment_coordinates(
                 number_of_x_segments,
                 number_of_y_segments,
                 TemperatureName.glass,
@@ -695,7 +703,7 @@ def _glass_equation(
             radiating_to_sky=True,
             source_emissivity=pvt_panel.glass.emissivity,
             source_temperature=best_guess_temperature_vector[
-                index.index_from_segment_coordinates(
+                index_handler.index_from_segment_coordinates(
                     number_of_x_segments,
                     number_of_y_segments,
                     TemperatureName.glass,
@@ -713,6 +721,8 @@ def _glass_equation(
 def _htf_equation(
     number_of_pipes: int,
     number_of_temperatures: int,
+    number_of_x_segments: int,
+    number_of_y_segments: int,
     previous_temperature_vector: numpy.ndarray,
     pvt_panel: pvt.PVT,
     resolution: int,
@@ -736,8 +746,10 @@ def _htf_equation(
 
     # Compute the T_f(#, j) term.
     row_equation[
-        index.index_from_pipe_coordinates(
+        index_handler.index_from_pipe_coordinates(
             number_of_pipes,
+            number_of_x_segments,
+            number_of_y_segments,
             TemperatureName.htf,
             segment.pipe_index,  # type: ignore
             segment.y_index,
@@ -759,8 +771,10 @@ def _htf_equation(
 
     # Compute the T_f,in(#, j) term.
     row_equation[
-        index.index_from_pipe_coordinates(
+        index_handler.index_from_pipe_coordinates(
             number_of_pipes,
+            number_of_x_segments,
+            number_of_y_segments,
             TemperatureName.htf_in,
             segment.pipe_index,  # type: ignore
             segment.y_index,
@@ -772,8 +786,10 @@ def _htf_equation(
 
     # Compute the T_f,out(#, j) term.
     row_equation[
-        index.index_from_pipe_coordinates(
+        index_handler.index_from_pipe_coordinates(
             number_of_pipes,
+            number_of_x_segments,
+            number_of_y_segments,
             TemperatureName.htf_out,
             segment.pipe_index,  # type: ignore
             segment.y_index,
@@ -785,8 +801,10 @@ def _htf_equation(
 
     # Compute the T_P(#, j) term.
     row_equation[
-        index.index_from_pipe_coordinates(
+        index_handler.index_from_pipe_coordinates(
             number_of_pipes,
+            number_of_x_segments,
+            number_of_y_segments,
             TemperatureName.pipe,
             segment.pipe_index,  # type: ignore
             segment.y_index,
@@ -808,8 +826,10 @@ def _htf_equation(
         * DENSITY_OF_WATER  # [kg/m^3]
         * pvt_panel.collector.htf_heat_capacity  # [J/kg*K]
         * previous_temperature_vector[
-            index.index_from_pipe_coordinates(
+            index_handler.index_from_pipe_coordinates(
                 number_of_pipes,
+                number_of_x_segments,
+                number_of_y_segments,
                 TemperatureName.htf,
                 segment.pipe_index,  # type: ignore
                 segment.y_index,
@@ -850,8 +870,10 @@ def _pipe_equation(
 
     # Compute the T_P(#, j) term.
     row_equation[
-        index.index_from_pipe_coordinates(
+        index_handler.index_from_pipe_coordinates(
             number_of_pipes,
+            number_of_x_segments,
+            number_of_y_segments,
             TemperatureName.pipe,
             segment.pipe_index,  # type: ignore
             segment.y_index,
@@ -885,7 +907,7 @@ def _pipe_equation(
 
     # Compute the T_A(i, j) term.
     row_equation[
-        index.index_from_segment_coordinates(
+        index_handler.index_from_segment_coordinates(
             number_of_x_segments,
             number_of_y_segments,
             TemperatureName.collector,
@@ -901,8 +923,10 @@ def _pipe_equation(
 
     # Compute the T_f(#, j) term.
     row_equation[
-        index.index_from_pipe_coordinates(
+        index_handler.index_from_pipe_coordinates(
             number_of_pipes,
+            number_of_x_segments,
+            number_of_y_segments,
             TemperatureName.htf,
             segment.pipe_index,  # type: ignore
             segment.y_index,
@@ -927,8 +951,10 @@ def _pipe_equation(
         * pvt_panel.collector.density  # [kg/m^3]
         * pvt_panel.collector.heat_capacity  # [J/kg*K]
         * previous_temperature_vector[
-            index.index_from_pipe_coordinates(
+            index_handler.index_from_pipe_coordinates(
                 number_of_pipes,
+                number_of_x_segments,
+                number_of_y_segments,
                 TemperatureName.pipe,
                 segment.pipe_index,  # type: ignore
                 segment.y_index,
@@ -974,7 +1000,7 @@ def _pv_equation(
 
     # Compute the T_pv(i, j) term
     row_equation[
-        index.index_from_segment_coordinates(
+        index_handler.index_from_segment_coordinates(
             number_of_x_segments,
             number_of_y_segments,
             TemperatureName.pv,
@@ -1007,7 +1033,7 @@ def _pv_equation(
         * radiative_heat_transfer_coefficient(
             destination_emissivity=pvt_panel.glass.emissivity,
             destination_temperature=best_guess_temperature_vector[
-                index.index_from_segment_coordinates(
+                index_handler.index_from_segment_coordinates(
                     number_of_x_segments,
                     number_of_y_segments,
                     TemperatureName.glass,
@@ -1017,7 +1043,7 @@ def _pv_equation(
             ],
             source_emissivity=pvt_panel.pv.emissivity,
             source_temperature=best_guess_temperature_vector[
-                index.index_from_segment_coordinates(
+                index_handler.index_from_segment_coordinates(
                     number_of_x_segments,
                     number_of_y_segments,
                     TemperatureName.pv,
@@ -1046,7 +1072,7 @@ def _pv_equation(
     # Compute the T_pv(i+1, j) term provided that that segment exists.
     if segment.x_index + 1 < number_of_x_segments:
         row_equation[
-            index.index_from_segment_coordinates(
+            index_handler.index_from_segment_coordinates(
                 number_of_x_segments,
                 number_of_y_segments,
                 TemperatureName.pv,
@@ -1064,7 +1090,7 @@ def _pv_equation(
     # Compute the T_pv(i-1, j) term provided that that segment exists.
     if segment.x_index > 0:
         row_equation[
-            index.index_from_segment_coordinates(
+            index_handler.index_from_segment_coordinates(
                 number_of_x_segments,
                 number_of_y_segments,
                 TemperatureName.pv,
@@ -1082,7 +1108,7 @@ def _pv_equation(
     # Compute the T_pv(i, j+1) term provided that that segment exists.
     if segment.y_index + 1 < number_of_y_segments:
         row_equation[
-            index.index_from_segment_coordinates(
+            index_handler.index_from_segment_coordinates(
                 number_of_x_segments,
                 number_of_y_segments,
                 TemperatureName.pv,
@@ -1100,7 +1126,7 @@ def _pv_equation(
     # Compute the T_pv(i, j-1) term provided that that segment exists.
     if segment.y_index > 0:
         row_equation[
-            index.index_from_segment_coordinates(
+            index_handler.index_from_segment_coordinates(
                 number_of_x_segments,
                 number_of_y_segments,
                 TemperatureName.pv,
@@ -1118,7 +1144,7 @@ def _pv_equation(
     # Compute the T_g(i, j) term provided that there is a glass layer present.
     if segment.glass:
         row_equation[
-            index.index_from_segment_coordinates(
+            index_handler.index_from_segment_coordinates(
                 number_of_x_segments,
                 number_of_y_segments,
                 TemperatureName.pv,
@@ -1133,7 +1159,7 @@ def _pv_equation(
                 radiative_heat_transfer_coefficient(
                     destination_emissivity=pvt_panel.glass.emissivity,
                     destination_temperature=best_guess_temperature_vector[
-                        index.index_from_segment_coordinates(
+                        index_handler.index_from_segment_coordinates(
                             number_of_x_segments,
                             number_of_y_segments,
                             TemperatureName.glass,
@@ -1143,7 +1169,7 @@ def _pv_equation(
                     ],
                     source_emissivity=pvt_panel.pv.emissivity,
                     source_temperature=best_guess_temperature_vector[
-                        index.index_from_segment_coordinates(
+                        index_handler.index_from_segment_coordinates(
                             number_of_x_segments,
                             number_of_y_segments,
                             TemperatureName.pv,
@@ -1160,7 +1186,7 @@ def _pv_equation(
     # Compute the T_A(i, j) term provided that there is a collector layer present.
     if segment.collector:
         row_equation[
-            index.index_from_segment_coordinates(
+            index_handler.index_from_segment_coordinates(
                 number_of_x_segments,
                 number_of_y_segments,
                 TemperatureName.collector,
@@ -1200,7 +1226,7 @@ def _pv_equation(
         * pvt_panel.pv.density  # [kg/m^3]
         * pvt_panel.pv.heat_capacity  # [J/kg*K]
         * previous_temperature_vector[
-            index.index_from_segment_coordinates(
+            index_handler.index_from_segment_coordinates(
                 number_of_x_segments,
                 number_of_y_segments,
                 TemperatureName.pv,
@@ -1218,7 +1244,7 @@ def _system_continuity_equations(
     number_of_temperatures: int,
     number_of_x_segments: int,
     number_of_y_segments: int,
-) -> Set[Tuple[List[float], float]]:
+) -> List[Tuple[List[float], float]]:
     """
     Returns matrix rows and resultant vector values representing system continuities.
 
@@ -1236,57 +1262,64 @@ def _system_continuity_equations(
         The number of temperatures being modelled in the system.
 
     :return:
-        A `set` of `tuple`s containing:
+        A `list` of `tuple`s containing:
         - the equation represented as a row in the matrix,
         - and the corresponding value in the resultant method.
 
     """
 
-    equations: Set[Tuple[List[float], float]] = set()
+    equations: List[Tuple[List[float], float]] = list()
 
     # Equation 1: Continuity of fluid entering the collector.
     for pipe_number in range(number_of_pipes):
         row_equation: List[float] = [0] * number_of_temperatures
         row_equation[
-            index.index_from_pipe_coordinates(
-                number_of_pipes, TemperatureName.htf_in, pipe_number, 0
+            index_handler.index_from_pipe_coordinates(
+                number_of_pipes,
+                number_of_x_segments,
+                number_of_y_segments,
+                TemperatureName.htf_in,
+                pipe_number,
+                0,
             )
         ] = -1
         row_equation[
-            index.index_from_temperature_name(
+            index_handler.index_from_temperature_name(
                 number_of_pipes,
                 number_of_x_segments,
                 number_of_y_segments,
                 TemperatureName.collector_in,
             )
         ] = 1
-        equations.add((row_equation, 0))
+        equations.append((row_equation, 0))
 
     # Equation 2: Continuity of fluid leaving the collector.
     for pipe_number in range(number_of_pipes):
         row_equation = [0] * number_of_temperatures
         row_equation[
-            index.index_from_pipe_coordinates(
+            index_handler.index_from_pipe_coordinates(
                 number_of_pipes,
+                number_of_x_segments,
+                number_of_y_segments,
                 TemperatureName.htf_out,
                 pipe_number,
                 number_of_y_segments,
             )
         ] = -1
         row_equation[
-            index.index_from_temperature_name(
+            index_handler.index_from_temperature_name(
                 number_of_pipes,
                 number_of_x_segments,
                 number_of_y_segments,
                 TemperatureName.collector_out,
             )
         ] = 1
-        equations.add((row_equation, 0))
+        equations.append((row_equation, 0))
 
     # Equation 3: Fluid leaving the collector enters the tank without losses.
     row_equation = [0] * number_of_temperatures
     row_equation[
-        index.index_from_temperature_name(
+        index_handler.index_from_temperature_name(
             number_of_pipes,
             number_of_x_segments,
             number_of_y_segments,
@@ -1294,18 +1327,18 @@ def _system_continuity_equations(
         )
     ] = -1
     row_equation[
-        index.index_from_temperature_name(
+        index_handler.index_from_temperature_name(
             number_of_pipes,
             number_of_x_segments,
             number_of_y_segments,
             TemperatureName.tank_in,
         )
     ] = 1
-    equations.add((row_equation, 0))
+    equations.append((row_equation, 0))
 
     row_equation = [0] * number_of_temperatures
     row_equation[
-        index.index_from_temperature_name(
+        index_handler.index_from_temperature_name(
             number_of_pipes,
             number_of_x_segments,
             number_of_y_segments,
@@ -1313,14 +1346,14 @@ def _system_continuity_equations(
         )
     ] = -1
     row_equation[
-        index.index_from_temperature_name(
+        index_handler.index_from_temperature_name(
             number_of_pipes,
             number_of_x_segments,
             number_of_y_segments,
             TemperatureName.collector_in,
         )
     ] = 1
-    equations.add((row_equation, 0))
+    equations.append((row_equation, 0))
 
     return equations
 
@@ -1355,7 +1388,7 @@ def _tank_continuity_equation(
     # If the flow is through the tank heat exchanger:
     if (
         best_guess_temperature_vector[
-            index.index_from_temperature_name(
+            index_handler.index_from_temperature_name(
                 number_of_pipes,
                 number_of_x_segments,
                 number_of_y_segments,
@@ -1363,7 +1396,7 @@ def _tank_continuity_equation(
             )
         ]
         > best_guess_temperature_vector[
-            index.index_from_temperature_name(
+            index_handler.index_from_temperature_name(
                 number_of_pipes,
                 number_of_x_segments,
                 number_of_y_segments,
@@ -1372,7 +1405,7 @@ def _tank_continuity_equation(
         ]
     ):
         row_equation[
-            index.index_from_temperature_name(
+            index_handler.index_from_temperature_name(
                 number_of_pipes,
                 number_of_x_segments,
                 number_of_y_segments,
@@ -1382,7 +1415,7 @@ def _tank_continuity_equation(
             -1 * heat_exchanger.efficiency
         )
         row_equation[
-            index.index_from_temperature_name(
+            index_handler.index_from_temperature_name(
                 number_of_pipes,
                 number_of_x_segments,
                 number_of_y_segments,
@@ -1392,7 +1425,7 @@ def _tank_continuity_equation(
             heat_exchanger.efficiency - 1
         )
         row_equation[
-            index.index_from_temperature_name(
+            index_handler.index_from_temperature_name(
                 number_of_pipes,
                 number_of_x_segments,
                 number_of_y_segments,
@@ -1403,7 +1436,7 @@ def _tank_continuity_equation(
 
     # Otherwise, the flow is diverted back into the collector.
     row_equation[
-        index.index_from_temperature_name(
+        index_handler.index_from_temperature_name(
             number_of_pipes,
             number_of_x_segments,
             number_of_y_segments,
@@ -1411,7 +1444,7 @@ def _tank_continuity_equation(
         )
     ] = -1
     row_equation[
-        index.index_from_temperature_name(
+        index_handler.index_from_temperature_name(
             number_of_pipes,
             number_of_x_segments,
             number_of_y_segments,
@@ -1453,7 +1486,7 @@ def _tank_equation(
 
     # Compute the T_t term
     row_equation[
-        index.index_from_temperature_name(
+        index_handler.index_from_temperature_name(
             number_of_pipes,
             number_of_x_segments,
             number_of_y_segments,
@@ -1476,7 +1509,7 @@ def _tank_equation(
             * heat_exchanger.efficiency
         )
         if best_guess_temperature_vector[
-            index.index_from_temperature_name(
+            index_handler.index_from_temperature_name(
                 number_of_pipes,
                 number_of_x_segments,
                 number_of_y_segments,
@@ -1484,7 +1517,7 @@ def _tank_equation(
             )
         ]
         > best_guess_temperature_vector[
-            index.index_from_temperature_name(
+            index_handler.index_from_temperature_name(
                 number_of_pipes,
                 number_of_x_segments,
                 number_of_y_segments,
@@ -1496,7 +1529,7 @@ def _tank_equation(
 
     # Compute the T_c,out term
     row_equation[
-        index.index_from_temperature_name(
+        index_handler.index_from_temperature_name(
             number_of_pipes,
             number_of_x_segments,
             number_of_y_segments,
@@ -1510,7 +1543,7 @@ def _tank_equation(
             * heat_exchanger.efficiency
         )
         if best_guess_temperature_vector[
-            index.index_from_temperature_name(
+            index_handler.index_from_temperature_name(
                 number_of_pipes,
                 number_of_x_segments,
                 number_of_y_segments,
@@ -1518,7 +1551,7 @@ def _tank_equation(
             )
         ]
         > best_guess_temperature_vector[
-            index.index_from_temperature_name(
+            index_handler.index_from_temperature_name(
                 number_of_pipes,
                 number_of_x_segments,
                 number_of_y_segments,
@@ -1534,7 +1567,7 @@ def _tank_equation(
         hot_water_tank.mass  # [kg]
         * hot_water_tank.heat_capacity  # [J/kg*K]
         * previous_temperature_vector[
-            index.index_from_temperature_name(
+            index_handler.index_from_temperature_name(
                 number_of_pipes,
                 number_of_x_segments,
                 number_of_y_segments,
@@ -1583,16 +1616,13 @@ def calculate_matrix_equation(
 
     """
 
-    # Set up an index for tracking the equation number.
-    equation_index: int = 0
-
     # Instantiate an empty matrix and array based on the number of temperatures present.
-    matrix = numpy.zeros([number_of_temperatures, number_of_temperatures])
-    reslutant_vector = numpy.zeros([number_of_temperatures, 1])
+    matrix = numpy.zeros([1, number_of_temperatures])
+    resultant_vector = numpy.zeros([1, 1])
 
     # Calculate the glass equations.
     for segment in pvt_panel.segments.values():
-        matrix[equation_index], reslutant_vector[equation_index] = _glass_equation(
+        equation, resultant_value = _glass_equation(
             best_guess_temperature_vector,
             number_of_temperatures,
             number_of_x_segments,
@@ -1603,11 +1633,12 @@ def calculate_matrix_equation(
             segment,
             weather_conditions,
         )
-        equation_index += 1
+        matrix = numpy.vstack((matrix, equation))
+        resultant_vector = numpy.vstack((resultant_vector, resultant_value))
 
     # Calculate the pv equations.
     for segment in pvt_panel.segments.values():
-        matrix[equation_index], reslutant_vector[equation_index] = _pv_equation(
+        equation, resultant_value = _pv_equation(
             best_guess_temperature_vector,
             number_of_temperatures,
             number_of_x_segments,
@@ -1618,11 +1649,12 @@ def calculate_matrix_equation(
             segment,
             weather_conditions,
         )
-        equation_index += 1
+        matrix = numpy.vstack((matrix, equation))
+        resultant_vector = numpy.vstack((resultant_vector, resultant_value))
 
     # Calculate the absorber-layer eqations.
     for segment in pvt_panel.segments.values():
-        matrix[equation_index], reslutant_vector[equation_index] = _absorber_equation(
+        equation, resultant_value = _absorber_equation(
             number_of_pipes,
             number_of_temperatures,
             number_of_x_segments,
@@ -1633,7 +1665,8 @@ def calculate_matrix_equation(
             segment,
             weather_conditions,
         )
-        equation_index += 1
+        matrix = numpy.vstack((matrix, equation))
+        resultant_vector = numpy.vstack((resultant_vector, resultant_value))
 
     # Determine a sub-set of sections that have pipes attached.
     segments_with_pipes = [
@@ -1646,7 +1679,7 @@ def calculate_matrix_equation(
 
     # Calculate the pipe equations.
     for segment in segments_with_pipes:
-        matrix[equation_index], reslutant_vector[equation_index] = _pipe_equation(
+        equation, resultant_value = _pipe_equation(
             number_of_pipes,
             number_of_temperatures,
             number_of_x_segments,
@@ -1657,22 +1690,26 @@ def calculate_matrix_equation(
             segment,
             weather_conditions,
         )
-        equation_index += 1
+        matrix = numpy.vstack((matrix, equation))
+        resultant_vector = numpy.vstack((resultant_vector, resultant_value))
 
     # Calculate the htf equations.
     for segment in segments_with_pipes:
-        matrix[equation_index], reslutant_vector[equation_index] = _htf_equation(
+        equation, resultant_value = _htf_equation(
             number_of_pipes,
             number_of_temperatures,
+            number_of_x_segments,
+            number_of_y_segments,
             previous_temperature_vector,
             pvt_panel,
             resolution,
             segment,
         )
-        equation_index += 1
+        matrix = numpy.vstack((matrix, equation))
+        resultant_vector = numpy.vstack((resultant_vector, resultant_value))
 
     # Calculate the tank equations.
-    matrix[equation_index], reslutant_vector[equation_index] = _tank_equation(
+    equation, resultant_value = _tank_equation(
         best_guess_temperature_vector,
         heat_exchanger,
         hot_water_load,
@@ -1686,13 +1723,11 @@ def calculate_matrix_equation(
         resolution,
         weather_conditions,
     )
-    equation_index += 1
+    matrix = numpy.vstack((matrix, equation))
+    resultant_vector = numpy.vstack((resultant_vector, resultant_value))
 
     # Calculate the tank continuity equation.
-    (
-        matrix[equation_index],
-        reslutant_vector[equation_index],
-    ) = _tank_continuity_equation(
+    equation, resultant_value = _tank_continuity_equation(
         best_guess_temperature_vector,
         heat_exchanger,
         number_of_pipes,
@@ -1700,7 +1735,8 @@ def calculate_matrix_equation(
         number_of_x_segments,
         number_of_y_segments,
     )
-    equation_index += 1
+    matrix = numpy.vstack((matrix, equation))
+    resultant_vector = numpy.vstack((resultant_vector, resultant_value))
 
     # Compute the fluid continuity equations - there will be "N_y - 1" equations.
     for segment in [
@@ -1708,11 +1744,15 @@ def calculate_matrix_equation(
         for segment in segments_with_pipes
         if segment.y_index < number_of_y_segments - 1
     ]:
-        (
-            matrix[equation_index],
-            reslutant_vector[equation_index],
-        ) = _fluid_continuity_equation(number_of_pipes, number_of_temperatures, segment)
-        equation_index += 1
+        equation, resultant_value = _fluid_continuity_equation(
+            number_of_pipes,
+            number_of_x_segments,
+            number_of_y_segments,
+            number_of_temperatures,
+            segment,
+        )
+        matrix = numpy.vstack((matrix, equation))
+        resultant_vector = numpy.vstack((resultant_vector, resultant_value))
 
     # Compute the system continuity equations and assign en masse.
     system_continuity_equations = _system_continuity_equations(
@@ -1722,41 +1762,19 @@ def calculate_matrix_equation(
         number_of_y_segments,
     )
 
-    system_continuity_row_equations = [
-        equation[0] for equation in system_continuity_equations
-    ]
-    system_continuity_resultant_values = [
-        equation[1] for equation in system_continuity_equations
-    ]
-
-    matrix[
-        equation_index : equation_index + len(system_continuity_equations)
-    ] = system_continuity_row_equations
-    reslutant_vector[
-        equation_index : equation_index + len(system_continuity_equations)
-    ] = system_continuity_resultant_values
-
-    equation_index += len(system_continuity_equations)
+    for equation, resultant_value in system_continuity_equations:
+        matrix = numpy.vstack((matrix, equation))
+        resultant_vector = numpy.vstack((resultant_vector, resultant_value))
 
     # Calculate the system boundary condition equations.
     boundary_condition_equations = _boundary_condition_equations(
         number_of_temperatures, number_of_x_segments, number_of_y_segments
     )
 
-    boundary_condition_row_equations = [
-        equation[0] for equation in boundary_condition_equations
-    ]
-    boundary_condition_resultant_values = [
-        equation[1] for equation in boundary_condition_equations
-    ]
+    for equation, resultant_value in boundary_condition_equations:
+        matrix = numpy.vstack((matrix, equation))
+        resultant_vector = numpy.vstack((resultant_vector, resultant_value))
+        if len(matrix) == number_of_temperatures:
+            return matrix, resultant_vector
 
-    matrix[
-        equation_index : equation_index + len(boundary_condition_equations)
-    ] = boundary_condition_row_equations
-    reslutant_vector[
-        equation_index : equation_index + len(boundary_condition_equations)
-    ] = boundary_condition_resultant_values
-
-    equation_index += len(boundary_condition_equations)
-
-    return matrix, reslutant_vector
+    return matrix, resultant_vector
