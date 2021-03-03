@@ -33,7 +33,7 @@ __all__ = (
 )
 
 
-def _get_index(
+def _get_index(  # pylint: disable=too-many-return-statements,too-many-branches
     temperature_name: TemperatureName,
     *,
     number_of_pipes: Optional[int] = None,
@@ -77,154 +77,186 @@ def _get_index(
     """
 
     if temperature_name == TemperatureName.glass:
-        try:
-            return int(number_of_x_segments * y_coord + x_coord)
-        except TypeError:
+        if number_of_x_segments is None or x_coord is None or y_coord is None:
             raise ProgrammerJudgementFault(
                 "Not all parameters needed were passed in to uniquely determine a "
                 "glass layer index."
-            ) from None
-    if temperature_name == TemperatureName.pv:
-        try:
-            return int(
-                number_of_x_segments * (number_of_y_segments + y_coord) + x_coord
             )
-        except TypeError:
+        return int(number_of_x_segments * y_coord + x_coord)
+    if temperature_name == TemperatureName.pv:
+        if (
+            number_of_x_segments is None
+            or number_of_y_segments is None
+            or x_coord is None
+            or y_coord is None
+        ):
             raise ProgrammerJudgementFault(
                 "Not all parameters needed were passed in to uniquely determine a "
                 "pv layer index."
-            ) from None
-    if temperature_name == TemperatureName.collector:
-        try:
-            return int(
-                number_of_x_segments * (2 * number_of_y_segments + y_coord) + x_coord
             )
-        except TypeError:
+        return int(number_of_x_segments * (number_of_y_segments + y_coord) + x_coord)
+    if temperature_name == TemperatureName.collector:
+        if (
+            number_of_x_segments is None
+            or number_of_y_segments is None
+            or x_coord is None
+            or y_coord is None
+        ):
             raise ProgrammerJudgementFault(
                 "Not all parameters needed were passed in to uniquely determine an "
                 "absorber layer index."
-            ) from None
-    if temperature_name == TemperatureName.pipe:
-        try:
-            return int(
-                (
-                    number_of_x_segments * (3 * number_of_y_segments + y_coord)
-                    + pipe_number
-                )
             )
-        except TypeError:
+        return int(
+            number_of_x_segments * (2 * number_of_y_segments + y_coord) + x_coord
+        )
+    if temperature_name == TemperatureName.pipe:
+        if (
+            number_of_x_segments is None
+            or number_of_y_segments is None
+            or pipe_number is None
+            or y_coord is None
+        ):
             raise ProgrammerJudgementFault(
                 "Not all parameters needed were passed in to uniquely determine a "
                 "pipe index."
-            ) from None
-    if temperature_name == TemperatureName.htf:
-        try:
-            return int(
-                (
-                    number_of_x_segments
-                    * (3 * number_of_y_segments + number_of_pipes + y_coord)
-                    + pipe_number
-                )
             )
-        except TypeError:
+        return int(
+            (number_of_x_segments * (3 * number_of_y_segments + y_coord) + pipe_number)
+        )
+    if temperature_name == TemperatureName.htf:
+        if (
+            number_of_pipes is None
+            or number_of_x_segments is None
+            or number_of_y_segments is None
+            or pipe_number is None
+            or y_coord is None
+        ):
             raise ProgrammerJudgementFault(
                 "Not all parameters needed were passed in to uniquely determine an "
                 "htf index."
-            ) from None
-    if temperature_name == TemperatureName.htf_in:
-        try:
-            return int(
-                (
-                    number_of_x_segments
-                    * (3 * number_of_y_segments + 2 * number_of_pipes + y_coord)
-                    + pipe_number
-                )
             )
-        except TypeError:
+        return int(
+            (
+                number_of_x_segments
+                * (3 * number_of_y_segments + number_of_pipes + y_coord)
+                + pipe_number
+            )
+        )
+    if temperature_name == TemperatureName.htf_in:
+        if (
+            number_of_pipes is None
+            or number_of_x_segments is None
+            or number_of_y_segments is None
+            or pipe_number is None
+            or y_coord is None
+        ):
             raise ProgrammerJudgementFault(
                 "Not all parameters needed were passed in to uniquely determine an "
                 "htf-input index."
-            ) from None
-    if temperature_name == TemperatureName.htf_out:
-        try:
-            return int(
-                (
-                    number_of_x_segments
-                    * (3 * number_of_y_segments + 3 * number_of_pipes + y_coord)
-                    + pipe_number
-                )
             )
-        except TypeError:
+        return int(
+            (
+                number_of_x_segments
+                * (3 * number_of_y_segments + 2 * number_of_pipes + y_coord)
+                + pipe_number
+            )
+        )
+    if temperature_name == TemperatureName.htf_out:
+        if (
+            number_of_pipes is None
+            or number_of_x_segments is None
+            or number_of_y_segments is None
+            or pipe_number is None
+            or y_coord is None
+        ):
             raise ProgrammerJudgementFault(
                 "Not all parameters needed were passed in to uniquely determine an "
                 "htf-output index."
-            ) from None
-    if temperature_name == TemperatureName.collector_in:
-        try:
-            return int(
-                number_of_x_segments * (3 * number_of_y_segments + 4 * number_of_pipes)
             )
-        except TypeError:
+        return int(
+            (
+                number_of_x_segments
+                * (3 * number_of_y_segments + 3 * number_of_pipes + y_coord)
+                + pipe_number
+            )
+        )
+    if temperature_name == TemperatureName.collector_in:
+        if (
+            number_of_pipes is None
+            or number_of_x_segments is None
+            or number_of_y_segments is None
+        ):
             raise ProgrammerJudgementFault(
                 "Not all parameters needed were passed in to uniquely determine the "
                 "collector input index."
-            ) from None
-    if temperature_name == TemperatureName.collector_out:
-        try:
-            return int(
-                (
-                    number_of_x_segments
-                    * (3 * number_of_y_segments + 4 * number_of_pipes)
-                    + 1
-                )
             )
-        except TypeError:
+        return int(
+            number_of_x_segments * (3 * number_of_y_segments + 4 * number_of_pipes)
+        )
+    if temperature_name == TemperatureName.collector_out:
+        if (
+            number_of_pipes is None
+            or number_of_x_segments is None
+            or number_of_y_segments is None
+        ):
             raise ProgrammerJudgementFault(
                 "Not all parameters needed were passed in to uniquely determine the "
                 "collector output index."
-            ) from None
-    if temperature_name == TemperatureName.tank:
-        try:
-            return int(
-                (
-                    number_of_x_segments
-                    * (3 * number_of_y_segments + 4 * number_of_pipes)
-                    + 2
-                )
             )
-        except TypeError:
+        return int(
+            (
+                number_of_x_segments * (3 * number_of_y_segments + 4 * number_of_pipes)
+                + 1
+            )
+        )
+    if temperature_name == TemperatureName.tank:
+        if (
+            number_of_pipes is None
+            or number_of_x_segments is None
+            or number_of_y_segments is None
+        ):
             raise ProgrammerJudgementFault(
                 "Not all parameters needed were passed in to uniquely determine the "
                 "tank index."
-            ) from None
-    if temperature_name == TemperatureName.tank_in:
-        try:
-            return int(
-                (
-                    number_of_x_segments
-                    * (3 * number_of_y_segments + 4 * number_of_pipes)
-                    + 3
-                )
             )
-        except TypeError:
+        return int(
+            (
+                number_of_x_segments * (3 * number_of_y_segments + 4 * number_of_pipes)
+                + 2
+            )
+        )
+    if temperature_name == TemperatureName.tank_in:
+        if (
+            number_of_pipes is None
+            or number_of_x_segments is None
+            or number_of_y_segments is None
+        ):
             raise ProgrammerJudgementFault(
                 "Not all parameters needed were passed in to uniquely determine the "
                 "tank input index."
-            ) from None
-    if temperature_name == TemperatureName.tank_out:
-        try:
-            return int(
-                (
-                    number_of_x_segments
-                    * (3 * number_of_y_segments + 4 * number_of_pipes)
-                    + 4
-                )
             )
-        except TypeError:
+        return int(
+            (
+                number_of_x_segments * (3 * number_of_y_segments + 4 * number_of_pipes)
+                + 3
+            )
+        )
+    if temperature_name == TemperatureName.tank_out:
+        if (
+            number_of_pipes is None
+            or number_of_x_segments is None
+            or number_of_y_segments is None
+        ):
             raise ProgrammerJudgementFault(
                 "Not all parameters needed were passed in to uniquely determine the "
                 "tank output index."
-            ) from None
+            )
+        return int(
+            (
+                number_of_x_segments * (3 * number_of_y_segments + 4 * number_of_pipes)
+                + 4
+            )
+        )
     raise ProgrammerJudgementFault(
         "An attempt was made to fetch an index using an undefined method."
     )
@@ -294,7 +326,7 @@ def index_from_segment_coordinates(
 
     """
 
-    _get_index(
+    return _get_index(
         temperature_name,
         number_of_x_segments=number_of_x_segments,
         number_of_y_segments=number_of_y_segments,
@@ -315,7 +347,7 @@ def index_from_temperature_name(temperature_name: TemperatureName) -> int:
 
     """
 
-    _get_index(temperature_name)
+    return _get_index(temperature_name)
 
 
 def num_temperatures(
