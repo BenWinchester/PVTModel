@@ -19,7 +19,7 @@ import sys
 
 from argparse import Namespace
 from logging import Logger
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 import json
 import yaml
@@ -102,7 +102,7 @@ def _get_system_fourier_numbers(
         resolution,
     )
     fourier_number_map[TemperatureName.htf] = fourier_number(
-        pvt_panel.collector.pipe_diameter,
+        pvt_panel.collector.inner_pipe_diameter,
         THERMAL_CONDUCTIVITY_OF_WATER,
         DENSITY_OF_WATER,
         pvt_panel.collector.htf_heat_capacity,
@@ -154,7 +154,10 @@ def _determine_fourier_numbers(
                 "{}{}".format(
                     key.name,
                     " "
-                    * (max([key.name for key in fourier_number_map]) - len(key.name)),
+                    * (
+                        max([len(key.name) for key in fourier_number_map])
+                        - len(key.name)
+                    ),
                 )
                 for key in fourier_number_map
             ]
@@ -164,7 +167,10 @@ def _determine_fourier_numbers(
                 "{}{}".format(
                     value,
                     " "
-                    * (max([key.name for key in fourier_number_map]) - len(str(value))),
+                    * (
+                        max([len(key.name) for key in fourier_number_map])
+                        - len(str(value))
+                    ),
                 )
                 for value in fourier_number_map.values()
             ]
@@ -178,7 +184,7 @@ def _determine_fourier_numbers(
                         key.name,
                         " "
                         * (
-                            max([key.name for key in fourier_number_map])
+                            max([len(key.name) for key in fourier_number_map])
                             - len(key.name)
                         ),
                     )
@@ -191,7 +197,7 @@ def _determine_fourier_numbers(
                         value,
                         " "
                         * (
-                            max([key.name for key in fourier_number_map])
+                            max([len(key.name) for key in fourier_number_map])
                             - len(str(value))
                         ),
                     )
@@ -208,8 +214,8 @@ def _determine_initial_conditions(
     parsed_args: Namespace,
     resolution: int = COARSE_RUN_RESOLUTION,
     run_depth: int = 1,
-    running_system_temperature_vector: Optional[Tuple[float, ...]] = None,
-) -> Tuple[float, ...]:
+    running_system_temperature_vector: Optional[List[float]] = None,
+) -> List[float]:
     """
     Determines the initial system temperatures for the run.
 
@@ -239,9 +245,9 @@ def _determine_initial_conditions(
 
     # Fetch the initial temperature conditions if not passed in:
     if running_system_temperature_vector is None:
-        running_system_temperature_vector = (
-            DEFAULT_SYSTEM_TEMPERATURE,
-        ) * index.num_temperatures(
+        running_system_temperature_vector = [
+            DEFAULT_SYSTEM_TEMPERATURE
+        ] * index.num_temperatures(
             number_of_pipes,
             parsed_args.x_resolution,
             parsed_args.y_resolution,
@@ -278,7 +284,7 @@ def _determine_initial_conditions(
             "Initial temperatures consistent. Max difference: %sK",
             max(abs(final_temperature_vector - running_system_temperature_vector)),
         )
-        return final_temperature_vector
+        return [value[0] for value in final_temperature_vector]
 
     logger.info(
         "Initial temperatures not consistent. Max difference: %sK",
@@ -291,7 +297,7 @@ def _determine_initial_conditions(
         parsed_args,
         resolution,
         run_depth + 1,
-        final_temperature_vector,
+        [value[0] for value in final_temperature_vector],
     )
 
 
@@ -403,7 +409,6 @@ def main(args) -> None:
 
     # Parse the PVT system information and generate a PVT panel based on the args.
     pvt_panel = pvt_panel_from_path(
-        DEFAULT_SYSTEM_TEMPERATURE,
         parsed_args.portion_covered,
         parsed_args.pvt_data_file,
         parsed_args.x_resolution,
@@ -449,7 +454,7 @@ def main(args) -> None:
         parsed_args.resolution,
         parsed_args.start_time,
         parsed_args.tank_data_file,
-        parsed_args.unglazed,
+        # parsed_args.unglazed,
         parsed_args.use_pvgis,
         parsed_args.x_resolution,
         parsed_args.y_resolution,
@@ -461,7 +466,7 @@ def main(args) -> None:
 
     # Conduct analysis of the data.
     logger.info("Conducting analysis.")
-    analysis.analyse(f"{parsed_args.output}.json")
+    # analysis.analyse(f"{parsed_args.output}.json")
 
 
 if __name__ == "__main__":

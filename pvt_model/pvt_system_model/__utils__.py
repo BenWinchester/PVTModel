@@ -545,7 +545,7 @@ class CollectorParameters(OpticalLayerParameters):
     inner_pipe_diameter: float
     length: float
     mass_flow_rate: float
-    number_of_pipes: float
+    number_of_pipes: int
     outer_pipe_diameter: float
 
 

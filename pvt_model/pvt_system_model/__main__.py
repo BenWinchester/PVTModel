@@ -19,7 +19,7 @@ import datetime
 import logging
 import os
 
-from typing import Dict, Set, Tuple
+from typing import Dict, List, Set, Tuple
 
 import numpy
 import pytz
@@ -455,7 +455,7 @@ def main(
     days: int,
     exchanger_data_file: str,
     initial_month: int,
-    initial_system_temperature_vector: Tuple[float, ...],
+    initial_system_temperature_vector: List[float],
     location: str,
     months: int,
     portion_covered: float,
