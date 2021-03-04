@@ -148,7 +148,10 @@ def _calculate_vector_difference(
 
     # Compute the gross difference between the vectors.
     try:
-        diff_vector = second_vector - first_vector
+        diff_vector = [
+            first_vector[index] - second_vector[index]
+            for index in range(len(first_vector))
+        ]
     except ValueError as e:
         raise ProgrammerJudgementFault(
             "Atempt was made to compute the difference between two vectors of "
@@ -379,7 +382,7 @@ def _solve_temperature_vector_convergence_method(
     run_two_temperature_vector: numpy.ndarray = numpy.asarray(  # type: ignore
         [run_two_output[index][0] for index in range(len(run_two_output))]
     )
-    # run_two_temperature_vector = run_two_output[0]
+    # run_two_temperature_vector = run_two_output[0].transpose()[0]
 
     logger.info(
         "Date and time: %s; Run number: %s: "
@@ -793,21 +796,30 @@ def main(
             next_date_and_time,
         )
 
-        current_run_temperature_vector = _solve_temperature_vector_convergence_method(
-            current_hot_water_load=current_hot_water_load,
-            heat_exchanger=heat_exchanger,
-            hot_water_tank=hot_water_tank,
-            next_date_and_time=next_date_and_time,
-            number_of_pipes=number_of_pipes,
-            number_of_temperatures=number_of_temperatures,
-            number_of_x_segments=number_of_x_segments,
-            number_of_y_segments=number_of_y_segments,
-            previous_run_temperature_vector=previous_run_temperature_vector,
-            pvt_panel=pvt_panel,
-            resolution=resolution,
-            run_one_temperature_vector=previous_run_temperature_vector,
-            weather_conditions=weather_conditions,
-        )
+        try:
+            current_run_temperature_vector = (
+                _solve_temperature_vector_convergence_method(
+                    current_hot_water_load=current_hot_water_load,
+                    heat_exchanger=heat_exchanger,
+                    hot_water_tank=hot_water_tank,
+                    next_date_and_time=next_date_and_time,
+                    number_of_pipes=number_of_pipes,
+                    number_of_temperatures=number_of_temperatures,
+                    number_of_x_segments=number_of_x_segments,
+                    number_of_y_segments=number_of_y_segments,
+                    previous_run_temperature_vector=previous_run_temperature_vector,
+                    pvt_panel=pvt_panel,
+                    resolution=resolution,
+                    run_one_temperature_vector=previous_run_temperature_vector,
+                    weather_conditions=weather_conditions,
+                )
+            )
+        except DivergentSolutionError as e:
+            logger.error(
+                "A divergent solution was reached at %s.",
+                date_and_time.strftime("%D/%M/%Y %H:%M:%S"),
+            )
+            raise
 
         # Determine the average temperatures of the various PVT layers.
         average_glass_temperature = _average_layer_temperature(

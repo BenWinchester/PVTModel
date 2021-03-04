@@ -52,6 +52,17 @@ class SegmentCoordinates:
             + self.x_index
         )
 
+    def __str__(self) -> str:
+        """
+        Return a string representing the coordinates.
+
+        :return:
+            A `str` detailing the coordinate information.
+
+        """
+
+        return f"({self.x_index}, {self.y_index})"
+
 
 @dataclass
 class Segment:

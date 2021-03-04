@@ -30,6 +30,7 @@ The temperatures represented in the vector T are:
 
 from typing import List, Tuple
 
+import logging
 import numpy
 
 from . import exchanger, index_handler, tank
@@ -37,7 +38,7 @@ from .pvt_panel import pvt
 from .pvt_panel.segment import Segment
 
 from ..__utils__ import TemperatureName, ProgrammerJudgementFault
-from .__utils__ import WeatherConditions
+from .__utils__ import WeatherConditions, PVT_SYSTEM_MODEL_LOGGER_NAME
 from .constants import DENSITY_OF_WATER, HEAT_CAPACITY_OF_WATER
 from .physics_utils import (
     radiative_heat_transfer_coefficient,
@@ -45,6 +46,8 @@ from .physics_utils import (
 )
 
 __all__ = ("calculate_matrix_equation",)
+
+logger = logging.getLogger(PVT_SYSTEM_MODEL_LOGGER_NAME)
 
 
 ####################
@@ -112,17 +115,21 @@ def _absorber_equation(
         + segment.width * segment.length / pvt_panel.pv_to_collector_thermal_resistance
         # Conduction to the pipe, if present.
         + (
-            segment.width  # [m]
-            * segment.length  # [m]
-            * pvt_panel.bond.conductivity  # [W/m*K]
-            / pvt_panel.bond.thickness  # [m]
+            (
+                segment.width  # [m]
+                * segment.length  # [m]
+                * pvt_panel.bond.conductivity  # [W/m*K]
+                / pvt_panel.bond.thickness  # [m]
+            )
+            if segment.pipe
+            else 0
         )
-        if segment.pipe
-        else 0
         # Loss through the back if no pipe is present.
-        + (segment.width * segment.length * pvt_panel.insulation_thermal_resistance)
-        if not segment.pipe
-        else 0
+        + (
+            (segment.width * segment.length * pvt_panel.insulation_thermal_resistance)
+            if not segment.pipe
+            else 0
+        )
     )
 
     # Compute the T_A(i+1, j) term provided that that segment exists.
@@ -262,13 +269,15 @@ def _absorber_equation(
         / resolution  # [s]
         # Ambient temperature term.
         + (
-            segment.width  # [m]
-            * segment.length  # [m]
-            * weather_conditions.ambient_temperature  # [K]
-            / pvt_panel.insulation_thermal_resistance  # [m^2*K/W]
+            (
+                segment.width  # [m]
+                * segment.length  # [m]
+                * weather_conditions.ambient_temperature  # [K]
+                / pvt_panel.insulation_thermal_resistance  # [m^2*K/W]
+            )
+            if not segment.pipe
+            else 0
         )
-        if not segment.pipe
-        else 0
     )
 
     return row_equation, resultant_vector_value
@@ -311,7 +320,7 @@ def _boundary_condition_equations(
         TemperatureName.collector,
     }:
         # Work along both "left" and "right" edges, applying the boundary conditions.
-        for y_coord in range(number_of_y_segments):
+        for y_coord in range(number_of_y_segments - 1):
             # Equation 1: Zero temperature gradient at x=0.
             row_equation: List[float] = [0] * number_of_temperatures
             row_equation[
@@ -356,7 +365,7 @@ def _boundary_condition_equations(
             equations.append((row_equation, 0))
 
         # Work along both "top" and "bottom" edges, applying the boundary conditions.
-        for x_coord in range(number_of_x_segments):
+        for x_coord in range(number_of_x_segments - 1):
             # Equation 3: Zero temperature gradient at y=0.
             row_equation = [0] * number_of_temperatures
             row_equation[
@@ -405,9 +414,9 @@ def _boundary_condition_equations(
 
 def _fluid_continuity_equation(
     number_of_pipes: int,
+    number_of_temperatures: int,
     number_of_x_segments: int,
     number_of_y_segments: int,
-    number_of_temperatures: int,
     segment: Segment,
 ) -> Tuple[List[float], float]:
     """
@@ -718,6 +727,68 @@ def _glass_equation(
     return row_equation, resultant_vector_value
 
 
+def _htf_continuity_equation(
+    number_of_pipes: int,
+    number_of_temperatures: int,
+    number_of_x_segments: int,
+    number_of_y_segments: int,
+    segment: Segment,
+) -> Tuple[List[float], float]:
+    """
+    Returns a matrix row and resultant vector value representing the htf equation.
+
+    :param number_of_temperatures:
+        The number of temperatures being modelled in the system.
+
+    :return:
+        A `tuple` containing:
+        - the equation represented as a row in the matrix,
+        - and the corresponding value in the resultant method.
+
+    """
+
+    # Compute the row equation
+    row_equation: List[float] = [0] * number_of_temperatures
+
+    # Compute the T_f(#, 0) term.
+    row_equation[
+        index_handler.index_from_pipe_coordinates(
+            number_of_pipes,
+            number_of_x_segments,
+            number_of_y_segments,
+            TemperatureName.htf,
+            segment.pipe_index,  # type: ignore
+            segment.y_index,
+        )
+    ] = 1
+
+    # Compute the T_f,in(#, 0) term.
+    row_equation[
+        index_handler.index_from_pipe_coordinates(
+            number_of_pipes,
+            number_of_x_segments,
+            number_of_y_segments,
+            TemperatureName.htf_in,
+            segment.pipe_index,  # type: ignore
+            segment.y_index,
+        )
+    ] = -0.5
+
+    # Compute the T_f,out(#, 0) term.
+    row_equation[
+        index_handler.index_from_pipe_coordinates(
+            number_of_pipes,
+            number_of_x_segments,
+            number_of_y_segments,
+            TemperatureName.htf_out,
+            segment.pipe_index,  # type: ignore
+            segment.y_index,
+        )
+    ] = -0.5
+
+    return row_equation, 0
+
+
 def _htf_equation(
     number_of_pipes: int,
     number_of_temperatures: int,
@@ -729,7 +800,7 @@ def _htf_equation(
     segment: Segment,
 ) -> Tuple[List[float], float]:
     """
-    Returns a matrix row and resultant vector value representing the glass equation.
+    Returns a matrix row and resultant vector value representing the htf equation.
 
     :param number_of_temperatures:
         The number of temperatures being modelled in the system.
@@ -1147,7 +1218,7 @@ def _pv_equation(
             index_handler.index_from_segment_coordinates(
                 number_of_x_segments,
                 number_of_y_segments,
-                TemperatureName.pv,
+                TemperatureName.glass,
                 segment.x_index,
                 segment.y_index,
             )
@@ -1303,7 +1374,7 @@ def _system_continuity_equations(
                 number_of_y_segments,
                 TemperatureName.htf_out,
                 pipe_number,
-                number_of_y_segments,
+                number_of_y_segments - 1,
             )
         ] = -1
         row_equation[
@@ -1504,27 +1575,29 @@ def _tank_equation(
         * hot_water_tank.area  # [m^2]
         # Heat input
         + (
-            pvt_panel.collector.mass_flow_rate  # [kg/s]
-            * pvt_panel.collector.htf_heat_capacity  # [J/kg*K]
-            * heat_exchanger.efficiency
+            (
+                pvt_panel.collector.mass_flow_rate  # [kg/s]
+                * pvt_panel.collector.htf_heat_capacity  # [J/kg*K]
+                * heat_exchanger.efficiency
+            )
+            if best_guess_temperature_vector[
+                index_handler.index_from_temperature_name(
+                    number_of_pipes,
+                    number_of_x_segments,
+                    number_of_y_segments,
+                    TemperatureName.tank,
+                )
+            ]
+            > best_guess_temperature_vector[
+                index_handler.index_from_temperature_name(
+                    number_of_pipes,
+                    number_of_x_segments,
+                    number_of_y_segments,
+                    TemperatureName.tank_in,
+                )
+            ]
+            else 0
         )
-        if best_guess_temperature_vector[
-            index_handler.index_from_temperature_name(
-                number_of_pipes,
-                number_of_x_segments,
-                number_of_y_segments,
-                TemperatureName.tank,
-            )
-        ]
-        > best_guess_temperature_vector[
-            index_handler.index_from_temperature_name(
-                number_of_pipes,
-                number_of_x_segments,
-                number_of_y_segments,
-                TemperatureName.tank_in,
-            )
-        ]
-        else 0
     )
 
     # Compute the T_c,out term
@@ -1616,9 +1689,11 @@ def calculate_matrix_equation(
 
     """
 
+    logger.info("Matrix module called: calculating matrix and resultant vector.")
+
     # Instantiate an empty matrix and array based on the number of temperatures present.
-    matrix = numpy.zeros([1, number_of_temperatures])
-    resultant_vector = numpy.zeros([1, 1])
+    matrix = numpy.zeros([0, number_of_temperatures])
+    resultant_vector = numpy.zeros([0, 1])
 
     # Calculate the glass equations.
     for segment in pvt_panel.segments.values():
@@ -1632,6 +1707,12 @@ def calculate_matrix_equation(
             resolution,
             segment,
             weather_conditions,
+        )
+        logger.info(
+            "Glass equation for segment %s computed:\n%s\nResultant value: %s",
+            segment.coordinates,
+            equation,
+            resultant_value,
         )
         matrix = numpy.vstack((matrix, equation))
         resultant_vector = numpy.vstack((resultant_vector, resultant_value))
@@ -1649,6 +1730,12 @@ def calculate_matrix_equation(
             segment,
             weather_conditions,
         )
+        logger.info(
+            "PV equation for segment %s computed:\n%s\nResultant value: %s",
+            segment.coordinates,
+            equation,
+            resultant_value,
+        )
         matrix = numpy.vstack((matrix, equation))
         resultant_vector = numpy.vstack((resultant_vector, resultant_value))
 
@@ -1664,6 +1751,12 @@ def calculate_matrix_equation(
             resolution,
             segment,
             weather_conditions,
+        )
+        logger.info(
+            "Collector equation for segment %s computed:\n%s\nResultant value: %s",
+            segment.coordinates,
+            equation,
+            resultant_value,
         )
         matrix = numpy.vstack((matrix, equation))
         resultant_vector = numpy.vstack((resultant_vector, resultant_value))
@@ -1690,6 +1783,12 @@ def calculate_matrix_equation(
             segment,
             weather_conditions,
         )
+        logger.info(
+            "Pipe equation for segment %s computed:\n%s\nResultant value: %s",
+            segment.coordinates,
+            equation,
+            resultant_value,
+        )
         matrix = numpy.vstack((matrix, equation))
         resultant_vector = numpy.vstack((resultant_vector, resultant_value))
 
@@ -1704,6 +1803,12 @@ def calculate_matrix_equation(
             pvt_panel,
             resolution,
             segment,
+        )
+        logger.info(
+            "HTF equation for segment %s computed:\n%s\nResultant value: %s",
+            segment.coordinates,
+            equation,
+            resultant_value,
         )
         matrix = numpy.vstack((matrix, equation))
         resultant_vector = numpy.vstack((resultant_vector, resultant_value))
@@ -1723,6 +1828,11 @@ def calculate_matrix_equation(
         resolution,
         weather_conditions,
     )
+    logger.info(
+        "Tank equation computed:\n%s\nResultant value: %s",
+        equation,
+        resultant_value,
+    )
     matrix = numpy.vstack((matrix, equation))
     resultant_vector = numpy.vstack((resultant_vector, resultant_value))
 
@@ -1735,8 +1845,31 @@ def calculate_matrix_equation(
         number_of_x_segments,
         number_of_y_segments,
     )
+    logger.info(
+        "Tank continuity equation computed:\n%s\nResultant value: %s",
+        equation,
+        resultant_value,
+    )
     matrix = numpy.vstack((matrix, equation))
     resultant_vector = numpy.vstack((resultant_vector, resultant_value))
+
+    # Compute the HTF calculation equation.
+    for segment in segments_with_pipes:
+        equation, resultant_value = _htf_continuity_equation(
+            number_of_pipes,
+            number_of_temperatures,
+            number_of_x_segments,
+            number_of_y_segments,
+            segment,
+        )
+        logger.info(
+            "HTF definition equation for segment %s computed:\n%s\nResultant value: %s",
+            segment.coordinates,
+            equation,
+            resultant_value,
+        )
+        matrix = numpy.vstack((matrix, equation))
+        resultant_vector = numpy.vstack((resultant_vector, resultant_value))
 
     # Compute the fluid continuity equations - there will be "N_y - 1" equations.
     for segment in [
@@ -1746,10 +1879,16 @@ def calculate_matrix_equation(
     ]:
         equation, resultant_value = _fluid_continuity_equation(
             number_of_pipes,
+            number_of_temperatures,
             number_of_x_segments,
             number_of_y_segments,
-            number_of_temperatures,
             segment,
+        )
+        logger.info(
+            "Fluid continuity equation for segment %s computed:\n%s\nResultant value: %s",
+            segment.coordinates,
+            equation,
+            resultant_value,
         )
         matrix = numpy.vstack((matrix, equation))
         resultant_vector = numpy.vstack((resultant_vector, resultant_value))
@@ -1763,6 +1902,11 @@ def calculate_matrix_equation(
     )
 
     for equation, resultant_value in system_continuity_equations:
+        logger.info(
+            "System continuity equation computed:\n%s\nResultant value: %s",
+            equation,
+            resultant_value,
+        )
         matrix = numpy.vstack((matrix, equation))
         resultant_vector = numpy.vstack((resultant_vector, resultant_value))
 
@@ -1772,9 +1916,14 @@ def calculate_matrix_equation(
     )
 
     for equation, resultant_value in boundary_condition_equations:
+        logger.info(
+            "Boundary condition equation computed:\n%s\nResultant value: %s",
+            equation,
+            resultant_value,
+        )
         matrix = numpy.vstack((matrix, equation))
         resultant_vector = numpy.vstack((resultant_vector, resultant_value))
-        if len(matrix) == number_of_temperatures:
-            return matrix, resultant_vector
+        # if len(matrix) == number_of_temperatures:
+        #     return matrix, resultant_vector
 
     return matrix, resultant_vector
