@@ -35,7 +35,7 @@ __all__ = (
 )
 
 # The resolution in seconds for determining the initial conditions.
-COARSE_RUN_RESOLUTION: int = 300
+COARSE_RUN_RESOLUTION: int = 1800
 # The prevision to reach when searching for consistent initial temperatures.
 INITIAL_CONDITION_PRECISION: float = 1
 # The directory for storing the logs.

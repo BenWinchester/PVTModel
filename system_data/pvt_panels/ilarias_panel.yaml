@@ -64,9 +64,9 @@ pv:
   # @@@ Value NOT taken from Maria's paper.
   cell_material: "silicon"
   cell_type: "monocrystalline"
-  # density: 2330 # [kg/m^3]
-  # @@@ Value adjusted from online mass values.
-  density: 32142 # [kg/m^3]
+  density: 2330 # [kg/m^3]
+  # # @@@ Value adjusted from online mass values.
+  # density: 32142 # [kg/m^3]
   emissivity: 0.9 # [unitless]
   # @@@ Value NOT taken from Maria's paper.
   heat_capacity: 677 # [J/kg*K]

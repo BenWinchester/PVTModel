@@ -27,7 +27,7 @@ from dateutil.relativedelta import relativedelta
 import numpy
 import yaml
 
-from ..__utils__ import LOGGER_NAME, ProgrammerJudgementFault
+from ..__utils__ import ProgrammerJudgementFault
 
 __all__ = (
     "BaseDailyProfile",
@@ -590,7 +590,7 @@ def read_yaml(yaml_file_path: str) -> Dict[Any, Any]:
 
     """
 
-    logger = logging.getLogger(LOGGER_NAME)
+    logger = logging.getLogger(PVT_SYSTEM_MODEL_LOGGER_NAME)
 
     # Open the yaml data and read it.
     if not os.path.isfile(yaml_file_path):

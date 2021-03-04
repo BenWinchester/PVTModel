@@ -18,7 +18,7 @@ import math
 
 from ..__utils__ import (
     CollectorParameters,
-    LOGGER_NAME,
+    PVT_SYSTEM_MODEL_LOGGER_NAME,
     OpticalLayerParameters,
 )
 from .__utils__ import (
@@ -28,7 +28,7 @@ from .__utils__ import (
 __all__ = ("Collector",)
 
 # Get the logger for the run.
-logger = logging.getLogger(LOGGER_NAME)
+logger = logging.getLogger(PVT_SYSTEM_MODEL_LOGGER_NAME)
 
 
 class Collector(OpticalLayer):

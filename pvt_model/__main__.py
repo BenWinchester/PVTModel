@@ -166,12 +166,13 @@ def _determine_fourier_numbers(
         "Fourier numbers determined:\n%s\n%s",
         "|".join(
             [
-                "{}{}".format(
+                " {}{}".format(
                     key.name,
                     " "
                     * (
                         max([len(key.name) for key in fourier_number_map])
                         - len(key.name)
+                        + 1
                     ),
                 )
                 for key in fourier_number_map
@@ -179,12 +180,13 @@ def _determine_fourier_numbers(
         ),
         "|".join(
             [
-                "{}{}".format(
+                " {}{}".format(
                     value,
                     " "
                     * (
                         max([len(key.name) for key in fourier_number_map])
                         - len(str(value))
+                        + 1
                     ),
                 )
                 for value in fourier_number_map.values()
@@ -195,12 +197,13 @@ def _determine_fourier_numbers(
         "Fourier numbers determined:\n{}\n{}".format(
             "|".join(
                 [
-                    "{}{}".format(
+                    " {}{}".format(
                         key.name,
                         " "
                         * (
                             max([len(key.name) for key in fourier_number_map])
                             - len(key.name)
+                            + 1
                         ),
                     )
                     for key in fourier_number_map
@@ -208,12 +211,13 @@ def _determine_fourier_numbers(
             ),
             "|".join(
                 [
-                    "{}{}".format(
+                    " {}{}".format(
                         value,
                         " "
                         * (
                             max([len(key.name) for key in fourier_number_map])
                             - len(str(value))
+                            + 1
                         ),
                     )
                     for value in fourier_number_map.values()
@@ -299,7 +303,7 @@ def _determine_initial_conditions(
             "Initial temperatures consistent. Max difference: %sK",
             max(abs(final_temperature_vector - running_system_temperature_vector)),
         )
-        return [value[0] for value in final_temperature_vector]
+        return final_temperature_vector.tolist()
 
     logger.info(
         "Initial temperatures not consistent. Max difference: %sK",
@@ -312,7 +316,7 @@ def _determine_initial_conditions(
         parsed_args,
         resolution,
         run_depth + 1,
-        [value[0] for value in final_temperature_vector],
+        final_temperature_vector.tolist(),
     )
 
 
@@ -446,6 +450,7 @@ def main(args) -> None:
     initial_system_temperature_vector = _determine_initial_conditions(
         pvt_panel.collector.number_of_pipes, logger, parsed_args
     )
+    print("Initial temperature conditions determined at coarse resolution.")
     logger.info(
         "Initial system temperatures successfully determined to %sK precision.",
         INITIAL_CONDITION_PRECISION,
@@ -454,6 +459,7 @@ def main(args) -> None:
     logger.info(
         "Running the model at the CLI resolution of %ss.", parsed_args.resolution
     )
+    print(f"Running the model at the high CLI resolution of {parsed_args.resolution}s.")
     # Run the model at this higher resolution.
     _, system_data = pvt_system_model_main(
         parsed_args.average_irradiance,
@@ -478,10 +484,12 @@ def main(args) -> None:
     # Save the data ouputted by the model.
     logger.info("Saving output data to: %s.json.", parsed_args.output)
     _save_data(FileType.JSON, parsed_args.output, system_data)
+    print(f"Model output successfully saved to {parsed_args.output}.json.")
 
     # Conduct analysis of the data.
     logger.info("Conducting analysis.")
-    # analysis.analyse(f"{parsed_args.output}.json")
+    analysis.analyse(f"{parsed_args.output}.json")
+    print("Analysis complete. Figures can be found in `./figures`.")
 
 
 if __name__ == "__main__":

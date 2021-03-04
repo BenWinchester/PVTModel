@@ -39,8 +39,8 @@ from .constants import ZERO_CELCIUS_OFFSET
 from .__utils__ import (
     BaseDailyProfile,
     Date,
-    LOGGER_NAME,
     ProgrammerJudgementFault,
+    PVT_SYSTEM_MODEL_LOGGER_NAME,
     read_yaml,
     WeatherConditions,
 )
@@ -54,7 +54,7 @@ G_CONST = 1
 # The resolution to which random numbers are generated
 RAND_RESOLUTION = 100
 
-logger = logging.getLogger(LOGGER_NAME)
+logger = logging.getLogger(PVT_SYSTEM_MODEL_LOGGER_NAME)
 
 
 class _DailyProfile(BaseDailyProfile):

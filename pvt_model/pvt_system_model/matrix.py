@@ -506,6 +506,7 @@ def _glass_equation(
         * pvt_panel.glass.heat_capacity  # [J/kg*K]
         / resolution  # [s]
         # X-wise conduction within the glass layer
+        # @@@ FIXME: Here, the code doesn't work in the 1x1 case.
         + (2 if segment.x_index not in [0, number_of_x_segments - 1] else 1)
         * pvt_panel.glass.conductivity  # [W/m*K]
         * pvt_panel.glass.thickness  # [m]
