@@ -108,6 +108,7 @@ collector:
   maximum_operating_pressure: 3.5 # [bar]
   number_of_pipes: 1 # [pipes]
   outer_pipe_diameter: 0.008 # [m]
+  pipe_diameter: 0.008 # [m]
   pipe_spacing: 0.095 # [m]
   recommended_flow_pressure_drop: 0.15 # [bar]
   recommended_mass_flow_rate: 108 # [L/h]
@@ -121,3 +122,8 @@ bond:
 insulation:
   thickness: 0.02 # [m]
   thermal_conductivity: 0.035 # [W/m*K]
+back:
+  density: 2330 # [kg/m^3]
+  thickness: 0.00017 # [m]
+  heat_capacity: 1130 # [J/kg*K]
+  thermal_conductivity: 0.14 # [W/m*K]

@@ -130,11 +130,11 @@ def _get_glass_equation_coefficients(
         )  # [W/m^2*K]
         * pvt_panel.area  # [m^2]
         # Change in internal energy of the glass layer
-        # + (
-        #     pvt_panel.glass.mass  # [kg]
-        #     * pvt_panel.glass.heat_capacity  # [J/kg*K]
-        #     / resolution  # [s]
-        # )  # [W/s]
+        + (
+            pvt_panel.glass.mass  # [kg]
+            * pvt_panel.glass.heat_capacity  # [J/kg*K]
+            / resolution  # [s]
+        )  # [W/s]
     )  # [W/K]
 
     # Compute the PV temperature term.
@@ -247,10 +247,10 @@ def _get_pv_equation_coefficients(
         + pvt_panel.pv_to_collector_thermal_conductance  # [W/m^2*K]
         * pvt_panel.pv.area  # [m^2]
         # Change in internal energy of the PV layer.
-        # + pvt_panel.pv.mass  # [kg]
-        # * pvt_panel.pv.heat_capacity  # [J/kg*K]
-        # * constants.NUMBER_OF_COLLECTORS
-        # / resolution  # [s]
+        + pvt_panel.pv.mass  # [kg]
+        * pvt_panel.pv.heat_capacity  # [J/kg*K]
+        * constants.NUMBER_OF_COLLECTORS
+        / resolution  # [s]
         # Solar heat input.
         - physics_utils.transmissivity_absorptivity_product(
             diffuse_reflection_coefficient=pvt_panel.glass.diffuse_reflection_coefficient,
@@ -369,14 +369,14 @@ def _get_collector_equation_coefficients(
         * pvt_panel.area  # [m^2]
         * (1 - pvt_panel.portion_covered)
         # Internal energy change of the collector layer.
-        # + (
-        #     pvt_panel.collector.mass  # [kg]
-        #     * pvt_panel.collector.heat_capacity  # [J/kg*K]
-        #     + pvt_panel.back_plate.mass  # [kg]
-        #     * pvt_panel.back_plate.heat_capacity  # [J/kg*K]
-        # )
-        # * constants.NUMBER_OF_COLLECTORS
-        # / resolution  # [s]
+        + (
+            pvt_panel.collector.mass  # [kg]
+            * pvt_panel.collector.heat_capacity  # [J/kg*K]
+            + pvt_panel.back_plate.mass  # [kg]
+            * pvt_panel.back_plate.heat_capacity  # [J/kg*K]
+        )
+        * constants.NUMBER_OF_COLLECTORS
+        / resolution  # [s]
     )  # [W/K]
 
     # Compute the collector input temperature term.
@@ -806,10 +806,10 @@ def calculate_resultant_vector(
         # * pvt_panel.area  # [m^2]
         # * weather_conditions.irradiance  # [W]
         # Change in internal energy
-        # + pvt_panel.glass.mass  # [kg]
-        # * pvt_panel.glass.heat_capacity  # [J/kg*K]
-        # * previous_glass_temperature  # [K]
-        # / resolution  # [s]
+        + pvt_panel.glass.mass  # [kg]
+        * pvt_panel.glass.heat_capacity  # [J/kg*K]
+        * previous_glass_temperature  # [K]
+        / resolution  # [s]
     )  # [W]
 
     # Compute the PV-layer-equation value.
@@ -831,11 +831,11 @@ def calculate_resultant_vector(
             )
         )  # [W]
         # Change in internal energy.
-        # + pvt_panel.pv.mass  # [kg]
-        # * pvt_panel.pv.heat_capacity  # [J/kg*K]
-        # * previous_pv_temperature  # [K]
-        # * constants.NUMBER_OF_COLLECTORS
-        # / resolution  # [s]
+        + pvt_panel.pv.mass  # [kg]
+        * pvt_panel.pv.heat_capacity  # [J/kg*K]
+        * previous_pv_temperature  # [K]
+        * constants.NUMBER_OF_COLLECTORS
+        / resolution  # [s]
     )  # [W]
 
     # Compute the collector-layer-equation value.
@@ -850,15 +850,15 @@ def calculate_resultant_vector(
         * pvt_panel.area  # [m^2]
         * (1 - pvt_panel.portion_covered)
         # Internal energy change.
-        # + (
-        #     pvt_panel.collector.mass  # [kg]
-        #     * pvt_panel.collector.heat_capacity  # [J/kg*K]
-        #     + pvt_panel.back_plate.mass  # [kg]
-        #     * pvt_panel.back_plate.heat_capacity  # [J/kg*K]
-        # )
-        # * previous_collector_temperature  # [K]
-        # * constants.NUMBER_OF_COLLECTORS
-        # / resolution  # [s]
+        + (
+            pvt_panel.collector.mass  # [kg]
+            * pvt_panel.collector.heat_capacity  # [J/kg*K]
+            + pvt_panel.back_plate.mass  # [kg]
+            * pvt_panel.back_plate.heat_capacity  # [J/kg*K]
+        )
+        * previous_collector_temperature  # [K]
+        * constants.NUMBER_OF_COLLECTORS
+        / resolution  # [s]
         # Back plate heat loss.
         + pvt_panel.back_plate.conductance  # [W/m^2*K]
         * pvt_panel.area  # [m^2]
