@@ -781,6 +781,13 @@ def calculate_resultant_vector(
     # Instantiate a vector to store the values computed and unpack the previous
     # temperatures
     resultant_vector = numpy.zeros([len(TemperatureName), 1])
+    previous_glass_temperature = previous_temperature_vector[
+        TemperatureName.glass.value
+    ]
+    previous_pv_temperature = previous_temperature_vector[TemperatureName.pv.value]
+    previous_collector_temperature = previous_temperature_vector[
+        TemperatureName.collector.value
+    ]
     previous_collector_input_temperature = previous_temperature_vector[
         TemperatureName.collector_input.value
     ]
