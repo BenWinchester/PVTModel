@@ -67,8 +67,6 @@ DEFAULT_INITIAL_DATE_AND_TIME = datetime.datetime(2005, 1, 1, 0, 0, tzinfo=pytz.
 # The average temperature of the air surrounding the tank, which is internal to the
 # household, measured in Kelvin.
 INTERNAL_HOUSEHOLD_AMBIENT_TEMPERATURE = ZERO_CELCIUS_OFFSET + 20  # [K]
-# Get the logger for the component.
-logger = get_logger(PVT_SYSTEM_MODEL_LOGGER_NAME)
 # Folder containing the solar irradiance profiles
 SOLAR_IRRADIANCE_FOLDERNAME = "solar_irradiance_profiles"
 # Folder containing the temperature profiles
@@ -265,6 +263,7 @@ def _solve_temperature_vector_convergence_method(
     current_hot_water_load: float,
     heat_exchanger: exchanger.Exchanger,
     hot_water_tank: tank.Tank,
+    logger: logging.Logger,
     next_date_and_time: datetime.datetime,
     number_of_pipes: int,
     number_of_temperatures: int,
@@ -305,6 +304,9 @@ def _solve_temperature_vector_convergence_method(
     :param hot_water_tank:
         A :class:`tank.Tank` instance representing the hot-water tank being modelled in
         the system.
+
+    :param logger:
+        The logger for the module run.
 
     :param next_date_and_time:
         The date and time at the time step being solved.
@@ -433,6 +435,7 @@ def _solve_temperature_vector_convergence_method(
         current_hot_water_load=current_hot_water_load,
         heat_exchanger=heat_exchanger,
         hot_water_tank=hot_water_tank,
+        logger=logger,
         next_date_and_time=next_date_and_time,
         number_of_pipes=number_of_pipes,
         number_of_temperatures=number_of_temperatures,
@@ -528,6 +531,9 @@ def main(
         The system data is returned.
 
     """
+
+    # Get the logger for the component.
+    logger = get_logger(PVT_SYSTEM_MODEL_LOGGER_NAME.format(resolution=resolution))
 
     # Set up numpy printing style.
     numpy.set_printoptions(formatter={"float": "{: 0.3f}".format})
@@ -802,6 +808,7 @@ def main(
                     current_hot_water_load=current_hot_water_load,
                     heat_exchanger=heat_exchanger,
                     hot_water_tank=hot_water_tank,
+                    logger=logger,
                     next_date_and_time=next_date_and_time,
                     number_of_pipes=number_of_pipes,
                     number_of_temperatures=number_of_temperatures,

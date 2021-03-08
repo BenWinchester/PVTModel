@@ -53,7 +53,7 @@ __all__ = (
 # Constants #
 #############
 
-PVT_SYSTEM_MODEL_LOGGER_NAME = "pvt_model.pvt_system_model"
+PVT_SYSTEM_MODEL_LOGGER_NAME = "pvt_system_model.{resolution}s_resolution"
 
 ##############
 # Exceptions #
