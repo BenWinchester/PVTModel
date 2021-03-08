@@ -96,9 +96,9 @@ tedlar:
 collector:
   absorptivity: 0.95 # [unitless]
   # @@@ Value NOT taken from Maria's paper.
-  # density: 8960 # [kg/m^3]
-  # @@@ Value updated from online search.
-  density: 87500 # [kg/m^3]
+  density: 8960 # [kg/m^3]
+  # # @@@ Value updated from online search.
+  # density: 87500 # [kg/m^3]
   emissivity: 0.05 # [unitless]
   # @@@ Value NOT taken from Maria's paper.
   heat_capacity: 386 # [J/kg*K]
