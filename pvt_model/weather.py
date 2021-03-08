@@ -617,49 +617,47 @@ class WeatherForecaster:
 
         # @@@ For now, the solar irradiance profiles and temperature profiles for the
         # @@@ missing months are filled in here.
+        monthly_irradiance_profiles[Date(1, 1)] = monthly_irradiance_profiles[
+            Date(1, 9)
+        ]
         monthly_irradiance_profiles[Date(1, 2)] = monthly_irradiance_profiles[
-            Date(1, 1)
+            Date(1, 9)
         ]
         monthly_irradiance_profiles[Date(1, 3)] = monthly_irradiance_profiles[
-            Date(1, 4)
+            Date(1, 9)
+        ]
+        monthly_irradiance_profiles[Date(1, 4)] = monthly_irradiance_profiles[
+            Date(1, 9)
         ]
         monthly_irradiance_profiles[Date(1, 5)] = monthly_irradiance_profiles[
-            Date(1, 4)
+            Date(1, 7)
         ]
         monthly_irradiance_profiles[Date(1, 6)] = monthly_irradiance_profiles[
-            Date(1, 8)
+            Date(1, 7)
         ]
-        monthly_irradiance_profiles[Date(1, 7)] = _DailyProfile(
-            {
-                key: (
-                    monthly_irradiance_profiles[Date(1, 8)].profile[key] * 3
-                    + monthly_irradiance_profiles[Date(1, 4)].profile[key]
-                )
-                / 4
-                for key in monthly_irradiance_profiles[Date(1, 8)].profile.keys()
-            }
-        )
-        monthly_irradiance_profiles[Date(1, 9)] = monthly_irradiance_profiles[
-            Date(1, 4)
+        monthly_irradiance_profiles[Date(1, 8)] = monthly_irradiance_profiles[
+            Date(1, 7)
         ]
         monthly_irradiance_profiles[Date(1, 10)] = monthly_irradiance_profiles[
-            Date(1, 4)
+            Date(1, 9)
         ]
         monthly_irradiance_profiles[Date(1, 11)] = monthly_irradiance_profiles[
-            Date(1, 1)
+            Date(1, 9)
         ]
         monthly_irradiance_profiles[Date(1, 12)] = monthly_irradiance_profiles[
-            Date(1, 1)
+            Date(1, 9)
         ]
 
-        temperature_profiles[Date(1, 2)] = temperature_profiles[Date(1, 1)]
-        temperature_profiles[Date(1, 3)] = temperature_profiles[Date(1, 4)]
-        temperature_profiles[Date(1, 5)] = temperature_profiles[Date(1, 4)]
+        temperature_profiles[Date(1, 1)] = temperature_profiles[Date(1, 9)]
+        temperature_profiles[Date(1, 2)] = temperature_profiles[Date(1, 9)]
+        temperature_profiles[Date(1, 3)] = temperature_profiles[Date(1, 9)]
+        temperature_profiles[Date(1, 4)] = temperature_profiles[Date(1, 9)]
+        temperature_profiles[Date(1, 5)] = temperature_profiles[Date(1, 7)]
         temperature_profiles[Date(1, 6)] = temperature_profiles[Date(1, 7)]
-        temperature_profiles[Date(1, 9)] = temperature_profiles[Date(1, 4)]
-        temperature_profiles[Date(1, 10)] = temperature_profiles[Date(1, 4)]
-        temperature_profiles[Date(1, 11)] = temperature_profiles[Date(1, 1)]
-        temperature_profiles[Date(1, 12)] = temperature_profiles[Date(1, 1)]
+        temperature_profiles[Date(1, 8)] = temperature_profiles[Date(1, 7)]
+        temperature_profiles[Date(1, 10)] = temperature_profiles[Date(1, 9)]
+        temperature_profiles[Date(1, 11)] = temperature_profiles[Date(1, 9)]
+        temperature_profiles[Date(1, 12)] = temperature_profiles[Date(1, 9)]
 
         # Instantiate and return a Weather Forecaster based off of this weather data.
         return cls(
