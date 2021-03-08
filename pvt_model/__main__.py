@@ -286,6 +286,7 @@ def _determine_initial_conditions(
         parsed_args.portion_covered,
         parsed_args.pvt_data_file,
         resolution,
+        run_depth,
         parsed_args.start_time,
         parsed_args.tank_data_file,
         # parsed_args.unglazed,
@@ -296,7 +297,7 @@ def _determine_initial_conditions(
 
     # If all the temperatures are within the desired limit, return the temperatures.
     if all(
-        final_temperature_vector - running_system_temperature_vector
+        abs(final_temperature_vector - running_system_temperature_vector)
         <= INITIAL_CONDITION_PRECISION
     ):
         logger.info(
@@ -447,6 +448,10 @@ def main(args) -> None:
 
     # Iterate to determine the initial conditions for the run.
     logger.info("Determining consistent initial conditions.")
+    print(
+        "Determining consistent initial conditions via successive runs at "
+        f"{COARSE_RUN_RESOLUTION}s resolution."
+    )
     initial_system_temperature_vector = _determine_initial_conditions(
         pvt_panel.collector.number_of_pipes, logger, parsed_args
     )
@@ -473,6 +478,7 @@ def main(args) -> None:
         parsed_args.portion_covered,
         parsed_args.pvt_data_file,
         parsed_args.resolution,
+        1,
         parsed_args.start_time,
         parsed_args.tank_data_file,
         # parsed_args.unglazed,

@@ -19,7 +19,7 @@ import datetime
 import logging
 import os
 
-from typing import Dict, List, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 import numpy
 import pytz
@@ -463,6 +463,7 @@ def main(
     portion_covered: float,
     pvt_data_file: str,
     resolution: int,
+    run_number: Optional[int],
     start_time: int,
     tank_data_file: str,
     use_pvgis: bool,
@@ -508,6 +509,9 @@ def main(
     :param resolution:
         The temporal resolution at which to run the simulation.
 
+    :param run_number:
+        The number of the run being carried out. This is used for categorising logs.
+
     :param start_time:
         The time of day at which to start the simulation, specified between 0 and 23.
 
@@ -533,7 +537,11 @@ def main(
     """
 
     # Get the logger for the component.
-    logger = get_logger(PVT_SYSTEM_MODEL_LOGGER_NAME.format(resolution=resolution))
+    logger = get_logger(
+        PVT_SYSTEM_MODEL_LOGGER_NAME.format(
+            resolution=resolution, run_number=run_number
+        )
+    )
 
     # Set up numpy printing style.
     numpy.set_printoptions(formatter={"float": "{: 0.3f}".format})

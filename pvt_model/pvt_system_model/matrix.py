@@ -237,7 +237,7 @@ def _absorber_equation(
                     segment.pipe_index,
                     segment.y_index,
                 )
-            ] = (
+            ] = -1 * (
                 segment.width  # [m]
                 * segment.length  # [m]
                 * pvt_panel.bond.conductivity  # [W/m*K]
