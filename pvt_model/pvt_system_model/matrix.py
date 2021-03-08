@@ -1279,9 +1279,8 @@ def _pv_equation(
             glass_transmissivity=pvt_panel.glass.transmissivity,
             layer_absorptivity=pvt_panel.pv.absorptivity,
         )
-        * weather_conditions.irradiance
-        # [W/m^2]
-        + segment.width  # [m]
+        * weather_conditions.irradiance  # [W/m^2]
+        * segment.width  # [m]
         * segment.length  # [m]
         * (
             1
@@ -1306,6 +1305,7 @@ def _pv_equation(
                 segment.y_index,
             )
         ]
+        / resolution
     )
 
     return row_equation, resultant_vector_value
