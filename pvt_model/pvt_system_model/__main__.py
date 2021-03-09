@@ -363,6 +363,7 @@ def _solve_temperature_vector_convergence_method(
         heat_exchanger,
         current_hot_water_load,
         hot_water_tank,
+        logger,
         number_of_pipes,
         number_of_temperatures,
         number_of_x_segments,
@@ -545,7 +546,7 @@ def main(
         PVT_SYSTEM_MODEL_LOGGER_NAME.format(
             resolution=resolution, run_number=run_number
         ),
-        verbose
+        verbose,
     )
 
     # Set up numpy printing style.

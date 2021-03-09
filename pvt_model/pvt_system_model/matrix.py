@@ -47,8 +47,6 @@ from .physics_utils import (
 
 __all__ = ("calculate_matrix_equation",)
 
-logger = logging.getLogger(PVT_SYSTEM_MODEL_LOGGER_NAME)
-
 
 ####################
 # Internal methods #
@@ -1045,6 +1043,7 @@ def _pipe_equation(
 
 def _pv_equation(
     best_guess_temperature_vector: numpy.ndarray,
+    logger: logging.Logger,
     number_of_temperatures: int,
     number_of_x_segments: int,
     number_of_y_segments: int,
@@ -1056,6 +1055,9 @@ def _pv_equation(
 ) -> Tuple[List[float], float]:
     """
     Returns a matrix row and resultant vector value representing the pv equation.
+
+    :param logger:
+        The logger used in the run.
 
     :param number_of_temperatures:
         The number of temperatures being modelled in the system.
@@ -1070,37 +1072,38 @@ def _pv_equation(
     # Compute the row equation
     row_equation: List[float] = [0] * number_of_temperatures
 
-    # Compute the T_pv(i, j) term
-    row_equation[
-        index_handler.index_from_segment_coordinates(
-            number_of_x_segments,
-            number_of_y_segments,
-            TemperatureName.pv,
-            segment.x_index,
-            segment.y_index,
-        )
-    ] = (
-        # Internal heat change.
+    logger.debug("Beginning calculation of PV equation components.")
+
+    pv_internal_energy = (
         segment.width  # [m]
         * segment.length  # [m]
         * pvt_panel.pv.thickness  # [m]
         * pvt_panel.pv.density  # [kg/m^3]
         * pvt_panel.pv.heat_capacity  # [J/kg*K]
         / resolution  # [s]
-        # X-wise conduction within the glass layer
-        + (2 if segment.x_index not in [0, number_of_x_segments - 1] else 1)
+    )
+    logger.debug("PV internal energy term: %sW/K", pv_internal_energy)
+
+    x_wise_conduction = (
+        (2 if segment.x_index not in [0, number_of_x_segments - 1] else 1)
         * pvt_panel.pv.conductivity  # [W/m*K]
         * pvt_panel.pv.thickness  # [m]
         * segment.length  # [m]
         / segment.width  # [m]
-        # Y-wise conduction within the glass layer
-        + (2 if segment.y_index not in [0, number_of_y_segments - 1] else 1)
+    )
+    logger.debug("PV x-wise conduction term: %sW/K", x_wise_conduction)
+
+    y_wise_conduction = (
+        (2 if segment.y_index not in [0, number_of_y_segments - 1] else 1)
         * pvt_panel.pv.conductivity  # [W/m*K]
         * pvt_panel.pv.thickness  # [m]
         * segment.width  # [m]
         / segment.length  # [m]
-        # Radiation to the glass layer
-        + segment.width
+    )
+    logger.debug("PV y-wise conduction term: %sW/K", y_wise_conduction)
+
+    pv_to_glass_radiation = (
+        segment.width
         * segment.length
         * radiative_heat_transfer_coefficient(
             destination_emissivity=pvt_panel.glass.emissivity,
@@ -1124,12 +1127,21 @@ def _pv_equation(
                 )
             ],
         )
-        # Conduction to the glass layer
-        + segment.width * segment.length / pvt_panel.air_gap_resistance
-        # Conduction to the absorber layer
-        + segment.width * segment.length / pvt_panel.pv_to_collector_thermal_resistance
-        # Solar thermal absorption
-        - transmissivity_absorptivity_product(
+    )
+    logger.debug("PV to glass radiation term: %sW/K", pv_to_glass_radiation)
+
+    pv_to_glass_conduction = (
+        segment.width * segment.length / pvt_panel.air_gap_resistance
+    )
+    logger.debug("PV to glass conduction term: %sW/K", pv_to_glass_conduction)
+
+    pv_to_absorber_conduction = (
+        segment.width * segment.length / pvt_panel.pv_to_collector_thermal_resistance
+    )
+    logger.debug("PV to absorber conduction term: %sW/K", pv_to_absorber_conduction)
+
+    solar_thermal_absorbtion_term = -1 * (
+        transmissivity_absorptivity_product(
             diffuse_reflection_coefficient=pvt_panel.glass.diffuse_reflection_coefficient,
             glass_transmissivity=pvt_panel.glass.transmissivity,
             layer_absorptivity=pvt_panel.pv.absorptivity,
@@ -1139,6 +1151,25 @@ def _pv_equation(
         * segment.length  # [m]
         * pvt_panel.pv.reference_efficiency
         * pvt_panel.pv.thermal_coefficient
+    )
+
+    # Compute the T_pv(i, j) term
+    row_equation[
+        index_handler.index_from_segment_coordinates(
+            number_of_x_segments,
+            number_of_y_segments,
+            TemperatureName.pv,
+            segment.x_index,
+            segment.y_index,
+        )
+    ] = (
+        pv_internal_energy
+        + x_wise_conduction
+        + y_wise_conduction
+        + pv_to_glass_radiation
+        + pv_to_glass_conduction
+        + pv_to_absorber_conduction
+        + solar_thermal_absorbtion_term
     )
 
     # Compute the T_pv(i+1, j) term provided that that segment exists.
@@ -1672,6 +1703,7 @@ def calculate_matrix_equation(
     heat_exchanger: exchanger.Exchanger,
     hot_water_load: float,
     hot_water_tank: tank.Tank,
+    logger: logging.Logger,
     number_of_pipes: int,
     number_of_temperatures: int,
     number_of_x_segments: int,
@@ -1722,6 +1754,7 @@ def calculate_matrix_equation(
     for segment in pvt_panel.segments.values():
         equation, resultant_value = _pv_equation(
             best_guess_temperature_vector,
+            logger,
             number_of_temperatures,
             number_of_x_segments,
             number_of_y_segments,
