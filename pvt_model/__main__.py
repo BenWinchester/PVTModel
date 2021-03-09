@@ -291,6 +291,7 @@ def _determine_initial_conditions(
         parsed_args.tank_data_file,
         # parsed_args.unglazed,
         parsed_args.use_pvgis,
+        parsed_args.verbose,
         parsed_args.x_resolution,
         parsed_args.y_resolution,
     )
@@ -300,13 +301,13 @@ def _determine_initial_conditions(
         abs(final_temperature_vector - running_system_temperature_vector)
         <= INITIAL_CONDITION_PRECISION
     ):
-        logger.info(
+        logger.debug(
             "Initial temperatures consistent. Max difference: %sK",
             max(abs(final_temperature_vector - running_system_temperature_vector)),
         )
         return final_temperature_vector.tolist()
 
-    logger.info(
+    logger.debug(
         "Initial temperatures not consistent. Max difference: %sK",
         max(abs(final_temperature_vector - running_system_temperature_vector)),
     )
@@ -395,15 +396,15 @@ def main(args) -> None:
 
     """
 
+    # Parse the arguments passed in.
+    parsed_args = argparser.parse_args(args)
+
     # Initialise logging.
-    logger = get_logger(LOGGER_NAME)
+    logger = get_logger(LOGGER_NAME, parsed_args.verbose)
     logger.info(
         "%s PVT model instantiated. %s\nCommand: %s", "=" * 20, "=" * 20, " ".join(args)
     )
     print("PVT model instantiated.")
-
-    # Parse the arguments passed in.
-    parsed_args = argparser.parse_args(args)
 
     # Check that the output file is specified, and that it doesn't already exist.
     if parsed_args.output is None or parsed_args.output == "":
@@ -436,7 +437,7 @@ def main(args) -> None:
     )
     # Instantiate a hot-water tank instance based on the data.
     hot_water_tank = hot_water_tank_from_path(parsed_args.tank_data_file)
-    logger.info(
+    logger.debug(
         "PVT system information successfully parsed:\n%s\n%s",
         str(pvt_panel),
         str(hot_water_tank),
@@ -483,6 +484,7 @@ def main(args) -> None:
         parsed_args.tank_data_file,
         # parsed_args.unglazed,
         parsed_args.use_pvgis,
+        parsed_args.verbose,
         parsed_args.x_resolution,
         parsed_args.y_resolution,
     )
@@ -499,4 +501,8 @@ def main(args) -> None:
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    try:
+        main(sys.argv[1:])
+    except Exception:
+        print("An exception occured. See /logs for details.")
+        raise

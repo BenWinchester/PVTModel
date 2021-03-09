@@ -174,6 +174,13 @@ def parse_args(args) -> argparse.Namespace:
         default=False,
     )
     parser.add_argument(
+        "--verbose",
+        "-v",
+        action="store_true",
+        default=False,
+        help="If specified, verbose logging will be carried out.",
+    )
+    parser.add_argument(
         "--x-resolution",
         "-x",
         help="The number of segments to include in the x direction (across the panel) "

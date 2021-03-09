@@ -373,7 +373,7 @@ def _solve_temperature_vector_convergence_method(
         weather_conditions,
     )
 
-    logger.info(
+    logger.debug(
         "Matrix equation computed.\nA =\n%s\nB =\n%s",
         str(coefficient_matrix),
         str(resultant_vector),
@@ -386,7 +386,7 @@ def _solve_temperature_vector_convergence_method(
     )
     # run_two_temperature_vector = run_two_output[0].transpose()[0]
 
-    logger.info(
+    logger.debug(
         "Date and time: %s; Run number: %s: "
         "Temperatures successfully computed. Temperature vector: T = %s",
         next_date_and_time.strftime("%d/%m/%Y %H:%M:%S"),
@@ -400,7 +400,7 @@ def _solve_temperature_vector_convergence_method(
 
     # If the solution has converged, return the temperature vector.
     if run_two_temperature_difference < CONVERGENT_SOLUTION_PRECISION:
-        logger.info(
+        logger.debug(
             "Date and time: %s; Run number: %s: Convergent solution found. "
             "Convergent difference: %s",
             next_date_and_time.strftime("%d/%m/%Y %H:%M:%S"),
@@ -428,7 +428,7 @@ def _solve_temperature_vector_convergence_method(
                 run_two_temperature_difference,
                 run_two_temperature_vector,
             )
-        logger.info("Continuing as fewer than two runs have been attempted...")
+        logger.debug("Continuing as fewer than two runs have been attempted...")
 
     # Otherwise, continue to solve until the prevision is reached.
     return _solve_temperature_vector_convergence_method(
@@ -467,6 +467,7 @@ def main(
     start_time: int,
     tank_data_file: str,
     use_pvgis: bool,
+    verbose: bool,
     x_resolution: int,
     y_resolution: int,
 ) -> Tuple[numpy.ndarray, Dict[int, SystemData]]:
@@ -525,6 +526,9 @@ def main(
     :param use_pvgis:
         Whether the data obtained from the PVGIS system should be used.
 
+    :param verbose:
+        Whether the logging level is verbose (True) or not (False).
+
     :param x_resolution:
         The x resolution of the simulation being run.
 
@@ -540,7 +544,8 @@ def main(
     logger = get_logger(
         PVT_SYSTEM_MODEL_LOGGER_NAME.format(
             resolution=resolution, run_number=run_number
-        )
+        ),
+        verbose
     )
 
     # Set up numpy printing style.
@@ -646,7 +651,7 @@ def main(
     # Set up a holder for the information about the final output of the system.
     # total_power_data = TotalPowerData()
 
-    logger.debug(
+    logger.info(
         "Beginning itterative model:\n  Running from: %s\n  Running to: %s",
         str(initial_date_and_time),
         str(final_date_and_time),
@@ -785,7 +790,7 @@ def main(
         )
     ):
 
-        logger.info(
+        logger.debug(
             "Time: %s: Beginning internal run. Previous temperature vector: T=%s",
             date_and_time.strftime("%d/%m/%Y %H:%M:%S"),
             previous_run_temperature_vector,

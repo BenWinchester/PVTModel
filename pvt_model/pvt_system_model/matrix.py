@@ -1690,7 +1690,7 @@ def calculate_matrix_equation(
 
     """
 
-    logger.info("Matrix module called: calculating matrix and resultant vector.")
+    logger.debug("Matrix module called: calculating matrix and resultant vector.")
 
     # Instantiate an empty matrix and array based on the number of temperatures present.
     matrix = numpy.zeros([0, number_of_temperatures])
@@ -1709,7 +1709,7 @@ def calculate_matrix_equation(
             segment,
             weather_conditions,
         )
-        logger.info(
+        logger.debug(
             "Glass equation for segment %s computed:\n%s\nResultant value: %s",
             segment.coordinates,
             equation,
@@ -1731,7 +1731,7 @@ def calculate_matrix_equation(
             segment,
             weather_conditions,
         )
-        logger.info(
+        logger.debug(
             "PV equation for segment %s computed:\n%s\nResultant value: %s",
             segment.coordinates,
             equation,
@@ -1753,7 +1753,7 @@ def calculate_matrix_equation(
             segment,
             weather_conditions,
         )
-        logger.info(
+        logger.debug(
             "Collector equation for segment %s computed:\n%s\nResultant value: %s",
             segment.coordinates,
             equation,
@@ -1784,7 +1784,7 @@ def calculate_matrix_equation(
             segment,
             weather_conditions,
         )
-        logger.info(
+        logger.debug(
             "Pipe equation for segment %s computed:\n%s\nResultant value: %s",
             segment.coordinates,
             equation,
@@ -1805,7 +1805,7 @@ def calculate_matrix_equation(
             resolution,
             segment,
         )
-        logger.info(
+        logger.debug(
             "HTF equation for segment %s computed:\n%s\nResultant value: %s",
             segment.coordinates,
             equation,
@@ -1829,7 +1829,7 @@ def calculate_matrix_equation(
         resolution,
         weather_conditions,
     )
-    logger.info(
+    logger.debug(
         "Tank equation computed:\n%s\nResultant value: %s",
         equation,
         resultant_value,
@@ -1846,7 +1846,7 @@ def calculate_matrix_equation(
         number_of_x_segments,
         number_of_y_segments,
     )
-    logger.info(
+    logger.debug(
         "Tank continuity equation computed:\n%s\nResultant value: %s",
         equation,
         resultant_value,
@@ -1863,7 +1863,7 @@ def calculate_matrix_equation(
             number_of_y_segments,
             segment,
         )
-        logger.info(
+        logger.debug(
             "HTF definition equation for segment %s computed:\n%s\nResultant value: %s",
             segment.coordinates,
             equation,
@@ -1885,7 +1885,7 @@ def calculate_matrix_equation(
             number_of_y_segments,
             segment,
         )
-        logger.info(
+        logger.debug(
             "Fluid continuity equation for segment %s computed:\n%s\nResultant value: %s",
             segment.coordinates,
             equation,
@@ -1903,7 +1903,7 @@ def calculate_matrix_equation(
     )
 
     for equation, resultant_value in system_continuity_equations:
-        logger.info(
+        logger.debug(
             "System continuity equation computed:\n%s\nResultant value: %s",
             equation,
             resultant_value,
@@ -1917,7 +1917,7 @@ def calculate_matrix_equation(
     )
 
     for equation, resultant_value in boundary_condition_equations:
-        logger.info(
+        logger.debug(
             "Boundary condition equation computed:\n%s\nResultant value: %s",
             equation,
             resultant_value,

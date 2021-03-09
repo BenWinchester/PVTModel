@@ -132,12 +132,15 @@ def fourier_number(
     return f_num
 
 
-def get_logger(logger_name: str) -> logging.Logger:
+def get_logger(logger_name: str, verbose: bool) -> logging.Logger:
     """
     Set-up and return a logger.
 
     :param logger_name:
         The name of the logger to instantiate.
+
+    :param verbose:
+        Whether the logging is verbose (DEBUG reported) or not (INFO only).
 
     :return:
         The logger for the component.
@@ -146,7 +149,10 @@ def get_logger(logger_name: str) -> logging.Logger:
 
     # Create a logger with the current component name.
     logger = logging.getLogger(logger_name)
-    logger.setLevel(logging.DEBUG)
+    if verbose:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
     # Create the logging directory if it doesn't exist.
     if not os.path.isdir(LOGGER_DIRECTORY):
         os.mkdir(LOGGER_DIRECTORY)
