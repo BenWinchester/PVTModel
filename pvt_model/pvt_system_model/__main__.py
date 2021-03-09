@@ -376,16 +376,16 @@ def _solve_temperature_vector_convergence_method(
 
     logger.debug(
         "Matrix equation computed.\nA =\n%s\nB =\n%s",
-        str(coefficient_matrix),
+        str("\n".join([",".join([str(e) for e in row]) for row in coefficient_matrix])),
         str(resultant_vector),
     )
 
-    run_two_output = linalg.solve(a=coefficient_matrix, b=resultant_vector)
-    # run_two_output = linalg.lstsq(a=coefficient_matrix, b=resultant_vector)
-    run_two_temperature_vector: numpy.ndarray = numpy.asarray(  # type: ignore
-        [run_two_output[index][0] for index in range(len(run_two_output))]
-    )
-    # run_two_temperature_vector = run_two_output[0].transpose()[0]
+    # run_two_output = linalg.solve(a=coefficient_matrix, b=resultant_vector)
+    run_two_output = linalg.lstsq(a=coefficient_matrix, b=resultant_vector)
+    # run_two_temperature_vector: numpy.ndarray = numpy.asarray(  # type: ignore
+    #     [run_two_output[index][0] for index in range(len(run_two_output))]
+    # )
+    run_two_temperature_vector = run_two_output[0].transpose()[0]
 
     logger.debug(
         "Date and time: %s; Run number: %s: "

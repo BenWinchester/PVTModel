@@ -301,13 +301,13 @@ def _determine_initial_conditions(
         abs(final_temperature_vector - running_system_temperature_vector)
         <= INITIAL_CONDITION_PRECISION
     ):
-        logger.debug(
+        logger.info(
             "Initial temperatures consistent. Max difference: %sK",
             max(abs(final_temperature_vector - running_system_temperature_vector)),
         )
         return final_temperature_vector.tolist()
 
-    logger.debug(
+    logger.info(
         "Initial temperatures not consistent. Max difference: %sK",
         max(abs(final_temperature_vector - running_system_temperature_vector)),
     )
@@ -498,6 +498,7 @@ def main(args) -> None:
     logger.info("Conducting analysis.")
     analysis.analyse(f"{parsed_args.output}.json")
     print("Analysis complete. Figures can be found in `./figures`.")
+    logger.info("Analysis complete. Exiting.")
 
 
 if __name__ == "__main__":

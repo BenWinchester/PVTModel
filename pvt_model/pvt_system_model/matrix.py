@@ -54,6 +54,7 @@ __all__ = ("calculate_matrix_equation",)
 
 
 def _absorber_equation(
+    logger: logging.Logger,
     number_of_pipes: int,
     number_of_temperatures: int,
     number_of_x_segments: int,
@@ -77,8 +78,76 @@ def _absorber_equation(
 
     """
 
+    logger.debug(
+        "Beginning calculation of absorber equation for segment %s.",
+        segment.coordinates,
+    )
+
     # Compute the row equation
     row_equation: List[float] = [0] * number_of_temperatures
+
+    absorber_internal_energy_change = (
+        segment.width  # [m]
+        * segment.length  # [m]
+        * pvt_panel.collector.thickness  # [m]
+        * pvt_panel.collector.density  # [kg/m^3]
+        * pvt_panel.collector.heat_capacity  # [J/kg*K]
+        / resolution  # [s]
+    )
+    logger.debug(
+        "Absorber internal energy term: %s W/K", absorber_internal_energy_change
+    )
+
+    x_wise_conduction = (
+        (
+            2
+            - (1 if segment.x_index == 0 else 0)
+            - (1 if segment.x_index == number_of_x_segments - 1 else 0)
+        )
+        * pvt_panel.collector.conductivity  # [W/m*K]
+        * pvt_panel.collector.thickness  # [m]
+        * segment.length  # [m]
+        / segment.width  # [m]
+    )
+    logger.debug(
+        "Absorber x-wise conduction term: %s W/K",
+        x_wise_conduction,
+    )
+
+    y_wise_conduction = (
+        (
+            2
+            - (1 if segment.y_index == 0 else 0)
+            - (1 if segment.y_index == number_of_y_segments - 1 else 0)
+        )
+        * pvt_panel.collector.conductivity  # [W/m*K]
+        * pvt_panel.collector.thickness  # [m]
+        * segment.width  # [m]
+        / segment.length  # [m]
+    )
+    logger.debug("Absorber y-wise conduction term: %s W/K", y_wise_conduction)
+
+    pv_to_absorber_conduction = (
+        segment.width * segment.length / pvt_panel.pv_to_collector_thermal_resistance
+    )
+    logger.debug("PV to absorber conduction term: %s W/K", pv_to_absorber_conduction)
+
+    absorber_to_pipe_conduction = (
+        segment.width  # [m]
+        * segment.length  # [m]
+        * pvt_panel.bond.conductivity  # [W/m*K]
+        / pvt_panel.bond.thickness  # [m]
+    )
+    logger.debug(
+        "Absorber to pipe conduction term: %s W/K", absorber_to_pipe_conduction
+    )
+
+    absorber_to_insulation_loss = (
+        segment.width * segment.length * pvt_panel.insulation_thermal_resistance
+    )
+    logger.debug(
+        "Absorber to insulation loss term: %s W/K", absorber_to_insulation_loss
+    )
 
     # Compute the T_A(i, j) term
     row_equation[
@@ -90,44 +159,12 @@ def _absorber_equation(
             segment.y_index,
         )
     ] = (
-        # Internal heat change.
-        segment.width  # [m]
-        * segment.length  # [m]
-        * pvt_panel.collector.thickness  # [m]
-        * pvt_panel.collector.density  # [kg/m^3]
-        * pvt_panel.collector.heat_capacity  # [J/kg*K]
-        / resolution  # [s]
-        # X-wise conduction within the glass layer
-        + (2 if segment.x_index not in [0, number_of_x_segments - 1] else 1)
-        * pvt_panel.collector.conductivity  # [W/m*K]
-        * pvt_panel.collector.thickness  # [m]
-        * segment.length  # [m]
-        / segment.width  # [m]
-        # Y-wise conduction within the glass layer
-        + (2 if segment.y_index not in [0, number_of_y_segments - 1] else 1)
-        * pvt_panel.collector.conductivity  # [W/m*K]
-        * pvt_panel.collector.thickness  # [m]
-        * segment.width  # [m]
-        / segment.length  # [m]
-        # Conduction from the PV layer
-        + segment.width * segment.length / pvt_panel.pv_to_collector_thermal_resistance
-        # Conduction to the pipe, if present.
-        + (
-            (
-                segment.width  # [m]
-                * segment.length  # [m]
-                * pvt_panel.bond.conductivity  # [W/m*K]
-                / pvt_panel.bond.thickness  # [m]
-            )
-            if segment.pipe
-            else 0
-        )
-        # Loss through the back if no pipe is present.
-        + (
-            (segment.width * segment.length * pvt_panel.insulation_thermal_resistance)
-            if not segment.pipe
-            else 0
-        )
+        absorber_internal_energy_change
+        + x_wise_conduction
+        + y_wise_conduction
+        + pv_to_absorber_conduction
+        + (absorber_to_pipe_conduction if segment.pipe else 0)
+        + (absorber_to_insulation_loss if not segment.pipe else 0)
     )
 
     # Compute the T_A(i+1, j) term provided that that segment exists.
@@ -212,10 +249,8 @@ def _absorber_equation(
                 segment.x_index,
                 segment.y_index,
             )
-        ] = -1 * (
-            segment.width  # [m]
-            * segment.length  # [m]
-            / pvt_panel.pv_to_collector_thermal_resistance
+        ] = (
+            -1 * pv_to_absorber_conduction
         )
 
     # Compute the T_P(pipe_number, j) term provided that there is a pipe present.
@@ -235,11 +270,8 @@ def _absorber_equation(
                     segment.pipe_index,
                     segment.y_index,
                 )
-            ] = -1 * (
-                segment.width  # [m]
-                * segment.length  # [m]
-                * pvt_panel.bond.conductivity  # [W/m*K]
-                / pvt_panel.bond.thickness  # [m]
+            ] = (
+                -1 * absorber_to_pipe_conduction
             )
         except ProgrammerJudgementFault as e:
             raise ProgrammerJudgementFault(
@@ -266,16 +298,7 @@ def _absorber_equation(
         ]
         / resolution  # [s]
         # Ambient temperature term.
-        + (
-            (
-                segment.width  # [m]
-                * segment.length  # [m]
-                * weather_conditions.ambient_temperature  # [K]
-                / pvt_panel.insulation_thermal_resistance  # [m^2*K/W]
-            )
-            if not segment.pipe
-            else 0
-        )
+        + (absorber_to_insulation_loss if not segment.pipe else 0)
     )
 
     return row_equation, resultant_vector_value
@@ -318,7 +341,7 @@ def _boundary_condition_equations(
         TemperatureName.collector,
     }:
         # Work along both "left" and "right" edges, applying the boundary conditions.
-        for y_coord in range(number_of_y_segments - 1):
+        for y_coord in range(number_of_y_segments):
             # Equation 1: Zero temperature gradient at x=0.
             row_equation: List[float] = [0] * number_of_temperatures
             row_equation[
@@ -363,7 +386,7 @@ def _boundary_condition_equations(
             equations.append((row_equation, 0))
 
         # Work along both "top" and "bottom" edges, applying the boundary conditions.
-        for x_coord in range(number_of_x_segments - 1):
+        for x_coord in range(number_of_x_segments):
             # Equation 3: Zero temperature gradient at y=0.
             row_equation = [0] * number_of_temperatures
             row_equation[
@@ -461,6 +484,7 @@ def _fluid_continuity_equation(
 
 def _glass_equation(
     best_guess_temperature_vector: numpy.ndarray,
+    logger: logging.Logger,
     number_of_temperatures: int,
     number_of_x_segments: int,
     number_of_y_segments: int,
@@ -486,42 +510,55 @@ def _glass_equation(
     # Compute the row equation
     row_equation: List[float] = [0] * number_of_temperatures
 
-    # Compute the T_g(i, j) term
-    row_equation[
-        index_handler.index_from_segment_coordinates(
-            number_of_x_segments,
-            number_of_y_segments,
-            TemperatureName.glass,
-            segment.x_index,
-            segment.y_index,
-        )
-    ] = (
-        # Internal heat change.
+    logger.debug(
+        "Beginning calculation of glass equation for segment %s.", segment.coordinates
+    )
+
+    glass_internal_energy = (
         segment.width  # [m]
         * segment.length  # [m]
         * pvt_panel.glass.thickness  # [m]
         * pvt_panel.glass.density  # [kg/m^3]
         * pvt_panel.glass.heat_capacity  # [J/kg*K]
         / resolution  # [s]
-        # X-wise conduction within the glass layer
-        # @@@ FIXME: Here, the code doesn't work in the 1x1 case.
-        + (2 if segment.x_index not in [0, number_of_x_segments - 1] else 1)
+    )
+    logger.debug("Glass internal energy term: %s W/K", glass_internal_energy)
+
+    x_wise_conduction = (
+        (
+            2
+            - (1 if segment.x_index == 0 else 0)
+            - (1 if segment.x_index == number_of_x_segments - 1 else 0)
+        )
         * pvt_panel.glass.conductivity  # [W/m*K]
         * pvt_panel.glass.thickness  # [m]
         * segment.length  # [m]
         / segment.width  # [m]
-        # Y-wise conduction within the glass layer
-        + (2 if segment.y_index not in [0, number_of_y_segments - 1] else 1)
+    )
+    logger.debug("Glass x-wise conduction term: %s W/K", x_wise_conduction)
+
+    y_wise_conduction = (
+        (
+            2
+            - (1 if segment.y_index == 0 else 0)
+            - (1 if segment.y_index == number_of_y_segments - 1 else 0)
+        )
         * pvt_panel.glass.conductivity  # [W/m*K]
         * pvt_panel.glass.thickness  # [m]
         * segment.width  # [m]
         / segment.length  # [m]
-        # Conduction to the air.
-        + segment.width  # [m]
+    )
+    logger.debug("Glass y-wise conduction term: %s W/K", y_wise_conduction)
+
+    glass_to_air_conduction = (
+        +segment.width  # [m]
         * segment.length  # [m]
         * weather_conditions.wind_heat_transfer_coefficient  # [W/m^2*K]
-        # Radiation to the sky.
-        + segment.width  # [m]
+    )
+    logger.debug("Glass to air conduction %s W/K", glass_to_air_conduction)
+
+    glass_to_sky_radiation = (
+        segment.width  # [m]
         * segment.length  # [m]
         * radiative_heat_transfer_coefficient(
             destination_temperature=weather_conditions.sky_temperature,
@@ -537,8 +574,16 @@ def _glass_equation(
                 )
             ],
         )
-        # Radiation to the PV layer
-        + segment.width
+    )
+    logger.debug("Glass to sky radiation %s W/K", glass_to_sky_radiation)
+
+    glass_to_pv_conduction = (
+        segment.width * segment.length / pvt_panel.air_gap_resistance
+    )
+    logger.debug("Glass to pv conduction %s W/K", glass_to_pv_conduction)
+
+    glass_to_pv_radiation = (
+        segment.width
         * segment.length
         * radiative_heat_transfer_coefficient(
             destination_emissivity=pvt_panel.pv.emissivity,
@@ -562,8 +607,26 @@ def _glass_equation(
                 )
             ],
         )
-        # Conduction to the PV layer
-        + segment.width * segment.length / pvt_panel.air_gap_resistance
+    )
+    logger.debug("Glass to pv radiation %s W/K", glass_to_sky_radiation)
+
+    # Compute the T_g(i, j) term
+    row_equation[
+        index_handler.index_from_segment_coordinates(
+            number_of_x_segments,
+            number_of_y_segments,
+            TemperatureName.glass,
+            segment.x_index,
+            segment.y_index,
+        )
+    ] = (
+        glass_internal_energy
+        + x_wise_conduction
+        + y_wise_conduction
+        + glass_to_air_conduction
+        + glass_to_sky_radiation
+        + glass_to_pv_conduction
+        + glass_to_pv_radiation
     )
 
     # Compute the T_g(i+1, j) term provided that that segment exists.
@@ -1072,7 +1135,9 @@ def _pv_equation(
     # Compute the row equation
     row_equation: List[float] = [0] * number_of_temperatures
 
-    logger.debug("Beginning calculation of PV equation components.")
+    logger.debug(
+        "Beginning calculation of PV equation for segment %s.", segment.coordinates
+    )
 
     pv_internal_energy = (
         segment.width  # [m]
@@ -1082,25 +1147,33 @@ def _pv_equation(
         * pvt_panel.pv.heat_capacity  # [J/kg*K]
         / resolution  # [s]
     )
-    logger.debug("PV internal energy term: %sW/K", pv_internal_energy)
+    logger.debug("PV internal energy term: %s W/K", pv_internal_energy)
 
     x_wise_conduction = (
-        (2 if segment.x_index not in [0, number_of_x_segments - 1] else 1)
+        (
+            2
+            - (1 if segment.x_index == 0 else 0)
+            - (1 if segment.x_index == number_of_x_segments - 1 else 0)
+        )
         * pvt_panel.pv.conductivity  # [W/m*K]
         * pvt_panel.pv.thickness  # [m]
         * segment.length  # [m]
         / segment.width  # [m]
     )
-    logger.debug("PV x-wise conduction term: %sW/K", x_wise_conduction)
+    logger.debug("PV x-wise conduction term: %s W/K", x_wise_conduction)
 
     y_wise_conduction = (
-        (2 if segment.y_index not in [0, number_of_y_segments - 1] else 1)
+        (
+            2
+            - (1 if segment.y_index == 0 else 0)
+            - (1 if segment.y_index == number_of_y_segments - 1 else 0)
+        )
         * pvt_panel.pv.conductivity  # [W/m*K]
         * pvt_panel.pv.thickness  # [m]
         * segment.width  # [m]
         / segment.length  # [m]
     )
-    logger.debug("PV y-wise conduction term: %sW/K", y_wise_conduction)
+    logger.debug("PV y-wise conduction term: %s W/K", y_wise_conduction)
 
     pv_to_glass_radiation = (
         segment.width
@@ -1128,17 +1201,17 @@ def _pv_equation(
             ],
         )
     )
-    logger.debug("PV to glass radiation term: %sW/K", pv_to_glass_radiation)
+    logger.debug("PV to glass radiation term: %s W/K", pv_to_glass_radiation)
 
     pv_to_glass_conduction = (
         segment.width * segment.length / pvt_panel.air_gap_resistance
     )
-    logger.debug("PV to glass conduction term: %sW/K", pv_to_glass_conduction)
+    logger.debug("PV to glass conduction term: %s W/K", pv_to_glass_conduction)
 
     pv_to_absorber_conduction = (
         segment.width * segment.length / pvt_panel.pv_to_collector_thermal_resistance
     )
-    logger.debug("PV to absorber conduction term: %sW/K", pv_to_absorber_conduction)
+    logger.debug("PV to absorber conduction term: %s W/K", pv_to_absorber_conduction)
 
     solar_thermal_absorbtion_term = -1 * (
         transmissivity_absorptivity_product(
@@ -1732,6 +1805,7 @@ def calculate_matrix_equation(
     for segment in pvt_panel.segments.values():
         equation, resultant_value = _glass_equation(
             best_guess_temperature_vector,
+            logger,
             number_of_temperatures,
             number_of_x_segments,
             number_of_y_segments,
@@ -1742,9 +1816,9 @@ def calculate_matrix_equation(
             weather_conditions,
         )
         logger.debug(
-            "Glass equation for segment %s computed:\n%s\nResultant value: %s",
+            "Glass equation for segment %s computed:\nEquation: %s\nResultant value: %s W",
             segment.coordinates,
-            equation,
+            ", ".join([f"{value:.3f} W/K" for value in equation]),
             resultant_value,
         )
         matrix = numpy.vstack((matrix, equation))
@@ -1765,9 +1839,9 @@ def calculate_matrix_equation(
             weather_conditions,
         )
         logger.debug(
-            "PV equation for segment %s computed:\n%s\nResultant value: %s",
+            "PV equation for segment %s computed:\nEquation: %s\nResultant value: %s W",
             segment.coordinates,
-            equation,
+            ", ".join([f"{value:.3f} W/K" for value in equation]),
             resultant_value,
         )
         matrix = numpy.vstack((matrix, equation))
@@ -1776,6 +1850,7 @@ def calculate_matrix_equation(
     # Calculate the absorber-layer eqations.
     for segment in pvt_panel.segments.values():
         equation, resultant_value = _absorber_equation(
+            logger,
             number_of_pipes,
             number_of_temperatures,
             number_of_x_segments,
@@ -1787,9 +1862,9 @@ def calculate_matrix_equation(
             weather_conditions,
         )
         logger.debug(
-            "Collector equation for segment %s computed:\n%s\nResultant value: %s",
+            "Collector equation for segment %s computed:\nEquation: %s\nResultant value: %s W",
             segment.coordinates,
-            equation,
+            ", ".join([f"{value:.3f} W/K" for value in equation]),
             resultant_value,
         )
         matrix = numpy.vstack((matrix, equation))
@@ -1818,9 +1893,9 @@ def calculate_matrix_equation(
             weather_conditions,
         )
         logger.debug(
-            "Pipe equation for segment %s computed:\n%s\nResultant value: %s",
+            "Pipe equation for segment %s computed:\nEquation: %s\nResultant value: %s W",
             segment.coordinates,
-            equation,
+            ", ".join([f"{value:.3f} W/K" for value in equation]),
             resultant_value,
         )
         matrix = numpy.vstack((matrix, equation))
@@ -1839,9 +1914,9 @@ def calculate_matrix_equation(
             segment,
         )
         logger.debug(
-            "HTF equation for segment %s computed:\n%s\nResultant value: %s",
+            "HTF equation for segment %s computed:\nEquation: %s\nResultant value: %s W",
             segment.coordinates,
-            equation,
+            ", ".join([f"{value:.3f} W/K" for value in equation]),
             resultant_value,
         )
         matrix = numpy.vstack((matrix, equation))
@@ -1863,7 +1938,7 @@ def calculate_matrix_equation(
         weather_conditions,
     )
     logger.debug(
-        "Tank equation computed:\n%s\nResultant value: %s",
+        "Tank equation computed:\nEquation: %s\nResultant value: %s W",
         equation,
         resultant_value,
     )
@@ -1880,7 +1955,7 @@ def calculate_matrix_equation(
         number_of_y_segments,
     )
     logger.debug(
-        "Tank continuity equation computed:\n%s\nResultant value: %s",
+        "Tank continuity equation computed:\nEquation: %s\nResultant value: %s W",
         equation,
         resultant_value,
     )
@@ -1897,9 +1972,9 @@ def calculate_matrix_equation(
             segment,
         )
         logger.debug(
-            "HTF definition equation for segment %s computed:\n%s\nResultant value: %s",
+            "HTF definition equation for segment %s computed:\nEquation: %s\nResultant value: %s W",
             segment.coordinates,
-            equation,
+            ", ".join([f"{value:.3f} W/K" for value in equation]),
             resultant_value,
         )
         matrix = numpy.vstack((matrix, equation))
@@ -1919,9 +1994,9 @@ def calculate_matrix_equation(
             segment,
         )
         logger.debug(
-            "Fluid continuity equation for segment %s computed:\n%s\nResultant value: %s",
+            "Fluid continuity equation for segment %s computed:\nEquation: %s\nResultant value: %s W",
             segment.coordinates,
-            equation,
+            ", ".join([f"{value:.3f} W/K" for value in equation]),
             resultant_value,
         )
         matrix = numpy.vstack((matrix, equation))
@@ -1937,8 +2012,8 @@ def calculate_matrix_equation(
 
     for equation, resultant_value in system_continuity_equations:
         logger.debug(
-            "System continuity equation computed:\n%s\nResultant value: %s",
-            equation,
+            "System continuity equation computed:\nEquation: %s\nResultant value: %s W",
+            ", ".join([f"{value:.3f} W/K" for value in equation]),
             resultant_value,
         )
         matrix = numpy.vstack((matrix, equation))
@@ -1949,15 +2024,15 @@ def calculate_matrix_equation(
         number_of_temperatures, number_of_x_segments, number_of_y_segments
     )
 
-    for equation, resultant_value in boundary_condition_equations:
-        logger.debug(
-            "Boundary condition equation computed:\n%s\nResultant value: %s",
-            equation,
-            resultant_value,
-        )
-        matrix = numpy.vstack((matrix, equation))
-        resultant_vector = numpy.vstack((resultant_vector, resultant_value))
-        # if len(matrix) == number_of_temperatures:
-        #     return matrix, resultant_vector
+    # for equation, resultant_value in boundary_condition_equations:
+    #     logger.debug(
+    #         "Boundary condition equation computed:\nEquation: %s\nResultant value: %s W",
+    #         ", ".join([f"{value:.3f} W/K" for value in equation]),
+    #         resultant_value,
+    #     )
+    #     matrix = numpy.vstack((matrix, equation))
+    #     resultant_vector = numpy.vstack((resultant_vector, resultant_value))
+    #     # if len(matrix) == number_of_temperatures:
+    #     #     return matrix, resultant_vector
 
     return matrix, resultant_vector
