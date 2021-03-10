@@ -40,11 +40,6 @@ from . import (
 
 from .pvt_panel import pvt
 
-from .constants import (
-    CONVERGENT_SOLUTION_PRECISION,
-    ZERO_CELCIUS_OFFSET,
-)
-
 from ..__utils__ import (  # pylint: disable=unused-import
     CarbonEmissions,
     get_logger,
@@ -59,6 +54,12 @@ from .__utils__ import (
     time_iterator,
 )
 
+from .constants import (
+    CONVERGENT_SOLUTION_PRECISION,
+    ZERO_CELCIUS_OFFSET,
+)
+
+from .pvt_panel.segment import Segment
 
 # The temperature of hot-water required by the end-user, measured in Kelvin.
 HOT_WATER_DEMAND_TEMP = 60 + ZERO_CELCIUS_OFFSET
@@ -257,6 +258,91 @@ def _get_weather_forecaster(
         use_pvgis,
     )
     return weather_forecaster
+
+
+def _layer_temperature_profile(
+    number_of_pipes: int,
+    number_of_x_segments: int,
+    number_of_y_segments: int,
+    segments: List[Segment],
+    temperature_name: TemperatureName,
+    temperature_vector: numpy.ndarray,
+) -> Dict[str, float]:
+    """
+    Returns a map between coordinates and temperature in celcius for a layer.
+
+    :param number_of_pipes:
+        The number of pipes in the collector.
+
+    :param number_of_x_segments:
+        The number of segments in a single row of the collector.
+
+    :param number_of_y_segments:
+        The number of y segments in a single row of the collector.
+
+    :param segments:
+        The list of segments involved in the layer.
+
+    :param temperature_name:
+        The name of the temperature for which to determine the average.
+
+    :param temperature_vector:
+        The temperature vector from which the average temperature of the given layer
+        should be extracted.
+
+    :return:
+        A mapping between coordinates, expressed as a string, and the temperature of
+        each segment, for the layer specified. The values of the temperatures are
+        expressed in Celcius.
+
+    """
+
+    if temperature_name in [
+        TemperatureName.glass,
+        TemperatureName.pv,
+        TemperatureName.collector,
+    ]:
+        layer_temperature_map: Dict[str, float] = {
+            str(segment_coordinates): temperature_vector[
+                index_handler.index_from_segment_coordinates(
+                    number_of_x_segments,
+                    number_of_y_segments,
+                    temperature_name,
+                    segment.x_index,
+                    segment.y_index,
+                )
+            ]
+            - ZERO_CELCIUS_OFFSET
+            for segment_coordinates, segment in segments.items()
+        }
+    elif temperature_name in [
+        TemperatureName.pipe,
+        TemperatureName.htf,
+        TemperatureName.htf_in,
+        TemperatureName.htf_out,
+    ]:
+        layer_temperature_map = {
+            str(segment_coordinates): temperature_vector[
+                index_handler.index_from_pipe_coordinates(
+                    number_of_pipes,
+                    number_of_x_segments,
+                    number_of_y_segments,
+                    temperature_name,
+                    segment.pipe_index,
+                    segment.y_index,
+                )
+            ]
+            - ZERO_CELCIUS_OFFSET
+            for segment_coordinates, segment in segments.items()
+            if segment.pipe
+        }
+    else:
+        raise ProgrammerJudgementFault(
+            "Attempt made to calculate a 2D profile for a temperature with no 2D "
+            "nature."
+        )
+
+    return layer_temperature_map
 
 
 def _solve_temperature_vector_convergence_method(
@@ -465,6 +551,7 @@ def main(
     pvt_data_file: str,
     resolution: int,
     run_number: Optional[int],
+    save_2d_output: bool,
     start_time: int,
     tank_data_file: str,
     use_pvgis: bool,
@@ -513,6 +600,10 @@ def main(
 
     :param run_number:
         The number of the run being carried out. This is used for categorising logs.
+
+    :param save_2d_output:
+        If True, the 2D output is saved to the system data and returned. If False, only
+        the 1D output is saved.
 
     :param start_time:
         The time of day at which to start the simulation, specified between 0 and 23.
@@ -679,7 +770,8 @@ def main(
         initial_date_and_time,
     )
 
-    # Determine the average temperatures for the layers in the PV-T system.
+    # Determine the average temperatures for the layers in the PV-T system, along with
+    # the 2D profiles of the layers.
     average_glass_temperature = _average_layer_temperature(
         number_of_pipes,
         number_of_x_segments,
@@ -687,6 +779,15 @@ def main(
         TemperatureName.glass,
         previous_run_temperature_vector,
     )
+    temperature_map_glass_layer = _layer_temperature_profile(
+        number_of_pipes,
+        number_of_x_segments,
+        number_of_y_segments,
+        pvt_panel.segments,
+        TemperatureName.glass,
+        previous_run_temperature_vector,
+    )
+
     average_pv_temperature = _average_layer_temperature(
         number_of_pipes,
         number_of_x_segments,
@@ -694,6 +795,15 @@ def main(
         TemperatureName.pv,
         previous_run_temperature_vector,
     )
+    temperature_map_pv_layer = _layer_temperature_profile(
+        number_of_pipes,
+        number_of_x_segments,
+        number_of_y_segments,
+        pvt_panel.segments,
+        TemperatureName.pv,
+        previous_run_temperature_vector,
+    )
+
     average_collector_temperature = _average_layer_temperature(
         number_of_pipes,
         number_of_x_segments,
@@ -701,10 +811,27 @@ def main(
         TemperatureName.collector,
         previous_run_temperature_vector,
     )
+    temperature_map_collector_layer = _layer_temperature_profile(
+        number_of_pipes,
+        number_of_x_segments,
+        number_of_y_segments,
+        pvt_panel.segments,
+        TemperatureName.collector,
+        previous_run_temperature_vector,
+    )
+
     average_bulk_water_temperature = _average_layer_temperature(
         number_of_pipes,
         number_of_x_segments,
         number_of_y_segments,
+        TemperatureName.htf,
+        previous_run_temperature_vector,
+    )
+    temperature_map_bulk_water_layer = _layer_temperature_profile(
+        number_of_pipes,
+        number_of_x_segments,
+        number_of_y_segments,
+        pvt_panel.segments,
         TemperatureName.htf,
         previous_run_temperature_vector,
     )
@@ -780,6 +907,16 @@ def main(
         ]
         - ZERO_CELCIUS_OFFSET,
         sky_temperature=weather_conditions.sky_temperature - ZERO_CELCIUS_OFFSET,
+        layer_temperature_map_bulk_water=temperature_map_bulk_water_layer
+        if save_2d_output
+        else None,
+        layer_temperature_map_collector=temperature_map_collector_layer
+        if save_2d_output
+        else None,
+        layer_temperature_map_glass=temperature_map_glass_layer
+        if save_2d_output
+        else None,
+        layer_temperature_map_pv=temperature_map_pv_layer if save_2d_output else None,
     )
 
     for run_number, date_and_time in enumerate(
@@ -837,8 +974,9 @@ def main(
             )
         except DivergentSolutionError as e:
             logger.error(
-                "A divergent solution was reached at %s.",
+                "A divergent solution was reached at %s:%s",
                 date_and_time.strftime("%D/%M/%Y %H:%M:%S"),
+                str(e),
             )
             raise
 
@@ -850,6 +988,15 @@ def main(
             TemperatureName.glass,
             current_run_temperature_vector,
         )
+        temperature_map_glass_layer = _layer_temperature_profile(
+            number_of_pipes,
+            number_of_x_segments,
+            number_of_y_segments,
+            pvt_panel.segments,
+            TemperatureName.glass,
+            current_run_temperature_vector,
+        )
+
         average_pv_temperature = _average_layer_temperature(
             number_of_pipes,
             number_of_x_segments,
@@ -857,6 +1004,15 @@ def main(
             TemperatureName.pv,
             current_run_temperature_vector,
         )
+        temperature_map_pv_layer = _layer_temperature_profile(
+            number_of_pipes,
+            number_of_x_segments,
+            number_of_y_segments,
+            pvt_panel.segments,
+            TemperatureName.pv,
+            current_run_temperature_vector,
+        )
+
         average_collector_temperature = _average_layer_temperature(
             number_of_pipes,
             number_of_x_segments,
@@ -864,10 +1020,27 @@ def main(
             TemperatureName.collector,
             current_run_temperature_vector,
         )
+        temperature_map_collector_layer = _layer_temperature_profile(
+            number_of_pipes,
+            number_of_x_segments,
+            number_of_y_segments,
+            pvt_panel.segments,
+            TemperatureName.collector,
+            current_run_temperature_vector,
+        )
+
         average_bulk_water_temperature = _average_layer_temperature(
             number_of_pipes,
             number_of_x_segments,
             number_of_y_segments,
+            TemperatureName.htf,
+            current_run_temperature_vector,
+        )
+        temperature_map_bulk_water_layer = _layer_temperature_profile(
+            number_of_pipes,
+            number_of_x_segments,
+            number_of_y_segments,
+            pvt_panel.segments,
             TemperatureName.htf,
             current_run_temperature_vector,
         )
@@ -947,6 +1120,18 @@ def main(
             ]
             - ZERO_CELCIUS_OFFSET,
             sky_temperature=weather_conditions.sky_temperature - ZERO_CELCIUS_OFFSET,
+            layer_temperature_map_bulk_water=temperature_map_bulk_water_layer
+            if save_2d_output
+            else None,
+            layer_temperature_map_collector=temperature_map_collector_layer
+            if save_2d_output
+            else None,
+            layer_temperature_map_glass=temperature_map_glass_layer
+            if save_2d_output
+            else None,
+            layer_temperature_map_pv=temperature_map_pv_layer
+            if save_2d_output
+            else None,
         )
 
         previous_run_temperature_vector = current_run_temperature_vector

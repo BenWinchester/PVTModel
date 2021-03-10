@@ -166,8 +166,9 @@ def _reduce_data(
                 ]
             ]
         ):
-            try:
-                for outer_index, _ in enumerate(reduced_data):
+            for outer_index, _ in enumerate(reduced_data):
+                # Attempt to process as a dict or float first.
+                if isinstance(data_to_reduce["0"][data_entry_name], float):
                     reduced_data[outer_index][data_entry_name] = sum(
                         [
                             float(data_to_reduce[str(inner_index)][data_entry_name])
@@ -178,12 +179,39 @@ def _reduce_data(
                             )
                         ]
                     )
-                continue
-            except TypeError as e:
-                logger.error("A value was none. Setting to 'None': %s", str(e))
-                for index, _ in enumerate(reduced_data):
-                    reduced_data[index][data_entry_name] = None
-                continue
+                elif isinstance(data_to_reduce["0"][data_entry_name], dict):
+                    # Loop through the various coordinate pairs.
+                    for sub_dict_key in data_to_reduce[str(outer_index)][
+                        data_entry_name
+                    ]:
+                        if data_entry_name not in reduced_data[outer_index]:
+                            reduced_data[outer_index][data_entry_name]: Dict[
+                                str, float
+                            ] = dict()
+                        reduced_data[outer_index][data_entry_name][sub_dict_key] = sum(
+                            [
+                                float(
+                                    data_to_reduce[str(inner_index)][data_entry_name][
+                                        sub_dict_key
+                                    ]
+                                )
+                                / data_points_per_graph_point
+                                for inner_index in range(
+                                    int(data_points_per_graph_point * outer_index),
+                                    int(
+                                        data_points_per_graph_point * (outer_index + 1)
+                                    ),
+                                )
+                            ]
+                        )
+                else:
+                    logger.debug(
+                        "A value was an unsuported type. Setting to 'None': %s",
+                        data_entry_name,
+                    )
+                    for index, _ in enumerate(reduced_data):
+                        reduced_data[index][data_entry_name] = None
+                    continue
 
         # * If the data entry is a load, then take a sum
         elif any([key in data_entry_name for key in ["load", "output"]]):

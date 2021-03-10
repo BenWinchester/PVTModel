@@ -101,7 +101,7 @@ def _get_system_fourier_numbers(
         ),
         2,
     )
-    fourier_number_map[TemperatureName.collector] = round(  
+    fourier_number_map[TemperatureName.collector] = round(
         fourier_number(
             pvt_panel.collector.thickness,
             pvt_panel.collector.conductivity,
@@ -288,6 +288,7 @@ def _determine_initial_conditions(
         parsed_args.pvt_data_file,
         resolution,
         run_depth,
+        not parsed_args.skip_2d_output,
         parsed_args.start_time,
         parsed_args.tank_data_file,
         # parsed_args.unglazed,
@@ -700,6 +701,7 @@ def main(args) -> None:
         parsed_args.pvt_data_file,
         parsed_args.resolution,
         1,
+        not parsed_args.skip_2d_output,
         parsed_args.start_time,
         parsed_args.tank_data_file,
         # parsed_args.unglazed,

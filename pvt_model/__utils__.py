@@ -19,7 +19,7 @@ import logging
 import os
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Dict, Optional
 
 __all__ = (
     "CarbonEmissions",
@@ -258,6 +258,23 @@ class SystemData:
     .. attribute:: time
         A `str` giving the current time.
 
+    .. attribute:: layer_temperature_map_bulk_water
+        A mapping between coordinate and temperature for the bulk water within the
+        pipes.
+
+    .. attribute:: layer_temperature_map_collector
+        A mapping between coordinate and temperature for segments within the collector
+        layer.
+
+    .. attribute:: layer_temperature_map_glass
+        A mapping between coordinate and temperature for segments within the glass layer.
+
+    .. attribute:: layer_temperature_map_pipe
+        A mapping between coordinate and temperature for the pipes.
+
+    .. attribute:: layer_temperature_map_pv
+        A mapping between coordinate and temperature for segments within the pv layer.
+
     .. attribute:: collector_input_temperature
         The temperature of the HTF inputted into the collector, measured in Celcius.
         This can be set to `None` if no data is recorded.
@@ -280,6 +297,11 @@ class SystemData:
     time: str
     collector_input_temperature: Optional[float] = None
     collector_output_temperature: Optional[float] = None
+    layer_temperature_map_bulk_water: Optional[Dict[str, float]] = None
+    layer_temperature_map_collector: Optional[Dict[str, float]] = None
+    layer_temperature_map_glass: Optional[Dict[str, float]] = None
+    layer_temperature_map_pipe: Optional[Dict[str, float]] = None
+    layer_temperature_map_pv: Optional[Dict[str, float]] = None
 
 
 class TemperatureName(enum.Enum):

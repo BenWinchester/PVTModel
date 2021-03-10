@@ -148,6 +148,14 @@ def parse_args(args) -> argparse.Namespace:
         action="store_true",
     )
     parser.add_argument(
+        "--skip-2d-output",
+        "-sk2d",
+        action="store_true",
+        default=False,
+        help="If specified, the 2D output will not be saved, and only 1D info, and "
+        "plots, will be saved and generated.",
+    )
+    parser.add_argument(
         "--start-time",
         "-st",
         type=int,
