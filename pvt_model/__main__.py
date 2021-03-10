@@ -91,22 +91,22 @@ def _get_system_fourier_numbers(
         ),
         2,
     )
-    fourier_number_map[TemperatureName.collector] = round(
-        fourier_number(
-            pvt_panel.collector.thickness,
-            pvt_panel.collector.conductivity,
-            pvt_panel.collector.density,
-            pvt_panel.collector.heat_capacity,
-            resolution,
-        ),
-        2,
-    )
     fourier_number_map[TemperatureName.pv] = round(
         fourier_number(
             pvt_panel.pv.thickness,
             pvt_panel.pv.conductivity,
             pvt_panel.pv.density,
             pvt_panel.pv.heat_capacity,
+            resolution,
+        ),
+        2,
+    )
+    fourier_number_map[TemperatureName.collector] = round(  
+        fourier_number(
+            pvt_panel.collector.thickness,
+            pvt_panel.collector.conductivity,
+            pvt_panel.collector.density,
+            pvt_panel.collector.heat_capacity,
             resolution,
         ),
         2,
@@ -350,7 +350,7 @@ def _print_temperature_info(
     """
 
     logger.info(
-        "Average temperatures for the run:\n%s\n%s",
+        "Average temperatures for the run in degC:\n%s\n%s",
         "|".join(
             [
                 " {}{}".format(
@@ -381,7 +381,7 @@ def _print_temperature_info(
         ),
     )
     print(
-        "Average temperatures for the run:\n{}\n{}".format(
+        "Average temperatures for the run in degC:\n{}\n{}".format(
             "|".join(
                 [
                     " {}{}".format(
@@ -414,7 +414,7 @@ def _print_temperature_info(
     )
 
     logger.info(
-        "Maximum temperatures for the run:\n%s\n%s",
+        "Maximum temperatures for the run in degC:\n%s\n%s",
         "|".join(
             [
                 " {}{}".format(
@@ -445,7 +445,7 @@ def _print_temperature_info(
         ),
     )
     print(
-        "Maximum temperatures for the run:\n{}\n{}".format(
+        "Maximum temperatures for the run in degC:\n{}\n{}".format(
             "|".join(
                 [
                     " {}{}".format(
@@ -478,7 +478,7 @@ def _print_temperature_info(
     )
 
     logger.info(
-        "Minimum temperatures for the run:\n%s\n%s",
+        "Minimum temperatures for the run in degC:\n%s\n%s",
         "|".join(
             [
                 " {}{}".format(
@@ -509,7 +509,7 @@ def _print_temperature_info(
         ),
     )
     print(
-        "Minimum temperatures for the run:\n{}\n{}".format(
+        "Minimum temperatures for the run in degC:\n{}\n{}".format(
             "|".join(
                 [
                     " {}{}".format(
