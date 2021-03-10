@@ -23,9 +23,12 @@ from logging import Logger
 from typing import Any, List, Dict, Optional, Tuple, Union
 
 import json
+import numpy
 import re
 
+from matplotlib import cm
 from matplotlib import pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D as plt3D
 
 try:
     from ..__utils__ import get_logger
@@ -545,7 +548,6 @@ def plot_figure(
 
     """
 
-    # Generate the necessary local variables needed for sub-plotting.
     _, ax1 = plt.subplots()
 
     lines = [
@@ -614,6 +616,99 @@ def plot_figure(
             second_axis_things_to_plot,
             ax2,
         )
+
+    save_figure(figure_name)
+
+
+def plot_two_dimensional_figure(
+    figure_name: str,
+    logger: Logger,
+    model_data: Dict[Any, Any],
+    thing_to_plot: str,
+    *,
+    hour: int,
+    minute: int,
+) -> None:
+    """
+    Plots a two-dimensional figure.
+
+    :param figure_name:
+        The name to use when saving the figure.
+
+    :param loger:
+        The logger used for the analysis module.
+
+    :param model_data:
+        The data outputted from the model.
+
+    :param thing_to_plot:
+        The name of the variable to plot.
+
+    :param hour:
+        The hour at which to plot the two-dimensional temperature profile.
+
+    :param minute:
+        The minute at which to plot the two-dimensional temperature profile.
+
+    """
+
+    # Determine the data index number based on the time.
+    entry_number = int(len(model_data) * ((hour / 24) + (minute / (24 * 60))))
+    data_entry = model_data[entry_number]
+
+    if thing_to_plot not in data_entry:
+        logger.error(
+            "Unable to plot %s. Either data is not 2D or name mismatch occured in the "
+            "analysis module. See /logs for details.",
+            thing_to_plot,
+        )
+        return
+
+    coordinate_regex = re.compile(r"\((?P<x_index>[0-9]*), (?P<y_index>[0-9]*)\)")
+
+    try:
+        x_series = [
+            int(re.match(coordinate_regex, coordinate).group("x_index"))
+            for coordinate in data_entry[thing_to_plot]
+        ]
+        y_series = [
+            int(re.match(coordinate_regex, coordinate).group("y_index"))
+            for coordinate in data_entry[thing_to_plot]
+        ]
+        z_series = list(data_entry[thing_to_plot].values())
+    except AttributeError as e:
+        logger.info(str(e))
+        logger.error(
+            "Unable to match coordinate output for %s. Check output file contents. See "
+            "/logs for details.",
+            thing_to_plot,
+        )
+        return
+
+    # Reshape the data for plotting.
+    array_shape = (len(set(x_series)), len(set(y_series)))
+    x_array = numpy.reshape(x_series, array_shape)
+    y_array = numpy.reshape(y_series, array_shape)
+    z_array = numpy.reshape(z_series, array_shape)
+
+    # Plot the figure.
+    fig3D = plt.figure()
+    axes3D = fig3D.gca(projection="3d")
+    surface = plt3D.plot_surface(
+        axes3D,
+        x_array,
+        y_array,
+        z_array,
+        cmap=cm.coolwarm,
+        linewidth=0,
+        antialiased=False,
+    )
+
+    # Add axes and colour scale.
+    fig3D.colorbar(surface, shrink=0.5, aspect=5)
+    axes3D.set_xlabel("X index")
+    axes3D.set_ylabel("Y index")
+    axes3D.set_zlabel("Temperature / degC")
 
     save_figure(figure_name)
 
@@ -764,6 +859,117 @@ def analyse(data_file_name: str) -> None:
     #     ["gross_electrical_output"],
     #     "Electrical Energy Supplied / Wh",
     # )
+
+    # Plot glass layer temperatures at midnight, 6 am, noon, and 6 pm.
+    plot_two_dimensional_figure(
+        "glass_temperature_0000",
+        logger,
+        data,
+        "layer_temperature_map_glass",
+        hour=0,
+        minute=0,
+    )
+
+    plot_two_dimensional_figure(
+        "glass_temperature_0600",
+        logger,
+        data,
+        "layer_temperature_map_glass",
+        hour=6,
+        minute=0,
+    )
+
+    plot_two_dimensional_figure(
+        "glass_temperature_1200",
+        logger,
+        data,
+        "layer_temperature_map_glass",
+        hour=12,
+        minute=0,
+    )
+
+    plot_two_dimensional_figure(
+        "glass_temperature_1800",
+        logger,
+        data,
+        "layer_temperature_map_glass",
+        hour=18,
+        minute=0,
+    )
+
+    # Plot PV layer temperatures at midnight, 6 am, noon, and 6 pm.
+    plot_two_dimensional_figure(
+        "pv_temperature_0000",
+        logger,
+        data,
+        "layer_temperature_map_pv",
+        hour=0,
+        minute=0,
+    )
+
+    plot_two_dimensional_figure(
+        "pv_temperature_0600",
+        logger,
+        data,
+        "layer_temperature_map_pv",
+        hour=6,
+        minute=0,
+    )
+
+    plot_two_dimensional_figure(
+        "pv_temperature_1200",
+        logger,
+        data,
+        "layer_temperature_map_pv",
+        hour=12,
+        minute=0,
+    )
+
+    plot_two_dimensional_figure(
+        "pv_temperature_1800",
+        logger,
+        data,
+        "layer_temperature_map_pv",
+        hour=18,
+        minute=0,
+    )
+
+    # Plot collector layer temperatures at midnight, 6 am, noon, and 6 pm.
+    plot_two_dimensional_figure(
+        "collector_temperature_0000",
+        logger,
+        data,
+        "layer_temperature_map_collector",
+        hour=0,
+        minute=0,
+    )
+
+    plot_two_dimensional_figure(
+        "collector_temperature_0600",
+        logger,
+        data,
+        "layer_temperature_map_collector",
+        hour=6,
+        minute=0,
+    )
+
+    plot_two_dimensional_figure(
+        "collector_temperature_1200",
+        logger,
+        data,
+        "layer_temperature_map_collector",
+        hour=12,
+        minute=0,
+    )
+
+    plot_two_dimensional_figure(
+        "collector_temperature_1800",
+        logger,
+        data,
+        "layer_temperature_map_collector",
+        hour=18,
+        minute=0,
+    )
 
     """  # pylint: disable=pointless-string-statement
     # * Plotting all tank-related temperatures
