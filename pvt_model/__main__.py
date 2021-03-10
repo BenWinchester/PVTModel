@@ -716,11 +716,6 @@ def main(args) -> None:
     _save_data(FileType.JSON, parsed_args.output, system_data)
     print(f"Model output successfully saved to {parsed_args.output}.json.")
 
-    # Conduct analysis of the data.
-    logger.info("Conducting analysis.")
-    analysis.analyse(f"{parsed_args.output}.json")
-    print("Analysis complete. Figures can be found in `./figures`.")
-    logger.info("Analysis complete.")
     # If in verbose mode, output average, min, and max temperatures.
     if parsed_args.verbose:
         # Determine the average, minimum, and maximum temperatures.
@@ -797,6 +792,12 @@ def main(args) -> None:
             maximum_temperature_map,
             minimum_temperature_map,
         )
+
+    # Conduct analysis of the data.
+    logger.info("Conducting analysis.")
+    analysis.analyse(f"{parsed_args.output}.json")
+    print("Analysis complete. Figures can be found in `./figures`.")
+    logger.info("Analysis complete.")
 
     logger.info("Exiting.")
     return

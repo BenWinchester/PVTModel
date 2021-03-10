@@ -69,6 +69,13 @@ def _parse_args(args) -> argparse.Namespace:
     parser.add_argument(
         "--data-file-name", "-df", help="Path to the data file to parse."
     )
+    parser.add_argument(
+        "--show-output",
+        "-so",
+        action="store_true",
+        default=False,
+        help="Show the output figures generated.",
+    )
 
     return parser.parse_args(args)
 
@@ -626,8 +633,10 @@ def plot_two_dimensional_figure(
     model_data: Dict[Any, Any],
     thing_to_plot: str,
     *,
+    axis_label: str,
     hour: int,
     minute: int,
+    hold: bool = False,
 ) -> None:
     """
     Plots a two-dimensional figure.
@@ -644,11 +653,17 @@ def plot_two_dimensional_figure(
     :param thing_to_plot:
         The name of the variable to plot.
 
+    :param axis_label:
+        The label for the y-axis of the plot.
+
     :param hour:
         The hour at which to plot the two-dimensional temperature profile.
 
     :param minute:
         The minute at which to plot the two-dimensional temperature profile.
+
+    :param hold:
+        Whether to hold the plot.
 
     """
 
@@ -687,6 +702,21 @@ def plot_two_dimensional_figure(
 
     # Reshape the data for plotting.
     array_shape = (len(set(x_series)), len(set(y_series)))
+
+    # If the data is only 1D, then plot a standard 1D profile through the collector.
+    if 1 in array_shape:
+        # If we are not holding the graph, then clear the model_data.
+        if not hold:
+            plt.clf()
+        lines = plt.plot(y_series, z_series)
+        # Set the labels for the axes.
+        plt.xlabel("Time of Day")
+        plt.ylabel(axis_label)
+        # Add the legend.
+        plt.legend(lines, [thing_to_plot])
+
+        return
+
     x_array = numpy.reshape(x_series, array_shape)
     y_array = numpy.reshape(y_series, array_shape)
     z_array = numpy.reshape(z_series, array_shape)
@@ -699,7 +729,7 @@ def plot_two_dimensional_figure(
         x_array,
         y_array,
         z_array,
-        cmap=cm.coolwarm,
+        cmap=cm.coolwarm,  # pylint: disable=no-member
         linewidth=0,
         antialiased=False,
     )
@@ -708,17 +738,20 @@ def plot_two_dimensional_figure(
     fig3D.colorbar(surface, shrink=0.5, aspect=5)
     axes3D.set_xlabel("X index")
     axes3D.set_ylabel("Y index")
-    axes3D.set_zlabel("Temperature / degC")
+    axes3D.set_zlabel(axis_label)
 
     save_figure(figure_name)
 
 
-def analyse(data_file_name: str) -> None:
+def analyse(data_file_name: str, show_output: Optional[bool] = False) -> None:
     """
     The main method for the analysis module.
 
     :param data_file_name:
         The path to the data file to analyse.
+
+    :param show_output:
+        Whether to show the output files generated.
 
     """
 
@@ -866,6 +899,7 @@ def analyse(data_file_name: str) -> None:
         logger,
         data,
         "layer_temperature_map_glass",
+        axis_label="Temperature / degC",
         hour=0,
         minute=0,
     )
@@ -875,6 +909,7 @@ def analyse(data_file_name: str) -> None:
         logger,
         data,
         "layer_temperature_map_glass",
+        axis_label="Temperature / degC",
         hour=6,
         minute=0,
     )
@@ -884,6 +919,7 @@ def analyse(data_file_name: str) -> None:
         logger,
         data,
         "layer_temperature_map_glass",
+        axis_label="Temperature / degC",
         hour=12,
         minute=0,
     )
@@ -893,6 +929,7 @@ def analyse(data_file_name: str) -> None:
         logger,
         data,
         "layer_temperature_map_glass",
+        axis_label="Temperature / degC",
         hour=18,
         minute=0,
     )
@@ -903,6 +940,7 @@ def analyse(data_file_name: str) -> None:
         logger,
         data,
         "layer_temperature_map_pv",
+        axis_label="Temperature / degC",
         hour=0,
         minute=0,
     )
@@ -912,6 +950,7 @@ def analyse(data_file_name: str) -> None:
         logger,
         data,
         "layer_temperature_map_pv",
+        axis_label="Temperature / degC",
         hour=6,
         minute=0,
     )
@@ -921,6 +960,7 @@ def analyse(data_file_name: str) -> None:
         logger,
         data,
         "layer_temperature_map_pv",
+        axis_label="Temperature / degC",
         hour=12,
         minute=0,
     )
@@ -930,6 +970,7 @@ def analyse(data_file_name: str) -> None:
         logger,
         data,
         "layer_temperature_map_pv",
+        axis_label="Temperature / degC",
         hour=18,
         minute=0,
     )
@@ -940,6 +981,7 @@ def analyse(data_file_name: str) -> None:
         logger,
         data,
         "layer_temperature_map_collector",
+        axis_label="Temperature / degC",
         hour=0,
         minute=0,
     )
@@ -949,6 +991,7 @@ def analyse(data_file_name: str) -> None:
         logger,
         data,
         "layer_temperature_map_collector",
+        axis_label="Temperature / degC",
         hour=6,
         minute=0,
     )
@@ -958,6 +1001,7 @@ def analyse(data_file_name: str) -> None:
         logger,
         data,
         "layer_temperature_map_collector",
+        axis_label="Temperature / degC",
         hour=12,
         minute=0,
     )
@@ -967,6 +1011,48 @@ def analyse(data_file_name: str) -> None:
         logger,
         data,
         "layer_temperature_map_collector",
+        axis_label="Temperature / degC",
+        hour=18,
+        minute=0,
+    )
+
+    # Plot bulk water temperatures at midnight, 6 am, noon, and 6 pm.
+    plot_two_dimensional_figure(
+        "bulk_water_temperature_0000",
+        logger,
+        data,
+        "layer_temperature_map_bulk_water",
+        axis_label="Temperature / degC",
+        hour=0,
+        minute=0,
+    )
+
+    plot_two_dimensional_figure(
+        "bulk_water_temperature_0600",
+        logger,
+        data,
+        "layer_temperature_map_bulk_water",
+        axis_label="Temperature / degC",
+        hour=6,
+        minute=0,
+    )
+
+    plot_two_dimensional_figure(
+        "bulk_water_temperature_1200",
+        logger,
+        data,
+        "layer_temperature_map_bulk_water",
+        axis_label="Temperature / degC",
+        hour=12,
+        minute=0,
+    )
+
+    plot_two_dimensional_figure(
+        "bulk_water_temperature_1800",
+        logger,
+        data,
+        "layer_temperature_map_bulk_water",
+        axis_label="Temperature / degC",
         hour=18,
         minute=0,
     )
@@ -1098,7 +1184,10 @@ def analyse(data_file_name: str) -> None:
     # * tank.
     """  # pylint: disable=pointless-string-statement
 
+    if show_output:
+        plt.show()
+
 
 if __name__ == "__main__":
     parsed_args = _parse_args(sys.argv[1:])
-    analyse(parsed_args.data_file_name)
+    analyse(parsed_args.data_file_name, parsed_args.show_output)

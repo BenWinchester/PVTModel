@@ -178,11 +178,7 @@ def _absorber_equation(
                 segment.y_index,
             )
         ] = (
-            -1
-            * pvt_panel.collector.conductivity  # [W/m*K]
-            * pvt_panel.collector.thickness  # [m]
-            * segment.length
-            / segment.width
+            -1 * x_wise_conduction
         )
 
     # Compute the T_A(i-1, j) term provided that that segment exists.
@@ -196,11 +192,7 @@ def _absorber_equation(
                 segment.y_index,
             )
         ] = (
-            -1
-            * pvt_panel.collector.conductivity  # [W/m*K]
-            * pvt_panel.collector.thickness  # [m]
-            * segment.length
-            / segment.width
+            -1 * x_wise_conduction
         )
 
     # Compute the T_A(i, j+1) term provided that that segment exists.
@@ -214,11 +206,7 @@ def _absorber_equation(
                 segment.y_index + 1,
             )
         ] = (
-            -1
-            * pvt_panel.collector.conductivity  # [W/m*K]
-            * pvt_panel.collector.thickness  # [m]
-            * segment.length
-            / segment.width
+            -1 * y_wise_conduction
         )
 
     # Compute the T_A(i, j-1) term provided that that segment exists.
@@ -232,11 +220,7 @@ def _absorber_equation(
                 segment.y_index - 1,
             )
         ] = (
-            -1
-            * pvt_panel.collector.conductivity  # [W/m*K]
-            * pvt_panel.collector.thickness  # [m]
-            * segment.length
-            / segment.width
+            -1 * y_wise_conduction
         )
 
     # Compute the T_pv(i, j) term provided that there is a collector layer present.
@@ -640,11 +624,7 @@ def _glass_equation(
                 segment.y_index,
             )
         ] = (
-            -1
-            * pvt_panel.glass.conductivity  # [W/m*K]
-            * pvt_panel.glass.thickness  # [m]
-            * segment.length
-            / segment.width
+            -1 * x_wise_conduction
         )
 
     # Compute the T_g(i-1, j) term provided that that segment exists.
@@ -658,11 +638,7 @@ def _glass_equation(
                 segment.y_index,
             )
         ] = (
-            -1
-            * pvt_panel.glass.conductivity  # [W/m*K]
-            * pvt_panel.glass.thickness  # [m]
-            * segment.length
-            / segment.width
+            -1 * x_wise_conduction
         )
 
     # Compute the T_g(i, j+1) term provided that that segment exists.
@@ -676,11 +652,7 @@ def _glass_equation(
                 segment.y_index + 1,
             )
         ] = (
-            -1
-            * pvt_panel.glass.conductivity  # [W/m*K]
-            * pvt_panel.glass.thickness  # [m]
-            * segment.length
-            / segment.width
+            -1 * y_wise_conduction
         )
 
     # Compute the T_g(i, j-1) term provided that that segment exists.
@@ -694,11 +666,7 @@ def _glass_equation(
                 segment.y_index - 1,
             )
         ] = (
-            -1
-            * pvt_panel.glass.conductivity  # [W/m*K]
-            * pvt_panel.glass.thickness  # [m]
-            * segment.length
-            / segment.width
+            -1 * y_wise_conduction
         )
 
     # Compute the T_pv(i, j) term provided that there is a PV layer present.
@@ -765,7 +733,7 @@ def _glass_equation(
         + segment.width  # [m]
         * segment.length  # [m]
         * weather_conditions.wind_heat_transfer_coefficient  # [W/m^2*K]
-        * weather_conditions.ambient_temperature
+        * weather_conditions.ambient_temperature  # [K]
         # Sky temperature term.
         + segment.width  # [m]
         * segment.length  # [m]
@@ -1256,11 +1224,7 @@ def _pv_equation(
                 segment.y_index,
             )
         ] = (
-            -1
-            * pvt_panel.pv.conductivity  # [W/m*K]
-            * pvt_panel.pv.thickness  # [m]
-            * segment.length
-            / segment.width
+            -1 * x_wise_conduction
         )
 
     # Compute the T_pv(i-1, j) term provided that that segment exists.
@@ -1274,11 +1238,7 @@ def _pv_equation(
                 segment.y_index,
             )
         ] = (
-            -1
-            * pvt_panel.pv.conductivity  # [W/m*K]
-            * pvt_panel.pv.thickness  # [m]
-            * segment.length
-            / segment.width
+            -1 * x_wise_conduction
         )
 
     # Compute the T_pv(i, j+1) term provided that that segment exists.
@@ -1292,11 +1252,7 @@ def _pv_equation(
                 segment.y_index + 1,
             )
         ] = (
-            -1
-            * pvt_panel.pv.conductivity  # [W/m*K]
-            * pvt_panel.pv.thickness  # [m]
-            * segment.length
-            / segment.width
+            -1 * y_wise_conduction
         )
 
     # Compute the T_pv(i, j-1) term provided that that segment exists.
@@ -1310,11 +1266,7 @@ def _pv_equation(
                 segment.y_index - 1,
             )
         ] = (
-            -1
-            * pvt_panel.pv.conductivity  # [W/m*K]
-            * pvt_panel.pv.thickness  # [m]
-            * segment.length
-            / segment.width
+            -1 * y_wise_conduction
         )
 
     # Compute the T_g(i, j) term provided that there is a glass layer present.
@@ -1660,6 +1612,21 @@ def _tank_equation(
     # Compute the row equation
     row_equation: List[float] = [0] * number_of_temperatures
 
+    # if (
+    #     previous_temperature_vector[
+    #         index_handler.index_from_temperature_name(
+    #             number_of_pipes,
+    #             number_of_x_segments,
+    #             number_of_y_segments,
+    #             TemperatureName.tank,
+    #         )
+    #     ]
+    #     < 285
+    # ):
+    #     import pdb
+
+    #     pdb.set_trace()
+
     # Compute the T_t term
     row_equation[
         index_handler.index_from_temperature_name(
@@ -1674,7 +1641,7 @@ def _tank_equation(
         * hot_water_tank.heat_capacity  # [J/kg*K]
         / resolution  # [s]
         # Hot-water load
-        + hot_water_load * HEAT_CAPACITY_OF_WATER  # [kg]  # [J/kg*K]
+        + hot_water_load * HEAT_CAPACITY_OF_WATER  # [kg/s]  # [J/kg*K]
         # Heat loss
         + hot_water_tank.heat_loss_coefficient  # [W/kg*K]
         * hot_water_tank.area  # [m^2]
@@ -2024,15 +1991,15 @@ def calculate_matrix_equation(
         number_of_temperatures, number_of_x_segments, number_of_y_segments
     )
 
-    # for equation, resultant_value in boundary_condition_equations:
-    #     logger.debug(
-    #         "Boundary condition equation computed:\nEquation: %s\nResultant value: %s W",
-    #         ", ".join([f"{value:.3f} W/K" for value in equation]),
-    #         resultant_value,
-    #     )
-    #     matrix = numpy.vstack((matrix, equation))
-    #     resultant_vector = numpy.vstack((resultant_vector, resultant_value))
-    #     # if len(matrix) == number_of_temperatures:
-    #     #     return matrix, resultant_vector
+    for equation, resultant_value in boundary_condition_equations:
+        logger.debug(
+            "Boundary condition equation computed:\nEquation: %s\nResultant value: %s W",
+            ", ".join([f"{value:.3f} W/K" for value in equation]),
+            resultant_value,
+        )
+        matrix = numpy.vstack((matrix, equation))
+        resultant_vector = numpy.vstack((resultant_vector, resultant_value))
+        # if len(matrix) == number_of_temperatures:
+        #     return matrix, resultant_vector
 
     return matrix, resultant_vector

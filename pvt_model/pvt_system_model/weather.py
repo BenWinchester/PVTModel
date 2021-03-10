@@ -540,7 +540,9 @@ class WeatherForecaster:
             ) from None
 
         try:
-            ambient_tank_temperature = data.pop("average_ambient_household_temperature")
+            ambient_tank_temperature = (
+                data.pop("average_ambient_household_temperature") + ZERO_CELCIUS_OFFSET
+            )
         except KeyError:
             logger.error(
                 "Weather forecaster from %s is missing "
