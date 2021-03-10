@@ -19,6 +19,7 @@ import sys
 
 from argparse import Namespace
 from logging import Logger
+from statistics import mean
 from typing import Any, Dict, List, Optional
 
 import json
@@ -322,6 +323,225 @@ def _determine_initial_conditions(
     )
 
 
+def _print_temperature_info(
+    average_temperature_map: Dict[str, float],
+    logger: Logger,
+    maximum_temperature_map: Dict[str, float],
+    minimum_temperature_map: Dict[str, float],
+) -> None:
+    """
+    Prints out the average temperatures to the console and logger.
+
+    :param average_temperature_map:
+        A mapping between temperature name, as a `str`, and the average temperature for
+        the run.
+
+    :param logger:
+        The logger used.
+
+    :param maximum_temperature_run:
+        A mapping between temperature name, as a `str`, and the maximum temperature for
+        the run.
+
+    :param minimum_temperature_run:
+        A mapping between temperature name, as a `str`, and the minimum temperature for
+        the run.
+
+    """
+
+    logger.info(
+        "Average temperatures for the run:\n%s\n%s",
+        "|".join(
+            [
+                " {}{}".format(
+                    key,
+                    " "
+                    * (
+                        max([len(key) for key in average_temperature_map])
+                        - len(key)
+                        + 1
+                    ),
+                )
+                for key in average_temperature_map
+            ]
+        ),
+        "|".join(
+            [
+                " {}{}".format(
+                    value,
+                    " "
+                    * (
+                        max([len(key) for key in average_temperature_map])
+                        - len(str(value))
+                        + 1
+                    ),
+                )
+                for value in average_temperature_map.values()
+            ]
+        ),
+    )
+    print(
+        "Average temperatures for the run:\n{}\n{}".format(
+            "|".join(
+                [
+                    " {}{}".format(
+                        key,
+                        " "
+                        * (
+                            max([len(key) for key in average_temperature_map])
+                            - len(key)
+                            + 1
+                        ),
+                    )
+                    for key in average_temperature_map
+                ]
+            ),
+            "|".join(
+                [
+                    " {}{}".format(
+                        value,
+                        " "
+                        * (
+                            max([len(key) for key in average_temperature_map])
+                            - len(str(value))
+                            + 1
+                        ),
+                    )
+                    for value in average_temperature_map.values()
+                ]
+            ),
+        )
+    )
+
+    logger.info(
+        "Maximum temperatures for the run:\n%s\n%s",
+        "|".join(
+            [
+                " {}{}".format(
+                    key,
+                    " "
+                    * (
+                        max([len(key) for key in maximum_temperature_map])
+                        - len(key)
+                        + 1
+                    ),
+                )
+                for key in maximum_temperature_map
+            ]
+        ),
+        "|".join(
+            [
+                " {}{}".format(
+                    value,
+                    " "
+                    * (
+                        max([len(key) for key in maximum_temperature_map])
+                        - len(str(value))
+                        + 1
+                    ),
+                )
+                for value in maximum_temperature_map.values()
+            ]
+        ),
+    )
+    print(
+        "Maximum temperatures for the run:\n{}\n{}".format(
+            "|".join(
+                [
+                    " {}{}".format(
+                        key,
+                        " "
+                        * (
+                            max([len(key) for key in maximum_temperature_map])
+                            - len(key)
+                            + 1
+                        ),
+                    )
+                    for key in maximum_temperature_map
+                ]
+            ),
+            "|".join(
+                [
+                    " {}{}".format(
+                        value,
+                        " "
+                        * (
+                            max([len(key) for key in maximum_temperature_map])
+                            - len(str(value))
+                            + 1
+                        ),
+                    )
+                    for value in maximum_temperature_map.values()
+                ]
+            ),
+        )
+    )
+
+    logger.info(
+        "Minimum temperatures for the run:\n%s\n%s",
+        "|".join(
+            [
+                " {}{}".format(
+                    key,
+                    " "
+                    * (
+                        max([len(key) for key in minimum_temperature_map])
+                        - len(key)
+                        + 1
+                    ),
+                )
+                for key in minimum_temperature_map
+            ]
+        ),
+        "|".join(
+            [
+                " {}{}".format(
+                    value,
+                    " "
+                    * (
+                        max([len(key) for key in minimum_temperature_map])
+                        - len(str(value))
+                        + 1
+                    ),
+                )
+                for value in minimum_temperature_map.values()
+            ]
+        ),
+    )
+    print(
+        "Minimum temperatures for the run:\n{}\n{}".format(
+            "|".join(
+                [
+                    " {}{}".format(
+                        key,
+                        " "
+                        * (
+                            max([len(key) for key in minimum_temperature_map])
+                            - len(key)
+                            + 1
+                        ),
+                    )
+                    for key in minimum_temperature_map
+                ]
+            ),
+            "|".join(
+                [
+                    " {}{}".format(
+                        value,
+                        " "
+                        * (
+                            max([len(key) for key in minimum_temperature_map])
+                            - len(str(value))
+                            + 1
+                        ),
+                    )
+                    for value in minimum_temperature_map.values()
+                ]
+            ),
+        )
+    )
+
+
 def _save_data(
     file_type: FileType,
     output_file_name: str,
@@ -498,7 +718,91 @@ def main(args) -> None:
     logger.info("Conducting analysis.")
     analysis.analyse(f"{parsed_args.output}.json")
     print("Analysis complete. Figures can be found in `./figures`.")
-    logger.info("Analysis complete. Exiting.")
+    logger.info("Analysis complete.")
+    # If in verbose mode, output average, min, and max temperatures.
+    if parsed_args.verbose:
+        # Determine the average, minimum, and maximum temperatures.
+        average_temperature_map = {
+            "glass": mean(
+                {round(entry.glass_temperature, 3) for entry in system_data.values()}
+            ),
+            "pv": mean(
+                {round(entry.pv_temperature, 3) for entry in system_data.values()}
+            ),
+            "absorber": mean(
+                {
+                    round(entry.collector_temperature, 3)
+                    for entry in system_data.values()
+                }
+            ),
+            "htf": mean(
+                {
+                    round(entry.bulk_water_temperature, 3)
+                    for entry in system_data.values()
+                }
+            ),
+            "tank": mean(
+                {round(entry.tank_temperature, 3) for entry in system_data.values()}
+            ),
+        }
+        maximum_temperature_map = {
+            "glass": max(
+                {round(entry.glass_temperature, 3) for entry in system_data.values()}
+            ),
+            "pv": max(
+                {round(entry.pv_temperature, 3) for entry in system_data.values()}
+            ),
+            "absorber": max(
+                {
+                    round(entry.collector_temperature, 3)
+                    for entry in system_data.values()
+                }
+            ),
+            "htf": max(
+                {
+                    round(entry.bulk_water_temperature, 3)
+                    for entry in system_data.values()
+                }
+            ),
+            "tank": max(
+                {round(entry.tank_temperature, 3) for entry in system_data.values()}
+            ),
+        }
+        minimum_temperature_map = {
+            "glass": min(
+                {round(entry.glass_temperature, 3) for entry in system_data.values()}
+            ),
+            "pv": min(
+                {round(entry.pv_temperature, 3) for entry in system_data.values()}
+            ),
+            "absorber": min(
+                {
+                    round(entry.collector_temperature, 3)
+                    for entry in system_data.values()
+                }
+            ),
+            "htf": min(
+                {
+                    round(entry.bulk_water_temperature, 3)
+                    for entry in system_data.values()
+                }
+            ),
+            "tank": min(
+                {round(entry.tank_temperature, 3) for entry in system_data.values()}
+            ),
+        }
+
+        # Print these out to the console.
+        logger.info("Average, minimum, and maximum temperatures determined.")
+        _print_temperature_info(
+            average_temperature_map,
+            logger,
+            maximum_temperature_map,
+            minimum_temperature_map,
+        )
+
+    logger.info("Exiting.")
+    return
 
 
 if __name__ == "__main__":
