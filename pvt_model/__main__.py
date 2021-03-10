@@ -723,26 +723,21 @@ def main(args) -> None:
     if parsed_args.verbose:
         # Determine the average, minimum, and maximum temperatures.
         average_temperature_map = {
-            "glass": mean(
-                {round(entry.glass_temperature, 3) for entry in system_data.values()}
+            "glass": round(
+                mean({entry.glass_temperature for entry in system_data.values()}), 3
             ),
-            "pv": mean(
-                {round(entry.pv_temperature, 3) for entry in system_data.values()}
+            "pv": round(
+                mean({entry.pv_temperature for entry in system_data.values()}), 3
             ),
-            "absorber": mean(
-                {
-                    round(entry.collector_temperature, 3)
-                    for entry in system_data.values()
-                }
+            "absorber": round(
+                mean({entry.collector_temperature for entry in system_data.values()}), 3
             ),
-            "htf": mean(
-                {
-                    round(entry.bulk_water_temperature, 3)
-                    for entry in system_data.values()
-                }
+            "htf": round(
+                mean({entry.bulk_water_temperature for entry in system_data.values()}),
+                3,
             ),
-            "tank": mean(
-                {round(entry.tank_temperature, 3) for entry in system_data.values()}
+            "tank": round(
+                mean({entry.tank_temperature for entry in system_data.values()}), 3
             ),
         }
         maximum_temperature_map = {
