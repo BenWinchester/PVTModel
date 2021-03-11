@@ -1612,20 +1612,20 @@ def _tank_equation(
     # Compute the row equation
     row_equation: List[float] = [0] * number_of_temperatures
 
-    # if (
-    #     previous_temperature_vector[
-    #         index_handler.index_from_temperature_name(
-    #             number_of_pipes,
-    #             number_of_x_segments,
-    #             number_of_y_segments,
-    #             TemperatureName.tank,
-    #         )
-    #     ]
-    #     < 285
-    # ):
-    #     import pdb
+    if (
+        previous_temperature_vector[
+            index_handler.index_from_temperature_name(
+                number_of_pipes,
+                number_of_x_segments,
+                number_of_y_segments,
+                TemperatureName.tank,
+            )
+        ]
+        < 285
+    ):
+        import pdb
 
-    #     pdb.set_trace()
+        pdb.set_trace()
 
     # Compute the T_t term
     row_equation[
@@ -1638,7 +1638,7 @@ def _tank_equation(
     ] = (
         # Internal heat change
         hot_water_tank.mass  # [kg]
-        * hot_water_tank.heat_capacity  # [J/kg*K]
+        * HEAT_CAPACITY_OF_WATER  # [J/kg*K]
         / resolution  # [s]
         # Hot-water load
         + hot_water_load * HEAT_CAPACITY_OF_WATER  # [kg/s]  # [J/kg*K]
@@ -1657,7 +1657,7 @@ def _tank_equation(
                     number_of_pipes,
                     number_of_x_segments,
                     number_of_y_segments,
-                    TemperatureName.tank,
+                    TemperatureName.tank_in,
                 )
             ]
             > best_guess_temperature_vector[
@@ -1665,7 +1665,7 @@ def _tank_equation(
                     number_of_pipes,
                     number_of_x_segments,
                     number_of_y_segments,
-                    TemperatureName.tank_in,
+                    TemperatureName.tank,
                 )
             ]
             else 0
@@ -1692,7 +1692,7 @@ def _tank_equation(
                 number_of_pipes,
                 number_of_x_segments,
                 number_of_y_segments,
-                TemperatureName.tank,
+                TemperatureName.tank_in,
             )
         ]
         > best_guess_temperature_vector[
@@ -1700,7 +1700,7 @@ def _tank_equation(
                 number_of_pipes,
                 number_of_x_segments,
                 number_of_y_segments,
-                TemperatureName.tank_in,
+                TemperatureName.tank,
             )
         ]
         else 0
@@ -1710,7 +1710,7 @@ def _tank_equation(
     resultant_vector_value = (
         # Internal heat change
         hot_water_tank.mass  # [kg]
-        * hot_water_tank.heat_capacity  # [J/kg*K]
+        * HEAT_CAPACITY_OF_WATER  # [J/kg*K]
         * previous_temperature_vector[
             index_handler.index_from_temperature_name(
                 number_of_pipes,
