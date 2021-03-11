@@ -345,6 +345,7 @@ def _annotate_maximum(
         ha="right",
         va="top",
     )
+    axis.ticklabel_format(useOffset=False)
     axis.annotate(box_text, xy=(x_max, y_max), xytext=(0.8, 0.8), **kwargs)
 
 
@@ -709,11 +710,14 @@ def plot_two_dimensional_figure(
         if not hold:
             plt.clf()
         lines = plt.plot(y_series, z_series)
+        # Set the axis limits to be sensible.
+        plt.ylim(0, 100)
         # Set the labels for the axes.
         plt.xlabel("Time of Day")
         plt.ylabel(axis_label)
         # Add the legend.
         plt.legend(lines, [thing_to_plot])
+        save_figure(figure_name)
 
         return
 

@@ -86,7 +86,7 @@ def _absorber_equation(
     # Compute the row equation
     row_equation: List[float] = [0] * number_of_temperatures
 
-    import pdb
+    # import pdb
 
     # pdb.set_trace(header=f"T_A{segment.coordinates}")
 
@@ -498,9 +498,10 @@ def _glass_equation(
     # Compute the row equation
     row_equation: List[float] = [0] * number_of_temperatures
 
-    import pdb
+    # if weather_conditions.irradiance > 500:
+    #     import pdb
 
-    # pdb.set_trace(header=f"T_G{segment.coordinates}")
+    #     pdb.set_trace(header=f"T_G{segment.coordinates}")
 
     logger.debug(
         "Beginning calculation of glass equation for segment %s.", segment.coordinates
@@ -600,7 +601,7 @@ def _glass_equation(
             ],
         )
     )
-    logger.debug("Glass to pv radiation %s W/K", glass_to_sky_radiation)
+    logger.debug("Glass to pv radiation %s W/K", glass_to_pv_conduction)
 
     # Compute the T_g(i, j) term
     row_equation[
@@ -947,6 +948,38 @@ def _pipe_equation(
     # Compute the row equation
     row_equation: List[float] = [0] * number_of_temperatures
 
+    pipe_internal_heat_change = (
+        numpy.pi
+        * (
+            (pvt_panel.collector.outer_pipe_diameter / 2) ** 2  # [m^2]
+            - (pvt_panel.collector.inner_pipe_diameter / 2) ** 2  # [m^2]
+        )
+        * segment.length  # [m]
+        * pvt_panel.collector.density  # [kg/m^3]
+        * pvt_panel.collector.heat_capacity  # [J/kg*K]
+        / resolution  # [s]
+    )
+
+    absorber_to_pipe_conduction = (
+        segment.width  # [m]
+        * segment.length  # [m]
+        * pvt_panel.bond.conductivity  # [W/m*K]
+        / pvt_panel.bond.thickness  # [m]
+    )
+
+    pipe_to_htf_heat_transfer = (
+        segment.length  # [m]
+        * numpy.pi
+        * pvt_panel.collector.inner_pipe_diameter  # [m]
+        * pvt_panel.collector.convective_heat_transfer_coefficient_of_water  # [W/m^2*K]
+    )
+
+    pipe_to_surroundings_losses = (
+        numpy.pi
+        * pvt_panel.collector.outer_pipe_diameter  # [m]
+        / pvt_panel.insulation_thermal_resistance  # [K*m/W]
+    )
+
     # Compute the T_P(#, j) term.
     row_equation[
         index_handler.index_from_pipe_coordinates(
@@ -958,30 +991,10 @@ def _pipe_equation(
             segment.y_index,
         )
     ] = (
-        # Internal heat change.
-        numpy.pi
-        * (
-            (pvt_panel.collector.outer_pipe_diameter / 2) ** 2  # [m^2]
-            - (pvt_panel.collector.inner_pipe_diameter / 2) ** 2  # [m^2]
-        )
-        * segment.length  # [m]
-        * pvt_panel.collector.density  # [kg/m^3]
-        * pvt_panel.collector.heat_capacity  # [J/kg*K]
-        / resolution  # [s]
-        # Heat transfer from the absorber layer
-        + segment.width  # [m]
-        * segment.length  # [m]
-        * pvt_panel.bond.conductivity  # [W/m*K]
-        / pvt_panel.bond.thickness  # [m]
-        # Heat transfer to the HTF.
-        + segment.length  # [m]
-        * numpy.pi
-        * pvt_panel.collector.inner_pipe_diameter  # [m]
-        * pvt_panel.collector.convective_heat_transfer_coefficient_of_water  # [W/m^2*K]
-        # Losses from the pipe to the surroundings.
-        + numpy.pi
-        * pvt_panel.collector.outer_pipe_diameter  # [m]
-        / pvt_panel.insulation_thermal_resistance  # [K*m/W]
+        pipe_internal_heat_change  # [W/K]
+        + absorber_to_pipe_conduction  # [W/K]
+        + pipe_to_htf_heat_transfer  # [W/K]
+        + pipe_to_surroundings_losses
     )
 
     # Compute the T_A(i, j) term.
@@ -993,12 +1006,7 @@ def _pipe_equation(
             segment.x_index,
             segment.y_index,
         )
-    ] = -1 * (
-        segment.width  # [m]
-        * segment.length  # [m]
-        * pvt_panel.bond.conductivity  # [W/m*K]
-        / pvt_panel.bond.thickness  # [m]
-    )
+    ] = -1 * (absorber_to_pipe_conduction)
 
     # Compute the T_f(#, j) term.
     row_equation[
@@ -1010,25 +1018,12 @@ def _pipe_equation(
             segment.pipe_index,  # type: ignore
             segment.y_index,
         )
-    ] = -1 * (
-        # Heat transfer from the pipe.
-        segment.length  # [m]
-        * numpy.pi
-        * pvt_panel.collector.inner_pipe_diameter  # [m]
-        * pvt_panel.collector.convective_heat_transfer_coefficient_of_water  # [W/m^2*K]
-    )
+    ] = -1 * (pipe_to_htf_heat_transfer)
 
     # Compute the resultant vector value.
     resultant_vector_value = (
         # Internal heat change.
-        numpy.pi
-        * (
-            (pvt_panel.collector.outer_pipe_diameter / 2) ** 2  # [m^2]
-            - (pvt_panel.collector.inner_pipe_diameter / 2) ** 2  # [m^2]
-        )
-        * segment.length  # [m]
-        * pvt_panel.collector.density  # [kg/m^3]
-        * pvt_panel.collector.heat_capacity  # [J/kg*K]
+        pipe_internal_heat_change
         * previous_temperature_vector[
             index_handler.index_from_pipe_coordinates(
                 number_of_pipes,
@@ -1039,12 +1034,8 @@ def _pipe_equation(
                 segment.y_index,
             )
         ]
-        / resolution  # [s]
         # Ambient heat loss.
-        + numpy.pi
-        * pvt_panel.collector.outer_pipe_diameter  # [m]
-        * weather_conditions.ambient_temperature  # [K]
-        / pvt_panel.insulation_thermal_resistance  # [m*K/W]
+        + pipe_to_surroundings_losses * weather_conditions.ambient_temperature  # [K]
     )
 
     return row_equation, resultant_vector_value
@@ -1081,9 +1072,10 @@ def _pv_equation(
     # Compute the row equation
     row_equation: List[float] = [0] * number_of_temperatures
 
-    import pdb
+    # if weather_conditions.irradiance > 0:
+    #     import pdb
 
-    # pdb.set_trace(header=f"T_PV{segment.coordinates}")
+    #     pdb.set_trace(header=f"T_PV{segment.coordinates}")
 
     logger.debug(
         "Beginning calculation of PV equation for segment %s.", segment.coordinates
@@ -1273,11 +1265,7 @@ def _pv_equation(
                 segment.x_index,
                 segment.y_index,
             )
-        ] = -1 * (
-            segment.width  # [m]
-            * segment.length  # [m]
-            / pvt_panel.pv_to_collector_thermal_resistance
-        )
+        ] = -1 * (pv_to_absorber_conduction)
 
     solar_thermal_resultant_vector_absorbtion_term = (
         transmissivity_absorptivity_product(
@@ -1304,6 +1292,7 @@ def _pv_equation(
 
     # Compute the resultant vector value.
     resultant_vector_value = (
+        # Solar thermal absorption term.
         solar_thermal_resultant_vector_absorbtion_term  # [W]
         # Internal energy change
         + pv_internal_energy  # [W/K]
