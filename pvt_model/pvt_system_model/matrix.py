@@ -86,6 +86,10 @@ def _absorber_equation(
     # Compute the row equation
     row_equation: List[float] = [0] * number_of_temperatures
 
+    import pdb
+
+    # pdb.set_trace(header=f"T_A{segment.coordinates}")
+
     absorber_internal_energy_change = (
         segment.width  # [m]
         * segment.length  # [m]
@@ -266,11 +270,7 @@ def _absorber_equation(
     # Compute the resultant vector value.
     resultant_vector_value = (
         # Internal heat change term.
-        segment.width  # [m]
-        * segment.length  # [m]
-        * pvt_panel.collector.thickness  # [m]
-        * pvt_panel.collector.density  # [kg/m^3]
-        * pvt_panel.collector.heat_capacity  # [J/kg*K]
+        absorber_internal_energy_change  # [W/K]
         * previous_temperature_vector[
             index_handler.index_from_segment_coordinates(
                 number_of_x_segments,
@@ -279,10 +279,14 @@ def _absorber_equation(
                 segment.x_index,
                 segment.y_index,
             )
-        ]
-        / resolution  # [s]
+        ]  # [K]
         # Ambient temperature term.
-        + (absorber_to_insulation_loss if not segment.pipe else 0)
+        + (
+            absorber_to_insulation_loss  # [W/K]
+            * weather_conditions.ambient_temperature  # [K]
+            if not segment.pipe
+            else 0
+        )  # [W]
     )
 
     return row_equation, resultant_vector_value
@@ -494,6 +498,10 @@ def _glass_equation(
     # Compute the row equation
     row_equation: List[float] = [0] * number_of_temperatures
 
+    import pdb
+
+    # pdb.set_trace(header=f"T_G{segment.coordinates}")
+
     logger.debug(
         "Beginning calculation of glass equation for segment %s.", segment.coordinates
     )
@@ -679,37 +687,7 @@ def _glass_equation(
                 segment.x_index,
                 segment.y_index,
             )
-        ] = -1 * (
-            segment.width  # [m]
-            * segment.length  # [m]
-            * (
-                # Radiative term
-                radiative_heat_transfer_coefficient(
-                    destination_emissivity=pvt_panel.pv.emissivity,
-                    destination_temperature=best_guess_temperature_vector[
-                        index_handler.index_from_segment_coordinates(
-                            number_of_x_segments,
-                            number_of_y_segments,
-                            TemperatureName.pv,
-                            segment.x_index,
-                            segment.y_index,
-                        )
-                    ],
-                    source_emissivity=pvt_panel.glass.emissivity,
-                    source_temperature=best_guess_temperature_vector[
-                        index_handler.index_from_segment_coordinates(
-                            number_of_x_segments,
-                            number_of_y_segments,
-                            TemperatureName.glass,
-                            segment.x_index,
-                            segment.y_index,
-                        )
-                    ],
-                )
-                # Conductive term
-                + 1 / pvt_panel.air_gap_resistance
-            )
-        )
+        ] = -1 * (glass_to_pv_conduction + glass_to_pv_radiation)
 
     # Compute the resultant vector value.
     resultant_vector_value = (
@@ -1103,6 +1081,10 @@ def _pv_equation(
     # Compute the row equation
     row_equation: List[float] = [0] * number_of_temperatures
 
+    import pdb
+
+    # pdb.set_trace(header=f"T_PV{segment.coordinates}")
+
     logger.debug(
         "Beginning calculation of PV equation for segment %s.", segment.coordinates
     )
@@ -1279,37 +1261,7 @@ def _pv_equation(
                 segment.x_index,
                 segment.y_index,
             )
-        ] = -1 * (
-            segment.width  # [m]
-            * segment.length  # [m]
-            * (
-                # Radiative term
-                radiative_heat_transfer_coefficient(
-                    destination_emissivity=pvt_panel.glass.emissivity,
-                    destination_temperature=best_guess_temperature_vector[
-                        index_handler.index_from_segment_coordinates(
-                            number_of_x_segments,
-                            number_of_y_segments,
-                            TemperatureName.glass,
-                            segment.x_index,
-                            segment.y_index,
-                        )
-                    ],
-                    source_emissivity=pvt_panel.pv.emissivity,
-                    source_temperature=best_guess_temperature_vector[
-                        index_handler.index_from_segment_coordinates(
-                            number_of_x_segments,
-                            number_of_y_segments,
-                            TemperatureName.pv,
-                            segment.x_index,
-                            segment.y_index,
-                        )
-                    ],
-                )
-                # Conductive term
-                + 1 / pvt_panel.air_gap_resistance
-            )
-        )
+        ] = -1 * (pv_to_glass_conduction + pv_to_glass_radiation)
 
     # Compute the T_A(i, j) term provided that there is a collector layer present.
     if segment.collector:
@@ -1327,9 +1279,7 @@ def _pv_equation(
             / pvt_panel.pv_to_collector_thermal_resistance
         )
 
-    # Compute the resultant vector value.
-    resultant_vector_value = (
-        # Solar heat absorption
+    solar_thermal_resultant_vector_absorbtion_term = (
         transmissivity_absorptivity_product(
             diffuse_reflection_coefficient=pvt_panel.glass.diffuse_reflection_coefficient,
             glass_transmissivity=pvt_panel.glass.transmissivity,
@@ -1346,12 +1296,17 @@ def _pv_equation(
                 + pvt_panel.pv.thermal_coefficient * pvt_panel.pv.reference_temperature
             )
         )
+    )
+    logger.debug(
+        "PV solar thermal resultant vector term: %s W/K",
+        solar_thermal_resultant_vector_absorbtion_term,
+    )
+
+    # Compute the resultant vector value.
+    resultant_vector_value = (
+        solar_thermal_resultant_vector_absorbtion_term  # [W]
         # Internal energy change
-        + pvt_panel.pv.thickness  # [m]
-        * segment.width  # [m]
-        * segment.length  # [m]
-        * pvt_panel.pv.density  # [kg/m^3]
-        * pvt_panel.pv.heat_capacity  # [J/kg*K]
+        + pv_internal_energy  # [W/K]
         * previous_temperature_vector[
             index_handler.index_from_segment_coordinates(
                 number_of_x_segments,
@@ -1361,7 +1316,6 @@ def _pv_equation(
                 segment.y_index,
             )
         ]
-        / resolution
     )
 
     return row_equation, resultant_vector_value
