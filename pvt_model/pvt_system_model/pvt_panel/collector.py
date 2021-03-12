@@ -21,6 +21,7 @@ from ..__utils__ import (
     PVT_SYSTEM_MODEL_LOGGER_NAME,
     OpticalLayerParameters,
 )
+from ..constants import THERMAL_CONDUCTIVITY_OF_WATER
 from .__utils__ import (
     OpticalLayer,
 )
@@ -124,10 +125,11 @@ class Collector(OpticalLayer):
 
         """
 
-        # @@@ Maria here used a value of 259, irrespective of these properties.
-        # @@@ For temporary consistency, this value is used.
+        h_f: float = 4.36 * THERMAL_CONDUCTIVITY_OF_WATER / self.inner_pipe_diameter
 
-        return 259
+        return h_f
+
+        # return 1000 * h_f
 
     @property
     def htf_surface_area(self) -> float:

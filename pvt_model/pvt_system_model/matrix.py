@@ -824,6 +824,27 @@ def _htf_equation(
     # Compute the row equation
     row_equation: List[float] = [0] * number_of_temperatures
 
+    bulk_water_internal_energy = (
+        numpy.pi
+        * (pvt_panel.collector.inner_pipe_diameter / 2) ** 2  # [m^2]
+        * segment.length  # [m]
+        * DENSITY_OF_WATER  # [kg/m^3]
+        * pvt_panel.collector.htf_heat_capacity  # [J/kg*K]
+        / resolution  # [s]
+    )  # [W/K]
+
+    pipe_to_bulk_water_heat_transfer = (
+        segment.length  # [m]
+        * numpy.pi
+        * pvt_panel.collector.inner_pipe_diameter  # [m]
+        * pvt_panel.collector.convective_heat_transfer_coefficient_of_water  # [W/m^2*K]
+    )  # [W/K]
+
+    fluid_input_output_transfer_term = (
+        pvt_panel.collector.mass_flow_rate  # [kg/s]
+        * pvt_panel.collector.htf_heat_capacity  # [J/kg*K]
+    )
+
     # Compute the T_f(#, j) term.
     row_equation[
         index_handler.index_from_pipe_coordinates(
@@ -835,18 +856,7 @@ def _htf_equation(
             segment.y_index,
         )
     ] = (
-        # Internal heat change.
-        numpy.pi
-        * (pvt_panel.collector.inner_pipe_diameter / 2) ** 2  # [m^2]
-        * segment.length  # [m]
-        * DENSITY_OF_WATER  # [kg/m^3]
-        * pvt_panel.collector.htf_heat_capacity  # [J/kg*K]
-        / resolution  # [s]
-        # Heat transfer from the pipe.
-        + segment.length  # [m]
-        * numpy.pi
-        * pvt_panel.collector.inner_pipe_diameter  # [m]
-        * pvt_panel.collector.convective_heat_transfer_coefficient_of_water  # [W/m^2*K]
+        bulk_water_internal_energy + pipe_to_bulk_water_heat_transfer
     )
 
     # Compute the T_f,in(#, j) term.
@@ -859,9 +869,8 @@ def _htf_equation(
             segment.pipe_index,  # type: ignore
             segment.y_index,
         )
-    ] = -1 * (
-        pvt_panel.collector.mass_flow_rate  # [kg/s]
-        * pvt_panel.collector.htf_heat_capacity  # [J/kg*K]
+    ] = (
+        -1 * fluid_input_output_transfer_term
     )
 
     # Compute the T_f,out(#, j) term.
@@ -874,10 +883,7 @@ def _htf_equation(
             segment.pipe_index,  # type: ignore
             segment.y_index,
         )
-    ] = (
-        pvt_panel.collector.mass_flow_rate  # [kg/s]
-        * pvt_panel.collector.htf_heat_capacity  # [J/kg*K]
-    )
+    ] = fluid_input_output_transfer_term
 
     # Compute the T_P(#, j) term.
     row_equation[
@@ -889,22 +895,14 @@ def _htf_equation(
             segment.pipe_index,  # type: ignore
             segment.y_index,
         )
-    ] = -1 * (
-        # Heat transfer from the pipe.
-        segment.length  # [m]
-        * numpy.pi
-        * pvt_panel.collector.inner_pipe_diameter  # [m]
-        * pvt_panel.collector.convective_heat_transfer_coefficient_of_water  # [W/m^2*K]
+    ] = (
+        -1 * pipe_to_bulk_water_heat_transfer
     )
 
     # Compute the resultant vector value.
     resultant_vector_value = (
         # Internal heat change.
-        numpy.pi
-        * (pvt_panel.collector.inner_pipe_diameter / 2) ** 2  # [m^2]
-        * segment.length  # [m]
-        * DENSITY_OF_WATER  # [kg/m^3]
-        * pvt_panel.collector.htf_heat_capacity  # [J/kg*K]
+        bulk_water_internal_energy
         * previous_temperature_vector[
             index_handler.index_from_pipe_coordinates(
                 number_of_pipes,
@@ -915,7 +913,6 @@ def _htf_equation(
                 segment.y_index,
             )
         ]
-        / resolution  # [s]
     )
 
     return row_equation, resultant_vector_value
@@ -1530,6 +1527,7 @@ def _tank_equation(
     heat_exchanger: exchanger.Exchanger,
     hot_water_load: float,
     hot_water_tank: tank.Tank,
+    logger: logging.Logger,
     number_of_pipes: int,
     number_of_temperatures: int,
     number_of_x_segments: int,
@@ -1552,79 +1550,27 @@ def _tank_equation(
 
     """
 
+    logger.debug("Beginning calculation of Tank equation")
+
     # Compute the row equation
     row_equation: List[float] = [0] * number_of_temperatures
 
-    if (
-        previous_temperature_vector[
-            index_handler.index_from_temperature_name(
-                number_of_pipes,
-                number_of_x_segments,
-                number_of_y_segments,
-                TemperatureName.tank,
-            )
-        ]
-        < 285
-    ):
-        import pdb
-
-        pdb.set_trace()
-
-    # Compute the T_t term
-    row_equation[
-        index_handler.index_from_temperature_name(
-            number_of_pipes,
-            number_of_x_segments,
-            number_of_y_segments,
-            TemperatureName.tank,
-        )
-    ] = (
-        # Internal heat change
+    tank_internal_energy = (
         hot_water_tank.mass  # [kg]
         * HEAT_CAPACITY_OF_WATER  # [J/kg*K]
         / resolution  # [s]
-        # Hot-water load
-        + hot_water_load * HEAT_CAPACITY_OF_WATER  # [kg/s]  # [J/kg*K]
-        # Heat loss
-        + hot_water_tank.heat_loss_coefficient  # [W/m^2*K]
-        * hot_water_tank.area  # [m^2]
-        # Heat input
-        + (
-            (
-                pvt_panel.collector.mass_flow_rate  # [kg/s]
-                * pvt_panel.collector.htf_heat_capacity  # [J/kg*K]
-                * heat_exchanger.efficiency
-            )
-            if best_guess_temperature_vector[
-                index_handler.index_from_temperature_name(
-                    number_of_pipes,
-                    number_of_x_segments,
-                    number_of_y_segments,
-                    TemperatureName.tank_in,
-                )
-            ]
-            > best_guess_temperature_vector[
-                index_handler.index_from_temperature_name(
-                    number_of_pipes,
-                    number_of_x_segments,
-                    number_of_y_segments,
-                    TemperatureName.tank,
-                )
-            ]
-            else 0
-        )
     )
+    logger.debug("Tank internal energy term: %s W/K", tank_internal_energy)
 
-    # Compute the T_c,out term
-    row_equation[
-        index_handler.index_from_temperature_name(
-            number_of_pipes,
-            number_of_x_segments,
-            number_of_y_segments,
-            TemperatureName.collector_out,
-        )
-    ] = -1 * (
-        # Heat input
+    hot_water_load_term = hot_water_load * HEAT_CAPACITY_OF_WATER  # [kg/s]  # [J/kg*K]
+    logger.debug("Tank hot-water load term: %s W/K", hot_water_load_term)
+
+    heat_loss_term = (
+        hot_water_tank.heat_loss_coefficient * hot_water_tank.area  # [W/m^2*K]  # [m^2]
+    )
+    logger.debug("Tank heat-loss term: %s W/K", heat_loss_term)
+
+    heat_input_term = (
         (
             pvt_panel.collector.mass_flow_rate  # [kg/s]
             * pvt_panel.collector.htf_heat_capacity  # [J/kg*K]
@@ -1648,12 +1594,58 @@ def _tank_equation(
         ]
         else 0
     )
+    logger.debug("Tank heat-input term: %s W/K", heat_input_term)
+
+    # if (
+    #     previous_temperature_vector[
+    #         index_handler.index_from_temperature_name(
+    #             number_of_pipes,
+    #             number_of_x_segments,
+    #             number_of_y_segments,
+    #             TemperatureName.tank_in,
+    #         )
+    #     ]
+    #     - previous_temperature_vector[
+    #         index_handler.index_from_temperature_name(
+    #             number_of_pipes,
+    #             number_of_x_segments,
+    #             number_of_y_segments,
+    #             TemperatureName.tank,
+    #         )
+    #     ]
+    # ) > 10:
+    #     import pdb
+
+    #     pdb.set_trace(header=f"Heat added to tank: {heat_input_term}")
+
+    # Compute the T_t term
+    row_equation[
+        index_handler.index_from_temperature_name(
+            number_of_pipes,
+            number_of_x_segments,
+            number_of_y_segments,
+            TemperatureName.tank,
+        )
+    ] = (
+        tank_internal_energy + hot_water_load_term + heat_loss_term + heat_input_term
+    )
+
+    # Compute the T_c,out term
+    row_equation[
+        index_handler.index_from_temperature_name(
+            number_of_pipes,
+            number_of_x_segments,
+            number_of_y_segments,
+            TemperatureName.tank_in,
+        )
+    ] = (
+        -1 * heat_input_term
+    )
 
     # Compute the resultant vector value.
     resultant_vector_value = (
         # Internal heat change
-        hot_water_tank.mass  # [kg]
-        * HEAT_CAPACITY_OF_WATER  # [J/kg*K]
+        tank_internal_energy  # [W/K]
         * previous_temperature_vector[
             index_handler.index_from_temperature_name(
                 number_of_pipes,
@@ -1662,15 +1654,11 @@ def _tank_equation(
                 TemperatureName.tank,
             )
         ]  # [K]
-        / resolution  # [s]
         # Hot-water load.
-        + hot_water_load  # [kg/s]
-        * HEAT_CAPACITY_OF_WATER  # [J/kg*K]
+        + hot_water_load_term  # [W/K]
         * weather_conditions.mains_water_temperature  # [K]
         # Heat loss
-        + hot_water_tank.heat_loss_coefficient  # [W/m^2*K]
-        * hot_water_tank.area  # [m^2]
-        * weather_conditions.ambient_tank_temperature  # [K]
+        + heat_loss_term * weather_conditions.ambient_tank_temperature  # [W/K]  # [K]
     )
 
     return row_equation, resultant_vector_value
@@ -1838,6 +1826,7 @@ def calculate_matrix_equation(
         heat_exchanger,
         hot_water_load,
         hot_water_tank,
+        logger,
         number_of_pipes,
         number_of_temperatures,
         number_of_x_segments,
@@ -1904,7 +1893,8 @@ def calculate_matrix_equation(
             segment,
         )
         logger.debug(
-            "Fluid continuity equation for segment %s computed:\nEquation: %s\nResultant value: %s W",
+            "Fluid continuity equation for segment %s computed:\nEquation: %s\n"
+            "Resultant value: %s W",
             segment.coordinates,
             ", ".join([f"{value:.3f} W/K" for value in equation]),
             resultant_value,
