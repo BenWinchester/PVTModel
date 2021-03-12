@@ -1586,7 +1586,7 @@ def _tank_equation(
         # Hot-water load
         + hot_water_load * HEAT_CAPACITY_OF_WATER  # [kg/s]  # [J/kg*K]
         # Heat loss
-        + hot_water_tank.heat_loss_coefficient  # [W/kg*K]
+        + hot_water_tank.heat_loss_coefficient  # [W/m^2*K]
         * hot_water_tank.area  # [m^2]
         # Heat input
         + (
@@ -1934,15 +1934,15 @@ def calculate_matrix_equation(
         number_of_temperatures, number_of_x_segments, number_of_y_segments
     )
 
-    for equation, resultant_value in boundary_condition_equations:
-        logger.debug(
-            "Boundary condition equation computed:\nEquation: %s\nResultant value: %s W",
-            ", ".join([f"{value:.3f} W/K" for value in equation]),
-            resultant_value,
-        )
-        matrix = numpy.vstack((matrix, equation))
-        resultant_vector = numpy.vstack((resultant_vector, resultant_value))
-        # if len(matrix) == number_of_temperatures:
-        #     return matrix, resultant_vector
+    # for equation, resultant_value in boundary_condition_equations:
+    #     logger.debug(
+    #         "Boundary condition equation computed:\nEquation: %s\nResultant value: %s W",
+    #         ", ".join([f"{value:.3f} W/K" for value in equation]),
+    #         resultant_value,
+    #     )
+    #     matrix = numpy.vstack((matrix, equation))
+    #     resultant_vector = numpy.vstack((resultant_vector, resultant_value))
+    #     # if len(matrix) == number_of_temperatures:
+    #     #     return matrix, resultant_vector
 
     return matrix, resultant_vector
