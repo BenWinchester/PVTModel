@@ -787,7 +787,7 @@ def analyse(data_file_name: str, show_output: Optional[bool] = False) -> None:
             "tank_temperature",
         ],
         first_axis_label="Temperature / deg C",
-        # first_axis_y_limits=[-10, 50],
+        first_axis_y_limits=[-10, 110],
     )
 
     # # Plot Figure 4a: Electrical Demand

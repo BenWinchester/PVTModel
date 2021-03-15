@@ -129,7 +129,7 @@ class Collector(OpticalLayer):
 
         return h_f
 
-        # return 1000 * h_f
+        # return 6500
 
     @property
     def htf_surface_area(self) -> float:

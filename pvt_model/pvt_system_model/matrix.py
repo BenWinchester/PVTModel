@@ -38,7 +38,7 @@ from .pvt_panel import pvt
 from .pvt_panel.segment import Segment
 
 from ..__utils__ import TemperatureName, ProgrammerJudgementFault
-from .__utils__ import WeatherConditions, PVT_SYSTEM_MODEL_LOGGER_NAME
+from .__utils__ import WeatherConditions
 from .constants import DENSITY_OF_WATER, HEAT_CAPACITY_OF_WATER
 from .physics_utils import (
     radiative_heat_transfer_coefficient,
@@ -137,7 +137,7 @@ def _absorber_equation(
     logger.debug("PV to absorber conduction term: %s W/K", pv_to_absorber_conduction)
 
     absorber_to_pipe_conduction = (
-        segment.width  # [m]
+        pvt_panel.collector.outer_pipe_diameter  # [m]
         * segment.length  # [m]
         * pvt_panel.bond.conductivity  # [W/m*K]
         / pvt_panel.bond.thickness  # [m]
@@ -601,7 +601,7 @@ def _glass_equation(
             ],
         )
     )
-    logger.debug("Glass to pv radiation %s W/K", glass_to_pv_conduction)
+    logger.debug("Glass to pv radiation %s W/K", glass_to_pv_radiation)
 
     # Compute the T_g(i, j) term
     row_equation[
@@ -731,6 +731,10 @@ def _glass_equation(
             ],
         )
         * weather_conditions.sky_temperature  # [K]
+        # Solar absorption term.
+        + segment.width  # [m]
+        * segment.length  # [m]
+        * weather_conditions.irradiance  # [W/m^2]
     )
 
     return row_equation, resultant_vector_value
@@ -958,7 +962,7 @@ def _pipe_equation(
     )
 
     absorber_to_pipe_conduction = (
-        segment.width  # [m]
+        pvt_panel.collector.outer_pipe_diameter  # [m]
         * segment.length  # [m]
         * pvt_panel.bond.conductivity  # [W/m*K]
         / pvt_panel.bond.thickness  # [m]
