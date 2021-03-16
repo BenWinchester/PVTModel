@@ -1308,13 +1308,14 @@ def _system_continuity_equations(
     number_of_temperatures: int,
     number_of_x_segments: int,
     number_of_y_segments: int,
+    previous_temperature_vector: List[float],
 ) -> List[Tuple[List[float], float]]:
     """
     Returns matrix rows and resultant vector values representing system continuities.
 
     These inluce:
         - fluid entering the first section of the pipe is the same as that entering the
-          collector (1);
+          collector at the previous time step (1);
         - fluid leaving the last section of the pipe is the same as that leaving the
           collector (2);
         - fluid entering the hot-water tank is the same as that leaving the collector
@@ -1346,16 +1347,16 @@ def _system_continuity_equations(
                 pipe_number,
                 0,
             )
-        ] = -1
-        row_equation[
+        ] = 1
+        resultant_value = previous_temperature_vector[
             index_handler.index_from_temperature_name(
                 number_of_pipes,
                 number_of_x_segments,
                 number_of_y_segments,
                 TemperatureName.collector_in,
             )
-        ] = 1
-        equations.append((row_equation, 0))
+        ]
+        equations.append((row_equation, resultant_value))
 
     # Equation 2: Continuity of fluid leaving the collector.
     for pipe_number in range(number_of_pipes):
@@ -1904,6 +1905,7 @@ def calculate_matrix_equation(
         number_of_temperatures,
         number_of_x_segments,
         number_of_y_segments,
+        previous_temperature_vector,
     )
 
     for equation, resultant_value in system_continuity_equations:
