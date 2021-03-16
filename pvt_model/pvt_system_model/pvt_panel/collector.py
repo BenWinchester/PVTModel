@@ -127,9 +127,9 @@ class Collector(OpticalLayer):
 
         h_f: float = 4.36 * THERMAL_CONDUCTIVITY_OF_WATER / self.inner_pipe_diameter
 
-        return h_f
+        # return h_f
 
-        # return 6500
+        return 6500
 
     @property
     def htf_surface_area(self) -> float:
