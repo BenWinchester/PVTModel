@@ -834,7 +834,7 @@ def _htf_equation(
     fluid_input_output_transfer_term = (
         pvt_panel.collector.mass_flow_rate  # [kg/s]
         * pvt_panel.collector.htf_heat_capacity  # [J/kg*K]
-    )
+    )  # [W/K]
 
     # Compute the T_f(#, j) term.
     row_equation[
@@ -1028,7 +1028,7 @@ def _pipe_equation(
             )
         ]
         # Ambient heat loss.
-        + pipe_to_surroundings_losses * weather_conditions.ambient_temperature  # [K]
+        + pipe_to_surroundings_losses * weather_conditions.ambient_temperature  # [W]
     )
 
     return row_equation, resultant_vector_value
