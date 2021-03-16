@@ -137,17 +137,27 @@ def _absorber_equation(
     logger.debug("PV to absorber conduction term: %s W/K", pv_to_absorber_conduction)
 
     absorber_to_pipe_conduction = (
-        pvt_panel.collector.outer_pipe_diameter  # [m]
-        * segment.length  # [m]
-        * pvt_panel.bond.conductivity  # [W/m*K]
-        / pvt_panel.bond.thickness  # [m]
+        (
+            pvt_panel.bond.width  # [m]
+            * segment.length  # [m]
+            * pvt_panel.bond.conductivity  # [W/m*K]
+            / pvt_panel.bond.thickness  # [m]
+        )
+        if segment.pipe
+        else 0
     )
     logger.debug(
         "Absorber to pipe conduction term: %s W/K", absorber_to_pipe_conduction
     )
 
     absorber_to_insulation_loss = (
-        segment.width * segment.length * pvt_panel.insulation_thermal_resistance
+        (
+            (segment.width - (pvt_panel.bond.width if segment.pipe else 0))  # [m]
+            * segment.length  # [m]
+            / pvt_panel.insulation_thermal_resistance  # [m^2*K/W]
+        )
+        if segment.width > pvt_panel.bond.width
+        else 0
     )
     logger.debug(
         "Absorber to insulation loss term: %s W/K", absorber_to_insulation_loss
@@ -167,8 +177,8 @@ def _absorber_equation(
         + x_wise_conduction
         + y_wise_conduction
         + pv_to_absorber_conduction
-        + (absorber_to_pipe_conduction if segment.pipe else 0)
-        + (absorber_to_insulation_loss if not segment.pipe else 0)
+        + absorber_to_pipe_conduction
+        + absorber_to_insulation_loss
     )
 
     # Compute the T_A(i+1, j) term provided that that segment exists.
@@ -693,11 +703,7 @@ def _glass_equation(
     # Compute the resultant vector value.
     resultant_vector_value = (
         # Previous glass temperature term.
-        segment.width  # [m]
-        * segment.length  # [m]
-        * pvt_panel.glass.thickness  # [m]
-        * pvt_panel.glass.density  # [kg/m^3]
-        * pvt_panel.glass.heat_capacity  # [J/kg*K]
+        glass_internal_energy  # [W/K]
         * previous_temperature_vector[
             index_handler.index_from_segment_coordinates(
                 number_of_x_segments,
@@ -706,34 +712,15 @@ def _glass_equation(
                 segment.x_index,
                 segment.y_index,
             )
-        ]
-        / resolution
+        ]  # [K]
         # Ambient temperature term.
-        + segment.width  # [m]
-        * segment.length  # [m]
-        * weather_conditions.wind_heat_transfer_coefficient  # [W/m^2*K]
-        * weather_conditions.ambient_temperature  # [K]
+        + glass_to_air_conduction * weather_conditions.ambient_temperature  # [W]
         # Sky temperature term.
-        + segment.width  # [m]
-        * segment.length  # [m]
-        * radiative_heat_transfer_coefficient(
-            destination_temperature=weather_conditions.sky_temperature,
-            radiating_to_sky=True,
-            source_emissivity=pvt_panel.glass.emissivity,
-            source_temperature=best_guess_temperature_vector[
-                index_handler.index_from_segment_coordinates(
-                    number_of_x_segments,
-                    number_of_y_segments,
-                    TemperatureName.glass,
-                    segment.x_index,
-                    segment.y_index,
-                )
-            ],
-        )
-        * weather_conditions.sky_temperature  # [K]
+        + glass_to_sky_radiation * weather_conditions.sky_temperature  # [W]
         # Solar absorption term.
         + segment.width  # [m]
         * segment.length  # [m]
+        * pvt_panel.glass.absorptivity
         * weather_conditions.irradiance  # [W/m^2]
     )
 
@@ -962,10 +949,14 @@ def _pipe_equation(
     )
 
     absorber_to_pipe_conduction = (
-        pvt_panel.collector.outer_pipe_diameter  # [m]
-        * segment.length  # [m]
-        * pvt_panel.bond.conductivity  # [W/m*K]
-        / pvt_panel.bond.thickness  # [m]
+        (
+            pvt_panel.bond.width  # [m]
+            * segment.length  # [m]
+            * pvt_panel.bond.conductivity  # [W/m*K]
+            / pvt_panel.bond.thickness  # [m]
+        )
+        if segment.pipe
+        else 0
     )
 
     pipe_to_htf_heat_transfer = (
@@ -977,8 +968,9 @@ def _pipe_equation(
 
     pipe_to_surroundings_losses = (
         numpy.pi
-        * pvt_panel.collector.outer_pipe_diameter  # [m]
-        / pvt_panel.insulation_thermal_resistance  # [K*m/W]
+        * (pvt_panel.collector.outer_pipe_diameter / 2)  # [m]
+        * segment.length  # [m]
+        / pvt_panel.insulation_thermal_resistance  # [K*m^2/W]
     )
 
     # Compute the T_P(#, j) term.
