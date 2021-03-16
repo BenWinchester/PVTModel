@@ -129,16 +129,17 @@ class PVT:
 
     def __init__(
         self,
+        absorber_pipe_bond: bond.Bond,
         adhesive: MicroLayer,
         air_gap_thickness: float,
         area: float,
-        bond: bond.Bond,
         collector_parameters: CollectorParameters,
         diffuse_reflection_coefficient: float,
         eva: MicroLayer,
         glass_parameters: OpticalLayerParameters,
         insulation: MicroLayer,
         latitude: float,
+        length: float,
         longitude: float,
         portion_covered: float,
         pv_parameters: PVParameters,
@@ -146,6 +147,7 @@ class PVT:
         segments: Dict[SegmentCoordinates, Segment],
         tedlar: MicroLayer,
         timezone: datetime.timezone,
+        width: float,
         *,
         azimuthal_orientation: Optional[float] = None,
         horizontal_tracking: bool = False,
@@ -187,6 +189,9 @@ class PVT:
             The latitude of the PV-T system, defined in degrees relative to the equator
             in the standard way.
 
+        :param length:
+            The length of the collector in meters.
+
         :param longitude:
             The longitude of the PV-T system, defined in degrees relative to the
             Greenwich meridian.
@@ -210,6 +215,9 @@ class PVT:
 
         :param timezone:
             The timezone in which the PV-T system is installed.
+
+        :param width:
+            The width of the collector in meters.
 
         :param azimuthal_orientation:
             The orientation of the surface of the panel, defined relative to True North,
@@ -236,11 +244,13 @@ class PVT:
         self.air_gap_thickness = air_gap_thickness
         self.area = area
         self.latitude = latitude
+        self.length = length
         self.longitude = longitude
         self.portion_covered = portion_covered
         self.pv_to_collector_thermal_conductance = pv_to_collector_thermal_conductance
         self.segments = segments
         self.timezone = timezone
+        self.width = width
 
         # If the orientation parameters have not been specified correctly, then raise an
         # error.
@@ -258,7 +268,7 @@ class PVT:
 
         # Instantiate the layers.
         self.adhesive = adhesive
-        self.bond = bond
+        self.bond = absorber_pipe_bond
         self.collector = collector.Collector(collector_parameters)
         self.eva = eva
         self.glass: glass.Glass = glass.Glass(

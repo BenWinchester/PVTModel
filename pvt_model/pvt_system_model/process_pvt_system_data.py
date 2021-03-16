@@ -375,17 +375,17 @@ def pvt_panel_from_path(
 
     try:
         pvt_panel = pvt.PVT(
+            absorber_pipe_bond=bond.Bond(
+                pvt_data["bond"]["thermal_conductivity"],
+                pvt_data["bond"]["thickness"],
+                pvt_data["bond"]["width"],
+            ),
             adhesive=adhesive.Adhesive(
                 pvt_data["adhesive"]["thermal_conductivity"],
                 pvt_data["adhesive"]["thickness"],
             ),
             air_gap_thickness=pvt_data["air_gap"]["thickness"],  # [m]
             area=pvt_data["pvt_system"]["area"],  # [m^2]
-            bond=bond.Bond(
-                pvt_data["bond"]["thermal_conductivity"],
-                pvt_data["bond"]["thickness"],
-                pvt_data["bond"]["width"],
-            ),
             collector_parameters=collector_parameters,
             diffuse_reflection_coefficient=diffuse_reflection_coefficient,
             eva=eva.EVA(
@@ -397,6 +397,7 @@ def pvt_panel_from_path(
                 pvt_data["insulation"]["thickness"],
             ),
             latitude=pvt_data["pvt_system"]["latitude"],  # [deg]
+            length=pvt_data["pvt_system"]["length"],  # [m]
             longitude=pvt_data["pvt_system"]["longitude"],  # [deg]
             portion_covered=portion_covered,  # [unitless]
             pv_parameters=pv_parameters,
@@ -411,6 +412,7 @@ def pvt_panel_from_path(
             timezone=datetime.timezone(
                 datetime.timedelta(hours=int(pvt_data["pvt_system"]["timezone"]))
             ),
+            width=pvt_data["pvt_system"]["width"],  # [m]
             azimuthal_orientation=pvt_data["pvt_system"][
                 "azimuthal_orientation"
             ]  # [deg]
