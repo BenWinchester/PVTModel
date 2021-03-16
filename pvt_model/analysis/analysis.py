@@ -670,7 +670,16 @@ def plot_two_dimensional_figure(
 
     # Determine the data index number based on the time.
     entry_number = int(len(model_data) * ((hour / 24) + (minute / (24 * 60))))
-    data_entry = model_data[entry_number]
+    try:
+        data_entry = model_data[entry_number]
+    except KeyError:
+        try:
+            data_entry = model_data[str(entry_number)]
+        except KeyError as e:
+            logger.error(
+                "Key lookup failed for data entry number %s: %s", entry_number, str(e)
+            )
+            raise
 
     if thing_to_plot not in data_entry:
         logger.error(
@@ -713,7 +722,7 @@ def plot_two_dimensional_figure(
         # Set the axis limits to be sensible.
         plt.ylim(0, 100)
         # Set the labels for the axes.
-        plt.xlabel("Time of Day")
+        plt.xlabel("Segment y index")
         plt.ylabel(axis_label)
         # Add the legend.
         plt.legend(lines, [thing_to_plot])
@@ -782,12 +791,32 @@ def analyse(data_file_name: str, show_output: Optional[bool] = False) -> None:
             "collector_input_temperature",
             "collector_output_temperature",
             "glass_temperature",
+            "pipe_temperature",
             "pv_temperature",
             "sky_temperature",
             "tank_temperature",
         ],
         first_axis_label="Temperature / deg C",
         first_axis_y_limits=[-10, 110],
+    )
+
+    # Plot All Temperatures
+    plot_figure(
+        "all_temperatures_unbounded",
+        data,
+        first_axis_things_to_plot=[
+            "ambient_temperature",
+            "bulk_water_temperature",
+            "collector_temperature",
+            "collector_input_temperature",
+            "collector_output_temperature",
+            "glass_temperature",
+            "pipe_temperature",
+            "pv_temperature",
+            "sky_temperature",
+            "tank_temperature",
+        ],
+        first_axis_label="Temperature / deg C",
     )
 
     # # Plot Figure 4a: Electrical Demand
@@ -840,6 +869,7 @@ def analyse(data_file_name: str, show_output: Optional[bool] = False) -> None:
             "bulk_water_temperature",
             "collector_temperature",
             "glass_temperature",
+            "pipe_temperature",
             "pv_temperature",
             "sky_temperature",
         ],
@@ -1015,6 +1045,47 @@ def analyse(data_file_name: str, show_output: Optional[bool] = False) -> None:
         logger,
         data,
         "layer_temperature_map_collector",
+        axis_label="Temperature / degC",
+        hour=18,
+        minute=0,
+    )
+
+    # Plot bulk water temperatures at midnight, 6 am, noon, and 6 pm.
+    plot_two_dimensional_figure(
+        "pipe_temperature_0000",
+        logger,
+        data,
+        "layer_temperature_map_pipe",
+        axis_label="Temperature / degC",
+        hour=0,
+        minute=0,
+    )
+
+    plot_two_dimensional_figure(
+        "pipe_temperature_0600",
+        logger,
+        data,
+        "layer_temperature_map_pipe",
+        axis_label="Temperature / degC",
+        hour=6,
+        minute=0,
+    )
+
+    plot_two_dimensional_figure(
+        "pipe_temperature_1200",
+        logger,
+        data,
+        "layer_temperature_map_pipe",
+        axis_label="Temperature / degC",
+        hour=12,
+        minute=0,
+    )
+
+    plot_two_dimensional_figure(
+        "pipe_temperature_1800",
+        logger,
+        data,
+        "layer_temperature_map_pipe",
         axis_label="Temperature / degC",
         hour=18,
         minute=0,
