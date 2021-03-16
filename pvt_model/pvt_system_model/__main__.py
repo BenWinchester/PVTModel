@@ -820,6 +820,22 @@ def main(
         previous_run_temperature_vector,
     )
 
+    average_pipe_temperature = _average_layer_temperature(
+        number_of_pipes,
+        number_of_x_segments,
+        number_of_y_segments,
+        TemperatureName.pipe,
+        previous_run_temperature_vector,
+    )
+    temperature_map_pipe_layer = _layer_temperature_profile(
+        number_of_pipes,
+        number_of_x_segments,
+        number_of_y_segments,
+        pvt_panel.segments,
+        TemperatureName.pipe,
+        previous_run_temperature_vector,
+    )
+
     average_bulk_water_temperature = _average_layer_temperature(
         number_of_pipes,
         number_of_x_segments,
@@ -861,6 +877,7 @@ def main(
             )
         ]
         - ZERO_CELCIUS_OFFSET,
+        pipe_temperature=average_pipe_temperature - ZERO_CELCIUS_OFFSET,
         bulk_water_temperature=average_bulk_water_temperature - ZERO_CELCIUS_OFFSET,
         ambient_temperature=weather_conditions.ambient_temperature
         - ZERO_CELCIUS_OFFSET,
@@ -914,6 +931,9 @@ def main(
         if save_2d_output
         else None,
         layer_temperature_map_glass=temperature_map_glass_layer
+        if save_2d_output
+        else None,
+        layer_temperature_map_pipe=temperature_map_pipe_layer
         if save_2d_output
         else None,
         layer_temperature_map_pv=temperature_map_pv_layer if save_2d_output else None,
@@ -1029,6 +1049,22 @@ def main(
             current_run_temperature_vector,
         )
 
+        average_pipe_temperature = _average_layer_temperature(
+            number_of_pipes,
+            number_of_x_segments,
+            number_of_y_segments,
+            TemperatureName.pipe,
+            current_run_temperature_vector,
+        )
+        temperature_map_pipe_layer = _layer_temperature_profile(
+            number_of_pipes,
+            number_of_x_segments,
+            number_of_y_segments,
+            pvt_panel.segments,
+            TemperatureName.pipe,
+            current_run_temperature_vector,
+        )
+
         average_bulk_water_temperature = _average_layer_temperature(
             number_of_pipes,
             number_of_x_segments,
@@ -1074,6 +1110,7 @@ def main(
                 )
             ]
             - ZERO_CELCIUS_OFFSET,
+            pipe_temperature=average_pipe_temperature - ZERO_CELCIUS_OFFSET,
             bulk_water_temperature=average_bulk_water_temperature - ZERO_CELCIUS_OFFSET,
             ambient_temperature=weather_conditions.ambient_temperature
             - ZERO_CELCIUS_OFFSET,
@@ -1127,6 +1164,9 @@ def main(
             if save_2d_output
             else None,
             layer_temperature_map_glass=temperature_map_glass_layer
+            if save_2d_output
+            else None,
+            layer_temperature_map_pipe=temperature_map_pipe_layer
             if save_2d_output
             else None,
             layer_temperature_map_pv=temperature_map_pv_layer
