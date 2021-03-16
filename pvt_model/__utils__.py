@@ -246,6 +246,9 @@ class SystemData:
     .. attribute:: glass_temperature
         The temperature of the glass layer, measured in Celcius.
 
+    .. attribute:: pipe_temperature
+        The temperature of the pipe, measured in Celcius.
+
     .. attribute:: pv_temperature
         The temperature of the PV layer, measured in Celcius.
 
@@ -291,6 +294,7 @@ class SystemData:
     date: str
     glass_temperature: float
     exchanger_temperature_drop: float
+    pipe_temperature: float
     pv_temperature: float
     sky_temperature: float
     tank_temperature: float
