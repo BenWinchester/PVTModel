@@ -687,7 +687,7 @@ def main(args) -> None:
     _determine_fourier_numbers(hot_water_tank, logger, parsed_args, pvt_panel)
 
     # Iterate to determine the initial conditions for the run.
-    logger.info("Determining consistent initial conditions.")
+    logger.info("Determining consistent initial conditions at coarse resolution.")
     print(
         "Determining consistent initial conditions via successive runs at "
         f"{COARSE_RUN_RESOLUTION}s resolution."
@@ -695,11 +695,22 @@ def main(args) -> None:
     initial_system_temperature_vector = _determine_initial_conditions(
         pvt_panel.collector.number_of_pipes, logger, parsed_args
     )
-    print("Initial temperature conditions determined at coarse resolution.")
+    print(
+        "Rough initial conditions determined at coarse resolution, refining via "
+        f"successive runs at CLI resolution of {parsed_args.resolution}s."
+    )
+    initial_system_temperature_vector = _determine_initial_conditions(
+        pvt_panel.collector.number_of_pipes,
+        logger,
+        parsed_args,
+        resolution=parsed_args.resolution,
+        running_system_temperature_vector=initial_system_temperature_vector,
+    )
     logger.info(
         "Initial system temperatures successfully determined to %sK precision.",
         INITIAL_CONDITION_PRECISION,
     )
+    print(f"Initial conditions determined to {INITIAL_CONDITION_PRECISION}K precision.")
 
     logger.info(
         "Running the model at the CLI resolution of %ss.", parsed_args.resolution
