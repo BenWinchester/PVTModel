@@ -21,7 +21,7 @@ import math
 from typing import Dict, Optional, Tuple
 
 
-from . import collector, glass, pv
+from . import bond, collector, glass, pv
 
 from ...__utils__ import MissingParametersError
 
@@ -132,7 +132,7 @@ class PVT:
         adhesive: MicroLayer,
         air_gap_thickness: float,
         area: float,
-        bond: MicroLayer,
+        bond: bond.Bond,
         collector_parameters: CollectorParameters,
         diffuse_reflection_coefficient: float,
         eva: MicroLayer,
@@ -165,7 +165,7 @@ class PVT:
             The area of the panel, measured in meters squared.
 
         :param bond:
-            A :class:`MicroLayer` instance representing the bond layer.
+            A :class:`Bond` instance representing the bond layer.
 
         :param collector_parameters:
             Parametsrs used to instantiate the collector layer.
