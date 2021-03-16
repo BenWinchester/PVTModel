@@ -171,7 +171,10 @@ def _determine_fourier_numbers(
                     key.name,
                     " "
                     * (
-                        max([len(key.name) for key in fourier_number_map])
+                        max(
+                            [len(key.name) for key in fourier_number_map]
+                            + [len(str(value)) for value in fourier_number_map.values()]
+                        )
                         - len(key.name)
                         + 1
                     ),
@@ -185,7 +188,10 @@ def _determine_fourier_numbers(
                     value,
                     " "
                     * (
-                        max([len(key.name) for key in fourier_number_map])
+                        max(
+                            [len(key.name) for key in fourier_number_map]
+                            + [len(str(value)) for value in fourier_number_map.values()]
+                        )
                         - len(str(value))
                         + 1
                     ),
@@ -202,7 +208,13 @@ def _determine_fourier_numbers(
                         key.name,
                         " "
                         * (
-                            max([len(key.name) for key in fourier_number_map])
+                            max(
+                                [len(key.name) for key in fourier_number_map]
+                                + [
+                                    len(str(value))
+                                    for value in fourier_number_map.values()
+                                ]
+                            )
                             - len(key.name)
                             + 1
                         ),
@@ -216,7 +228,13 @@ def _determine_fourier_numbers(
                         value,
                         " "
                         * (
-                            max([len(key.name) for key in fourier_number_map])
+                            max(
+                                [len(key.name) for key in fourier_number_map]
+                                + [
+                                    len(str(value))
+                                    for value in fourier_number_map.values()
+                                ]
+                            )
                             - len(str(value))
                             + 1
                         ),
