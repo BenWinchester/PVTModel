@@ -23,7 +23,7 @@ import datetime
 from math import ceil
 from typing import Any, Dict, Optional, Tuple
 
-from .pvt_panel import adhesive, eva, pvt, segment, tedlar
+from .pvt_panel import adhesive, bond, eva, pvt, segment, tedlar
 from . import exchanger, tank, pump
 
 from ..__utils__ import MissingParametersError
@@ -381,8 +381,10 @@ def pvt_panel_from_path(
             ),
             air_gap_thickness=pvt_data["air_gap"]["thickness"],  # [m]
             area=pvt_data["pvt_system"]["area"],  # [m^2]
-            bond=MicroLayer(
-                pvt_data["bond"]["thermal_conductivity"], pvt_data["bond"]["thickness"]
+            bond=bond.Bond(
+                pvt_data["bond"]["thermal_conductivity"],
+                pvt_data["bond"]["thickness"],
+                pvt_data["bond"]["width"],
             ),
             collector_parameters=collector_parameters,
             diffuse_reflection_coefficient=diffuse_reflection_coefficient,
