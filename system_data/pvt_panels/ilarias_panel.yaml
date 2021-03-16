@@ -116,8 +116,9 @@ collector:
   thickness: 0.00012 # [m]
   transmissivity: 0.9 # [unitless]
 bond:
-  thermal_conductivity: 2.3 # [W/m*K]
-  thickness: 0.003 # [m]
+  thermal_conductivity: 0.85 # [W/m*K]
+  thickness: 0.00005 # [m]
+  width: 0.02 # [m]
 insulation:
   thickness: 0.02 # [m]
   thermal_conductivity: 0.035 # [W/m*K]
