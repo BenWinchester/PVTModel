@@ -385,7 +385,10 @@ def pvt_panel_from_path(
                 pvt_data["adhesive"]["thickness"],
             ),
             air_gap_thickness=pvt_data["air_gap"]["thickness"],  # [m]
-            area=pvt_data["pvt_system"]["area"],  # [m^2]
+            area=pvt_data["pvt_system"]["area"]
+            if "area" in pvt_data["pvt_system"]
+            else pvt_data["pvt_system"]["width"]
+            * pvt_data["pvt_system"]["length"],  # [m^2]
             collector_parameters=collector_parameters,
             diffuse_reflection_coefficient=diffuse_reflection_coefficient,
             eva=eva.EVA(
