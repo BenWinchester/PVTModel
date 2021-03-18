@@ -777,6 +777,7 @@ def _htf_equation(
     fluid_input_output_transfer_term = (
         pvt_panel.collector.mass_flow_rate  # [kg/s]
         * pvt_panel.collector.htf_heat_capacity  # [J/kg*K]
+        / pvt_panel.collector.number_of_pipes
     )  # [W/K]
 
     # Compute the T_f(#, j) term.
@@ -1208,8 +1209,8 @@ def _system_continuity_equations(
     These inluce:
         - fluid entering the first section of the pipe is the same as that entering the
           collector at the previous time step (1);
-        - fluid leaving the last section of the pipe is the same as that leaving the
-          collector (2);
+        - fluid leaving the collector is an average over the various fluid temperatures
+          leaving all pipes (2);
         - fluid entering the hot-water tank is the same as that leaving the collector
           (3);
         - fluid leaving the hot-water tank is the same as that entering the collector
@@ -1250,9 +1251,10 @@ def _system_continuity_equations(
         ]
         equations.append((row_equation, resultant_value))
 
-    # Equation 2: Continuity of fluid leaving the collector.
+    # Equation 2: Fluid leaving the collector is computed by an average across the
+    # output from all pipes.
+    row_equation = [0] * number_of_temperatures
     for pipe_number in range(number_of_pipes):
-        row_equation = [0] * number_of_temperatures
         row_equation[
             index_handler.index_from_pipe_coordinates(
                 number_of_pipes,
@@ -1262,16 +1264,18 @@ def _system_continuity_equations(
                 pipe_number,
                 number_of_y_segments - 1,
             )
-        ] = -1
-        row_equation[
-            index_handler.index_from_temperature_name(
-                number_of_pipes,
-                number_of_x_segments,
-                number_of_y_segments,
-                TemperatureName.collector_out,
-            )
-        ] = 1
-        equations.append((row_equation, 0))
+        ] = (
+            -1 / number_of_pipes
+        )
+    row_equation[
+        index_handler.index_from_temperature_name(
+            number_of_pipes,
+            number_of_x_segments,
+            number_of_y_segments,
+            TemperatureName.collector_out,
+        )
+    ] = 1
+    equations.append((row_equation, 0))
 
     # Equation 3: Fluid leaving the collector enters the tank without losses.
     row_equation = [0] * number_of_temperatures
@@ -1560,7 +1564,7 @@ def calculate_matrix_equation(
 
     """
 
-    logger.debug("Matrix module called: calculating matrix and resultant vector.")
+    logger.info("Matrix module called: calculating matrix and resultant vector.")
 
     # Instantiate an empty matrix and array based on the number of temperatures present.
     matrix = numpy.zeros([0, number_of_temperatures])
@@ -1701,6 +1705,7 @@ def calculate_matrix_equation(
 
         # Only calculate the pipe equations if the segment has an associated pipe.
         if not segment.pipe:
+            logger.debug("3 equations for segment %s", segment_coordinates)
             continue
 
         pipe_equation, pipe_resultant_value = _pipe_equation(
@@ -1763,6 +1768,7 @@ def calculate_matrix_equation(
         # Fluid continuity equations only need to be computed if there exist multiple
         # connected segments.
         if segment.y_index >= number_of_y_segments - 1:
+            logger.debug("6 equations for segment %s", segment_coordinates)
             continue
 
         (
@@ -1786,6 +1792,7 @@ def calculate_matrix_equation(
         resultant_vector = numpy.vstack(
             (resultant_vector, fluid_continuity_resultant_value)
         )
+        logger.debug("7 equations for segment %s", segment_coordinates)
 
     # Calculate the tank equations.
     equation, resultant_value = _tank_equation(
@@ -1827,6 +1834,7 @@ def calculate_matrix_equation(
     )
     matrix = numpy.vstack((matrix, equation))
     resultant_vector = numpy.vstack((resultant_vector, resultant_value))
+    logger.debug("2 tank equations computed.")
 
     # Compute the system continuity equations and assign en masse.
     system_continuity_equations = _system_continuity_equations(
@@ -1835,6 +1843,9 @@ def calculate_matrix_equation(
         number_of_x_segments,
         number_of_y_segments,
         previous_temperature_vector,
+    )
+    logger.debug(
+        "%s system continuity equations computed.", len(system_continuity_equations)
     )
 
     for equation, resultant_value in system_continuity_equations:
@@ -1861,5 +1872,7 @@ def calculate_matrix_equation(
     #     resultant_vector = numpy.vstack((resultant_vector, resultant_value))
     #     # if len(matrix) == number_of_temperatures:
     #     #     return matrix, resultant_vector
+
+    logger.info("Matrix equation computed, matrix dimensions: %s", matrix.shape)
 
     return matrix, resultant_vector
