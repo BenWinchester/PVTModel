@@ -125,7 +125,7 @@ def _get_index(  # pylint: disable=too-many-branches
             )
         index = int(
             (
-                number_of_x_segments * (3 * number_of_y_segments)
+                3 * number_of_x_segments * number_of_y_segments
                 + number_of_pipes * y_coord
                 + pipe_number
             )
@@ -144,7 +144,7 @@ def _get_index(  # pylint: disable=too-many-branches
             )
         index = int(
             (
-                number_of_x_segments * (3 * number_of_y_segments + number_of_pipes)
+                (3 * number_of_x_segments + number_of_pipes) * number_of_y_segments
                 + number_of_pipes * y_coord
                 + pipe_number
             )
@@ -163,7 +163,7 @@ def _get_index(  # pylint: disable=too-many-branches
             )
         index = int(
             (
-                number_of_x_segments * (3 * number_of_y_segments + 2 * number_of_pipes)
+                (3 * number_of_x_segments + 2 * number_of_pipes) * number_of_y_segments
                 + number_of_pipes * y_coord
                 + pipe_number
             )
@@ -182,7 +182,7 @@ def _get_index(  # pylint: disable=too-many-branches
             )
         index = int(
             (
-                number_of_x_segments * (3 * number_of_y_segments + 3 * number_of_pipes)
+                (3 * number_of_x_segments + 3 * number_of_pipes) * number_of_y_segments
                 + number_of_pipes * y_coord
                 + pipe_number
             )
@@ -198,7 +198,7 @@ def _get_index(  # pylint: disable=too-many-branches
                 "collector input index_handler."
             )
         index = int(
-            number_of_x_segments * (3 * number_of_y_segments + 4 * number_of_pipes)
+            (3 * number_of_x_segments + 4 * number_of_pipes) * number_of_y_segments
         )
     if temperature_name == TemperatureName.collector_out:
         if (
@@ -212,7 +212,7 @@ def _get_index(  # pylint: disable=too-many-branches
             )
         index = int(
             (
-                number_of_x_segments * (3 * number_of_y_segments + 4 * number_of_pipes)
+                (3 * number_of_x_segments + 4 * number_of_pipes) * number_of_y_segments
                 + 1
             )
         )
@@ -228,7 +228,7 @@ def _get_index(  # pylint: disable=too-many-branches
             )
         index = int(
             (
-                number_of_x_segments * (3 * number_of_y_segments + 4 * number_of_pipes)
+                (3 * number_of_x_segments + 4 * number_of_pipes) * number_of_y_segments
                 + 2
             )
         )
@@ -244,7 +244,7 @@ def _get_index(  # pylint: disable=too-many-branches
             )
         index = int(
             (
-                number_of_x_segments * (3 * number_of_y_segments + 4 * number_of_pipes)
+                (3 * number_of_x_segments + 4 * number_of_pipes) * number_of_y_segments
                 + 3
             )
         )
@@ -260,7 +260,7 @@ def _get_index(  # pylint: disable=too-many-branches
             )
         index = int(
             (
-                number_of_x_segments * (3 * number_of_y_segments + 4 * number_of_pipes)
+                (3 * number_of_x_segments + 4 * number_of_pipes) * number_of_y_segments
                 + 4
             )
         )
@@ -412,7 +412,7 @@ def num_temperatures(
 
     """
 
-    return number_of_x_segments * (3 * number_of_y_segments + 4 * number_of_pipes) + 5
+    return (3 * number_of_x_segments + 4 * number_of_pipes) * number_of_y_segments + 5
 
 
 def temperature_name_from_index(  # pylint: disable=too-many-branches
