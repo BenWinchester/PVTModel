@@ -28,6 +28,7 @@ import yaml
 from . import argparser
 
 from .__utils__ import (
+    BColours,
     CarbonEmissions,
     COARSE_RUN_RESOLUTION,
     FileType,
@@ -391,6 +392,7 @@ def _determine_initial_conditions(
             logger,
             maximum_temperature_map,
             minimum_temperature_map,
+            True,
         )
 
     # If all the temperatures are within the desired limit, return the temperatures.
@@ -424,6 +426,7 @@ def _print_temperature_info(
     logger: Logger,
     maximum_temperature_map: Dict[str, float],
     minimum_temperature_map: Dict[str, float],
+    verbose_mode: bool = False,
 ) -> None:
     """
     Prints out the average temperatures to the console and logger.
@@ -442,6 +445,10 @@ def _print_temperature_info(
     :param minimum_temperature_run:
         A mapping between temperature name, as a `str`, and the minimum temperature for
         the run.
+
+    :param verbose_mode:
+        If True, then colouring will be done of the output to indicate that it is
+        verbose-mode specific.
 
     """
 
@@ -477,7 +484,8 @@ def _print_temperature_info(
         ),
     )
     print(
-        "Average temperatures for the run in degC:\n{}\n{}".format(
+        "{}Average temperatures for the run in degC:\n{}\n{}{}".format(
+            BColours.OKGREEN if verbose_mode else "",
             "|".join(
                 [
                     " {}{}".format(
@@ -506,6 +514,7 @@ def _print_temperature_info(
                     for value in average_temperature_map.values()
                 ]
             ),
+            BColours.ENDC,
         )
     )
 
@@ -541,7 +550,8 @@ def _print_temperature_info(
         ),
     )
     print(
-        "Maximum temperatures for the run in degC:\n{}\n{}".format(
+        "{}Maximum temperatures for the run in degC:\n{}\n{}{}".format(
+            BColours.OKGREEN if verbose_mode else "",
             "|".join(
                 [
                     " {}{}".format(
@@ -570,6 +580,7 @@ def _print_temperature_info(
                     for value in maximum_temperature_map.values()
                 ]
             ),
+            BColours.ENDC,
         )
     )
 
@@ -605,7 +616,8 @@ def _print_temperature_info(
         ),
     )
     print(
-        "Minimum temperatures for the run in degC:\n{}\n{}".format(
+        "{}Minimum temperatures for the run in degC:\n{}\n{}{}".format(
+            BColours.OKGREEN if verbose_mode else "",
             "|".join(
                 [
                     " {}{}".format(
@@ -634,6 +646,7 @@ def _print_temperature_info(
                     for value in minimum_temperature_map.values()
                 ]
             ),
+            BColours.ENDC,
         )
     )
 
@@ -720,7 +733,13 @@ def main(args) -> None:
     logger.info(
         "%s PVT model instantiated. %s\nCommand: %s", "=" * 20, "=" * 20, " ".join(args)
     )
-    print("PVT model instantiated.")
+    print(
+        "PVT model instantiated{}.".format(
+            f"{BColours.OKGREEN} in verbose mode{BColours.ENDC}"
+            if parsed_args.verbose
+            else ""
+        )
+    )
 
     # Check that the output file is specified, and that it doesn't already exist.
     if parsed_args.output is None or parsed_args.output == "":
@@ -897,6 +916,7 @@ def main(args) -> None:
             logger,
             maximum_temperature_map,
             minimum_temperature_map,
+            False,
         )
 
     # Conduct analysis of the data.

@@ -1862,16 +1862,16 @@ def calculate_matrix_equation(
         number_of_temperatures, number_of_x_segments, number_of_y_segments
     )
 
-    # for equation, resultant_value in boundary_condition_equations:
-    #     logger.debug(
-    #         "Boundary condition equation computed:\nEquation: %s\nResultant value: %s W",
-    #         ", ".join([f"{value:.3f} W/K" for value in equation]),
-    #         resultant_value,
-    #     )
-    #     matrix = numpy.vstack((matrix, equation))
-    #     resultant_vector = numpy.vstack((resultant_vector, resultant_value))
-    #     # if len(matrix) == number_of_temperatures:
-    #     #     return matrix, resultant_vector
+    for equation, resultant_value in boundary_condition_equations:
+        logger.debug(
+            "Boundary condition equation computed:\nEquation: %s\nResultant value: %s W",
+            ", ".join([f"{value:.3f} W/K" for value in equation]),
+            resultant_value,
+        )
+        matrix = numpy.vstack((matrix, equation))
+        resultant_vector = numpy.vstack((resultant_vector, resultant_value))
+        # if len(matrix) == number_of_temperatures:
+        #     return matrix, resultant_vector
 
     logger.info("Matrix equation computed, matrix dimensions: %s", matrix.shape)
 
