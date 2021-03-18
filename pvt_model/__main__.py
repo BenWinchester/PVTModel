@@ -293,7 +293,7 @@ def _determine_initial_conditions(
 
     # Call the model to generate the output of the run.
     logger.info("Running the model. Run number %s.", run_depth)
-    final_temperature_vector, _ = pvt_system_model_main(
+    final_temperature_vector, system_data = pvt_system_model_main(
         parsed_args.average_irradiance,
         parsed_args.cloud_efficacy_factor,
         parsed_args.days,
@@ -315,6 +315,83 @@ def _determine_initial_conditions(
         parsed_args.x_resolution,
         parsed_args.y_resolution,
     )
+
+    # If in verbose mode, output average, min, and max temperatures.
+    if parsed_args.verbose:
+        # Determine the average, minimum, and maximum temperatures.
+        average_temperature_map = {
+            "glass": round(
+                mean({entry.glass_temperature for entry in system_data.values()}), 3
+            ),
+            "pv": round(
+                mean({entry.pv_temperature for entry in system_data.values()}), 3
+            ),
+            "absorber": round(
+                mean({entry.collector_temperature for entry in system_data.values()}), 3
+            ),
+            "htf": round(
+                mean({entry.bulk_water_temperature for entry in system_data.values()}),
+                3,
+            ),
+            "tank": round(
+                mean({entry.tank_temperature for entry in system_data.values()}), 3
+            ),
+        }
+        maximum_temperature_map = {
+            "glass": max(
+                {round(entry.glass_temperature, 3) for entry in system_data.values()}
+            ),
+            "pv": max(
+                {round(entry.pv_temperature, 3) for entry in system_data.values()}
+            ),
+            "absorber": max(
+                {
+                    round(entry.collector_temperature, 3)
+                    for entry in system_data.values()
+                }
+            ),
+            "htf": max(
+                {
+                    round(entry.bulk_water_temperature, 3)
+                    for entry in system_data.values()
+                }
+            ),
+            "tank": max(
+                {round(entry.tank_temperature, 3) for entry in system_data.values()}
+            ),
+        }
+        minimum_temperature_map = {
+            "glass": min(
+                {round(entry.glass_temperature, 3) for entry in system_data.values()}
+            ),
+            "pv": min(
+                {round(entry.pv_temperature, 3) for entry in system_data.values()}
+            ),
+            "absorber": min(
+                {
+                    round(entry.collector_temperature, 3)
+                    for entry in system_data.values()
+                }
+            ),
+            "htf": min(
+                {
+                    round(entry.bulk_water_temperature, 3)
+                    for entry in system_data.values()
+                }
+            ),
+            "tank": min(
+                {round(entry.tank_temperature, 3) for entry in system_data.values()}
+            ),
+        }
+
+        # Print these out to the console.
+        logger.info("Average, minimum, and maximum temperatures determined.")
+        _print_temperature_info(
+            average_temperature_map,
+            logger,
+            maximum_temperature_map,
+            minimum_temperature_map,
+        )
 
     # If all the temperatures are within the desired limit, return the temperatures.
     if all(
