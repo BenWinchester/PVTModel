@@ -303,6 +303,53 @@ def _pv_params_from_data(pv_data: Optional[Dict[str, Any]]) -> PVParameters:
         ) from None
 
 
+def _segments_from_data() -> Any:
+    """
+    Returns an array of segments based on the input data.
+
+    """
+
+    # * If 1x1, warn that 1x1 resolution is depreciated and should not really be used.
+
+    # * If 1x1, return a single segment with an attached pipe.
+
+    # * Determine the indicies of segments that have pipes attached.
+
+    # * Determine whether the width of the segments is greater than or less than the
+    # * edge width. Likewise for the heights.
+
+    # * Calculate the widths and heights of edge, pipe, and normal segments.
+
+    # * Instantiate the array of segments.
+
+    # Construct the segmented array based on the arguments.
+    pv_coordinate_cutoff = int(y_resolution * portion_covered)
+    try:
+        segments = {
+            segment.SegmentCoordinates(
+                x_coordinate(segment_number, x_resolution),
+                y_coordinate(segment_number, x_resolution),
+            ): segment.Segment(
+                True,
+                True,
+                pvt_data["pvt_system"]["length"] / x_resolution,
+                x_coordinate(segment_number, x_resolution) in pipe_positions,
+                y_coordinate(segment_number, x_resolution) <= pv_coordinate_cutoff,
+                pvt_data["pvt_system"]["width"] / y_resolution,
+                x_coordinate(segment_number, x_resolution),
+                y_coordinate(segment_number, x_resolution),
+                pipe_positions.index(x_coordinate(segment_number, x_resolution))
+                if x_coordinate(segment_number, x_resolution) in pipe_positions
+                else None,
+            )
+            for segment_number in range(x_resolution * y_resolution)
+        }
+    except KeyError as e:
+        raise MissingParametersError(
+            "PVT", f"Missing parameters when instantiating the PV-T system: {str(e)}"
+        ) from None
+
+
 def pvt_panel_from_path(
     portion_covered: float,
     pvt_data_file: str,
@@ -340,39 +387,7 @@ def pvt_panel_from_path(
         pvt_data["collector"],
     )
 
-    # Construct the segmented array based on the arguments.
-    pipe_positions = list(
-        range(
-            x_resolution // (pvt_data["collector"]["number_of_pipes"] + 1),
-            x_resolution,
-            ceil(x_resolution / (pvt_data["collector"]["number_of_pipes"] + 1)),
-        )
-    )
-    pv_coordinate_cutoff = int(y_resolution * portion_covered)
-    try:
-        segments = {
-            segment.SegmentCoordinates(
-                x_coordinate(segment_number, x_resolution),
-                y_coordinate(segment_number, x_resolution),
-            ): segment.Segment(
-                True,
-                True,
-                pvt_data["pvt_system"]["length"] / x_resolution,
-                x_coordinate(segment_number, x_resolution) in pipe_positions,
-                y_coordinate(segment_number, x_resolution) <= pv_coordinate_cutoff,
-                pvt_data["pvt_system"]["width"] / y_resolution,
-                x_coordinate(segment_number, x_resolution),
-                y_coordinate(segment_number, x_resolution),
-                pipe_positions.index(x_coordinate(segment_number, x_resolution))
-                if x_coordinate(segment_number, x_resolution) in pipe_positions
-                else None,
-            )
-            for segment_number in range(x_resolution * y_resolution)
-        }
-    except KeyError as e:
-        raise MissingParametersError(
-            "PVT", f"Missing parameters when instantiating the PV-T system: {str(e)}"
-        ) from None
+    segments = _segments_from_data()
 
     try:
         pvt_panel = pvt.PVT(
