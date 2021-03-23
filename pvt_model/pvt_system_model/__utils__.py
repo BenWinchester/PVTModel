@@ -541,6 +541,10 @@ class CollectorParameters(OpticalLayerParameters):
     .. attribute:: outer_pipe_diameter
         The diameter of the outer wall of the pipes, in meters.
 
+    .. attribute:: pipe_density
+        The density of the material making up the pipes, measured in kilograms per meter
+        cubed.
+
     """
 
     htf_heat_capacity: float
@@ -549,6 +553,7 @@ class CollectorParameters(OpticalLayerParameters):
     mass_flow_rate: float
     number_of_pipes: int
     outer_pipe_diameter: float
+    pipe_density: float
 
 
 @dataclass

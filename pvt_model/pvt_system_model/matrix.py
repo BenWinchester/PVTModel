@@ -889,7 +889,7 @@ def _pipe_equation(
             - (pvt_panel.collector.inner_pipe_diameter / 2) ** 2  # [m^2]
         )
         * segment.length  # [m]
-        * pvt_panel.collector.density  # [kg/m^3]
+        * pvt_panel.collector.pipe_density  # [kg/m^3]
         * pvt_panel.collector.heat_capacity  # [J/kg*K]
         / resolution  # [s]
     )

@@ -86,6 +86,7 @@ class Collector(OpticalLayer):
         self._mass_flow_rate = collector_params.mass_flow_rate
         self.number_of_pipes = collector_params.number_of_pipes
         self.outer_pipe_diameter = collector_params.outer_pipe_diameter
+        self.pipe_density = collector_params.pipe_density
 
     def __repr__(self) -> str:
         """

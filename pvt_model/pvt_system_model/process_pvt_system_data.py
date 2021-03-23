@@ -206,6 +206,7 @@ def _collector_params_from_data(
             mass_flow_rate=collector_data["mass_flow_rate"],  # [Litres/hour]
             number_of_pipes=collector_data["number_of_pipes"],  # [pipes]
             outer_pipe_diameter=collector_data["outer_pipe_diameter"],  # [m]
+            pipe_density=collector_data["pipe_density"],  # [kg/m^3]
             thickness=collector_data["thickness"],  # [m]
             transmissivity=collector_data["transmissivity"],  # [unitless]
         )
