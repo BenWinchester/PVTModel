@@ -35,7 +35,7 @@ import numpy
 
 from . import exchanger, index_handler, tank
 from .pvt_panel import pvt
-from .pvt_panel.segment import Segment
+from .pvt_panel.segment import Segment, SegmentCoordinates
 
 from ..__utils__ import TemperatureName, ProgrammerJudgementFault
 from .__utils__ import WeatherConditions
@@ -103,6 +103,18 @@ def _absorber_equation(
     logger.debug(
         "Absorber internal energy term: %s W/K", absorber_internal_energy_change
     )
+
+    # * Compute the positive conductive term based on the next segment along.
+    # if SegmentCoordinates(segment.x_index + 1, segment.y_index) in pvt_panel.segments:
+    #     positive_x_wise_conduction = (
+    #         pvt_panel.pv.conductivity  # [W/m*K]
+    #         * pvt_panel.pv.thickness  # [m]
+    #         * segment.length  # [m]
+    #         / (0.5 * (segment.width + pvt_panel.segments[SegmentCoordinates(segment.x_index + 1, segment.y_index)].width))  # [m]
+    #     )
+
+    # * Similarly compute the negative x-wise conduction, and the y-wise conduction in
+    # * both directions based on the widths of the neighborougin segments.
 
     x_wise_conduction = (
         (
@@ -502,6 +514,18 @@ def _glass_equation(
         / resolution  # [s]
     )
     logger.debug("Glass internal energy term: %s W/K", glass_internal_energy)
+
+    # * Compute the positive conductive term based on the next segment along.
+    # if SegmentCoordinates(segment.x_index + 1, segment.y_index) in pvt_panel.segments:
+    #     positive_x_wise_conduction = (
+    #         pvt_panel.pv.conductivity  # [W/m*K]
+    #         * pvt_panel.pv.thickness  # [m]
+    #         * segment.length  # [m]
+    #         / (0.5 * (segment.width + pvt_panel.segments[SegmentCoordinates(segment.x_index + 1, segment.y_index)].width))  # [m]
+    #     )
+
+    # * Similarly compute the negative x-wise conduction, and the y-wise conduction in
+    # * both directions based on the widths of the neighborougin segments.
 
     x_wise_conduction = (
         (
@@ -1014,6 +1038,18 @@ def _pv_equation(
         / resolution  # [s]
     )
     logger.debug("PV internal energy term: %s W/K", pv_internal_energy)
+
+    # * Compute the positive conductive term based on the next segment along.
+    # if SegmentCoordinates(segment.x_index + 1, segment.y_index) in pvt_panel.segments:
+    #     positive_x_wise_conduction = (
+    #         pvt_panel.pv.conductivity  # [W/m*K]
+    #         * pvt_panel.pv.thickness  # [m]
+    #         * segment.length  # [m]
+    #         / (0.5 * (segment.width + pvt_panel.segments[SegmentCoordinates(segment.x_index + 1, segment.y_index)].width))  # [m]
+    #     )
+
+    # * Similarly compute the negative x-wise conduction, and the y-wise conduction in
+    # * both directions based on the widths of the neighborougin segments.
 
     x_wise_conduction = (
         (
