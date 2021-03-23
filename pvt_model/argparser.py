@@ -19,6 +19,41 @@ module for the model.
 
 import argparse
 
+__all__ = ("parse_args",)
+
+
+class ArgumentMismatchError(Exception):
+    """
+    Raised when arguments passed in mismatch.
+
+    """
+
+    def __init__(self, msg: str) -> None:
+        """
+        Instantiate a :class:`ArgumentMismatchError`.
+
+        :param msg:
+            The message to append to the output.
+
+        """
+
+        super().__init__(f"Mismatch in command-line arguments: {msg}")
+
+
+def _check_args(parsed_args: argparse.Namespace) -> None:
+    """
+    Enforces rules on the command-line arguments passed in in addition to argparse rules
+
+    :param parsed_args:
+        The parsed command-line arguments.
+
+    :raises: ArgumentMismatchError
+        Raised if the command-line arguments mismatch.
+
+    """
+
+    # * Enforce that the resolution has to be either 1x1 or greater than 5x3.
+
 
 def parse_args(args) -> argparse.Namespace:
     """
