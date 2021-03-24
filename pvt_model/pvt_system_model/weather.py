@@ -32,7 +32,7 @@ from typing import Any, Dict, Optional, Set, Tuple, Union
 import json
 import pysolar
 
-from ..__utils__ import MissingParametersError
+from ..__utils__ import MissingParametersError, read_yaml
 
 
 from .constants import ZERO_CELCIUS_OFFSET
@@ -41,7 +41,6 @@ from .__utils__ import (
     Date,
     ProgrammerJudgementFault,
     PVT_SYSTEM_MODEL_LOGGER_NAME,
-    read_yaml,
     WeatherConditions,
 )
 
