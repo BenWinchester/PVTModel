@@ -20,7 +20,7 @@ import sys
 from argparse import Namespace
 from logging import Logger
 from statistics import mean
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import json
 import yaml
@@ -35,8 +35,10 @@ from .__utils__ import (
     fourier_number,
     get_logger,
     INITIAL_CONDITION_PRECISION,
-    MissingParametersError,
     LOGGER_NAME,
+    MissingParametersError,
+    OperatingMode,
+    ProgrammerJudgementFault,
     read_yaml,
     SystemData,
     TemperatureName,
@@ -62,7 +64,7 @@ from .pvt_system_model.process_pvt_system_data import (
 
 
 def _get_system_fourier_numbers(
-    hot_water_tank: tank.Tank, pvt_panel: pvt.PVT, resolution: float
+    hot_water_tank: Optional[tank.Tank], pvt_panel: pvt.PVT, resolution: float
 ) -> Dict[TemperatureName, float]:
     """
     Determine the Fourier numbers of the various system components.
@@ -123,22 +125,23 @@ def _get_system_fourier_numbers(
         ),
         2,
     )
-    fourier_number_map[TemperatureName.tank] = round(
-        fourier_number(
-            hot_water_tank.diameter,
-            THERMAL_CONDUCTIVITY_OF_WATER,
-            DENSITY_OF_WATER,
-            HEAT_CAPACITY_OF_WATER,
-            resolution,
-        ),
-        5,
-    )
+    if hot_water_tank is not None:
+        fourier_number_map[TemperatureName.tank] = round(
+            fourier_number(
+                hot_water_tank.diameter,
+                THERMAL_CONDUCTIVITY_OF_WATER,
+                DENSITY_OF_WATER,
+                HEAT_CAPACITY_OF_WATER,
+                resolution,
+            ),
+            5,
+        )
 
     return fourier_number_map
 
 
 def _determine_fourier_numbers(
-    hot_water_tank: tank.Tank,
+    hot_water_tank: Optional[tank.Tank],
     logger: Logger,
     parsed_args: Namespace,
     pvt_panel: pvt.PVT,
@@ -248,14 +251,17 @@ def _determine_fourier_numbers(
     )
 
 
-def _determine_initial_conditions(
+def _determine_consistent_conditions(
     number_of_pipes: int,
     logger: Logger,
+    operating_mode: OperatingMode,
     parsed_args: Namespace,
+    *,
+    override_ambient_temperature: Optional[float] = None,
     resolution: int = COARSE_RUN_RESOLUTION,
     run_depth: int = 1,
     running_system_temperature_vector: Optional[List[float]] = None,
-) -> List[float]:
+) -> Tuple[List[float], Dict[int, SystemData]]:
     """
     Determines the initial system temperatures for the run.
 
@@ -265,8 +271,15 @@ def _determine_initial_conditions(
     :param logger:
         The logger for the run.
 
+    :param operating_mode:
+        The operating mode for the run.
+
     :param parsed_args:
         The parsed command-line arguments.
+
+    :param override_ambient_tempearture:
+        If specified, this can be used as a value to override the weather forecaster's
+        inbuilt ambient temperature.
 
     :param resolution:
         The resolution for the run, measured in seconds.
@@ -279,7 +292,9 @@ def _determine_initial_conditions(
         compare with the previous run.
 
     :return:
-        The initial system temperature which fits within the desired resolution.
+        A `tuple` containing:
+        - the initial system temperature which fits within the desired resolution;
+        - the system data from the sun which satisfies the desired consistency.
 
     """
 
@@ -304,6 +319,9 @@ def _determine_initial_conditions(
         running_system_temperature_vector,
         parsed_args.location,
         parsed_args.months,
+        operating_mode,
+        override_ambient_temperature,
+        parsed_args.solar_irradiance,
         parsed_args.portion_covered,
         parsed_args.pvt_data_file,
         resolution,
@@ -311,7 +329,6 @@ def _determine_initial_conditions(
         not parsed_args.skip_2d_output,
         parsed_args.start_time,
         parsed_args.tank_data_file,
-        # parsed_args.unglazed,
         parsed_args.use_pvgis,
         parsed_args.verbose,
         parsed_args.x_resolution,
@@ -405,20 +422,21 @@ def _determine_initial_conditions(
             "Initial temperatures consistent. Max difference: %sK",
             max(abs(final_temperature_vector - running_system_temperature_vector)),
         )
-        return final_temperature_vector.tolist()
+        return final_temperature_vector.tolist(), system_data
 
     logger.info(
         "Initial temperatures not consistent. Max difference: %sK",
         max(abs(final_temperature_vector - running_system_temperature_vector)),
     )
     # Otherwise, call the method recursively.
-    return _determine_initial_conditions(
+    return _determine_consistent_conditions(
         number_of_pipes,
         logger,
+        operating_mode,
         parsed_args,
-        resolution,
-        run_depth + 1,
-        final_temperature_vector.tolist(),
+        resolution=resolution,
+        run_depth=run_depth + 1,
+        running_system_temperature_vector=final_temperature_vector.tolist(),
     )
 
 
@@ -486,7 +504,7 @@ def _print_temperature_info(
     )
     print(
         "{}Average temperatures for the run in degC:\n{}\n{}{}".format(
-            BColours.OKGREEN if verbose_mode else "",
+            BColours.OKTEAL if verbose_mode else "",
             "|".join(
                 [
                     " {}{}".format(
@@ -552,7 +570,7 @@ def _print_temperature_info(
     )
     print(
         "{}Maximum temperatures for the run in degC:\n{}\n{}{}".format(
-            BColours.OKGREEN if verbose_mode else "",
+            BColours.OKTEAL if verbose_mode else "",
             "|".join(
                 [
                     " {}{}".format(
@@ -618,7 +636,7 @@ def _print_temperature_info(
     )
     print(
         "{}Minimum temperatures for the run in degC:\n{}\n{}{}".format(
-            BColours.OKGREEN if verbose_mode else "",
+            BColours.OKTEAL if verbose_mode else "",
             "|".join(
                 [
                     " {}{}".format(
@@ -736,7 +754,7 @@ def main(args) -> None:
     )
     print(
         "PVT model instantiated{}.".format(
-            f"{BColours.OKGREEN} in verbose mode{BColours.ENDC}"
+            f"{BColours.OKTEAL} in verbose mode{BColours.ENDC}"
             if parsed_args.verbose
             else ""
         )
@@ -796,70 +814,111 @@ def main(args) -> None:
         logger.info("Output file successfully moved.")
 
     # Instantiate a hot-water tank instance based on the data.
-    hot_water_tank = hot_water_tank_from_path(parsed_args.tank_data_file)
+    if parsed_args.decoupled:
+        hot_water_tank: Optional[tank.Tank] = None
+    else:
+        hot_water_tank = hot_water_tank_from_path(parsed_args.tank_data_file)
+
     logger.debug(
         "PVT system information successfully parsed:\n%s\n%s",
         str(pvt_panel),
-        str(hot_water_tank),
+        str(hot_water_tank) if hot_water_tank is not None else "NO HOT-WATER TANK",
     )
 
     # Determine the Fourier number for the PV-T panel.
     logger.info("Beginning Fourier number calculation.")
     _determine_fourier_numbers(hot_water_tank, logger, parsed_args, pvt_panel)
 
-    # Iterate to determine the initial conditions for the run.
-    logger.info("Determining consistent initial conditions at coarse resolution.")
-    print(
-        "Determining consistent initial conditions via successive runs at "
-        f"{COARSE_RUN_RESOLUTION}s resolution."
-    )
-    initial_system_temperature_vector = _determine_initial_conditions(
-        pvt_panel.collector.number_of_pipes, logger, parsed_args
-    )
-    print(
-        "Rough initial conditions determined at coarse resolution, refining via "
-        f"successive runs at CLI resolution of {parsed_args.resolution}s."
-    )
-    initial_system_temperature_vector = _determine_initial_conditions(
-        pvt_panel.collector.number_of_pipes,
-        logger,
-        parsed_args,
-        resolution=parsed_args.resolution,
-        running_system_temperature_vector=initial_system_temperature_vector,
-    )
-    logger.info(
-        "Initial system temperatures successfully determined to %sK precision.",
-        INITIAL_CONDITION_PRECISION,
-    )
-    print(f"Initial conditions determined to {INITIAL_CONDITION_PRECISION}K precision.")
+    # Determine the operating mode of the system.
+    operating_mode = OperatingMode(not parsed_args.decoupled, parsed_args.dynamic)
 
-    logger.info(
-        "Running the model at the CLI resolution of %ss.", parsed_args.resolution
-    )
-    print(f"Running the model at the high CLI resolution of {parsed_args.resolution}s.")
-    # Run the model at this higher resolution.
-    _, system_data = pvt_system_model_main(
-        parsed_args.average_irradiance,
-        parsed_args.cloud_efficacy_factor,
-        parsed_args.days,
-        parsed_args.exchanger_data_file,
-        parsed_args.initial_month,
-        initial_system_temperature_vector,
-        parsed_args.location,
-        parsed_args.months,
-        parsed_args.portion_covered,
-        parsed_args.pvt_data_file,
-        parsed_args.resolution,
-        1,
-        not parsed_args.skip_2d_output,
-        parsed_args.start_time,
-        parsed_args.tank_data_file,
-        # parsed_args.unglazed,
-        parsed_args.use_pvgis,
-        parsed_args.verbose,
-        parsed_args.x_resolution,
-        parsed_args.y_resolution,
-    )
+    if operating_mode.coupled:
+        if operating_mode.dynamic:
+            logger.info("Running a dynamic and coupled system.")
+            print(
+                f"{BColours.OKGREEN}Running a dynamic and coupled system.{BColours.ENDC}"
+            )
+        if operating_mode.steady_state:
+            logger.info("Running a steady-state and coupled system.")
+            print(
+                f"{BColours.OKGREEN}Running a steady-state and coupled system.{BColours.ENDC}"
+            )
+        # Iterate to determine the initial conditions for the run.
+        logger.info("Determining consistent initial conditions at coarse resolution.")
+        print(
+            "Determining consistent initial conditions via successive runs at "
+            f"{COARSE_RUN_RESOLUTION}s resolution."
+        )
+        initial_system_temperature_vector, _ = _determine_consistent_conditions(
+            pvt_panel.collector.number_of_pipes, logger, operating_mode, parsed_args
+        )
+        print(
+            "Rough initial conditions determined at coarse resolution, refining via "
+            f"successive runs at CLI resolution of {parsed_args.resolution}s."
+        )
+        initial_system_temperature_vector, _ = _determine_consistent_conditions(
+            pvt_panel.collector.number_of_pipes,
+            logger,
+            operating_mode,
+            parsed_args,
+            resolution=parsed_args.resolution,
+            running_system_temperature_vector=initial_system_temperature_vector,
+        )
+        logger.info(
+            "Initial system temperatures successfully determined to %sK precision.",
+            INITIAL_CONDITION_PRECISION,
+        )
+        print(
+            f"Initial conditions determined to {INITIAL_CONDITION_PRECISION}K precision."
+        )
+
+        logger.info(
+            "Running the model at the CLI resolution of %ss.", parsed_args.resolution
+        )
+        print(
+            f"Running the model at the high CLI resolution of {parsed_args.resolution}s."
+        )
+        # Run the model at this higher resolution.
+        _, system_data = pvt_system_model_main(
+            parsed_args.average_irradiance,
+            parsed_args.cloud_efficacy_factor,
+            parsed_args.days,
+            parsed_args.exchanger_data_file,
+            parsed_args.initial_month,
+            initial_system_temperature_vector,
+            parsed_args.location,
+            parsed_args.months,
+            operating_mode,
+            parsed_args.ambient_temperature,
+            parsed_args.solar_irradiance,
+            parsed_args.portion_covered,
+            parsed_args.pvt_data_file,
+            parsed_args.resolution,
+            1,
+            not parsed_args.skip_2d_output,
+            parsed_args.start_time,
+            parsed_args.tank_data_file,
+            parsed_args.use_pvgis,
+            parsed_args.verbose,
+            parsed_args.x_resolution,
+            parsed_args.y_resolution,
+        )
+
+    elif operating_mode.decoupled:
+        logger.info("Running a steady-state and decoupled system.")
+        print(
+            f"{BColours.OKGREEN}"
+            "Running a steady-state and decoupled system."
+            f"{BColours.ENDC}"
+        )
+        # * Call `_determine_consistent_conditions` to determine the solution for the
+        # * model in a steady-state and decoupled configuration.
+
+    else:
+        raise ProgrammerJudgementFault(
+            "The system needs to either be run in steady-state or dynamic modes, with "
+            "either `--steady-state` or `--dynamic` specified on the CLI."
+        )
 
     # Save the data ouputted by the model.
     logger.info("Saving output data to: %s.json.", parsed_args.output)

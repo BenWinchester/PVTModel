@@ -383,6 +383,14 @@ class WeatherForecaster:
     #   A `dict` mapping month number to :class:`_MonthlyWeatherData` instances
     #   containing weather information for that month.
     #
+    # .. attribute:: _override_ambient_temperature
+    #   The ambient temperature, measured in Kelvin, used as a constant value rather
+    #   than time-s[ecific data.
+    #
+    # .. attribute:: _override_irradiance
+    #   The solar irradiance, measured in Watts per meter squared, to use as a constant
+    #   value rather than time-specific data.
+    #
     # .. attribute:: _solar_insolation
     #   The solar insolation, measured in Watts per meter squared, that would hit the
     #   UK on a clear day with no other factors present.
@@ -402,6 +410,8 @@ class WeatherForecaster:
         monthly_weather_data: Dict[str, Dict[str, Union[str, float]]],
         monthly_irradiance_profiles: Dict[Date, _DailyProfile],
         monthly_temperature_profiles: Dict[Date, _DailyProfile],
+        override_ambient_temperature: Optional[float],
+        override_irradiance: Optional[float],
     ) -> None:
         """
         Instantiate a weather forecaster class.
@@ -423,10 +433,18 @@ class WeatherForecaster:
             A mapping between :class:`__utils__.Date` instances and solar irradiance
             profiles stored as :class:`_DailyProfile` instances.
 
+        :param override_ambient_temperature:
+            Used to override the ambient temperature profiles with a constant value.
+
+        :param override_irradiance:
+            Used to override the solar-irradiance profiles with a constant value.
+
         """
 
-        self.ambient_tank_temperature = ambient_tank_temperature
         self._average_irradiance = average_irradiance
+        self._override_ambient_temperature = override_ambient_temperature
+        self._override_irradiance = override_irradiance
+        self.ambient_tank_temperature = ambient_tank_temperature
         self.mains_water_temperature = mains_water_temperature + ZERO_CELCIUS_OFFSET
 
         self._monthly_weather_data: Dict[int, _MonthlyWeatherData] = {
@@ -475,13 +493,117 @@ class WeatherForecaster:
             ")"
         )
 
+    def _ambient_temperature(
+        self, latitude: float, longitude: float, date_and_time: datetime.datetime
+    ) -> float:
+        """
+        Return the ambient temperature, in Kelvin, based on the date and time.
+
+        A sine curve is fitted, and the temp extracted.
+
+        The models used in this function are obtained, with permission, from
+        https://mathscinotes.com/wp-content/uploads/2012/12/dailytempvariation.pdf
+        and use an improved theoretical model from a previous paper.
+
+        :param latitude:
+            The latitude of the set-up.
+
+        :param longitude:
+            The longitude of the set-up.
+
+        :param date_and_time:
+            The current date and time.
+
+        :return:
+            The temperature in Kelvin.
+
+        """
+
+        max_temp = self._monthly_weather_data[date_and_time.month].day_temp
+        min_temp = self._monthly_weather_data[date_and_time.month].night_temp
+        temp_range = max_temp - min_temp
+
+        if (
+            self._monthly_weather_data[date_and_time.month].sunrise is None
+            or self._monthly_weather_data[date_and_time.month].sunset is None
+        ):
+            self._monthly_weather_data[date_and_time.month].sunrise = _get_sunrise(
+                latitude, longitude, date_and_time.replace(hour=0)
+            )
+            self._monthly_weather_data[date_and_time.month].sunset = _get_sunset(
+                latitude, longitude, date_and_time.replace(hour=23)
+            )
+
+        return (
+            temp_range
+            * math.exp(-(date_and_time.hour + date_and_time.minute / 60 - 12) * G_CONST)
+            * (1 + (date_and_time.hour + date_and_time.minute / 60 - 12) / 12)
+            ** (G_CONST * 12)
+            + min_temp
+        )
+
+    def _cloud_cover(
+        self, cloud_efficacy_factor: float, date_and_time: datetime.datetime
+    ) -> float:
+        """
+        Computes the cloud clover based on the time of day and various factors.
+
+        :param cloud_efficacy_factor:
+            The extend to which cloud cover affects the sunlight. This is multiplied by
+            a random number which further reduces the effect of the cloud cover in
+            reducing the sunlight.
+
+        :param date_and_time:
+            The date and time of day, used to determine which month the cloud cover
+            should be retrieved for.
+
+        :return:
+            The fractional effect that the cloud cover has to reduce
+
+        """
+
+        # Extract the cloud cover probability for the month.
+        cloud_cover_prob = self._monthly_weather_data[date_and_time.month].cloud_cover
+
+        # Generate a random number between 1 and 0 for that month based on this factor.
+        rand_prob: float = random.randrange(0, RAND_RESOLUTION, 1) / RAND_RESOLUTION
+
+        # Determine what effect the cloudy (or not cloudy) conditions have on the solar
+        # insolation. Generate a fractional reduction based on this.
+        # Return this number
+        return cloud_cover_prob * rand_prob * cloud_efficacy_factor
+
+    def _irradiance(self, date_and_time: datetime.datetime) -> float:
+        """
+        Return the solar irradiance, in Watts per meter squared, at the current date and
+        time.
+
+        :param date_and_time:
+            The date and time.
+
+        :return:
+            The solar irradiance, in Watts per meter squared.
+
+        """
+
+        if self._average_irradiance:
+            return self._monthly_weather_data[
+                date_and_time.month
+            ].average_irradiance_profile[date_and_time.time()]
+
+        return self._monthly_weather_data[
+            date_and_time.month
+        ].solar_irradiance_profiles[date_and_time.day][date_and_time.time()]
+
     @classmethod
     def from_data(
         cls,
         average_irradiance: bool,
-        weather_data_path: str,
         solar_irradiance_filenames: Set[str],
         temperature_filenames: Set[str],
+        weather_data_path: str,
+        override_ambient_temperature: Optional[float] = None,
+        override_irradiance: Optional[float] = None,
         use_pvgis: bool = False,
     ) -> Any:  # type: ignore
         """
@@ -491,10 +613,6 @@ class WeatherForecaster:
             Whether to average the solar irradiances wihtin each month (True), or use
             the value for each day specifically when called (False).
 
-        :param weather_data_path:
-            The path to the weather-data file. This contains basic information about the
-            location that is weather-related.
-
         :param solar_irradiance_filenames:
             A `set` of paths to files containing solar irradiance profiles. The format
             of these files is in the form as given by the PVGIS (Photovoltaic,
@@ -502,6 +620,21 @@ class WeatherForecaster:
 
         :param temperature_filenames:
             A `set` of paths to files containing temperature profiles.
+
+        :param weather_data_path:
+            The path to the weather-data file. This contains basic information about the
+            location that is weather-related.
+
+        :param override_ambient_temperature:
+            If specified, the value will be used to override the internal ambient
+            temperature profile(s). The value should be in degrees Kelvin.
+
+        :param override_irradiance:
+            If specified, the value will be used to override the internal solar
+            irradiance profile(s).
+
+        :param use_pvgis:
+            Whether to use data obtained from PVGIS (True) or not (False).
 
         :return:
             A :class:`WeatherForecaster` instance.
@@ -681,108 +814,10 @@ class WeatherForecaster:
             data,
             monthly_irradiance_profiles,
             temperature_profiles,
-        )
-
-    def _cloud_cover(
-        self, cloud_efficacy_factor: float, date_and_time: datetime.datetime
-    ) -> float:
-        """
-        Computes the cloud clover based on the time of day and various factors.
-
-        :param cloud_efficacy_factor:
-            The extend to which cloud cover affects the sunlight. This is multiplied by
-            a random number which further reduces the effect of the cloud cover in
-            reducing the sunlight.
-
-        :param date_and_time:
-            The date and time of day, used to determine which month the cloud cover
-            should be retrieved for.
-
-        :return:
-            The fractional effect that the cloud cover has to reduce
-
-        """
-
-        # Extract the cloud cover probability for the month.
-        cloud_cover_prob = self._monthly_weather_data[date_and_time.month].cloud_cover
-
-        # Generate a random number between 1 and 0 for that month based on this factor.
-        rand_prob: float = random.randrange(0, RAND_RESOLUTION, 1) / RAND_RESOLUTION
-
-        # Determine what effect the cloudy (or not cloudy) conditions have on the solar
-        # insolation. Generate a fractional reduction based on this.
-        # Return this number
-        return cloud_cover_prob * rand_prob * cloud_efficacy_factor
-
-    def _irradiance(self, date_and_time: datetime.datetime) -> float:
-        """
-        Return the solar irradiance, in Watts per meter squared, at the current date and
-        time.
-
-        :param date_and_time:
-            The date and time.
-
-        :return:
-            The solar irradiance, in Watts per meter squared.
-
-        """
-
-        if self._average_irradiance:
-            return self._monthly_weather_data[
-                date_and_time.month
-            ].average_irradiance_profile[date_and_time.time()]
-
-        return self._monthly_weather_data[
-            date_and_time.month
-        ].solar_irradiance_profiles[date_and_time.day][date_and_time.time()]
-
-    def _ambient_temperature(
-        self, latitude: float, longitude: float, date_and_time: datetime.datetime
-    ) -> float:
-        """
-        Return the ambient temperature, in Kelvin, based on the date and time.
-
-        A sine curve is fitted, and the temp extracted.
-
-        The models used in this function are obtained, with permission, from
-        https://mathscinotes.com/wp-content/uploads/2012/12/dailytempvariation.pdf
-        and use an improved theoretical model from a previous paper.
-
-        :param latitude:
-            The latitude of the set-up.
-
-        :param longitude:
-            The longitude of the set-up.
-
-        :param date_and_time:
-            The current date and time.
-
-        :return:
-            The temperature in Kelvin.
-
-        """
-
-        max_temp = self._monthly_weather_data[date_and_time.month].day_temp
-        min_temp = self._monthly_weather_data[date_and_time.month].night_temp
-        temp_range = max_temp - min_temp
-
-        if (
-            self._monthly_weather_data[date_and_time.month].sunrise is None
-            or self._monthly_weather_data[date_and_time.month].sunset is None
-        ):
-            self._monthly_weather_data[date_and_time.month].sunrise = _get_sunrise(
-                latitude, longitude, date_and_time.replace(hour=0)
-            )
-            self._monthly_weather_data[date_and_time.month].sunset = _get_sunset(
-                latitude, longitude, date_and_time.replace(hour=23)
-            )
-
-        return (
-            temp_range
-            * math.exp(-(date_and_time.hour + date_and_time.minute / 60 - 12) * G_CONST)
-            * (1 + (date_and_time.hour + date_and_time.minute / 60 - 12) / 12)
-            ** (G_CONST * 12)
-            + min_temp
+            override_ambient_temperature - ZERO_CELCIUS_OFFSET
+            if override_ambient_temperature is not None
+            else None,
+            override_irradiance,
         )
 
     def get_weather(
@@ -790,7 +825,7 @@ class WeatherForecaster:
         latitude: float,
         longitude: float,
         cloud_efficacy_factor: float,  # pylint: disable=unused-argument
-        date_and_time: datetime.datetime,
+        date_and_time: Optional[datetime.datetime] = None,
     ) -> WeatherConditions:
         """
         Computes the solar irradiance based on weather conditions at the time of day.
@@ -824,23 +859,38 @@ class WeatherForecaster:
 
         # Factor in the weather conditions and cloud cover to compute the current solar
         # irradiance.
-        irradiance: float = self._irradiance(date_and_time)  # * (
-        # 1 - self._cloud_cover(cloud_efficacy_factor, date_and_time)
-        # )
+        if date_and_time is not None:
+            irradiance: float = self._irradiance(date_and_time)  # * (
+            # 1 - self._cloud_cover(cloud_efficacy_factor, date_and_time)
+            # )
+            # >>> The ambient temperature is now determined from a temperature profile.
+            # # Compute the ambient temperature.
+            # ambient_temperature: float = self._ambient_temperature(
+            #     latitude, longitude, date_and_time
+            # )
+            # <<< >>> Ambient temperature determination using temperature profile.
+            ambient_temperature: float = self._monthly_weather_data[
+                date_and_time.month
+            ].average_temperature_profile[date_and_time.time()]
+            # <<< E.O. code-alteration block
+        else:
+            if self._override_irradiance is None:
+                raise MissingParametersError(
+                    "WeatherForecaster",
+                    "The weather forecaster was called for time-independant weather "
+                    "data without an override irradiance provided.",
+                )
+            irradiance = self._override_irradiance
+            if self._override_ambient_temperature is None:
+                raise MissingParametersError(
+                    "WeatherForecaster",
+                    "The weather forecaster was called for time-independant weather "
+                    "data without an override ambient temperature provided.",
+                )
+            ambient_temperature = self._override_ambient_temperature
 
         # * Compute the wind speed
         wind_speed: float = 5  # [m/s]
-
-        # >>> The ambient temperature is now determined from a temperature profile.
-        # # Compute the ambient temperature.
-        # ambient_temperature = self._ambient_temperature(
-        #     latitude, longitude, date_and_time
-        # )
-        # <<< >>> Ambient temperature determination using temperature profile.
-        ambient_temperature = self._monthly_weather_data[
-            date_and_time.month
-        ].average_temperature_profile[date_and_time.time()]
-        # <<< E.O. code-alteration block
 
         # Return all of these in a WeatherConditions variable.
         return WeatherConditions(

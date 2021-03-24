@@ -32,6 +32,7 @@ __all__ = (
     "INITIAL_CONDITION_PRECISION",
     "InvalidParametersError",
     "LOGGER_NAME",
+    "OperatingMode",
     "ProgrammerJudgementFault",
     "MissingParametersError",
     "read_yaml",
@@ -51,12 +52,30 @@ LOGGER_NAME = "pvt_model"
 
 @dataclass
 class BColours:
-    HEADER = "\033[95m"
-    OKBLUE = "\033[94m"
-    OKCYAN = "\033[96m"
-    OKGREEN = "\033[92m"
-    WARNING = "\033[93m"
+    """
+    Contains various colours used for pretty-printing out to the command-line on stdout.
+
+    .. attribute:: FAIL
+        Used for a failure message.
+
+    .. attributes:: OKTEAL, WARNING, OKBLUE, HEADER, OKCYAN, OKGREEN
+        Various colours used.
+
+    .. attribute:: ENDC
+        Used to reset the colour of the terminal output.
+
+    .. attribute:: BOLD, UNDERLINE
+        Used to format the text.
+
+    """
+
     FAIL = "\033[91m"
+    OKTEAL = "\033[92m"
+    WARNING = "\033[93m"
+    OKBLUE = "\033[94m"
+    HEADER = "\033[95m"
+    OKCYAN = "\033[96m"
+    OKGREEN = "\033[97m"
     ENDC = "\033[0m"
     BOLD = "\033[1m"
     UNDERLINE = "\033[4m"
@@ -167,6 +186,11 @@ def get_logger(logger_name: str, verbose: bool) -> logging.Logger:
 
     # Create a logger with the current component name.
     logger = logging.getLogger(logger_name)
+    if os.path.exists(os.path.join(LOGGER_DIRECTORY, f"{logger_name}.log")):
+        os.rename(
+            os.path.join(LOGGER_DIRECTORY, f"{logger_name}.log"),
+            os.path.join(LOGGER_DIRECTORY, f"{logger_name}.log.1"),
+        )
     fh = logging.FileHandler(os.path.join(LOGGER_DIRECTORY, f"{logger_name}.log"))
     ch = logging.StreamHandler()
     if verbose:
@@ -181,11 +205,6 @@ def get_logger(logger_name: str, verbose: bool) -> logging.Logger:
     if not os.path.isdir(LOGGER_DIRECTORY):
         os.mkdir(LOGGER_DIRECTORY)
     # Create a file handler which logs even debug messages.
-    if os.path.exists(os.path.join(LOGGER_DIRECTORY, f"{logger_name}.log")):
-        os.rename(
-            os.path.join(LOGGER_DIRECTORY, f"{logger_name}.log"),
-            os.path.join(LOGGER_DIRECTORY, f"{logger_name}.log.1"),
-        )
     # Create a formatter and add it to the handlers.
     formatter = logging.Formatter(
         "%(asctime)s: %(name)s: %(levelname)s: %(message)s",
@@ -244,6 +263,48 @@ class MissingParametersError(Exception):
         super().__init__(
             f"Missing parameters when initialising a '{class_name}' class: {message}."
         )
+
+
+@dataclass
+class OperatingMode:
+    """
+    Contains information about the mode of operation of the model.
+
+    .. attribute:: coupled
+        Whether the system is coupled (True) or decoupled (False)
+
+    .. attribute:: dynamic
+        Whether the system is dyanmic (True) or steady-state (False).
+
+    """
+
+    coupled: bool
+    dynamic: bool
+
+    @property
+    def decoupled(self) -> bool:
+        """
+        Returns whether the operating mode is decoupled.
+
+        :return:
+            A `bool` giving whether the system is coupled (False) or decoupled (True).
+
+        """
+
+        return not self.coupled
+
+    @property
+    def steady_state(self) -> bool:
+        """
+        Returns whether the operating mode is steady-state.
+
+        :return:
+            A `bool` giving whether the system is dynamic (False) or steady-state
+            (True).
+
+        """
+
+        return not self.dynamic
 
 
 class ProgrammerJudgementFault(Exception):
@@ -326,14 +387,25 @@ class SystemData:
     .. attribute:: pv_temperature
         The temperature of the PV layer, measured in Celcius.
 
+    .. attribute:: reduced_temperature
+        The reduced temperature of the PV-T collector, measured in Celcius.
+
     .. attribute:: sky_temperature
         The temperature of the sky, measured in Celcius.
 
     .. attribute:: tank_temperature
         The temperature of the hot-water tank, measured in Celcius.
 
-    .. attribute:: time
-        A `str` giving the current time.
+    .. attribute:: thermal_efficiency
+        The thermal efficiency of the system.
+
+    .. attribute:: collector_input_temperature
+        The temperature of the HTF inputted into the collector, measured in Celcius.
+        This can be set to `None` if no data is recorded.
+
+    .. attribute:: collector_output_temperature
+        The temperature of the HTF outputted from the collector, measured in Celcius.
+        This can be set to `None` if no data is recorded.
 
     .. attribute:: layer_temperature_map_bulk_water
         A mapping between coordinate and temperature for the bulk water within the
@@ -352,13 +424,8 @@ class SystemData:
     .. attribute:: layer_temperature_map_pv
         A mapping between coordinate and temperature for segments within the pv layer.
 
-    .. attribute:: collector_input_temperature
-        The temperature of the HTF inputted into the collector, measured in Celcius.
-        This can be set to `None` if no data is recorded.
-
-    .. attribute:: collector_output_temperature
-        The temperature of the HTF outputted from the collector, measured in Celcius.
-        This can be set to `None` if no data is recorded.
+    .. attribute:: time
+        A `str` giving the current time, can be set to `None` for steady-state runs.
 
     """
 
@@ -370,9 +437,10 @@ class SystemData:
     exchanger_temperature_drop: float
     pipe_temperature: float
     pv_temperature: float
+    reduced_temperature: float
     sky_temperature: float
     tank_temperature: float
-    time: str
+    thermal_efficiency: float
     collector_input_temperature: Optional[float] = None
     collector_output_temperature: Optional[float] = None
     layer_temperature_map_bulk_water: Optional[Dict[str, float]] = None
@@ -380,6 +448,7 @@ class SystemData:
     layer_temperature_map_glass: Optional[Dict[str, float]] = None
     layer_temperature_map_pipe: Optional[Dict[str, float]] = None
     layer_temperature_map_pv: Optional[Dict[str, float]] = None
+    time: Optional[str] = None
 
 
 class TemperatureName(enum.Enum):

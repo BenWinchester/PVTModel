@@ -23,7 +23,6 @@ from dataclasses import dataclass
 from dateutil.relativedelta import relativedelta
 
 import numpy
-import yaml
 
 from ..__utils__ import ProgrammerJudgementFault
 

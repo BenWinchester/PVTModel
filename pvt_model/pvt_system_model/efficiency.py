@@ -19,6 +19,8 @@ such as over an entire year to compute the annual demand covered value.
 
 """
 
+from .constants import HEAT_CAPACITY_OF_WATER
+
 __all__ = (
     "dc_electrical",
     "dc_thermal",
@@ -26,6 +28,7 @@ __all__ = (
     "dc_average_from_dc_values",
     "dc_weighted_average",
     "dc_weighted_average_from_dc_values",
+    "thermal_efficiency",
 )
 
 
@@ -202,3 +205,26 @@ def dc_weighted_average_from_dc_values(
     return (
         electrical_demand * dc_electrical_value + thermal_demand * dc_thermal_value
     ) / (electrical_demand + thermal_demand)
+
+
+def thermal_efficiency(
+    area: float, mass_flow_rate: float, solar_irradiance: float
+) -> float:
+    """
+    Compute the thermal efficiency.
+
+    :param area:
+        The area of the panel, measured in meters squared.
+
+    :param mass_flow_rate:
+        The mass flow rate of HTF through the collector.
+
+    :param solar_irradiance:
+        The solar irradiance, measured in Watts per meter squared.
+
+    :return:
+        The thermal efficiency, based on the input parameters, for a PV-T collector.
+
+    """
+
+    # Compute the thermal efficiency of the collector.

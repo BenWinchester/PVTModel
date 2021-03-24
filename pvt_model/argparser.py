@@ -64,6 +64,7 @@ def check_args(
 
     """
 
+    # Enforce the resolution requirements.
     if parsed_args.x_resolution == 1 and parsed_args.y_resolution == 1:
         logger.warn(
             "%s1x1 resolution is depreciated, consider running at a higher resolution."
@@ -93,13 +94,26 @@ def check_args(
             BColours.ENDC,
         )
         raise ArgumentMismatchError(
-            "The specified resolution of {} by {} is not supported. The resolution ".format(
+            "The specified resolution of {} by {} is not supported. The ".format(
                 parsed_args.x_resolution, parsed_args.y_resolution
             )
-            + "must be either 1 by 1 or greater than {} by 3".format(
+            + "resolution must be either 1 by 1 or greater than {} by 3".format(
                 int((2 * number_of_pipes + 3))
             )
         )
+
+    # Enforce the matching up of dynamic and steady-state arguments.
+    # * Enforce that either dynamic or steady-state is specified, but not both.
+
+    # * Enforce that, if decoupled is specified, steady-state is specified.
+
+    # * Enforce that, if decoupled is specified, solar irradiance is specified.
+
+    # * Enforce that, if decoupled if specified, collector-input temperature is specified.
+
+    # * Enforce that, if decoupled is not specified, either days or months is specified.
+
+    # * Enforce that, if decoupled is not specified, start-time is specified.
 
 
 def parse_args(args) -> argparse.Namespace:
@@ -115,6 +129,7 @@ def parse_args(args) -> argparse.Namespace:
     """
 
     parser = argparse.ArgumentParser()
+    required_named_arguments = parser.add_argument_group("required named arguments")
 
     parser.add_argument(
         "--average-irradiance",
@@ -131,10 +146,24 @@ def parse_args(args) -> argparse.Namespace:
         help="The effect that the cloud cover has, rated between 0 (no effect) and 1.",
     )
     parser.add_argument(
+        "--collector-input-temperature",
+        "-ci",
+        default=None,
+        type=float,
+        help="[decoupled] The input temperature in degrees Celcius of HTF to use when "
+        "modelling a decoupled PVT collector.",
+    )
+    parser.add_argument(
         "--days",
         "-d",
         type=int,
         help="The number of days to run the simulation for. Overrides 'months'.",
+    )
+    parser.add_argument(
+        "--decoupled",
+        action="store_true",
+        default=False,
+        help="If specified, the model will be run with a decoupled PVT collector.",
     )
     parser.add_argument(
         "--dynamic",
@@ -148,7 +177,7 @@ def parse_args(args) -> argparse.Namespace:
         "-e",
         help="The location of the Exchanger system YAML data file.",
     )
-    parser.add_argument(
+    required_named_arguments.add_argument(
         "--initial-month",
         "-i",
         type=int,
@@ -161,13 +190,7 @@ def parse_args(args) -> argparse.Namespace:
         help="If specified, this will override the internal initial system "
         "temperature vector.",
     )
-    parser.add_argument(
-        "--input-water-temperature",
-        "-it",
-        help="The input water temperature to instantiate the system, measured in "
-        "Celcius. Defaults to 20 Celcius if not provided.",
-    )
-    parser.add_argument(
+    required_named_arguments.add_argument(
         "--location", "-l", help="The location for which to run the simulation."
     )
     parser.add_argument(
@@ -189,12 +212,12 @@ def parse_args(args) -> argparse.Namespace:
         type=int,
         help="The number of household members to consider in this model.",
     )
-    parser.add_argument(
+    required_named_arguments.add_argument(
         "--output",
         "-o",
         help="The output file to save data to. This should be of JSON format.",
     )
-    parser.add_argument(
+    required_named_arguments.add_argument(
         "--portion-covered",
         "-pc",
         type=float,
@@ -206,17 +229,10 @@ def parse_args(args) -> argparse.Namespace:
         "-pm",
         help="The location of the pump YAML data file for the PV-T system pump.",
     )
-    parser.add_argument(
+    required_named_arguments.add_argument(
         "--pvt-data-file", "-p", help="The location of the PV-T system YAML data file."
     )
-    parser.add_argument(
-        "--quasi-steady",
-        default=False,
-        action="store_true",
-        help="If specified, Fourier number calculation will be skipped and a quasi-"
-        "steady model will be used for the run.",
-    )
-    parser.add_argument(
+    required_named_arguments.add_argument(
         "--resolution",
         "-r",
         help="The resolution, in seconds, used to solve the panel temperatures.",
@@ -238,11 +254,27 @@ def parse_args(args) -> argparse.Namespace:
         "plots, will be saved and generated.",
     )
     parser.add_argument(
+        "--solar-irradiance",
+        "-sol",
+        default=None,
+        type=float,
+        help="[decoupled] The solar irradiance in Watts per meter squared to use when "
+        "running the system as a decoupled PVT collector.",
+    )
+    parser.add_argument(
         "--start-time",
         "-st",
         type=int,
         default=0,
         help="The start time, in hours, at which to begin the simulation during the day",
+    )
+    parser.add_argument(
+        "--steady-state",
+        "--ss",
+        action="store_true",
+        default=False,
+        help="If specified, Fourier-number calculation will be skipped and the model "
+        "will be run without transient/dynamic terms.",
     )
     parser.add_argument(
         "--tank-data-file",
@@ -270,14 +302,14 @@ def parse_args(args) -> argparse.Namespace:
         default=False,
         help="If specified, verbose logging will be carried out.",
     )
-    parser.add_argument(
+    required_named_arguments.add_argument(
         "--x-resolution",
         "-x",
         help="The number of segments to include in the x direction (across the panel) "
         "for the simulation.",
         type=int,
     )
-    parser.add_argument(
+    required_named_arguments.add_argument(
         "--y-resolution",
         "-y",
         help="The number of segments to include in the y direction (along the length of "
