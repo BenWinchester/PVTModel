@@ -1,4 +1,4 @@
-#!/usr/bin/local/python3.7
+#!/usr/bin/python3.7
 ########################################################################################
 # process_pvt_system_data.py - Module for processing the PVT data files.
 #
