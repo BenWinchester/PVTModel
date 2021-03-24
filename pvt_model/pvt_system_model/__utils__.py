@@ -16,10 +16,8 @@ various modules throughout the PVT model.
 
 import datetime
 import enum
-import logging
-import os
 
-from typing import Any, Dict, Generator, Optional
+from typing import Any, Dict, Generator
 
 from dataclasses import dataclass
 from dateutil.relativedelta import relativedelta
@@ -42,7 +40,6 @@ __all__ = (
     "OpticalLayerParameters",
     "PVParameters",
     "PVT_SYSTEM_MODEL_LOGGER_NAME",
-    "read_yaml",
     "time_iterator",
     "UtilityType",
     "WeatherConditions",
@@ -583,38 +580,6 @@ class PVParameters(OpticalLayerParameters):
 ####################
 # Helper functions #
 ####################
-
-
-def read_yaml(yaml_file_path: str) -> Dict[Any, Any]:
-    """
-    Read in some yaml data and return it.
-
-    :param yaml_file_path:
-        The path to the yaml data to read in.
-
-    :return:
-        A `dict` containing the data read in from the yaml file.
-
-    """
-
-    logger = logging.getLogger(PVT_SYSTEM_MODEL_LOGGER_NAME)
-
-    # Open the yaml data and read it.
-    if not os.path.isfile(yaml_file_path):
-        logger.error(
-            "A YAML data file, '%s', could not be found. Exiting...", yaml_file_path
-        )
-        raise FileNotFoundError(yaml_file_path)
-    with open(yaml_file_path) as f:
-        try:
-            data: Dict[Any, Any] = yaml.safe_load(f)
-        except yaml.parser.ParserError as e:
-            logger.error("Failed to read YAML file '%s'.", yaml_file_path)
-            print(f"Failed to parse YAML. Internal error: {str(e)}")
-            raise
-
-    logger.info("Data successfully read from '%s'.", yaml_file_path)
-    return data
 
 
 def time_iterator(
