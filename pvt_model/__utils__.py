@@ -19,7 +19,9 @@ import logging
 import os
 
 from dataclasses import dataclass
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
+
+import yaml
 
 __all__ = (
     "BColours",
@@ -28,9 +30,11 @@ __all__ = (
     "fourier_number",
     "get_logger",
     "INITIAL_CONDITION_PRECISION",
+    "InvalidParametersError",
     "LOGGER_NAME",
     "ProgrammerJudgementFault",
     "MissingParametersError",
+    "read_yaml",
     "SystemData",
     "TotalPowerData",
 )
@@ -163,10 +167,16 @@ def get_logger(logger_name: str, verbose: bool) -> logging.Logger:
 
     # Create a logger with the current component name.
     logger = logging.getLogger(logger_name)
+    fh = logging.FileHandler(os.path.join(LOGGER_DIRECTORY, f"{logger_name}.log"))
+    ch = logging.StreamHandler()
     if verbose:
         logger.setLevel(logging.DEBUG)
+        fh.setLevel(logging.DEBUG)
+        ch.setLevel(logging.WARN)
     else:
         logger.setLevel(logging.INFO)
+        fh.setLevel(logging.INFO)
+        ch.setLevel(logging.ERROR)
     # Create the logging directory if it doesn't exist.
     if not os.path.isdir(LOGGER_DIRECTORY):
         os.mkdir(LOGGER_DIRECTORY)
@@ -176,11 +186,6 @@ def get_logger(logger_name: str, verbose: bool) -> logging.Logger:
             os.path.join(LOGGER_DIRECTORY, f"{logger_name}.log"),
             os.path.join(LOGGER_DIRECTORY, f"{logger_name}.log.1"),
         )
-    fh = logging.FileHandler(os.path.join(LOGGER_DIRECTORY, f"{logger_name}.log"))
-    fh.setLevel(logging.DEBUG)
-    # Create a console handler with a higher log level.
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.ERROR)
     # Create a formatter and add it to the handlers.
     formatter = logging.Formatter(
         "%(asctime)s: %(name)s: %(levelname)s: %(message)s",
@@ -193,6 +198,29 @@ def get_logger(logger_name: str, verbose: bool) -> logging.Logger:
     logger.addHandler(ch)
 
     return logger
+
+
+class InvalidParametersError(Exception):
+    """
+    Raised when some parameters have been specified incorrectly.
+
+    """
+
+    def __init__(self, message: str, variable_name: str) -> None:
+        """
+        Instantiate an invalid parameters error.
+
+        :param message:
+            An appended message to display to the user.
+
+        :param variable_name:
+            The name of the variable for which insufficient parameters were specified.
+
+        """
+
+        super().__init__(
+            f"Invalid parameters when determining '{variable_name}': {message}."
+        )
 
 
 class MissingParametersError(Exception):
@@ -234,6 +262,38 @@ class ProgrammerJudgementFault(Exception):
         """
 
         super().__init__(f"A programmer judgement fault has occurred: {message}")
+
+
+def read_yaml(yaml_file_path: str) -> Dict[Any, Any]:
+    """
+    Read in some yaml data and return it.
+
+    :param yaml_file_path:
+        The path to the yaml data to read in.
+
+    :return:
+        A `dict` containing the data read in from the yaml file.
+
+    """
+
+    logger = logging.getLogger(LOGGER_NAME)
+
+    # Open the yaml data and read it.
+    if not os.path.isfile(yaml_file_path):
+        logger.error(
+            "A YAML data file, '%s', could not be found. Exiting...", yaml_file_path
+        )
+        raise FileNotFoundError(yaml_file_path)
+    with open(yaml_file_path) as f:
+        try:
+            data: Dict[Any, Any] = yaml.safe_load(f)
+        except yaml.parser.ParserError as e:
+            logger.error("Failed to read YAML file '%s'.", yaml_file_path)
+            print(f"Failed to parse YAML. Internal error: {str(e)}")
+            raise
+
+    logger.info("Data successfully read from '%s'.", yaml_file_path)
+    return data
 
 
 @dataclass
