@@ -19,7 +19,11 @@ module for the model.
 
 import argparse
 
-__all__ = ("parse_args",)
+from logging import Logger
+
+from .__utils__ import BColours
+
+__all__ = ("check_args", "parse_args")
 
 
 class ArgumentMismatchError(Exception):
@@ -40,19 +44,62 @@ class ArgumentMismatchError(Exception):
         super().__init__(f"Mismatch in command-line arguments: {msg}")
 
 
-def _check_args(parsed_args: argparse.Namespace) -> None:
+def check_args(
+    parsed_args: argparse.Namespace, logger: Logger, number_of_pipes: int
+) -> None:
     """
     Enforces rules on the command-line arguments passed in in addition to argparse rules
 
     :param parsed_args:
         The parsed command-line arguments.
 
+    :param logger:
+        The logger used for the run.
+
+    :param number_of_pipes:
+        The number of pipes attached to the collector being modelled.
+
     :raises: ArgumentMismatchError
         Raised if the command-line arguments mismatch.
 
     """
 
-    # * Enforce that the resolution has to be either 1x1 or greater than 5x3.
+    if parsed_args.x_resolution == 1 and parsed_args.y_resolution == 1:
+        logger.warn(
+            "%s1x1 resolution is depreciated, consider running at a higher resolution."
+            "%s",
+            BColours.FAIL,
+            BColours.ENDC,
+        )
+    elif (
+        parsed_args.x_resolution >= (2 * number_of_pipes + 3)
+        # and parsed_args.x_resolution % 2 == 1
+        and parsed_args.y_resolution >= 3
+    ):
+        logger.info(
+            "Resolution of %s by %s is accpetable and is greater than %s by 3.",
+            parsed_args.x_resolution,
+            parsed_args.y_resolution,
+            int((2 * number_of_pipes + 3)),
+        )
+    else:
+        logger.error(
+            "%sThe specified resolution of %s by %s is not supported. The resolution "
+            "must be either 1 by 1 or greater than %s by 3.%s",
+            BColours.FAIL,
+            parsed_args.x_resolution,
+            parsed_args.y_resolution,
+            int((2 * number_of_pipes + 3)),
+            BColours.ENDC,
+        )
+        raise ArgumentMismatchError(
+            "The specified resolution of {} by {} is not supported. The resolution ".format(
+                parsed_args.x_resolution, parsed_args.y_resolution
+            )
+            + "must be either 1 by 1 or greater than {} by 3".format(
+                int((2 * number_of_pipes + 3))
+            )
+        )
 
 
 def parse_args(args) -> argparse.Namespace:
