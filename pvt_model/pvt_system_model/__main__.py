@@ -665,12 +665,22 @@ def main(
 
     # Initialise the PV-T panel.
     pvt_panel = process_pvt_system_data.pvt_panel_from_path(
+        logger,
         portion_covered,
         pvt_data_file,
         x_resolution,
         y_resolution,
     )
     logger.info("PV-T panel successfully instantiated: %s", pvt_panel)
+    logger.info(
+        "PV-T panel segments:\n%s",
+        "\n  ".join(
+            [
+                f"{segment_coordinates}: {segment}"
+                for segment_coordinates, segment in pvt_panel.segments.items()
+            ]
+        ),
+    )
 
     # Instantiate the rest of the PVT system.
     heat_exchanger = process_pvt_system_data.heat_exchanger_from_path(
