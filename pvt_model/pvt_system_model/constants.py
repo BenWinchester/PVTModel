@@ -17,6 +17,8 @@ panel.
 __all__ = (
     "CONVERGENT_SOLUTION_PRECISION",
     "DENSITY_OF_WATER",
+    "EDGE_WIDTH",
+    "EDGE_LENGTH",
     "FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR",
     "HEAT_CAPACITY_OF_WATER",
     "NUMBER_OF_COLLECTORS",
@@ -47,6 +49,10 @@ CONVERGENT_SOLUTION_PRECISION = 0.1
 DEFAULT_SYSTEM_TEMPERATURE = ZERO_CELCIUS_OFFSET + 30  # [K]
 # The density of water, measured in kilograms per meter cubed.
 DENSITY_OF_WATER: int = 1000
+# The maximum size allowed for the width of edge segments, measured in meters.
+EDGE_WIDTH = 0.005
+# The maximum size allowed for the length of top and bottom-eg
+EDGE_LENGTH = 0.005
 # The free convective, heat-transfer coefficient of air. This varies, and potentially
 # could be extended to the weather module and calculated on the fly depending on various
 # environmental conditions etc.. This is measured in Watts per meter squared
