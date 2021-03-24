@@ -104,54 +104,89 @@ def _absorber_equation(
         "Absorber internal energy term: %s W/K", absorber_internal_energy_change
     )
 
-    # * Compute the positive conductive term based on the next segment along.
-    # if SegmentCoordinates(segment.x_index + 1, segment.y_index) in pvt_panel.segments:
-    #     positive_x_wise_conduction = (
-    #         pvt_panel.pv.conductivity  # [W/m*K]
-    #         * pvt_panel.pv.thickness  # [m]
-    #         * segment.length  # [m]
-    #         / (0.5 * (segment.width + pvt_panel.segments[SegmentCoordinates(segment.x_index + 1, segment.y_index)].width))  # [m]
-    #     )
-
-    # * Similarly compute the negative x-wise conduction, and the y-wise conduction in
-    # * both directions based on the widths of the neighborougin segments.
-
-    x_wise_conduction = (
-        (
-            2
-            - (1 if segment.x_index == 0 else 0)
-            - (1 if segment.x_index == number_of_x_segments - 1 else 0)
-        )
-        * pvt_panel.collector.conductivity  # [W/m*K]
-        * pvt_panel.collector.thickness  # [m]
-        * segment.length  # [m]
-        / segment.width  # [m]
+    # Compute the positive conductive term based on the next segment along.
+    positive_x_segment = pvt_panel.segments.get(
+        SegmentCoordinates(segment.x_index + 1, segment.y_index)
     )
+    if positive_x_segment is not None:
+        positive_x_wise_conduction: float = (
+            pvt_panel.collector.conductivity  # [W/m*K]
+            * pvt_panel.collector.thickness  # [m]
+            * segment.length  # [m]
+            / (0.5 * (segment.width + positive_x_segment.width))  # [m]
+        )
+    else:
+        positive_x_wise_conduction = 0
     logger.debug(
-        "Absorber x-wise conduction term: %s W/K",
-        x_wise_conduction,
+        "Positive absorber x-wise conduction term: %s W/K", positive_x_wise_conduction
     )
 
-    y_wise_conduction = (
-        (
-            2
-            - (1 if segment.y_index == 0 else 0)
-            - (1 if segment.y_index == number_of_y_segments - 1 else 0)
-        )
-        * pvt_panel.collector.conductivity  # [W/m*K]
-        * pvt_panel.collector.thickness  # [m]
-        * segment.width  # [m]
-        / segment.length  # [m]
+    # Compute the positive conductive term based on the next segment along.
+    negative_x_segment = pvt_panel.segments.get(
+        SegmentCoordinates(segment.x_index - 1, segment.y_index)
     )
+    if negative_x_segment is not None:
+        negative_x_wise_conduction: float = (
+            pvt_panel.collector.conductivity  # [W/m*K]
+            * pvt_panel.collector.thickness  # [m]
+            * segment.length  # [m]
+            / (0.5 * (segment.width + negative_x_segment.width))  # [m]
+        )
+    else:
+        negative_x_wise_conduction = 0
+    logger.debug(
+        "Negative absorber x-wise conduction term: %s W/K", negative_x_wise_conduction
+    )
+
+    # Compute the overall x-wise conduction term.
+    x_wise_conduction = positive_x_wise_conduction + negative_x_wise_conduction
+    logger.debug("Absorber x-wise conduction term: %s W/K", x_wise_conduction)
+
+    # Compute the positive conductive term based on the next segment along.
+    positive_y_segment = pvt_panel.segments.get(
+        SegmentCoordinates(segment.x_index, segment.y_index + 1)
+    )
+    if positive_y_segment is not None:
+        positive_y_wise_conduction: float = (
+            pvt_panel.collector.conductivity  # [W/m*K]
+            * pvt_panel.collector.thickness  # [m]
+            * segment.width  # [m]
+            / (0.5 * (segment.length + positive_y_segment.length))  # [m]
+        )
+    else:
+        positive_y_wise_conduction = 0
+    logger.debug(
+        "Positive absorber y-wise conduction term: %s W/K", positive_y_wise_conduction
+    )
+
+    # Compute the positive conductive term based on the next segment along.
+    negative_y_segment = pvt_panel.segments.get(
+        SegmentCoordinates(segment.x_index, segment.y_index - 1)
+    )
+    if negative_y_segment is not None:
+        negative_y_wise_conduction: float = (
+            pvt_panel.collector.conductivity  # [W/m*K]
+            * pvt_panel.collector.thickness  # [m]
+            * segment.width  # [m]
+            / (0.5 * (segment.length + negative_y_segment.length))  # [m]
+        )
+    else:
+        negative_y_wise_conduction = 0
+    logger.debug(
+        "Negative absorber y-wise conduction term: %s W/K", negative_y_wise_conduction
+    )
+
+    # Compute the overall y-wise conduction term.
+    y_wise_conduction = positive_y_wise_conduction + negative_y_wise_conduction
     logger.debug("Absorber y-wise conduction term: %s W/K", y_wise_conduction)
 
     absorber_to_insulation_loss = (
         (
-            (segment.width - (pvt_panel.bond.width if segment.pipe else 0))  # [m]
+            segment.width  # [m]
             * segment.length  # [m]
             / pvt_panel.insulation_thermal_resistance  # [m^2*K/W]
         )
-        if segment.width > pvt_panel.bond.width
+        if not segment.pipe
         else 0
     )
     logger.debug(
@@ -515,42 +550,80 @@ def _glass_equation(
     )
     logger.debug("Glass internal energy term: %s W/K", glass_internal_energy)
 
-    # * Compute the positive conductive term based on the next segment along.
-    # if SegmentCoordinates(segment.x_index + 1, segment.y_index) in pvt_panel.segments:
-    #     positive_x_wise_conduction = (
-    #         pvt_panel.pv.conductivity  # [W/m*K]
-    #         * pvt_panel.pv.thickness  # [m]
-    #         * segment.length  # [m]
-    #         / (0.5 * (segment.width + pvt_panel.segments[SegmentCoordinates(segment.x_index + 1, segment.y_index)].width))  # [m]
-    #     )
-
-    # * Similarly compute the negative x-wise conduction, and the y-wise conduction in
-    # * both directions based on the widths of the neighborougin segments.
-
-    x_wise_conduction = (
-        (
-            2
-            - (1 if segment.x_index == 0 else 0)
-            - (1 if segment.x_index == number_of_x_segments - 1 else 0)
-        )
-        * pvt_panel.glass.conductivity  # [W/m*K]
-        * pvt_panel.glass.thickness  # [m]
-        * segment.length  # [m]
-        / segment.width  # [m]
+    # Compute the positive conductive term based on the next segment along.
+    positive_x_segment = pvt_panel.segments.get(
+        SegmentCoordinates(segment.x_index + 1, segment.y_index)
     )
+    if positive_x_segment is not None:
+        positive_x_wise_conduction: float = (
+            pvt_panel.glass.conductivity  # [W/m*K]
+            * pvt_panel.glass.thickness  # [m]
+            * segment.length  # [m]
+            / (0.5 * (segment.width + positive_x_segment.width))  # [m]
+        )
+    else:
+        positive_x_wise_conduction = 0
+    logger.debug(
+        "Positive glass x-wise conduction term: %s W/K", positive_x_wise_conduction
+    )
+
+    # Compute the positive conductive term based on the next segment along.
+    negative_x_segment = pvt_panel.segments.get(
+        SegmentCoordinates(segment.x_index - 1, segment.y_index)
+    )
+    if negative_x_segment is not None:
+        negative_x_wise_conduction: float = (
+            pvt_panel.glass.conductivity  # [W/m*K]
+            * pvt_panel.glass.thickness  # [m]
+            * segment.length  # [m]
+            / (0.5 * (segment.width + negative_x_segment.width))  # [m]
+        )
+    else:
+        negative_x_wise_conduction = 0
+    logger.debug(
+        "Negative glass x-wise conduction term: %s W/K", negative_x_wise_conduction
+    )
+
+    # Compute the overall x-wise conduction term.
+    x_wise_conduction = positive_x_wise_conduction + negative_x_wise_conduction
     logger.debug("Glass x-wise conduction term: %s W/K", x_wise_conduction)
 
-    y_wise_conduction = (
-        (
-            2
-            - (1 if segment.y_index == 0 else 0)
-            - (1 if segment.y_index == number_of_y_segments - 1 else 0)
-        )
-        * pvt_panel.glass.conductivity  # [W/m*K]
-        * pvt_panel.glass.thickness  # [m]
-        * segment.width  # [m]
-        / segment.length  # [m]
+    # Compute the positive conductive term based on the next segment along.
+    positive_y_segment = pvt_panel.segments.get(
+        SegmentCoordinates(segment.x_index, segment.y_index + 1)
     )
+    if positive_y_segment is not None:
+        positive_y_wise_conduction: float = (
+            pvt_panel.glass.conductivity  # [W/m*K]
+            * pvt_panel.glass.thickness  # [m]
+            * segment.width  # [m]
+            / (0.5 * (segment.length + positive_y_segment.length))  # [m]
+        )
+    else:
+        positive_y_wise_conduction = 0
+    logger.debug(
+        "Positive glass y-wise conduction term: %s W/K", positive_y_wise_conduction
+    )
+
+    # Compute the positive conductive term based on the next segment along.
+    negative_y_segment = pvt_panel.segments.get(
+        SegmentCoordinates(segment.x_index, segment.y_index - 1)
+    )
+    if negative_y_segment is not None:
+        negative_y_wise_conduction: float = (
+            pvt_panel.glass.conductivity  # [W/m*K]
+            * pvt_panel.glass.thickness  # [m]
+            * segment.width  # [m]
+            / (0.5 * (segment.length + negative_y_segment.length))  # [m]
+        )
+    else:
+        negative_y_wise_conduction = 0
+    logger.debug(
+        "Negative glass y-wise conduction term: %s W/K", negative_y_wise_conduction
+    )
+
+    # Compute the overall y-wise conduction term.
+    y_wise_conduction = positive_y_wise_conduction + negative_y_wise_conduction
     logger.debug("Glass y-wise conduction term: %s W/K", y_wise_conduction)
 
     glass_to_air_conduction = (
@@ -1039,42 +1112,80 @@ def _pv_equation(
     )
     logger.debug("PV internal energy term: %s W/K", pv_internal_energy)
 
-    # * Compute the positive conductive term based on the next segment along.
-    # if SegmentCoordinates(segment.x_index + 1, segment.y_index) in pvt_panel.segments:
-    #     positive_x_wise_conduction = (
-    #         pvt_panel.pv.conductivity  # [W/m*K]
-    #         * pvt_panel.pv.thickness  # [m]
-    #         * segment.length  # [m]
-    #         / (0.5 * (segment.width + pvt_panel.segments[SegmentCoordinates(segment.x_index + 1, segment.y_index)].width))  # [m]
-    #     )
-
-    # * Similarly compute the negative x-wise conduction, and the y-wise conduction in
-    # * both directions based on the widths of the neighborougin segments.
-
-    x_wise_conduction = (
-        (
-            2
-            - (1 if segment.x_index == 0 else 0)
-            - (1 if segment.x_index == number_of_x_segments - 1 else 0)
-        )
-        * pvt_panel.pv.conductivity  # [W/m*K]
-        * pvt_panel.pv.thickness  # [m]
-        * segment.length  # [m]
-        / segment.width  # [m]
+    # Compute the positive conductive term based on the next segment along.
+    positive_x_segment = pvt_panel.segments.get(
+        SegmentCoordinates(segment.x_index + 1, segment.y_index)
     )
+    if positive_x_segment is not None:
+        positive_x_wise_conduction: float = (
+            pvt_panel.pv.conductivity  # [W/m*K]
+            * pvt_panel.pv.thickness  # [m]
+            * segment.length  # [m]
+            / (0.5 * (segment.width + positive_x_segment.width))  # [m]
+        )
+    else:
+        positive_x_wise_conduction = 0
+    logger.debug(
+        "Positive PV x-wise conduction term: %s W/K", positive_x_wise_conduction
+    )
+
+    # Compute the positive conductive term based on the next segment along.
+    negative_x_segment = pvt_panel.segments.get(
+        SegmentCoordinates(segment.x_index - 1, segment.y_index)
+    )
+    if negative_x_segment is not None:
+        negative_x_wise_conduction: float = (
+            pvt_panel.pv.conductivity  # [W/m*K]
+            * pvt_panel.pv.thickness  # [m]
+            * segment.length  # [m]
+            / (0.5 * (segment.width + negative_x_segment.width))  # [m]
+        )
+    else:
+        negative_x_wise_conduction = 0
+    logger.debug(
+        "Negative PV x-wise conduction term: %s W/K", negative_x_wise_conduction
+    )
+
+    # Compute the overall x-wise conduction term.
+    x_wise_conduction = positive_x_wise_conduction + negative_x_wise_conduction
     logger.debug("PV x-wise conduction term: %s W/K", x_wise_conduction)
 
-    y_wise_conduction = (
-        (
-            2
-            - (1 if segment.y_index == 0 else 0)
-            - (1 if segment.y_index == number_of_y_segments - 1 else 0)
-        )
-        * pvt_panel.pv.conductivity  # [W/m*K]
-        * pvt_panel.pv.thickness  # [m]
-        * segment.width  # [m]
-        / segment.length  # [m]
+    # Compute the positive conductive term based on the next segment along.
+    positive_y_segment = pvt_panel.segments.get(
+        SegmentCoordinates(segment.x_index, segment.y_index + 1)
     )
+    if positive_y_segment is not None:
+        positive_y_wise_conduction: float = (
+            pvt_panel.pv.conductivity  # [W/m*K]
+            * pvt_panel.pv.thickness  # [m]
+            * segment.width  # [m]
+            / (0.5 * (segment.length + positive_y_segment.length))  # [m]
+        )
+    else:
+        positive_y_wise_conduction = 0
+    logger.debug(
+        "Positive PV y-wise conduction term: %s W/K", positive_y_wise_conduction
+    )
+
+    # Compute the positive conductive term based on the next segment along.
+    negative_y_segment = pvt_panel.segments.get(
+        SegmentCoordinates(segment.x_index, segment.y_index - 1)
+    )
+    if negative_y_segment is not None:
+        negative_y_wise_conduction: float = (
+            pvt_panel.pv.conductivity  # [W/m*K]
+            * pvt_panel.pv.thickness  # [m]
+            * segment.width  # [m]
+            / (0.5 * (segment.length + negative_y_segment.length))  # [m]
+        )
+    else:
+        negative_y_wise_conduction = 0
+    logger.debug(
+        "Negative PV y-wise conduction term: %s W/K", negative_y_wise_conduction
+    )
+
+    # Compute the overall y-wise conduction term.
+    y_wise_conduction = positive_y_wise_conduction + negative_y_wise_conduction
     logger.debug("PV y-wise conduction term: %s W/K", y_wise_conduction)
 
     solar_thermal_absorbtion_term = -1 * (
@@ -1651,7 +1762,7 @@ def calculate_matrix_equation(
 
         absorber_to_pipe_conduction = (
             (
-                pvt_panel.bond.width  # [m]
+                segment.width  # [m]
                 * segment.length  # [m]
                 * pvt_panel.bond.conductivity  # [W/m*K]
                 / pvt_panel.bond.thickness  # [m]
