@@ -108,6 +108,36 @@ class Segment:
     y_index: int
     pipe_index: Optional[int] = None
 
+    def __str__(self) -> str:
+        """
+        Return a nice-looking representation of the segment.
+
+        :return:
+            A `str` giving a nice-looking representation of the segment.
+
+        """
+
+        layers = ", ".join(
+            [
+                entry
+                for entry in [
+                    "glass" if self.glass else None,
+                    "collector" if self.collector else None,
+                    "pv" if self.pv else None,
+                    "pipe" if self.pipe else None,
+                ]
+                if entry is not None
+            ]
+        )
+
+        return (
+            "Segment("
+            f"width: {self.width:.3f}m, "
+            f"length: {self.length:.3f}m, "
+            f"layers: {layers}"
+            ")"
+        )
+
     @property
     def coordinates(self) -> SegmentCoordinates:
         """
