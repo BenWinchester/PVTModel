@@ -1,4 +1,4 @@
-#!/usr/bin/local/python3.9
+#!/usr/bin/local/python3.7
 ########################################################################################
 # process_pvt_system_data.py - Module for processing the PVT data files.
 #
@@ -20,14 +20,16 @@ happens within this module.
 
 import datetime
 
-from math import ceil
+from logging import Logger
 from typing import Any, Dict, Optional, Tuple
 
 from .pvt_panel import adhesive, bond, eva, pvt, segment, tedlar
 from . import exchanger, tank, pump
 
-from ..__utils__ import MissingParametersError
+from ..__utils__ import InvalidParametersError, MissingParametersError, read_yaml
 from .constants import (
+    EDGE_LENGTH,
+    EDGE_WIDTH,
     HEAT_CAPACITY_OF_WATER,
 )
 from .__utils__ import (
@@ -36,7 +38,6 @@ from .__utils__ import (
     MissingDataError,
     OpticalLayerParameters,
     PVParameters,
-    read_yaml,
 )
 from .index_handler import x_coordinate, y_coordinate
 from .pvt_panel.__utils__ import MicroLayer
@@ -303,22 +304,128 @@ def _pv_params_from_data(pv_data: Optional[Dict[str, Any]]) -> PVParameters:
         ) from None
 
 
-def _segments_from_data() -> Any:
+def _segments_from_data(
+    edge_length: float,
+    edge_width: float,
+    logger: Logger,
+    portion_covered: float,
+    pvt_data: Dict[Any, Any],
+    x_resolution: int,
+    y_resolution: int,
+) -> Any:
     """
-    Returns an array of segments based on the input data.
+    Returns mapping from segment coordinate to segment based on the input data.
+
+    :param edge_length:
+        The maximum length of an edge segment along the top and bottom edges of the
+        panel, measured in meters.
+
+    :param edge_width:
+        The maximum width of an edge segment along the side edges of the panel, measured
+        in meters.
+
+    :param logger:
+        The :class:`logging.Logger` logger instance used for the run.
+
+    :param portion_covered:
+        The portion of the PVT collector that is covered with PV cells. The uncovered
+        section is mapped as solar absorber only with glazing as appropriate.
+
+    :param pvt_data:
+        The raw PVT data, extracted from the data file.
+
+    :param x_resolution:
+        The x resolution for the run.
+
+    :param y_resolution:
+        The y resolution for the run.
+
+    :return:
+        A mapping between the segment coordinates and the segment for all segments
+        within the panel.
 
     """
 
     # * If 1x1, warn that 1x1 resolution is depreciated and should not really be used.
+    if x_resolution == 1 and y_resolution == 1:
+        logger.warn(
+            "Running the system at a 1x1 resolution is depreciated. Consider running "
+            "at a higher resolution."
+        )
+        return {
+            segment.SegmentCoordinates(0, 0): segment.Segment(
+                True,
+                True,
+                pvt_data["pvt_system"]["length"],
+                True,
+                True,
+                pvt_data["pvt_system"]["width"],
+                0,
+                0,
+                0,
+            )
+        }
 
-    # * If 1x1, return a single segment with an attached pipe.
+    # Extract the necessary parameters from the system data.
+    try:
+        number_of_pipes = pvt_data["collector"]["number_of_pipes"]
+    except KeyError as e:
+        raise MissingParametersError(
+            "Segment", "The number of pipes attached to the collector must be supplied."
+        ) from None
+    try:
+        panel_length = pvt_data["pvt_system"]["length"]
+    except KeyError as e:
+        raise MissingParametersError(
+            "Segment", "PVT panel length must be supplied."
+        ) from None
+
+    try:
+        panel_width = pvt_data["pvt_system"]["width"]
+    except KeyError as e:
+        raise MissingParametersError(
+            "Segment", "PVT panel width must be supplied."
+        ) from None
+    try:
+        bond_width = pvt_data["bond"]["width"]
+    except KeyError as e:
+        raise MissingParametersError(
+            "Segment", "Collector-to-pipe bond width must be supplied."
+        ) from None
+
+    # * Determine the spacing between the pipes.
+    pipe_spacing = (x_resolution - number_of_pipes) / (number_of_pipes + 1)
+    if int(pipe_spacing) != pipe_spacing:
+        raise InvalidParametersError(
+            "The resolution supplied results in an uneven pipe distribution.",
+            "pipe_spcaing",
+        )
 
     # * Determine the indicies of segments that have pipes attached.
+    pipe_positions = [
+        value
+        for value in range(int(pipe_spacing), x_resolution - 2, int(pipe_spacing) + 1)
+    ]
 
-    # * Determine whether the width of the segments is greater than or less than the
-    # * edge width. Likewise for the heights.
+    # Determine whether the width of the segments is greater than or less than the edge
+    # width and adjust accordingly.
+    nominal_segment_width: float = (
+        panel_width - number_of_pipes * bond_width - 2 * edge_width
+    ) / (x_resolution - number_of_pipes - 2)
+    if nominal_segment_width < edge_width:
+        nominal_segment_width = (panel_width - number_of_pipes * bond_width) / (
+            x_resolution - number_of_pipes
+        )
+        edge_width = nominal_segment_width
 
-    # * Calculate the widths and heights of edge, pipe, and normal segments.
+    # Likewise, determine whether the nominal segment height is greater than the edge
+    # height and adjust accordingly.
+    nominal_segment_length: float = (panel_length - 2 * edge_length) / (
+        y_resolution - 2
+    )
+    if nominal_segment_length < edge_length:
+        nominal_segment_length = panel_length / y_resolution
+        edge_length = nominal_segment_length
 
     # * Instantiate the array of segments.
 
@@ -332,10 +439,19 @@ def _segments_from_data() -> Any:
             ): segment.Segment(
                 True,
                 True,
-                pvt_data["pvt_system"]["length"] / x_resolution,
+                edge_length
+                if y_coordinate(segment_number, x_resolution) in {0, y_resolution - 1}
+                else nominal_segment_length,
                 x_coordinate(segment_number, x_resolution) in pipe_positions,
                 y_coordinate(segment_number, x_resolution) <= pv_coordinate_cutoff,
-                pvt_data["pvt_system"]["width"] / y_resolution,
+                # Use the edge with if the segment is an edge segment.
+                edge_width
+                if x_coordinate(segment_number, x_resolution) in {0, x_resolution - 1}
+                # Otherwise, use the bond width if the segment is a pipe segment.
+                else bond_width
+                if x_coordinate(segment_number, x_resolution) in pipe_positions
+                # Otherwise, use the nominal segment width.
+                else nominal_segment_width,
                 x_coordinate(segment_number, x_resolution),
                 y_coordinate(segment_number, x_resolution),
                 pipe_positions.index(x_coordinate(segment_number, x_resolution))
@@ -349,8 +465,11 @@ def _segments_from_data() -> Any:
             "PVT", f"Missing parameters when instantiating the PV-T system: {str(e)}"
         ) from None
 
+    return segments
+
 
 def pvt_panel_from_path(
+    logger: Logger,
     portion_covered: float,
     pvt_data_file: str,
     x_resolution: int,
@@ -358,6 +477,9 @@ def pvt_panel_from_path(
 ) -> pvt.PVT:
     """
     Generate a :class:`pvt.PVT` instance based on the path to the data file.
+
+    :param logger:
+        The :class:`logging.Logger` used for the run.
 
     :param portion_covered:
         The portion of the PV-T panel which is covered in PV.
@@ -387,7 +509,15 @@ def pvt_panel_from_path(
         pvt_data["collector"],
     )
 
-    segments = _segments_from_data()
+    segments = _segments_from_data(
+        EDGE_LENGTH,
+        EDGE_WIDTH,
+        logger,
+        portion_covered,
+        pvt_data,
+        x_resolution,
+        y_resolution,
+    )
 
     try:
         pvt_panel = pvt.PVT(
