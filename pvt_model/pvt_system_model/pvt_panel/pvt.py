@@ -298,10 +298,12 @@ class PVT:
             f"  tedlar: {self.tedlar}\n"
             f"  collector: {self.collector},\n"
             f"  bond: {self.bond},\n"
-            f"  azimuthal_orientation: {self._azimuthal_orientation}, "
+            f"  outer_pipe_diameter: {self.collector.outer_pipe_diameter}m\n"
+            "  additional_params: "
+            f"azimuthal_orientation: {self._azimuthal_orientation}, "
             f"coordinates: {self.latitude}N {self.longitude}E, "
             f"tilt: {self._tilt}deg"
-            ")"
+            "\n)"
         )
 
     def _get_solar_orientation_diff(
