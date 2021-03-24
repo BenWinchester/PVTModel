@@ -21,13 +21,11 @@ from typing import Any
 
 from ..__utils__ import (
     CarbonEmissions,
+    read_yaml,
     TotalPowerData,
 )
 
-from .__utils__ import (
-    read_yaml,
-    UtilityType,
-)
+from .__utils__ import UtilityType
 
 
 @dataclass
