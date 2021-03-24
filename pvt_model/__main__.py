@@ -37,6 +37,7 @@ from .__utils__ import (
     INITIAL_CONDITION_PRECISION,
     MissingParametersError,
     LOGGER_NAME,
+    read_yaml,
     SystemData,
     TemperatureName,
     TotalPowerData,
@@ -741,16 +742,47 @@ def main(args) -> None:
         )
     )
 
+    # Check that all CLI args are valid.
+    argparser.check_args(
+        parsed_args,
+        logger,
+        read_yaml(parsed_args.pvt_data_file)["collector"]["number_of_pipes"],
+    )
+
+    # Parse the PVT system information and generate a PVT panel based on the args.
+    pvt_panel = pvt_panel_from_path(
+        logger,
+        parsed_args.portion_covered,
+        parsed_args.pvt_data_file,
+        parsed_args.x_resolution,
+        parsed_args.y_resolution,
+    )
+    logger.info(
+        "PV-T panel segments:\n  %s",
+        "\n  ".join(
+            [
+                f"{segment_coordinates}: {segment}"
+                for segment_coordinates, segment in pvt_panel.segments.items()
+            ]
+        ),
+    )
+
     # Check that the output file is specified, and that it doesn't already exist.
     if parsed_args.output is None or parsed_args.output == "":
         logger.error(
-            "An output filename must be provided on the command-line interface."
+            "%sAn output filename must be provided on the command-line interface.%s",
+            BColours.FAIL,
+            BColours.ENDC,
         )
         raise MissingParametersError(
             "Command-Line Interface", "An output file name must be provided."
         )
     if parsed_args.output.endswith(".yaml") or parsed_args.output.endswith(".json"):
-        logger.error("The output filename must be irrespective of data type..")
+        logger.error(
+            "%sThe output filename must be irrespective of data type..%s",
+            BColours.FAIL,
+            BColours.ENDC,
+        )
         raise Exception(
             "The output file must be irrespecitve of file extension/data type."
         )
@@ -763,13 +795,6 @@ def main(args) -> None:
         os.rename(f"{parsed_args.output}.json", f"{parsed_args.output}.json.1")
         logger.info("Output file successfully moved.")
 
-    # Parse the PVT system information and generate a PVT panel based on the args.
-    pvt_panel = pvt_panel_from_path(
-        parsed_args.portion_covered,
-        parsed_args.pvt_data_file,
-        parsed_args.x_resolution,
-        parsed_args.y_resolution,
-    )
     # Instantiate a hot-water tank instance based on the data.
     hot_water_tank = hot_water_tank_from_path(parsed_args.tank_data_file)
     logger.debug(
