@@ -59,6 +59,7 @@ from .__utils__ import (
 )
 
 from .constants import (
+    COLLECTOR_INPUT_TEMPERATURES,
     CONVERGENT_SOLUTION_PRECISION,
     MAXIMUM_RECURSION_DEPTH,
     WARN_RECURSION_DEPTH,
@@ -1479,8 +1480,7 @@ def main(
             weather_forecaster,
         )
     elif operating_mode.steady_state:
-        collector_input_temperatures = {300, 310, 320, 330, 340, 350}
-        run_outputs = {
+        system_data = {
             collector_input_temperature: _steady_state_run(
                 collector_input_temperature,
                 cloud_efficacy_factor,
@@ -1495,12 +1495,10 @@ def main(
                 pvt_panel,
                 save_2d_output,
                 weather_forecaster,
-            )
-            for collector_input_temperature in collector_input_temperatures
+            )[1][1]
+            for collector_input_temperature in COLLECTOR_INPUT_TEMPERATURES
         }
-        import pdb
-
-        pdb.set_trace()
+        final_run_temperature_vector = None
     else:
         raise ProgrammerJudgementFault(
             "The system model was called with an operating mode "

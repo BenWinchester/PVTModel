@@ -15,6 +15,7 @@ panel.
 """
 
 __all__ = (
+    "COLLECTOR_INPUT_TEMPERATURES",
     "CONVERGENT_SOLUTION_PRECISION",
     "DENSITY_OF_WATER",
     "EDGE_WIDTH",
@@ -45,8 +46,10 @@ NUMBER_OF_COLLECTORS = 1
 # vice-a-versa.
 ZERO_CELCIUS_OFFSET: float = 273.15
 
+# Collector input temperatures.
+COLLECTOR_INPUT_TEMPERATURES = {300, 310, 320, 330, 340, 350}
 # The precision at which to calculate the convergent solution: 1 -> 0.1, 2 -> 0.01, etc.
-CONVERGENT_SOLUTION_PRECISION = -1
+CONVERGENT_SOLUTION_PRECISION = 1
 # The default system temperature, used for instantiating runs.
 DEFAULT_SYSTEM_TEMPERATURE = ZERO_CELCIUS_OFFSET + 30  # [K]
 # The density of water, measured in kilograms per meter cubed.

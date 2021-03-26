@@ -23,7 +23,6 @@ where
 
 The equations represented by the rows of the matrix are:
 
-
 The temperatures represented in the vector T are:
 
 """
@@ -314,7 +313,7 @@ def _absorber_equation(
     # Compute the resultant vector value.
     resultant_vector_value = (
         # Ambient temperature term.
-        +absorber_to_insulation_loss  # [W/K]
+        absorber_to_insulation_loss  # [W/K]
         * weather_conditions.ambient_temperature  # [K]
     )
 
@@ -331,6 +330,19 @@ def _absorber_equation(
                     segment.y_index,
                 )
             ]  # [K]
+        )
+
+    try:
+        logger.info(
+            "Rough Absorber Temperature estimate: %s K.",
+            int(
+                resultant_vector_value
+                / (absorber_to_insulation_loss + absorber_internal_energy_change)
+            ),
+        )
+    except ZeroDivisionError:
+        logger.info(
+            "Absorber temperature estimate could not be computed due to zero-division."
         )
 
     return row_equation, resultant_vector_value
@@ -839,7 +851,7 @@ def _glass_equation(
     # Compute the resultant vector value.
     resultant_vector_value = (
         # Ambient temperature term.
-        +glass_to_air_conduction * weather_conditions.ambient_temperature  # [W]
+        glass_to_air_conduction * weather_conditions.ambient_temperature  # [W]
         # Sky temperature term.
         + glass_to_sky_radiation * weather_conditions.sky_temperature  # [W]
         # Solar absorption term.
@@ -863,6 +875,14 @@ def _glass_equation(
                 )
             ]  # [K]
         )
+
+    logger.info(
+        "Rough Glass Temperature estimate: %s K.",
+        int(
+            resultant_vector_value
+            / (glass_to_air_conduction + glass_to_sky_radiation + glass_internal_energy)
+        ),
+    )
 
     return row_equation, resultant_vector_value
 
@@ -935,6 +955,7 @@ def _htf_equation(
     number_of_x_segments: int,
     number_of_y_segments: int,
     operating_mode: OperatingMode,
+    pipe_to_bulk_water_heat_transfer: float,
     previous_temperature_vector: Optional[numpy.ndarray],
     pvt_panel: pvt.PVT,
     resolution: int,
@@ -967,13 +988,6 @@ def _htf_equation(
         )  # [W/K]
     else:
         bulk_water_internal_energy = 0
-
-    pipe_to_bulk_water_heat_transfer = (
-        segment.length  # [m]
-        * numpy.pi
-        * pvt_panel.collector.inner_pipe_diameter  # [m]
-        * pvt_panel.collector.convective_heat_transfer_coefficient_of_water  # [W/m^2*K]
-    )  # [W/K]
 
     fluid_input_output_transfer_term = (
         pvt_panel.collector.mass_flow_rate  # [kg/s]
@@ -1059,6 +1073,7 @@ def _htf_equation(
 
 def _pipe_equation(
     absorber_to_pipe_conduction: float,
+    logger: logging.Logger,
     number_of_pipes: int,
     number_of_temperatures: int,
     number_of_x_segments: int,
@@ -1152,7 +1167,7 @@ def _pipe_equation(
     # Compute the resultant vector value.
     resultant_vector_value = (
         # Ambient heat loss.
-        +pipe_to_surroundings_losses
+        pipe_to_surroundings_losses
         * weather_conditions.ambient_temperature  # [W]
     )
 
@@ -1171,6 +1186,14 @@ def _pipe_equation(
                 )
             ]
         )
+
+    logger.info(
+        "Rough Pipe Temperature estimate: %s K.",
+        int(
+            resultant_vector_value
+            / (pipe_to_surroundings_losses + pipe_internal_heat_change)
+        ),
+    )
 
     return row_equation, resultant_vector_value
 
@@ -1308,19 +1331,6 @@ def _pv_equation(
     y_wise_conduction = positive_y_wise_conduction + negative_y_wise_conduction
     logger.debug("PV y-wise conduction term: %s W/K", y_wise_conduction)
 
-    solar_thermal_absorbtion_term = -1 * (
-        transmissivity_absorptivity_product(
-            diffuse_reflection_coefficient=pvt_panel.glass.diffuse_reflection_coefficient,
-            glass_transmissivity=pvt_panel.glass.transmissivity,
-            layer_absorptivity=pvt_panel.pv.absorptivity,
-        )
-        * weather_conditions.irradiance  # [W/m^2]
-        * segment.width  # [m]
-        * segment.length  # [m]
-        * pvt_panel.pv.reference_efficiency
-        * pvt_panel.pv.thermal_coefficient
-    )
-
     # Compute the T_pv(i, j) term
     row_equation[
         index_handler.index_from_segment_coordinates(
@@ -1337,7 +1347,6 @@ def _pv_equation(
         + pv_to_glass_radiation
         + pv_to_glass_conduction
         + pv_to_absorber_conduction
-        + solar_thermal_absorbtion_term
     )
 
     # Compute the T_pv(i+1, j) term provided that that segment exists.
@@ -1434,7 +1443,19 @@ def _pv_equation(
             - pvt_panel.pv.reference_efficiency
             * (
                 1
-                + pvt_panel.pv.thermal_coefficient * pvt_panel.pv.reference_temperature
+                - pvt_panel.pv.thermal_coefficient
+                * (
+                    best_guess_temperature_vector[
+                        index_handler.index_from_segment_coordinates(
+                            number_of_x_segments,
+                            number_of_y_segments,
+                            TemperatureName.pv,
+                            segment.x_index,
+                            segment.y_index,
+                        )
+                    ]
+                    - pvt_panel.pv.reference_temperature
+                )
             )
         )
     )
@@ -1452,7 +1473,7 @@ def _pv_equation(
     if operating_mode.dynamic:
         resultant_vector_value += (
             # Internal energy change
-            +pv_internal_energy  # [W/K]
+            pv_internal_energy  # [W/K]
             * previous_temperature_vector[
                 index_handler.index_from_segment_coordinates(
                     number_of_x_segments,
@@ -1992,6 +2013,7 @@ def calculate_matrix_equation(
 
         pipe_equation, pipe_resultant_value = _pipe_equation(
             absorber_to_pipe_conduction,
+            logger,
             number_of_pipes,
             number_of_temperatures,
             number_of_x_segments,
@@ -2019,6 +2041,7 @@ def calculate_matrix_equation(
             number_of_x_segments,
             number_of_y_segments,
             operating_mode,
+            pipe_to_htf_heat_transfer,
             previous_temperature_vector,
             pvt_panel,
             resolution,

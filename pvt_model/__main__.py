@@ -424,15 +424,20 @@ def _determine_consistent_conditions(
         )
 
     # If all the temperatures are within the desired limit, return the temperatures.
-    if all(
-        abs(final_temperature_vector - running_system_temperature_vector)
-        <= INITIAL_CONDITION_PRECISION
-    ):
-        logger.info(
-            "Initial temperatures consistent. Max difference: %sK",
-            max(abs(final_temperature_vector - running_system_temperature_vector)),
-        )
-        return final_temperature_vector.tolist(), system_data
+    if operating_mode.dynamic:
+        if all(
+            abs(final_temperature_vector - running_system_temperature_vector)
+            <= INITIAL_CONDITION_PRECISION
+        ):
+            logger.info(
+                "Initial temperatures consistent. Max difference: %sK",
+                max(abs(final_temperature_vector - running_system_temperature_vector)),
+            )
+            return final_temperature_vector.tolist(), system_data
+    # For steady-state data, there is no need to itterate through days.
+    if operating_mode.steady_state:
+        logger.info("Consistent temperatures determined for steady-state run.")
+        return None, system_data
 
     logger.info(
         "Initial temperatures not consistent. Max difference: %sK",
@@ -682,6 +687,7 @@ def _print_temperature_info(
 
 def _save_data(
     file_type: FileType,
+    operating_mode: OperatingMode,
     output_file_name: str,
     system_data: Dict[int, SystemData],
     carbon_emissions: Optional[CarbonEmissions] = None,
@@ -689,16 +695,25 @@ def _save_data(
 ) -> None:
     """
     Save data when called. The data entry should be appended to the file.
+
     :param file_type:
         The file type that's being saved.
+
+    :param operating_mode:
+        The operating mode for the run.
+
     :param output_file_name:
         The destination file name.
+
     :param system_data:
         The data to save.
+
     :param carbon_emissions:
         The carbon emissions data for the run.
+
     :param total_power_data:
         The total power data for the run.
+
     """
 
     # Convert the system data entry to JSON-readable format
@@ -721,6 +736,12 @@ def _save_data(
             system_data_dict.update(dataclasses.asdict(total_power_data))  # type: ignore
         if carbon_emissions is not None:
             system_data_dict.update(dataclasses.asdict(carbon_emissions))  # type: ignore
+
+        # Append the data type for the run.
+        if operating_mode.dynamic:
+            system_data_dict["data_type"] = "dynamic"
+        elif operating_mode.steady_state:
+            system_data_dict["data_type"] = "steady_state"
 
         # Save the data
         # If this is the initial dump, then create the file.
@@ -921,15 +942,15 @@ def main(args) -> None:
             "Running a steady-state and decoupled system."
             f"{BColours.ENDC}"
         )
-        _determine_consistent_conditions(
+        # Call `_determine_consistent_conditions` to determine the solution for the
+        # model in a steady-state and decoupled configuration.
+        _, system_data = _determine_consistent_conditions(
             pvt_panel.collector.number_of_pipes,
             logger,
             operating_mode,
             parsed_args,
             override_ambient_temperature=parsed_args.ambient_temperature,
         )
-        # * Call `_determine_consistent_conditions` to determine the solution for the
-        # * model in a steady-state and decoupled configuration.
 
     else:
         raise ProgrammerJudgementFault(
@@ -939,7 +960,7 @@ def main(args) -> None:
 
     # Save the data ouputted by the model.
     logger.info("Saving output data to: %s.json.", parsed_args.output)
-    _save_data(FileType.JSON, parsed_args.output, system_data)
+    _save_data(FileType.JSON, operating_mode, parsed_args.output, system_data)
     print(f"Model output successfully saved to {parsed_args.output}.json.")
 
     # If in verbose mode, output average, min, and max temperatures.

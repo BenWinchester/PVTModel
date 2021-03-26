@@ -46,10 +46,14 @@ except ModuleNotFoundError:
 
 __all__ = ("analyse",)
 
+# Used to distinguish dynamic data sets.
+DYNAMIC_DATA_TYPE = "dynamic"
 # The directory into which which should be saved
 NEW_FIGURES_DIRECTORY: str = "figures"
 # The directory in which old figures are saved and stored for long-term access
 OLD_FIGURES_DIRECTORY: str = "old_figures"
+# Used to distinguish steady-state data sets.
+STEADY_STATE_DATA_TYPE = "steady_state"
 # How detailed the graph should be
 GRAPH_DETAIL: GraphDetail = GraphDetail.lowest
 # How many values there should be between each tick on the x-axis
@@ -635,9 +639,10 @@ def plot_two_dimensional_figure(
     thing_to_plot: str,
     *,
     axis_label: str,
-    hour: int,
-    minute: int,
+    entry_number: Optional[int] = None,
     hold: bool = False,
+    hour: Optional[int] = None,
+    minute: Optional[int] = None,
 ) -> None:
     """
     Plots a two-dimensional figure.
@@ -657,19 +662,24 @@ def plot_two_dimensional_figure(
     :param axis_label:
         The label for the y-axis of the plot.
 
+    :param entry_number:
+        If provided, this is used to compute the entry to plot. Otherwise, hour and
+        minute are used.
+
+    :param hold:
+        Whether to hold the plot.
+
     :param hour:
         The hour at which to plot the two-dimensional temperature profile.
 
     :param minute:
         The minute at which to plot the two-dimensional temperature profile.
 
-    :param hold:
-        Whether to hold the plot.
-
     """
 
     # Determine the data index number based on the time.
-    entry_number = int(len(model_data) * ((hour / 24) + (minute / (24 * 60))))
+    if entry_number is None:
+        entry_number = int(len(model_data) * ((hour / 24) + (minute / (24 * 60))))
     try:
         data_entry = model_data[entry_number]
     except KeyError:
@@ -719,8 +729,6 @@ def plot_two_dimensional_figure(
         if not hold:
             plt.clf()
         lines = plt.plot(y_series, z_series)
-        # Set the axis limits to be sensible.
-        plt.ylim(0, 100)
         # Set the labels for the axes.
         plt.xlabel("Segment y index")
         plt.ylabel(axis_label)
@@ -737,7 +745,7 @@ def plot_two_dimensional_figure(
     # Plot the figure.
     fig3D = plt.figure()
     axes3D = fig3D.gca(projection="3d")
-    surface = plt3D.plot_surface(
+    surface = plt3D.scatter(
         axes3D,
         x_array,
         y_array,
@@ -756,23 +764,17 @@ def plot_two_dimensional_figure(
     save_figure(figure_name)
 
 
-def analyse(data_file_name: str, show_output: Optional[bool] = False) -> None:
+def analyse_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
     """
-    The main method for the analysis module.
+    Carry out analysis on a set of dynamic data.
 
-    :param data_file_name:
-        The path to the data file to analyse.
+    :param data:
+        The data to analyse.
 
-    :param show_output:
-        Whether to show the output files generated.
+    :param logger:
+        The logger to use for the analysis run.
 
     """
-
-    # * Set up the logger
-    logger = get_logger("pvt_analysis", True)
-
-    # * Extract the data.
-    data = load_model_data(data_file_name)
 
     # * Reduce the resolution of the data.
     data = _reduce_data(data, GRAPH_DETAIL, logger)
@@ -1258,6 +1260,108 @@ def analyse(data_file_name: str, show_output: Optional[bool] = False) -> None:
     # * Plotting the tank temperature, collector temperature, and heat inputted into the
     # * tank.
     """  # pylint: disable=pointless-string-statement
+
+
+def analyse_steady_state_data(data: Dict[Any, Any], logger: Logger) -> None:
+    """
+    Carry out analysis on a set of steady-state data.
+
+    :param data:
+        The data to analyse.
+
+    :param logger:
+        The logger to use for the analysis run.
+
+    """
+
+    logger.info("Beginning steady-state analysis.")
+
+    # Glass Temperatures
+    # plot_two_dimensional_figure(
+    #     "steady_state_glass_layer_350K_input",
+    #     logger,
+    #     data,
+    #     thing_to_plot="layer_temperature_map_glass",
+    #     axis_label="Glass layer temperature / deg C",
+    #     entry_number=350,
+    # )
+
+    # PV Temperatures
+    plot_two_dimensional_figure(
+        "steady_state_pv_layer_350K_input",
+        logger,
+        data,
+        thing_to_plot="layer_temperature_map_pv",
+        axis_label="PV layer temperature / deg C",
+        entry_number=350,
+    )
+
+    # Collector Temperatures
+    plot_two_dimensional_figure(
+        "steady_state_collector_layer_350K_input",
+        logger,
+        data,
+        thing_to_plot="layer_temperature_map_collector",
+        axis_label="Collector layer temperature / deg C",
+        entry_number=350,
+    )
+
+    # Pipe Temperatures
+    # plot_two_dimensional_figure(
+    #     "steady_state_pipe_350K_input",
+    #     logger,
+    #     data,
+    #     thing_to_plot="layer_temperature_map_pipe",
+    #     axis_label="Pipe temperature / deg C",
+    #     entry_number=350,
+    # )
+
+    # # # Bulk-water Temperatures
+    # plot_two_dimensional_figure(
+    #     "steady_state_bulk_water_350K_input",
+    #     logger,
+    #     data,
+    #     thing_to_plot="layer_temperature_map_bulk_water",
+    #     axis_label="Pipe temperature / deg C",
+    #     entry_number=350,
+    # )
+
+
+def analyse(data_file_name: str, show_output: Optional[bool] = False) -> None:
+    """
+    The main method for the analysis module.
+
+    :param data_file_name:
+        The path to the data file to analyse.
+
+    :param show_output:
+        Whether to show the output files generated.
+
+    """
+
+    # * Set up the logger
+    logger = get_logger("pvt_analysis", True)
+
+    # * Extract the data.
+    data = load_model_data(data_file_name)
+
+    # * Determine whether the data is dynamic or steady-state.
+    try:
+        data_type = data.pop("data_type")
+    except KeyError:
+        logger.error(
+            "Analysis data without an explicit data type is depreciated. Dynamic assumed."
+        )
+        data_type = DYNAMIC_DATA_TYPE
+
+    # * Carry out analysis appropriate to the data type specified.
+    if data_type == DYNAMIC_DATA_TYPE:
+        analyse_dynamic_data(data, logger)
+    elif data_type == STEADY_STATE_DATA_TYPE:
+        analyse_steady_state_data(data, logger)
+    else:
+        logger.error("Data type was neither 'dynamic' nor 'steady_state'. Exiting...")
+        exit(1)
 
     if show_output:
         plt.show()
