@@ -208,7 +208,7 @@ def dc_weighted_average_from_dc_values(
 
 
 def thermal_efficiency(
-    area: float, mass_flow_rate: float, solar_irradiance: float
+    area: float, mass_flow_rate: float, solar_irradiance: float, temperature_gain: float
 ) -> float:
     """
     Compute the thermal efficiency.
@@ -222,9 +222,16 @@ def thermal_efficiency(
     :param solar_irradiance:
         The solar irradiance, measured in Watts per meter squared.
 
+    :param temperature_gain:
+        The temperature gain across the panel, measured in Kelvin.
+
     :return:
         The thermal efficiency, based on the input parameters, for a PV-T collector.
 
     """
 
     # Compute the thermal efficiency of the collector.
+    thermal_input: float = area * solar_irradiance
+    thermal_output: float = mass_flow_rate * HEAT_CAPACITY_OF_WATER * temperature_gain
+
+    return thermal_output / thermal_input

@@ -103,17 +103,65 @@ def check_args(
         )
 
     # Enforce the matching up of dynamic and steady-state arguments.
-    # * Enforce that either dynamic or steady-state is specified, but not both.
+    # Enforce that either dynamic or steady-state is specified, but not both.
+    if (parsed_args.dynamic and parsed_args.steady_state) or (
+        not parsed_args.dynamic and not parsed_args.steady_state
+    ):
+        raise ArgumentMismatchError(
+            "{}Either `--dynamnic` or `--steady-state` should be used, but ".format(
+                BColours.FAIL
+            )
+            + "not both.{}".format(BColours.ENDC)
+        )
 
-    # * Enforce that, if decoupled is specified, steady-state is specified.
+    # Enforce that, if decoupled is specified, steady-state is specified.
+    if parsed_args.decoupled and not parsed_args.steady_state:
+        raise ArgumentMismatchError(
+            "{}If `--decoupled` is specified, the system must be run in ".format(
+                BColours.FAIL
+            )
+            + "steady-state mode.{}".format(BColours.ENDC)
+        )
 
-    # * Enforce that, if decoupled is specified, solar irradiance is specified.
+    # Enforce that, if decoupled is specified, solar irradiance is specified.
+    if parsed_args.decoupled and not parsed_args.solar_irradiance:
+        raise ArgumentMismatchError(
+            "{}If `--decoupled` is specified, the solar irradiance must be ".format(
+                BColours.FAIL
+            )
+            + "specified with `--solar-irradiance`.{}".format(BColours.ENDC)
+        )
 
-    # * Enforce that, if decoupled if specified, collector-input temperature is specified.
+    # Enforce that, if decoupled if specified, ambient temperature is specified.
+    if parsed_args.decoupled and not parsed_args.ambient_temperature:
+        raise ArgumentMismatchError(
+            "{}If `--decoupled` is specified, the ambient temperature must be ".format(
+                BColours.FAIL
+            )
+            + "specified with `--ambient-temperature`.{}".format(BColours.ENDC)
+        )
 
-    # * Enforce that, if decoupled is not specified, either days or months is specified.
+    # Enforce that, if decoupled is not specified, either days or months is specified.
+    if not parsed_args.decoupled and not (
+        parsed_args.months is not None or parsed_args.days is not None
+    ):
+        raise ArgumentMismatchError(
+            "{}If running a coupled system, the number of days or months for ".format(
+                BColours.FAIL
+            )
+            + "the run must be specified with `--days` or `--months`.{}".format(
+                BColours.ENDC
+            )
+        )
 
-    # * Enforce that, if decoupled is not specified, start-time is specified.
+    # Enforce that, if decoupled is not specified, start-time is specified.
+    if not parsed_args.decoupled and parsed_args.start_time is None:
+        raise ArgumentMismatchError(
+            "{}If running a coupled system, the start time for the run must be ".format(
+                BColours.FAIL
+            )
+            + "specified with `--start-time`.{}".format(BColours.ENDC)
+        )
 
 
 def parse_args(args) -> argparse.Namespace:
@@ -131,6 +179,13 @@ def parse_args(args) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     required_named_arguments = parser.add_argument_group("required named arguments")
 
+    parser.add_argument(
+        "--ambient-temperature",
+        "-at",
+        type=float,
+        help="[decoupled] The ambient temperature surrounding the collector, in "
+        "degrees Celcius, needs to be specified if running a decoupled system.",
+    )
     parser.add_argument(
         "--average-irradiance",
         "-ar",

@@ -28,6 +28,7 @@ from dateutil.relativedelta import relativedelta
 from scipy import linalg  # type: ignore
 
 from . import (
+    efficiency,
     exchanger,
     index_handler,
     load,
@@ -364,6 +365,7 @@ def _layer_temperature_profile(
 
 def _solve_temperature_vector_convergence_method(
     *,
+    collector_input_temperature: Optional[float] = None,
     current_hot_water_load: Optional[float] = None,
     heat_exchanger: Optional[exchanger.Exchanger] = None,
     hot_water_tank: Optional[tank.Tank] = None,
@@ -373,6 +375,7 @@ def _solve_temperature_vector_convergence_method(
     number_of_temperatures: int,
     number_of_x_segments: int,
     number_of_y_segments: int,
+    operating_mode: OperatingMode,
     previous_run_temperature_vector: Optional[numpy.ndarray] = None,
     pvt_panel: pvt.PVT,
     resolution: Optional[int] = None,
@@ -397,6 +400,10 @@ def _solve_temperature_vector_convergence_method(
         - If the solution has diverged, an error is raised;
         - If the solution is converging, but has not yet converged, then the function
           runs through again.
+
+    :param collector_input_temperature:
+        If set, this governs the input water temperature of the feedwater entering the
+        collector.
 
     :param current_hot_water_load:
         The current hot-water load placed on the system, measured in kilograms per
@@ -429,6 +436,9 @@ def _solve_temperature_vector_convergence_method(
         The number of segments in one "column" of the panel, i.e., which have the same x
         coordiante.
 
+    :param operating_mode:
+        The operating mode for the run.
+
     :param previous_run_temperature_vector:
         The temperatures at the previous time step.
 
@@ -457,26 +467,44 @@ def _solve_temperature_vector_convergence_method(
     """
 
     logger.info(
-        "Date and time: %s; Run number: %s: " "Beginning convergent calculation.",
-        next_date_and_time.strftime("%d/%m/%Y %H:%M:%S"),
+        "Date and time: %s; Run number: %s: Beginning convergent calculation.",
+        next_date_and_time.strftime("%d/%m/%Y %H:%M:%S")
+        if next_date_and_time is not None
+        else "[time-independent]",
         convergence_run_number,
     )
 
-    coefficient_matrix, resultant_vector = matrix.calculate_matrix_equation(
-        run_one_temperature_vector,
-        heat_exchanger,
-        current_hot_water_load,
-        hot_water_tank,
-        logger,
-        number_of_pipes,
-        number_of_temperatures,
-        number_of_x_segments,
-        number_of_y_segments,
-        previous_run_temperature_vector,
-        pvt_panel,
-        resolution,
-        weather_conditions,
-    )
+    if operating_mode.coupled:
+        coefficient_matrix, resultant_vector = matrix.calculate_matrix_equation(
+            best_guess_temperature_vector=run_one_temperature_vector,
+            heat_exchanger=heat_exchanger,
+            hot_water_load=current_hot_water_load,
+            hot_water_tank=hot_water_tank,
+            logger=logger,
+            number_of_pipes=number_of_pipes,
+            number_of_temperatures=number_of_temperatures,
+            number_of_x_segments=number_of_x_segments,
+            number_of_y_segments=number_of_y_segments,
+            operating_mode=operating_mode,
+            previous_temperature_vector=previous_run_temperature_vector,
+            pvt_panel=pvt_panel,
+            resolution=resolution,
+            weather_conditions=weather_conditions,
+        )
+    elif operating_mode.decoupled:
+        coefficient_matrix, resultant_vector = matrix.calculate_matrix_equation(
+            best_guess_temperature_vector=run_one_temperature_vector,
+            collector_input_temperature=collector_input_temperature,
+            logger=logger,
+            number_of_pipes=number_of_pipes,
+            number_of_temperatures=number_of_temperatures,
+            number_of_x_segments=number_of_x_segments,
+            number_of_y_segments=number_of_y_segments,
+            operating_mode=operating_mode,
+            pvt_panel=pvt_panel,
+            resolution=resolution,
+            weather_conditions=weather_conditions,
+        )
 
     logger.debug(
         "Matrix equation computed.\nA =\n%s\nB =\n%s",
@@ -484,17 +512,28 @@ def _solve_temperature_vector_convergence_method(
         str(resultant_vector),
     )
 
-    # run_two_output = linalg.solve(a=coefficient_matrix, b=resultant_vector)
-    run_two_output = linalg.lstsq(a=coefficient_matrix, b=resultant_vector)
-    # run_two_temperature_vector: numpy.ndarray = numpy.asarray(  # type: ignore
-    #     [run_two_output[index][0] for index in range(len(run_two_output))]
-    # )
-    run_two_temperature_vector = run_two_output[0].transpose()[0]
+    try:
+        run_two_output = linalg.solve(a=coefficient_matrix, b=resultant_vector)
+    except ValueError:
+        logger.error(
+            "%sMatrix has dimensions %s and is not square.%s",
+            BColours.FAIL,
+            coefficient_matrix.shape,
+            BColours.ENDC,
+        )
+        raise
+    # run_two_output = linalg.lstsq(a=coefficient_matrix, b=resultant_vector)
+    run_two_temperature_vector: numpy.ndarray = numpy.asarray(  # type: ignore
+        [run_two_output[index][0] for index in range(len(run_two_output))]
+    )
+    # run_two_temperature_vector = run_two_output[0].transpose()[0]
 
     logger.debug(
         "Date and time: %s; Run number: %s: "
         "Temperatures successfully computed. Temperature vector: T = %s",
-        next_date_and_time.strftime("%d/%m/%Y %H:%M:%S"),
+        next_date_and_time.strftime("%d/%m/%Y %H:%M:%S")
+        if next_date_and_time is not None
+        else "[time-independent]",
         convergence_run_number,
         run_two_temperature_vector,
     )
@@ -508,7 +547,9 @@ def _solve_temperature_vector_convergence_method(
         logger.debug(
             "Date and time: %s; Run number: %s: Convergent solution found. "
             "Convergent difference: %s",
-            next_date_and_time.strftime("%d/%m/%Y %H:%M:%S"),
+            next_date_and_time.strftime("%d/%m/%Y %H:%M:%S")
+            if next_date_and_time is not None
+            else "[time-independent]",
             convergence_run_number,
             run_two_temperature_difference,
         )
@@ -561,6 +602,7 @@ def _solve_temperature_vector_convergence_method(
 
     # Otherwise, continue to solve until the prevision is reached.
     return _solve_temperature_vector_convergence_method(
+        collector_input_temperature=collector_input_temperature,
         current_hot_water_load=current_hot_water_load,
         heat_exchanger=heat_exchanger,
         hot_water_tank=hot_water_tank,
@@ -570,6 +612,7 @@ def _solve_temperature_vector_convergence_method(
         number_of_temperatures=number_of_temperatures,
         number_of_x_segments=number_of_x_segments,
         number_of_y_segments=number_of_y_segments,
+        operating_mode=operating_mode,
         previous_run_temperature_vector=previous_run_temperature_vector,
         pvt_panel=pvt_panel,
         resolution=resolution,
@@ -716,17 +759,70 @@ def _system_data_from_run(
         temperature_vector,
     )
 
-    # Save the system data.
-    return SystemData(
-        date=date.strftime("%d/%m/%Y"),
-        time=str((date.day - initial_date_and_time.day) * 24 + time.hour)
-        + time.strftime("%H:%M:%S")[2:]
-        if operating_mode.dynamic
-        else None,
-        glass_temperature=average_glass_temperature - ZERO_CELCIUS_OFFSET,
-        pv_temperature=average_pv_temperature - ZERO_CELCIUS_OFFSET,
-        collector_temperature=average_collector_temperature - ZERO_CELCIUS_OFFSET,
-        collector_input_temperature=temperature_vector[
+    # Set various parameters depending on the operating mode of the model.
+    # Set the variables that depend on a coupled vs decoupled system.
+    if operating_mode.coupled:
+        exchanger_temperature_drop: Optional[float] = (
+            temperature_vector[
+                index_handler.index_from_temperature_name(
+                    number_of_pipes,
+                    number_of_x_segments,
+                    number_of_y_segments,
+                    TemperatureName.tank_out,
+                )
+            ]
+            - temperature_vector[
+                index_handler.index_from_temperature_name(
+                    number_of_pipes,
+                    number_of_x_segments,
+                    number_of_y_segments,
+                    TemperatureName.tank_in,
+                )
+            ]
+            if temperature_vector[
+                index_handler.index_from_temperature_name(
+                    number_of_pipes,
+                    number_of_x_segments,
+                    number_of_y_segments,
+                    TemperatureName.tank_in,
+                )
+            ]
+            > temperature_vector[
+                index_handler.index_from_temperature_name(
+                    number_of_pipes,
+                    number_of_x_segments,
+                    number_of_y_segments,
+                    TemperatureName.tank,
+                )
+            ]
+            else 0
+        )
+        tank_temperature: Optional[float] = (
+            temperature_vector[
+                index_handler.index_from_temperature_name(
+                    number_of_pipes,
+                    number_of_x_segments,
+                    number_of_y_segments,
+                    TemperatureName.tank,
+                )
+            ]
+            - ZERO_CELCIUS_OFFSET
+        )
+    else:
+        exchanger_temperature_drop = None
+        tank_temperature = None
+    # Set the variables that depend on a dynamic vs steady-state system.
+    if operating_mode.dynamic:
+        time: Optional[str] = (
+            str((date.day - initial_date_and_time.day) * 24 + time.hour)
+            + time.strftime("%H:%M:%S")[2:]
+        )
+    else:
+        time = None
+
+    # Compute variables in common to both.
+    collector_input_temperature = (
+        temperature_vector[
             index_handler.index_from_temperature_name(
                 number_of_pipes,
                 number_of_x_segments,
@@ -734,8 +830,10 @@ def _system_data_from_run(
                 TemperatureName.collector_in,
             )
         ]
-        - ZERO_CELCIUS_OFFSET,
-        collector_output_temperature=temperature_vector[
+        - ZERO_CELCIUS_OFFSET
+    )
+    collector_output_temperature = (
+        temperature_vector[
             index_handler.index_from_temperature_name(
                 number_of_pipes,
                 number_of_x_segments,
@@ -743,53 +841,24 @@ def _system_data_from_run(
                 TemperatureName.collector_out,
             )
         ]
-        - ZERO_CELCIUS_OFFSET,
+        - ZERO_CELCIUS_OFFSET
+    )
+
+    # Return the system data.
+    return SystemData(
+        date=date.strftime("%d/%m/%Y"),
+        time=time,
+        glass_temperature=average_glass_temperature - ZERO_CELCIUS_OFFSET,
+        pv_temperature=average_pv_temperature - ZERO_CELCIUS_OFFSET,
+        collector_temperature=average_collector_temperature - ZERO_CELCIUS_OFFSET,
+        collector_input_temperature=collector_input_temperature,
+        collector_output_temperature=collector_output_temperature,
         pipe_temperature=average_pipe_temperature - ZERO_CELCIUS_OFFSET,
         bulk_water_temperature=average_bulk_water_temperature - ZERO_CELCIUS_OFFSET,
         ambient_temperature=weather_conditions.ambient_temperature
         - ZERO_CELCIUS_OFFSET,
-        exchanger_temperature_drop=temperature_vector[
-            index_handler.index_from_temperature_name(
-                number_of_pipes,
-                number_of_x_segments,
-                number_of_y_segments,
-                TemperatureName.tank_out,
-            )
-        ]
-        - temperature_vector[
-            index_handler.index_from_temperature_name(
-                number_of_pipes,
-                number_of_x_segments,
-                number_of_y_segments,
-                TemperatureName.tank_in,
-            )
-        ]
-        if temperature_vector[
-            index_handler.index_from_temperature_name(
-                number_of_pipes,
-                number_of_x_segments,
-                number_of_y_segments,
-                TemperatureName.tank_in,
-            )
-        ]
-        > temperature_vector[
-            index_handler.index_from_temperature_name(
-                number_of_pipes,
-                number_of_x_segments,
-                number_of_y_segments,
-                TemperatureName.tank,
-            )
-        ]
-        else 0,
-        tank_temperature=temperature_vector[
-            index_handler.index_from_temperature_name(
-                number_of_pipes,
-                number_of_x_segments,
-                number_of_y_segments,
-                TemperatureName.tank,
-            )
-        ]
-        - ZERO_CELCIUS_OFFSET,
+        exchanger_temperature_drop=exchanger_temperature_drop,
+        tank_temperature=tank_temperature,
         sky_temperature=weather_conditions.sky_temperature - ZERO_CELCIUS_OFFSET,
         layer_temperature_map_bulk_water=temperature_map_bulk_water_layer
         if save_2d_output
@@ -804,7 +873,12 @@ def _system_data_from_run(
         if save_2d_output
         else None,
         layer_temperature_map_pv=temperature_map_pv_layer if save_2d_output else None,
-        thermal_efficiency=0,
+        thermal_efficiency=efficiency.thermal_efficiency(
+            pvt_panel.area,
+            pvt_panel.collector.mass_flow_rate,
+            weather_conditions.irradiance,
+            collector_output_temperature - collector_input_temperature,
+        ),
         reduced_temperature=300,
     )
 
@@ -1006,6 +1080,7 @@ def _dynamic_system_run(
                     number_of_temperatures=number_of_temperatures,
                     number_of_x_segments=number_of_x_segments,
                     number_of_y_segments=number_of_y_segments,
+                    operating_mode=operating_mode,
                     previous_run_temperature_vector=previous_run_temperature_vector,
                     pvt_panel=pvt_panel,
                     resolution=resolution,
@@ -1041,6 +1116,7 @@ def _dynamic_system_run(
 
 
 def _steady_state_run(
+    collector_input_temperature: float,
     cloud_efficacy_factor: float,
     initial_date_and_time: datetime.datetime,
     initial_system_temperature_vector: List[float],
@@ -1092,11 +1168,13 @@ def _steady_state_run(
 
     try:
         current_run_temperature_vector = _solve_temperature_vector_convergence_method(
+            collector_input_temperature=collector_input_temperature,
             logger=logger,
             number_of_pipes=number_of_pipes,
             number_of_temperatures=number_of_temperatures,
             number_of_x_segments=number_of_x_segments,
             number_of_y_segments=number_of_y_segments,
+            operating_mode=operating_mode,
             pvt_panel=pvt_panel,
             run_one_temperature_vector=initial_system_temperature_vector,
             weather_conditions=weather_conditions,
@@ -1129,26 +1207,27 @@ def _steady_state_run(
 def main(
     average_irradiance: bool,
     cloud_efficacy_factor: float,
-    days: Optional[int],
     exchanger_data_file: str,
     initial_month: int,
     initial_system_temperature_vector: List[float],
     location: str,
-    months: Optional[int],
     operating_mode: OperatingMode,
-    override_ambient_temperature: Optional[float],
-    override_irradiance: Optional[float],
     portion_covered: float,
     pvt_data_file: str,
     resolution: int,
-    run_number: Optional[int],
     save_2d_output: bool,
-    start_time: Optional[int],
     tank_data_file: str,
     use_pvgis: bool,
     verbose: bool,
     x_resolution: int,
     y_resolution: int,
+    *,
+    days: Optional[int] = None,
+    months: Optional[int] = None,
+    override_ambient_temperature: Optional[float],
+    override_irradiance: Optional[float],
+    run_number: Optional[int],
+    start_time: Optional[int],
 ) -> Tuple[numpy.ndarray, Dict[int, SystemData]]:
     """
     The main module for the code. Calling this method executes a run of the simulation.
@@ -1158,9 +1237,6 @@ def main(
 
     :param cloud_efficiacy_factor:
         The extent to which cloud cover influences the solar irradiance.
-
-    :param days:
-        The number of days for which the simulation is being run.
 
     :param exchanger_data_file:
         The path to the data file containing information about the heat exchanger being
@@ -1176,20 +1252,9 @@ def main(
         The location at which the PVT system is installed and for which location data
         should be used.
 
-    :param months:
-        The number of months for which to run the simulation.
-
     :param operating_mode:
         The operating mode of the run, containing information needed to set up the
         matrix.
-
-    :param override_ambient_temperature:
-        In decoupled instances, the ambient temperature can be specified as a constant
-        value which will override the ambient-temperature profiles.
-
-    :param override_irradiance:
-        In decoupled instances, the solar irradiance can be specified as a constant
-        value which will override the solar-irradiance profiles.
 
     :param portion_covered:
         The portion of the collector which is covered with PV cells.
@@ -1201,15 +1266,9 @@ def main(
     :param resolution:
         The temporal resolution at which to run the simulation.
 
-    :param run_number:
-        The number of the run being carried out. This is used for categorising logs.
-
     :param save_2d_output:
         If True, the 2D output is saved to the system data and returned. If False, only
         the 1D output is saved.
-
-    :param start_time:
-        The time of day at which to start the simulation, specified between 0 and 23.
 
     :param tank_data_file:
         The path to the data file containing information about the hot-water tank used
@@ -1230,18 +1289,47 @@ def main(
     :param y_resolution:
         The y resolution of the simulation being run.
 
+    :param days:
+        The number of days for which the simulation is being run. This can be `None` if
+        a steady-state simulation is being run.
+
+    :param months:
+        The number of months for which to run the simulation. This can be `None` if a
+        steady-state simulation is being run.
+
+    :param override_ambient_temperature:
+        In decoupled instances, the ambient temperature can be specified as a constant
+        value which will override the ambient-temperature profiles.
+
+    :param override_irradiance:
+        In decoupled instances, the solar irradiance can be specified as a constant
+        value which will override the solar-irradiance profiles.
+
+    :param run_number:
+        The number of the run being carried out. This is used for categorising logs.
+
+    :param start_time:
+        The time of day at which to start the simulation, specified between 0 and 23.
+        This can be `None` if a steady-state simulation is being run.
+
     :return:
         The system data is returned.
 
     """
 
     # Get the logger for the component.
-    logger = get_logger(
-        PVT_SYSTEM_MODEL_LOGGER_NAME.format(
-            resolution=resolution, run_number=run_number
-        ),
-        verbose,
-    )
+    if operating_mode.dynamic:
+        logger = get_logger(
+            PVT_SYSTEM_MODEL_LOGGER_NAME.format(
+                tag=f"{resolution}s", run_number=run_number
+            ),
+            verbose,
+        )
+    else:
+        logger = get_logger(
+            PVT_SYSTEM_MODEL_LOGGER_NAME.format(tag="dynamic", run_number=run_number),
+            verbose,
+        )
 
     # Set up numpy printing style.
     numpy.set_printoptions(formatter={"float": "{: 0.3f}".format})
@@ -1310,8 +1398,11 @@ def main(
         logger.info("Mains supply successfully instantiated: %s", mains_supply)
 
     else:
+        heat_exchanger = None
         logger.info("NO HEAT EXCHANGER PRESENT")
+        hot_water_tank = None
         logger.info("NO HOT-WATER TANK PRESENT")
+        mains_supply = None
         logger.info("NO MAINS SUPPLY PRESENT")
 
     # Determine the number of temperatures being modelled.
@@ -1328,9 +1419,17 @@ def main(
     number_of_y_segments = len(
         {segment.y_index for segment in pvt_panel.segments.values()}
     )
-    number_of_temperatures = index_handler.num_temperatures(
-        number_of_pipes, number_of_x_segments, number_of_y_segments
-    )
+    if operating_mode.coupled:
+        number_of_temperatures: int = index_handler.num_temperatures(
+            number_of_pipes, number_of_x_segments, number_of_y_segments
+        )
+    else:
+        number_of_temperatures: int = (
+            index_handler.num_temperatures(
+                number_of_pipes, number_of_x_segments, number_of_y_segments
+            )
+            - 3
+        )
     logger.info(
         "System consists of %s pipes, %s by %s segments, and %s temperatures in all.",
         number_of_pipes,
@@ -1351,19 +1450,13 @@ def main(
 
     logger.info(
         "System state before beginning run:\n%s\n%s\n%s\n%s",
-        heat_exchanger,
-        hot_water_tank,
+        heat_exchanger if heat_exchanger is not None else "No heat exchanger",
+        hot_water_tank if hot_water_tank is not None else "No hot-water tank",
         pvt_panel,
         weather_forecaster,
     )
 
     if operating_mode.dynamic:
-        # Determine the initial date and time for the run.
-        start_month = (
-            initial_month
-            if 1 <= initial_month <= 12
-            else DEFAULT_INITIAL_DATE_AND_TIME.month
-        )  # [months]
         final_run_temperature_vector, system_data = _dynamic_system_run(
             cloud_efficacy_factor,
             days,
@@ -1386,7 +1479,28 @@ def main(
             weather_forecaster,
         )
     elif operating_mode.steady_state:
-        final_run_temperature_vector, system_data = _steady_state_run()
+        collector_input_temperatures = {300, 310, 320, 330, 340, 350}
+        run_outputs = {
+            collector_input_temperature: _steady_state_run(
+                collector_input_temperature,
+                cloud_efficacy_factor,
+                DEFAULT_INITIAL_DATE_AND_TIME.replace(month=initial_month),
+                initial_system_temperature_vector,
+                logger,
+                number_of_pipes,
+                number_of_temperatures,
+                number_of_x_segments,
+                number_of_y_segments,
+                operating_mode,
+                pvt_panel,
+                save_2d_output,
+                weather_forecaster,
+            )
+            for collector_input_temperature in collector_input_temperatures
+        }
+        import pdb
+
+        pdb.set_trace()
     else:
         raise ProgrammerJudgementFault(
             "The system model was called with an operating mode "

@@ -28,7 +28,7 @@ The temperatures represented in the vector T are:
 
 """
 
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 import logging
 import numpy
@@ -37,7 +37,7 @@ from . import exchanger, index_handler, tank
 from .pvt_panel import pvt
 from .pvt_panel.segment import Segment, SegmentCoordinates
 
-from ..__utils__ import TemperatureName, ProgrammerJudgementFault
+from ..__utils__ import TemperatureName, OperatingMode, ProgrammerJudgementFault
 from .__utils__ import WeatherConditions
 from .constants import DENSITY_OF_WATER, HEAT_CAPACITY_OF_WATER
 from .physics_utils import (
@@ -60,6 +60,7 @@ def _absorber_equation(
     number_of_temperatures: int,
     number_of_x_segments: int,
     number_of_y_segments: int,
+    operating_mode: Optional[OperatingMode],
     previous_temperature_vector: numpy.ndarray,
     pv_to_absorber_conduction: float,
     pvt_panel: pvt.PVT,
@@ -92,14 +93,17 @@ def _absorber_equation(
 
     # pdb.set_trace(header=f"T_A{segment.coordinates}")
 
-    absorber_internal_energy_change = (
-        segment.width  # [m]
-        * segment.length  # [m]
-        * pvt_panel.collector.thickness  # [m]
-        * pvt_panel.collector.density  # [kg/m^3]
-        * pvt_panel.collector.heat_capacity  # [J/kg*K]
-        / resolution  # [s]
-    )
+    if operating_mode.dynamic:
+        absorber_internal_energy_change: float = (
+            segment.width  # [m]
+            * segment.length  # [m]
+            * pvt_panel.collector.thickness  # [m]
+            * pvt_panel.collector.density  # [kg/m^3]
+            * pvt_panel.collector.heat_capacity  # [J/kg*K]
+            / resolution  # [s]
+        )
+    else:
+        absorber_internal_energy_change = 0
     logger.debug(
         "Absorber internal energy term: %s W/K", absorber_internal_energy_change
     )
@@ -309,21 +313,25 @@ def _absorber_equation(
 
     # Compute the resultant vector value.
     resultant_vector_value = (
-        # Internal heat change term.
-        absorber_internal_energy_change  # [W/K]
-        * previous_temperature_vector[
-            index_handler.index_from_segment_coordinates(
-                number_of_x_segments,
-                number_of_y_segments,
-                TemperatureName.collector,
-                segment.x_index,
-                segment.y_index,
-            )
-        ]  # [K]
         # Ambient temperature term.
-        + absorber_to_insulation_loss  # [W/K]
+        +absorber_to_insulation_loss  # [W/K]
         * weather_conditions.ambient_temperature  # [K]
     )
+
+    if operating_mode.dynamic:
+        resultant_vector_value += (
+            # Internal heat change term.
+            absorber_internal_energy_change  # [W/K]
+            * previous_temperature_vector[
+                index_handler.index_from_segment_coordinates(
+                    number_of_x_segments,
+                    number_of_y_segments,
+                    TemperatureName.collector,
+                    segment.x_index,
+                    segment.y_index,
+                )
+            ]  # [K]
+        )
 
     return row_equation, resultant_vector_value
 
@@ -457,6 +465,90 @@ def _boundary_condition_equations(
     return equations
 
 
+def _decoupled_system_continuity_equation(
+    collector_input_temperature: float,
+    number_of_pipes: int,
+    number_of_temperatures: int,
+    number_of_x_segments: int,
+    number_of_y_segments: int,
+) -> List[Tuple[List[float], float]]:
+    """
+    Compute the system continuity equations when the system is decoupled.
+
+    The equations represented and computed are:
+        - fluid enters the collector at the set temperature specified (1);
+        - the fluid entering the collector is the same across all pipes (2);
+        - fluid leaving the collector is computed as an average over all the outputs
+          (2);
+
+    """
+
+    equations: List[Tuple[List[float], float]] = list()
+
+    # Equation 1: Fluid enters the collector at the temperature specified.
+    row_equation: List[float] = [0] * number_of_temperatures
+    row_equation[
+        index_handler.index_from_temperature_name(
+            number_of_pipes,
+            number_of_x_segments,
+            number_of_y_segments,
+            TemperatureName.collector_in,
+        )
+    ] = 1
+    equations.append((row_equation, collector_input_temperature))
+
+    # Equation 2: Fluid entering the collector is the same across all pipes.
+    for pipe_number in range(number_of_pipes):
+        row_equation: List[float] = [0] * number_of_temperatures
+        row_equation[
+            index_handler.index_from_pipe_coordinates(
+                number_of_pipes,
+                number_of_x_segments,
+                number_of_y_segments,
+                TemperatureName.htf_in,
+                pipe_number,
+                0,
+            )
+        ] = 1
+        row_equation[
+            index_handler.index_from_temperature_name(
+                number_of_pipes,
+                number_of_x_segments,
+                number_of_y_segments,
+                TemperatureName.collector_in,
+            )
+        ] = -1
+        equations.append((row_equation, 0))
+
+    # Equation 3: Fluid leaving the collector is computed by an average across the
+    # output from all pipes.
+    row_equation = [0] * number_of_temperatures
+    for pipe_number in range(number_of_pipes):
+        row_equation[
+            index_handler.index_from_pipe_coordinates(
+                number_of_pipes,
+                number_of_x_segments,
+                number_of_y_segments,
+                TemperatureName.htf_out,
+                pipe_number,
+                number_of_y_segments - 1,
+            )
+        ] = (
+            -1 / number_of_pipes
+        )
+    row_equation[
+        index_handler.index_from_temperature_name(
+            number_of_pipes,
+            number_of_x_segments,
+            number_of_y_segments,
+            TemperatureName.collector_out,
+        )
+    ] = 1
+    equations.append((row_equation, 0))
+
+    return equations
+
+
 def _fluid_continuity_equation(
     number_of_pipes: int,
     number_of_temperatures: int,
@@ -514,7 +606,8 @@ def _glass_equation(
     number_of_temperatures: int,
     number_of_x_segments: int,
     number_of_y_segments: int,
-    previous_temperature_vector: numpy.ndarray,
+    operating_mode: OperatingMode,
+    previous_temperature_vector: Optional[numpy.ndarray],
     pvt_panel: pvt.PVT,
     resolution: int,
     segment: Segment,
@@ -540,14 +633,17 @@ def _glass_equation(
         "Beginning calculation of glass equation for segment %s.", segment.coordinates
     )
 
-    glass_internal_energy = (
-        segment.width  # [m]
-        * segment.length  # [m]
-        * pvt_panel.glass.thickness  # [m]
-        * pvt_panel.glass.density  # [kg/m^3]
-        * pvt_panel.glass.heat_capacity  # [J/kg*K]
-        / resolution  # [s]
-    )
+    if operating_mode.dynamic:
+        glass_internal_energy: float = (
+            segment.width  # [m]
+            * segment.length  # [m]
+            * pvt_panel.glass.thickness  # [m]
+            * pvt_panel.glass.density  # [kg/m^3]
+            * pvt_panel.glass.heat_capacity  # [J/kg*K]
+            / resolution  # [s]
+        )
+    else:
+        glass_internal_energy = 0
     logger.debug("Glass internal energy term: %s W/K", glass_internal_energy)
 
     # Compute the positive conductive term based on the next segment along.
@@ -742,19 +838,8 @@ def _glass_equation(
 
     # Compute the resultant vector value.
     resultant_vector_value = (
-        # Previous glass temperature term.
-        glass_internal_energy  # [W/K]
-        * previous_temperature_vector[
-            index_handler.index_from_segment_coordinates(
-                number_of_x_segments,
-                number_of_y_segments,
-                TemperatureName.glass,
-                segment.x_index,
-                segment.y_index,
-            )
-        ]  # [K]
         # Ambient temperature term.
-        + glass_to_air_conduction * weather_conditions.ambient_temperature  # [W]
+        +glass_to_air_conduction * weather_conditions.ambient_temperature  # [W]
         # Sky temperature term.
         + glass_to_sky_radiation * weather_conditions.sky_temperature  # [W]
         # Solar absorption term.
@@ -763,6 +848,21 @@ def _glass_equation(
         * pvt_panel.glass.absorptivity
         * weather_conditions.irradiance  # [W/m^2]
     )
+
+    if operating_mode.dynamic:
+        resultant_vector_value += (
+            # Previous glass temperature term.
+            glass_internal_energy  # [W/K]
+            * previous_temperature_vector[
+                index_handler.index_from_segment_coordinates(
+                    number_of_x_segments,
+                    number_of_y_segments,
+                    TemperatureName.glass,
+                    segment.x_index,
+                    segment.y_index,
+                )
+            ]  # [K]
+        )
 
     return row_equation, resultant_vector_value
 
@@ -834,7 +934,8 @@ def _htf_equation(
     number_of_temperatures: int,
     number_of_x_segments: int,
     number_of_y_segments: int,
-    previous_temperature_vector: numpy.ndarray,
+    operating_mode: OperatingMode,
+    previous_temperature_vector: Optional[numpy.ndarray],
     pvt_panel: pvt.PVT,
     resolution: int,
     segment: Segment,
@@ -855,14 +956,17 @@ def _htf_equation(
     # Compute the row equation
     row_equation: List[float] = [0] * number_of_temperatures
 
-    bulk_water_internal_energy = (
-        numpy.pi
-        * (pvt_panel.collector.inner_pipe_diameter / 2) ** 2  # [m^2]
-        * segment.length  # [m]
-        * DENSITY_OF_WATER  # [kg/m^3]
-        * pvt_panel.collector.htf_heat_capacity  # [J/kg*K]
-        / resolution  # [s]
-    )  # [W/K]
+    if operating_mode.dynamic:
+        bulk_water_internal_energy: float = (
+            numpy.pi
+            * (pvt_panel.collector.inner_pipe_diameter / 2) ** 2  # [m^2]
+            * segment.length  # [m]
+            * DENSITY_OF_WATER  # [kg/m^3]
+            * pvt_panel.collector.htf_heat_capacity  # [J/kg*K]
+            / resolution  # [s]
+        )  # [W/K]
+    else:
+        bulk_water_internal_energy = 0
 
     pipe_to_bulk_water_heat_transfer = (
         segment.length  # [m]
@@ -932,20 +1036,23 @@ def _htf_equation(
     )
 
     # Compute the resultant vector value.
-    resultant_vector_value = (
-        # Internal heat change.
-        bulk_water_internal_energy
-        * previous_temperature_vector[
-            index_handler.index_from_pipe_coordinates(
-                number_of_pipes,
-                number_of_x_segments,
-                number_of_y_segments,
-                TemperatureName.htf,
-                segment.pipe_index,  # type: ignore
-                segment.y_index,
-            )
-        ]
-    )
+    resultant_vector_value = 0
+
+    if operating_mode.dynamic:
+        resultant_vector_value += (
+            # Internal heat change.
+            bulk_water_internal_energy
+            * previous_temperature_vector[
+                index_handler.index_from_pipe_coordinates(
+                    number_of_pipes,
+                    number_of_x_segments,
+                    number_of_y_segments,
+                    TemperatureName.htf,
+                    segment.pipe_index,  # type: ignore
+                    segment.y_index,
+                )
+            ]
+        )
 
     return row_equation, resultant_vector_value
 
@@ -956,8 +1063,9 @@ def _pipe_equation(
     number_of_temperatures: int,
     number_of_x_segments: int,
     number_of_y_segments: int,
+    operating_mode: OperatingMode,
     pipe_to_htf_heat_transfer: float,
-    previous_temperature_vector: numpy.ndarray,
+    previous_temperature_vector: Optional[numpy.ndarray],
     pvt_panel: pvt.PVT,
     resolution: int,
     segment: Segment,
@@ -979,17 +1087,20 @@ def _pipe_equation(
     # Compute the row equation
     row_equation: List[float] = [0] * number_of_temperatures
 
-    pipe_internal_heat_change = (
-        numpy.pi
-        * (
-            (pvt_panel.collector.outer_pipe_diameter / 2) ** 2  # [m^2]
-            - (pvt_panel.collector.inner_pipe_diameter / 2) ** 2  # [m^2]
+    if operating_mode.dynamic:
+        pipe_internal_heat_change: float = (
+            numpy.pi
+            * (
+                (pvt_panel.collector.outer_pipe_diameter / 2) ** 2  # [m^2]
+                - (pvt_panel.collector.inner_pipe_diameter / 2) ** 2  # [m^2]
+            )
+            * segment.length  # [m]
+            * pvt_panel.collector.pipe_density  # [kg/m^3]
+            * pvt_panel.collector.heat_capacity  # [J/kg*K]
+            / resolution  # [s]
         )
-        * segment.length  # [m]
-        * pvt_panel.collector.pipe_density  # [kg/m^3]
-        * pvt_panel.collector.heat_capacity  # [J/kg*K]
-        / resolution  # [s]
-    )
+    else:
+        pipe_internal_heat_change = 0
 
     pipe_to_surroundings_losses = (
         numpy.pi
@@ -1040,21 +1151,26 @@ def _pipe_equation(
 
     # Compute the resultant vector value.
     resultant_vector_value = (
-        # Internal heat change.
-        pipe_internal_heat_change
-        * previous_temperature_vector[
-            index_handler.index_from_pipe_coordinates(
-                number_of_pipes,
-                number_of_x_segments,
-                number_of_y_segments,
-                TemperatureName.pipe,
-                segment.pipe_index,  # type: ignore
-                segment.y_index,
-            )
-        ]
         # Ambient heat loss.
-        + pipe_to_surroundings_losses * weather_conditions.ambient_temperature  # [W]
+        +pipe_to_surroundings_losses
+        * weather_conditions.ambient_temperature  # [W]
     )
+
+    if operating_mode.dynamic:
+        resultant_vector_value += (
+            # Internal heat change.
+            pipe_internal_heat_change
+            * previous_temperature_vector[
+                index_handler.index_from_pipe_coordinates(
+                    number_of_pipes,
+                    number_of_x_segments,
+                    number_of_y_segments,
+                    TemperatureName.pipe,
+                    segment.pipe_index,  # type: ignore
+                    segment.y_index,
+                )
+            ]
+        )
 
     return row_equation, resultant_vector_value
 
@@ -1065,7 +1181,8 @@ def _pv_equation(
     number_of_temperatures: int,
     number_of_x_segments: int,
     number_of_y_segments: int,
-    previous_temperature_vector: numpy.ndarray,
+    operating_mode: OperatingMode,
+    previous_temperature_vector: Optional[numpy.ndarray],
     pv_to_absorber_conduction: float,
     pv_to_glass_conduction: float,
     pv_to_glass_radiation: float,
@@ -1102,14 +1219,17 @@ def _pv_equation(
         "Beginning calculation of PV equation for segment %s.", segment.coordinates
     )
 
-    pv_internal_energy = (
-        segment.width  # [m]
-        * segment.length  # [m]
-        * pvt_panel.pv.thickness  # [m]
-        * pvt_panel.pv.density  # [kg/m^3]
-        * pvt_panel.pv.heat_capacity  # [J/kg*K]
-        / resolution  # [s]
-    )
+    if operating_mode.dynamic:
+        pv_internal_energy: float = (
+            segment.width  # [m]
+            * segment.length  # [m]
+            * pvt_panel.pv.thickness  # [m]
+            * pvt_panel.pv.density  # [kg/m^3]
+            * pvt_panel.pv.heat_capacity  # [J/kg*K]
+            / resolution  # [s]
+        )
+    else:
+        pv_internal_energy = 0
     logger.debug("PV internal energy term: %s W/K", pv_internal_energy)
 
     # Compute the positive conductive term based on the next segment along.
@@ -1327,18 +1447,22 @@ def _pv_equation(
     resultant_vector_value = (
         # Solar thermal absorption term.
         solar_thermal_resultant_vector_absorbtion_term  # [W]
-        # Internal energy change
-        + pv_internal_energy  # [W/K]
-        * previous_temperature_vector[
-            index_handler.index_from_segment_coordinates(
-                number_of_x_segments,
-                number_of_y_segments,
-                TemperatureName.pv,
-                segment.x_index,
-                segment.y_index,
-            )
-        ]
     )
+
+    if operating_mode.dynamic:
+        resultant_vector_value += (
+            # Internal energy change
+            +pv_internal_energy  # [W/K]
+            * previous_temperature_vector[
+                index_handler.index_from_segment_coordinates(
+                    number_of_x_segments,
+                    number_of_y_segments,
+                    TemperatureName.pv,
+                    segment.x_index,
+                    segment.y_index,
+                )
+            ]
+        )
 
     return row_equation, resultant_vector_value
 
@@ -1688,19 +1812,22 @@ def _tank_equation(
 
 
 def calculate_matrix_equation(
+    *,
     best_guess_temperature_vector: numpy.ndarray,
-    heat_exchanger: exchanger.Exchanger,
-    hot_water_load: float,
-    hot_water_tank: tank.Tank,
     logger: logging.Logger,
     number_of_pipes: int,
     number_of_temperatures: int,
     number_of_x_segments: int,
     number_of_y_segments: int,
-    previous_temperature_vector: numpy.ndarray,
+    operating_mode: OperatingMode,
     pvt_panel: pvt.PVT,
     resolution: int,
     weather_conditions: WeatherConditions,
+    collector_input_temperature: Optional[float] = None,
+    heat_exchanger: Optional[exchanger.Exchanger] = None,
+    hot_water_load: Optional[float] = None,
+    hot_water_tank: Optional[tank.Tank] = None,
+    previous_temperature_vector: Optional[numpy.ndarray] = None,
 ) -> Tuple[numpy.ndarray, numpy.ndarray]:
     """
     Calculates and returns both the matrix and resultant vector for the matrix equation.
@@ -1712,6 +1839,11 @@ def calculate_matrix_equation(
     """
 
     logger.info("Matrix module called: calculating matrix and resultant vector.")
+    logger.info(
+        "A %s and %s matrix will be computed.",
+        "dynamic" if operating_mode.dynamic else "steady-state",
+        "decoupled" if operating_mode.decoupled else "coupled",
+    )
 
     # Instantiate an empty matrix and array based on the number of temperatures present.
     matrix = numpy.zeros([0, number_of_temperatures])
@@ -1788,6 +1920,7 @@ def calculate_matrix_equation(
             number_of_temperatures,
             number_of_x_segments,
             number_of_y_segments,
+            operating_mode,
             previous_temperature_vector,
             pvt_panel,
             resolution,
@@ -1809,6 +1942,7 @@ def calculate_matrix_equation(
             number_of_temperatures,
             number_of_x_segments,
             number_of_y_segments,
+            operating_mode,
             previous_temperature_vector,
             pv_to_absorber_conduction,
             glass_to_pv_conduction,
@@ -1834,6 +1968,7 @@ def calculate_matrix_equation(
             number_of_temperatures,
             number_of_x_segments,
             number_of_y_segments,
+            operating_mode,
             previous_temperature_vector,
             pv_to_absorber_conduction,
             pvt_panel,
@@ -1861,6 +1996,7 @@ def calculate_matrix_equation(
             number_of_temperatures,
             number_of_x_segments,
             number_of_y_segments,
+            operating_mode,
             pipe_to_htf_heat_transfer,
             previous_temperature_vector,
             pvt_panel,
@@ -1882,6 +2018,7 @@ def calculate_matrix_equation(
             number_of_temperatures,
             number_of_x_segments,
             number_of_y_segments,
+            operating_mode,
             previous_temperature_vector,
             pvt_panel,
             resolution,
@@ -1940,6 +2077,43 @@ def calculate_matrix_equation(
             (resultant_vector, fluid_continuity_resultant_value)
         )
         logger.debug("7 equations for segment %s", segment_coordinates)
+
+    # # Calculate the system boundary condition equations.
+    # boundary_condition_equations = _boundary_condition_equations(
+    #     number_of_temperatures, number_of_x_segments, number_of_y_segments
+    # )
+
+    # for equation, resultant_value in boundary_condition_equations:
+    #     logger.debug(
+    #         "Boundary condition equation computed:\nEquation: %s\nResultant value: %s W",
+    #         ", ".join([f"{value:.3f} W/K" for value in equation]),
+    #         resultant_value,
+    #     )
+    #     matrix = numpy.vstack((matrix, equation))
+    #     resultant_vector = numpy.vstack((resultant_vector, resultant_value))
+    #     # if len(matrix) == number_of_temperatures:
+    #     #     return matrix, resultant_vector
+
+    # If the system is decoupled, do not compute and add the tank-related equations.
+    if operating_mode.decoupled:
+        decoupled_system_continuity_equations = _decoupled_system_continuity_equation(
+            collector_input_temperature,
+            number_of_pipes,
+            number_of_temperatures,
+            number_of_x_segments,
+            number_of_y_segments,
+        )
+        for equation, resultant_value in decoupled_system_continuity_equations:
+            logger.debug(
+                "System continuity equation computed:\nEquation: %s\nResultant value: %s W",
+                ", ".join([f"{value:.3f} W/K" for value in equation]),
+                resultant_value,
+            )
+            matrix = numpy.vstack((matrix, equation))
+            resultant_vector = numpy.vstack((resultant_vector, resultant_value))
+        logger.info("Matrix equation computed, matrix dimensions: %s", matrix.shape)
+
+        return matrix, resultant_vector
 
     # Calculate the tank equations.
     equation, resultant_value = _tank_equation(
@@ -2003,22 +2177,6 @@ def calculate_matrix_equation(
         )
         matrix = numpy.vstack((matrix, equation))
         resultant_vector = numpy.vstack((resultant_vector, resultant_value))
-
-    # Calculate the system boundary condition equations.
-    boundary_condition_equations = _boundary_condition_equations(
-        number_of_temperatures, number_of_x_segments, number_of_y_segments
-    )
-
-    for equation, resultant_value in boundary_condition_equations:
-        logger.debug(
-            "Boundary condition equation computed:\nEquation: %s\nResultant value: %s W",
-            ", ".join([f"{value:.3f} W/K" for value in equation]),
-            resultant_value,
-        )
-        matrix = numpy.vstack((matrix, equation))
-        resultant_vector = numpy.vstack((resultant_vector, resultant_value))
-        # if len(matrix) == number_of_temperatures:
-        #     return matrix, resultant_vector
 
     logger.info("Matrix equation computed, matrix dimensions: %s", matrix.shape)
 

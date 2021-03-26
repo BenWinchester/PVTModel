@@ -186,6 +186,10 @@ def get_logger(logger_name: str, verbose: bool) -> logging.Logger:
 
     # Create a logger with the current component name.
     logger = logging.getLogger(logger_name)
+    # Create the logging directory if it doesn't exist.
+    if not os.path.isdir(LOGGER_DIRECTORY):
+        os.mkdir(LOGGER_DIRECTORY)
+    # Rename old log files.
     if os.path.exists(os.path.join(LOGGER_DIRECTORY, f"{logger_name}.log")):
         os.rename(
             os.path.join(LOGGER_DIRECTORY, f"{logger_name}.log"),
@@ -201,10 +205,6 @@ def get_logger(logger_name: str, verbose: bool) -> logging.Logger:
         logger.setLevel(logging.INFO)
         fh.setLevel(logging.INFO)
         ch.setLevel(logging.ERROR)
-    # Create the logging directory if it doesn't exist.
-    if not os.path.isdir(LOGGER_DIRECTORY):
-        os.mkdir(LOGGER_DIRECTORY)
-    # Create a file handler which logs even debug messages.
     # Create a formatter and add it to the handlers.
     formatter = logging.Formatter(
         "%(asctime)s: %(name)s: %(levelname)s: %(message)s",

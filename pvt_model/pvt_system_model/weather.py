@@ -488,8 +488,11 @@ class WeatherForecaster:
 
         return (
             "WeatherForecaster("
-            f"mains_water_temperature: {self.mains_water_temperature}, "
-            f"num_months: {len(self._monthly_weather_data.keys())}"
+            f"_average_irradiance: {self._average_irradiance}, "
+            f"mains_water_temperature: {self.mains_water_temperature}K, "
+            f"num_months: {len(self._monthly_weather_data.keys())}, "
+            f"override_ambient_temperature: {self._override_ambient_temperature}K, "
+            f"override_irradiance: {self._override_irradiance}W/m^2"
             ")"
         )
 
@@ -814,7 +817,7 @@ class WeatherForecaster:
             data,
             monthly_irradiance_profiles,
             temperature_profiles,
-            override_ambient_temperature - ZERO_CELCIUS_OFFSET
+            override_ambient_temperature + ZERO_CELCIUS_OFFSET
             if override_ambient_temperature is not None
             else None,
             override_irradiance,
@@ -851,15 +854,14 @@ class WeatherForecaster:
 
         """
 
-        # Based on the time, compute the sun's position in the sky, making sure to
-        # account for the seasonal variation.
-        azimuthal_angle, declination = _get_solar_angles(
-            latitude, longitude, date_and_time
-        )
-
         # Factor in the weather conditions and cloud cover to compute the current solar
         # irradiance.
         if date_and_time is not None:
+            # Based on the time, compute the sun's position in the sky, making sure to
+            # account for the seasonal variation.
+            azimuthal_angle, declination = _get_solar_angles(
+                latitude, longitude, date_and_time
+            )
             irradiance: float = self._irradiance(date_and_time)  # * (
             # 1 - self._cloud_cover(cloud_efficacy_factor, date_and_time)
             # )
@@ -874,6 +876,8 @@ class WeatherForecaster:
             ].average_temperature_profile[date_and_time.time()]
             # <<< E.O. code-alteration block
         else:
+            azimuthal_angle = 180
+            declination = 45
             if self._override_irradiance is None:
                 raise MissingParametersError(
                     "WeatherForecaster",

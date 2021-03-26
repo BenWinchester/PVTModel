@@ -300,39 +300,49 @@ def _determine_consistent_conditions(
 
     # Fetch the initial temperature conditions if not passed in:
     if running_system_temperature_vector is None:
-        running_system_temperature_vector = [
-            DEFAULT_SYSTEM_TEMPERATURE
-        ] * index_handler.num_temperatures(
-            number_of_pipes,
-            (parsed_args.x_resolution),
-            (parsed_args.y_resolution),
-        )
+        if operating_mode.coupled:
+            running_system_temperature_vector = [
+                DEFAULT_SYSTEM_TEMPERATURE
+            ] * index_handler.num_temperatures(
+                number_of_pipes,
+                (parsed_args.x_resolution),
+                (parsed_args.y_resolution),
+            )
+        else:
+            running_system_temperature_vector = [DEFAULT_SYSTEM_TEMPERATURE] * (
+                index_handler.num_temperatures(
+                    number_of_pipes,
+                    (parsed_args.x_resolution),
+                    (parsed_args.y_resolution),
+                )
+                - 3
+            )
 
     # Call the model to generate the output of the run.
     logger.info("Running the model. Run number %s.", run_depth)
     final_temperature_vector, system_data = pvt_system_model_main(
         parsed_args.average_irradiance,
         parsed_args.cloud_efficacy_factor,
-        parsed_args.days,
         parsed_args.exchanger_data_file,
         parsed_args.initial_month,
         running_system_temperature_vector,
         parsed_args.location,
-        parsed_args.months,
         operating_mode,
-        override_ambient_temperature,
-        parsed_args.solar_irradiance,
         parsed_args.portion_covered,
         parsed_args.pvt_data_file,
         resolution,
-        run_depth,
         not parsed_args.skip_2d_output,
-        parsed_args.start_time,
         parsed_args.tank_data_file,
         parsed_args.use_pvgis,
         parsed_args.verbose,
         parsed_args.x_resolution,
         parsed_args.y_resolution,
+        days=parsed_args.days,
+        months=parsed_args.months,
+        override_ambient_temperature=override_ambient_temperature,
+        override_irradiance=parsed_args.solar_irradiance,
+        run_number=run_depth,
+        start_time=parsed_args.start_time,
     )
 
     # If in verbose mode, output average, min, and max temperatures.
@@ -882,26 +892,26 @@ def main(args) -> None:
         _, system_data = pvt_system_model_main(
             parsed_args.average_irradiance,
             parsed_args.cloud_efficacy_factor,
-            parsed_args.days,
             parsed_args.exchanger_data_file,
             parsed_args.initial_month,
             initial_system_temperature_vector,
             parsed_args.location,
-            parsed_args.months,
             operating_mode,
-            parsed_args.ambient_temperature,
-            parsed_args.solar_irradiance,
             parsed_args.portion_covered,
             parsed_args.pvt_data_file,
             parsed_args.resolution,
-            1,
             not parsed_args.skip_2d_output,
-            parsed_args.start_time,
             parsed_args.tank_data_file,
             parsed_args.use_pvgis,
             parsed_args.verbose,
             parsed_args.x_resolution,
             parsed_args.y_resolution,
+            days=parsed_args.days,
+            months=parsed_args.months,
+            override_ambient_temperature=parsed_args.ambient_temperature,
+            override_irradiance=parsed_args.solar_irradiance,
+            run_number=1,
+            start_time=parsed_args.start_time,
         )
 
     elif operating_mode.decoupled:
@@ -910,6 +920,13 @@ def main(args) -> None:
             f"{BColours.OKGREEN}"
             "Running a steady-state and decoupled system."
             f"{BColours.ENDC}"
+        )
+        _determine_consistent_conditions(
+            pvt_panel.collector.number_of_pipes,
+            logger,
+            operating_mode,
+            parsed_args,
+            override_ambient_temperature=parsed_args.ambient_temperature,
         )
         # * Call `_determine_consistent_conditions` to determine the solution for the
         # * model in a steady-state and decoupled configuration.
