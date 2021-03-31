@@ -1,15 +1,15 @@
 #!/usr/bin/python3.7
 ########################################################################################
-# pvt_panel/collector.py - Represents a collector within a PVT panel.
+# pvt_panel/absorber.py - Represents a absorber within a PVT panel.
 #
 # Author: Ben Winchester
 # Copyright: Ben Winchester, 2021
 ########################################################################################
 
 """
-The collector module for the PV-T model.
+The absorber module for the PV-T model.
 
-This module represents a thermal collector within a PV-T panel.
+This module represents a thermal absorber within a PV-T panel.
 
 """
 
@@ -34,14 +34,14 @@ logger = logging.getLogger(PVT_SYSTEM_MODEL_LOGGER_NAME)
 
 class Collector(OpticalLayer):
     """
-    Represents the thermal collector (lower) layer of the PV-T panel.
+    Represents the thermal absorber (lower) layer of the PV-T panel.
 
     .. attribute:: htf_heat_capacity
-        The heat capacity of the heat-transfer fluid passing through the collector,
+        The heat capacity of the heat-transfer fluid passing through the absorber,
         measured in Joules per kilogram Kelvin.
 
     .. attribute:: mass_flow_rate
-        The mass flow rate of heat-transfer fluid through the collector, measured in
+        The mass flow rate of heat-transfer fluid through the absorber, measured in
         kilograms per second.
 
     .. attribute:: output_water_temperature
@@ -55,38 +55,38 @@ class Collector(OpticalLayer):
     # Pirvate Attributes:
     #
     # .. attribute:: _mass_flow_rate
-    #   The mass flow rate of heat-trasnfer fluid through the collector, measured in
+    #   The mass flow rate of heat-trasnfer fluid through the absorber, measured in
     #   Litres per hour.
     #
 
-    def __init__(self, collector_params: CollectorParameters) -> None:
+    def __init__(self, absorber_params: CollectorParameters) -> None:
         """
-        Instantiate a collector layer.
+        Instantiate a absorber layer.
 
-        :param collector_params:
-            The parameters needed to instantiate the collector.
+        :param absorber_params:
+            The parameters needed to instantiate the absorber.
 
         """
 
         super().__init__(
             OpticalLayerParameters(
-                collector_params.conductivity,
-                collector_params.density,
-                collector_params.heat_capacity,
-                collector_params.thickness,
-                collector_params.transmissivity,
-                collector_params.absorptivity,
-                collector_params.emissivity,
+                absorber_params.conductivity,
+                absorber_params.density,
+                absorber_params.heat_capacity,
+                absorber_params.thickness,
+                absorber_params.transmissivity,
+                absorber_params.absorptivity,
+                absorber_params.emissivity,
             )
         )
 
-        self.htf_heat_capacity = collector_params.htf_heat_capacity
-        self.inner_pipe_diameter = collector_params.inner_pipe_diameter
-        self.length = collector_params.length
-        self._mass_flow_rate = collector_params.mass_flow_rate
-        self.number_of_pipes = collector_params.number_of_pipes
-        self.outer_pipe_diameter = collector_params.outer_pipe_diameter
-        self.pipe_density = collector_params.pipe_density
+        self.htf_heat_capacity = absorber_params.htf_heat_capacity
+        self.inner_pipe_diameter = absorber_params.inner_pipe_diameter
+        self.length = absorber_params.length
+        self._mass_flow_rate = absorber_params.mass_flow_rate
+        self.number_of_pipes = absorber_params.number_of_pipes
+        self.outer_pipe_diameter = absorber_params.outer_pipe_diameter
+        self.pipe_density = absorber_params.pipe_density
 
     def __repr__(self) -> str:
         """
@@ -135,13 +135,13 @@ class Collector(OpticalLayer):
     @property
     def htf_surface_area(self) -> float:
         """
-        Returns the contact area between the HTF and the collector, measured in m^2.
+        Returns the contact area between the HTF and the absorber, measured in m^2.
 
         :return:
-            The contact surface area, between the collector (i.e., the pipes) and the
+            The contact surface area, between the absorber (i.e., the pipes) and the
             HTF passing through the pipes.
             A single pass is assumed, with multiple pipes increasing the area, rather
-            than the length, of the collector.
+            than the length, of the absorber.
 
         """
 
@@ -155,10 +155,10 @@ class Collector(OpticalLayer):
     @property
     def htf_volume(self) -> float:
         """
-        Returns the volume of HTF that can be held within the collector, measured in m^3
+        Returns the volume of HTF that can be held within the absorber, measured in m^3
 
         :return:
-            The volume of the HTF within the collector, measured in meters cubed.
+            The volume of the HTF within the absorber, measured in meters cubed.
 
         """
 

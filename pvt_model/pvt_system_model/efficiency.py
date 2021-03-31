@@ -217,7 +217,7 @@ def thermal_efficiency(
         The area of the panel, measured in meters squared.
 
     :param mass_flow_rate:
-        The mass flow rate of HTF through the collector.
+        The mass flow rate of HTF through the absorber.
 
     :param solar_irradiance:
         The solar irradiance, measured in Watts per meter squared.
@@ -226,11 +226,11 @@ def thermal_efficiency(
         The temperature gain across the panel, measured in Kelvin.
 
     :return:
-        The thermal efficiency, based on the input parameters, for a PV-T collector.
+        The thermal efficiency, based on the input parameters, for a PV-T absorber.
 
     """
 
-    # Compute the thermal efficiency of the collector.
+    # Compute the thermal efficiency of the absorber.
     thermal_input: float = area * solar_irradiance
     thermal_output: float = mass_flow_rate * HEAT_CAPACITY_OF_WATER * temperature_gain
 

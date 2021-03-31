@@ -28,21 +28,21 @@ pvt_system:
   horizontal_tracking: false
   latitude: 51.4934 # [deg]
   longitude: 0.0098 # [deg]
-  # The length of the collector is measured in meters.
+  # The length of the absorber is measured in meters.
   length: 1.66 # [m]
   # length: 0.11857142857 # [m]
   # The conductance, measured in Watts per meter squared Kelvin, between the PV
-  # laye and collector layers of the panel.
-  pv_to_collector_conductance: 500 # [W/m^2*K]
+  # laye and absorber layers of the panel.
+  pv_to_absorber_conductance: 500 # [W/m^2*K]
   # These parameters set up how the panel is orientated.
   # All angles are measured in degrees
   tilt: 35 # [deg]
   # The timezone offset in Hours from UTC.
   timezone: 0 # [hours]
   vertical_tracking: false
-  # The width of the collector is measured in meters.
-  # width: 0.86 #[m]
-  width: 0.06142857142 # [m]
+  # The width of the absorber is measured in meters.
+  width: 0.86 #[m]
+  # width: 0.06142857142 # [m]
 glass:
   absorptivity: 0.01 # [unitless]
   # @@@ Value NOT taken from Maria's paper.
@@ -93,7 +93,7 @@ adhesive:
 tedlar:
   thickness: 0.0001 # [m]
   thermal_conductivity: 0.2 # [W/m*K]
-collector:
+absorber:
   absorptivity: 0.95 # [unitless]
   # @@@ Value NOT taken from Maria's paper.
   density: 8960 # [kg/m^3]
@@ -104,8 +104,8 @@ collector:
   heat_capacity: 386 # [J/kg*K]
   inner_pipe_diameter: 0.007717 #[m]
   length: 1.66 # [m]
-  # mass_flow_rate: 108 # [L/h]
-  mass_flow_rate: 7.71 # [L/h]
+  mass_flow_rate: 108 # [L/h]
+  # mass_flow_rate: 7.71 # [L/h]
   maximum_operating_pressure: 3.5 # [bar]
   number_of_pipes: 1 # [pipes]
   outer_pipe_diameter: 0.008 # [m]
@@ -120,7 +120,7 @@ collector:
 bond:
   thermal_conductivity: 0.85 # [W/m*K]
   thickness: 0.00005 # [m]
-  width: 0.02 # [m]
+  width: 0.004 # [m]
 insulation:
   thickness: 0.02 # [m]
   thermal_conductivity: 0.035 # [W/m*K]

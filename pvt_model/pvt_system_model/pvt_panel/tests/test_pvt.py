@@ -81,7 +81,7 @@ def _pvt(
         conductivity=500,
         density=2500,
     )
-    collector_parameters = CollectorParameters(
+    absorber_parameters = CollectorParameters(
         conductivity=140,
         density=2500,
         mass=100,
@@ -128,7 +128,7 @@ def _pvt(
         air_gap_thickness=0.05,
         area=15,
         back_params=back_layer_parameters,
-        collector_parameters=collector_parameters,
+        absorber_parameters=absorber_parameters,
         diffuse_reflection_coefficient=0.18,
         glass_parameters=glass_parameters,
         glazed=glazed,
@@ -136,7 +136,7 @@ def _pvt(
         longitude=longitude,
         portion_covered=portion_covered,
         pv_parameters=pv_parameters if pv_params_provded else None,
-        pv_to_collector_thermal_conductance=500,
+        pv_to_absorber_thermal_conductance=500,
         timezone=timezone(timedelta(0)),
         azimuthal_orientation=azimuthal_orientation,
         horizontal_tracking=horizontal_tracking,

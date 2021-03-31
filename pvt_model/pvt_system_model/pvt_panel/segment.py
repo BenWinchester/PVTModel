@@ -69,8 +69,8 @@ class Segment:
     """
     Represents a single segment within a PV-T panel.
 
-    .. attribute:: collector
-        Whether the collector layer is present in this segment.
+    .. attribute:: absorber
+        Whether the absorber layer is present in this segment.
 
     .. attribute:: glass
         Whether the glass layer is present in this segment.
@@ -98,7 +98,7 @@ class Segment:
 
     """
 
-    collector: bool
+    absorber: bool
     glass: bool
     length: float
     pipe: bool
@@ -122,7 +122,7 @@ class Segment:
                 entry
                 for entry in [
                     "glass" if self.glass else None,
-                    "collector" if self.collector else None,
+                    "absorber" if self.absorber else None,
                     "pv" if self.pv else None,
                     "pipe" if self.pipe else None,
                 ]

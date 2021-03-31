@@ -66,7 +66,7 @@ from .constants import (
     ZERO_CELCIUS_OFFSET,
 )
 
-from .pvt_panel.segment import Segment
+from .pvt_panel.segment import Segment, SegmentCoordinates
 
 # The temperature of hot-water required by the end-user, measured in Kelvin.
 HOT_WATER_DEMAND_TEMP = 60 + ZERO_CELCIUS_OFFSET
@@ -94,13 +94,13 @@ def _average_layer_temperature(
     Determines the average temperature for a layer.
 
     :param number_of_pipes:
-        The number of pipes in the collector.
+        The number of pipes in the absorber.
 
     :param number_of_x_segments:
-        The number of segments in a single row of the collector.
+        The number of segments in a single row of the absorber.
 
     :param number_of_y_segments:
-        The number of y segments in a single row of the collector.
+        The number of y segments in a single row of the absorber.
 
     :param temperature_name:
         The name of the temperature for which to determine the average.
@@ -283,7 +283,7 @@ def _layer_temperature_profile(
     number_of_pipes: int,
     number_of_x_segments: int,
     number_of_y_segments: int,
-    segments: List[Segment],
+    segments: Dict[SegmentCoordinates, Segment],
     temperature_name: TemperatureName,
     temperature_vector: numpy.ndarray,
 ) -> Dict[str, float]:
@@ -291,13 +291,13 @@ def _layer_temperature_profile(
     Returns a map between coordinates and temperature in celcius for a layer.
 
     :param number_of_pipes:
-        The number of pipes in the collector.
+        The number of pipes in the absorber.
 
     :param number_of_x_segments:
-        The number of segments in a single row of the collector.
+        The number of segments in a single row of the absorber.
 
     :param number_of_y_segments:
-        The number of y segments in a single row of the collector.
+        The number of y segments in a single row of the absorber.
 
     :param segments:
         The list of segments involved in the layer.
@@ -319,7 +319,7 @@ def _layer_temperature_profile(
     if temperature_name in [
         TemperatureName.glass,
         TemperatureName.pv,
-        TemperatureName.collector,
+        TemperatureName.absorber,
     ]:
         layer_temperature_map: Dict[str, float] = {
             str(segment_coordinates): temperature_vector[
@@ -366,24 +366,24 @@ def _layer_temperature_profile(
 
 def _solve_temperature_vector_convergence_method(
     *,
-    collector_input_temperature: Optional[float] = None,
-    current_hot_water_load: Optional[float] = None,
-    heat_exchanger: Optional[exchanger.Exchanger] = None,
-    hot_water_tank: Optional[tank.Tank] = None,
     logger: logging.Logger,
-    next_date_and_time: Optional[datetime.datetime] = None,
     number_of_pipes: int,
     number_of_temperatures: int,
     number_of_x_segments: int,
     number_of_y_segments: int,
     operating_mode: OperatingMode,
-    previous_run_temperature_vector: Optional[numpy.ndarray] = None,
     pvt_panel: pvt.PVT,
-    resolution: Optional[int] = None,
     run_one_temperature_vector: numpy.ndarray,
     weather_conditions: WeatherConditions,
     convergence_run_number: int = 0,
     run_one_temperature_difference: float = 5 * ZERO_CELCIUS_OFFSET ** 2,
+    collector_input_temperature: Optional[float] = None,
+    current_hot_water_load: Optional[float] = None,
+    heat_exchanger: Optional[exchanger.Exchanger] = None,
+    hot_water_tank: Optional[tank.Tank] = None,
+    next_date_and_time: Optional[datetime.datetime] = None,
+    previous_run_temperature_vector: Optional[numpy.ndarray] = None,
+    resolution: Optional[int] = None,
 ) -> numpy.ndarray:
     """
     Itteratively solves for the temperature vector to find a convergent solution.
@@ -404,7 +404,7 @@ def _solve_temperature_vector_convergence_method(
 
     :param collector_input_temperature:
         If set, this governs the input water temperature of the feedwater entering the
-        collector.
+        absorber.
 
     :param current_hot_water_load:
         The current hot-water load placed on the system, measured in kilograms per
@@ -647,19 +647,19 @@ def _system_data_from_run(
         The initial date and time for the run.
 
     :param number_of_pies:
-        The number of pipes attached to the collector.
+        The number of pipes attached to the absorber.
 
     :param number_of_x_segments:
-        The number of x segments included in the collector.
+        The number of x segments included in the absorber.
 
     :param number_of_y_segments:
-        The number of y segments included in the collector.
+        The number of y segments included in the absorber.
 
     :param operating_mode:
         The operating mode for the run.
 
     :param pvt_panel:
-        A :class:`pvt.PVT` instance representing the PVT collector being modelled.
+        A :class:`pvt.PVT` instance representing the PVT absorber being modelled.
 
     :param save_2d_output:
         Whether the 2D output should be saved (True) or not (False).
@@ -712,19 +712,19 @@ def _system_data_from_run(
         temperature_vector,
     )
 
-    average_collector_temperature = _average_layer_temperature(
+    average_absorber_temperature = _average_layer_temperature(
         number_of_pipes,
         number_of_x_segments,
         number_of_y_segments,
-        TemperatureName.collector,
+        TemperatureName.absorber,
         temperature_vector,
     )
-    temperature_map_collector_layer = _layer_temperature_profile(
+    temperature_map_absorber_layer = _layer_temperature_profile(
         number_of_pipes,
         number_of_x_segments,
         number_of_y_segments,
         pvt_panel.segments,
-        TemperatureName.collector,
+        TemperatureName.absorber,
         temperature_vector,
     )
 
@@ -814,7 +814,7 @@ def _system_data_from_run(
         tank_temperature = None
     # Set the variables that depend on a dynamic vs steady-state system.
     if operating_mode.dynamic:
-        time: Optional[str] = (
+        time = (
             str((date.day - initial_date_and_time.day) * 24 + time.hour)
             + time.strftime("%H:%M:%S")[2:]
         )
@@ -851,7 +851,7 @@ def _system_data_from_run(
         time=time,
         glass_temperature=average_glass_temperature - ZERO_CELCIUS_OFFSET,
         pv_temperature=average_pv_temperature - ZERO_CELCIUS_OFFSET,
-        collector_temperature=average_collector_temperature - ZERO_CELCIUS_OFFSET,
+        absorber_temperature=average_absorber_temperature - ZERO_CELCIUS_OFFSET,
         collector_input_temperature=collector_input_temperature,
         collector_output_temperature=collector_output_temperature,
         pipe_temperature=average_pipe_temperature - ZERO_CELCIUS_OFFSET,
@@ -864,7 +864,7 @@ def _system_data_from_run(
         layer_temperature_map_bulk_water=temperature_map_bulk_water_layer
         if save_2d_output
         else None,
-        layer_temperature_map_collector=temperature_map_collector_layer
+        layer_temperature_map_absorber=temperature_map_absorber_layer
         if save_2d_output
         else None,
         layer_temperature_map_glass=temperature_map_glass_layer
@@ -876,7 +876,7 @@ def _system_data_from_run(
         layer_temperature_map_pv=temperature_map_pv_layer if save_2d_output else None,
         thermal_efficiency=efficiency.thermal_efficiency(
             pvt_panel.area,
-            pvt_panel.collector.mass_flow_rate,
+            pvt_panel.absorber.mass_flow_rate,
             weather_conditions.irradiance,
             collector_output_temperature - collector_input_temperature,
         ),
@@ -945,7 +945,7 @@ def _dynamic_system_run(
         `None`.
 
     :param number_of_pipes:
-        The number of pipes attached to the collector.
+        The number of pipes attached to the absorber.
 
     :param number_of_temperatures:
         The number of temperatures being modelled.
@@ -1211,6 +1211,7 @@ def main(
     exchanger_data_file: str,
     initial_month: int,
     initial_system_temperature_vector: List[float],
+    layers: Set[TemperatureName],
     location: str,
     operating_mode: OperatingMode,
     portion_covered: float,
@@ -1223,12 +1224,12 @@ def main(
     x_resolution: int,
     y_resolution: int,
     *,
-    days: Optional[int] = None,
-    months: Optional[int] = None,
     override_ambient_temperature: Optional[float],
     override_irradiance: Optional[float],
     run_number: Optional[int],
     start_time: Optional[int],
+    days: Optional[int] = None,
+    months: Optional[int] = None,
 ) -> Tuple[numpy.ndarray, Dict[int, SystemData]]:
     """
     The main module for the code. Calling this method executes a run of the simulation.
@@ -1258,7 +1259,7 @@ def main(
         matrix.
 
     :param portion_covered:
-        The portion of the collector which is covered with PV cells.
+        The portion of the absorber which is covered with PV cells.
 
     :param pvt_data_file:
         The path to the data file containing information about the PVT system being
@@ -1290,14 +1291,6 @@ def main(
     :param y_resolution:
         The y resolution of the simulation being run.
 
-    :param days:
-        The number of days for which the simulation is being run. This can be `None` if
-        a steady-state simulation is being run.
-
-    :param months:
-        The number of months for which to run the simulation. This can be `None` if a
-        steady-state simulation is being run.
-
     :param override_ambient_temperature:
         In decoupled instances, the ambient temperature can be specified as a constant
         value which will override the ambient-temperature profiles.
@@ -1312,6 +1305,14 @@ def main(
     :param start_time:
         The time of day at which to start the simulation, specified between 0 and 23.
         This can be `None` if a steady-state simulation is being run.
+
+    :param days:
+        The number of days for which the simulation is being run. This can be `None` if
+        a steady-state simulation is being run.
+
+    :param months:
+        The number of months for which to run the simulation. This can be `None` if a
+        steady-state simulation is being run.
 
     :return:
         The system data is returned.
@@ -1361,6 +1362,7 @@ def main(
 
     # Initialise the PV-T panel.
     pvt_panel = process_pvt_system_data.pvt_panel_from_path(
+        layers,
         logger,
         portion_covered,
         pvt_data_file,
@@ -1440,8 +1442,8 @@ def main(
     )
 
     # Instantiate the two pipes used to store input and output temperature values.
-    # collector_to_tank_pipe = pipe.Pipe(temperature=initial_system_temperature_vector[3])
-    # tank_to_collector_pipe = pipe.Pipe(temperature=initial_system_temperature_vector[3])
+    # absorber_to_tank_pipe = pipe.Pipe(temperature=initial_system_temperature_vector[3])
+    # tank_to_absorber_pipe = pipe.Pipe(temperature=initial_system_temperature_vector[3])
 
     # Instnatiate the hot-water pump.
     # htf_pump = process_pvt_system_data.pump_from_path(pump_data_file)

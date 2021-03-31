@@ -277,7 +277,7 @@ def _post_process_data(
 
     # * Cycle through all the data points and compute the new values as needed.
     for data_entry in data_to_post_process.values():
-        data_entry["collector_temperature_gain"] = (
+        data_entry["absorber_temperature_gain"] = (
             data_entry["collector_output_temperature"]
             - data_entry["collector_input_temperature"]
         )
@@ -727,7 +727,7 @@ def plot_two_dimensional_figure(
     # Reshape the data for plotting.
     array_shape = (len(set(y_series)), len(set(x_series)))
 
-    # If the data is only 1D, then plot a standard 1D profile through the collector.
+    # If the data is only 1D, then plot a standard 1D profile through the absorber.
     if 1 in array_shape:
         # If we are not holding the graph, then clear the model_data.
         if not hold:
@@ -764,6 +764,31 @@ def plot_two_dimensional_figure(
 
     save_figure(figure_name)
 
+    x_array = numpy.reshape(x_series, array_shape)
+    y_array = numpy.reshape(y_series, array_shape)
+    z_array = numpy.reshape(z_series, array_shape)
+
+    # Plot the figure.
+    fig3D = plt.figure()
+    axes3D = fig3D.gca(projection="3d")
+    surface = plt3D.scatter(
+        axes3D,
+        x_array,
+        y_array,
+        z_array,
+        cmap=cm.coolwarm,  # pylint: disable=no-member
+        linewidth=0,
+        antialiased=False,
+    )
+
+    # Add axes and colour scale.
+    fig3D.colorbar(surface, shrink=0.5, aspect=5)
+    axes3D.set_xlabel("X index")
+    axes3D.set_ylabel("Y index")
+    axes3D.set_zlabel(axis_label)
+
+    save_figure(f"{figure_name}_3d")
+
 
 def analyse_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
     """
@@ -790,7 +815,7 @@ def analyse_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
         first_axis_things_to_plot=[
             "ambient_temperature",
             "bulk_water_temperature",
-            "collector_temperature",
+            "absorber_temperature",
             "collector_input_temperature",
             "collector_output_temperature",
             "glass_temperature",
@@ -810,7 +835,7 @@ def analyse_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
         first_axis_things_to_plot=[
             "ambient_temperature",
             "bulk_water_temperature",
-            "collector_temperature",
+            "absorber_temperature",
             "collector_input_temperature",
             "collector_output_temperature",
             "glass_temperature",
@@ -870,7 +895,7 @@ def analyse_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
         first_axis_things_to_plot=[
             "ambient_temperature",
             "bulk_water_temperature",
-            "collector_temperature",
+            "absorber_temperature",
             "glass_temperature",
             "pipe_temperature",
             "pv_temperature",
@@ -898,7 +923,7 @@ def analyse_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
         "maria_7_stream_temperature",
         data,
         first_axis_things_to_plot=[
-            "collector_temperature_gain",
+            "absorber_temperature_gain",
             "exchanger_temperature_drop",
         ],
         first_axis_label="Temperature Gain / deg C",
@@ -1020,12 +1045,12 @@ def analyse_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
         plot_title="PV layer temperature profile at 18:00",
     )
 
-    # Plot collector layer temperatures at midnight, 6 am, noon, and 6 pm.
+    # Plot absorber layer temperatures at midnight, 6 am, noon, and 6 pm.
     plot_two_dimensional_figure(
-        "collector_temperature_0000",
+        "absorber_temperature_0000",
         logger,
         data,
-        "layer_temperature_map_collector",
+        "layer_temperature_map_absorber",
         axis_label="Temperature / degC",
         hour=0,
         minute=0,
@@ -1033,10 +1058,10 @@ def analyse_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
     )
 
     plot_two_dimensional_figure(
-        "collector_temperature_0600",
+        "absorber_temperature_0600",
         logger,
         data,
-        "layer_temperature_map_collector",
+        "layer_temperature_map_absorber",
         axis_label="Temperature / degC",
         hour=6,
         minute=0,
@@ -1044,10 +1069,10 @@ def analyse_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
     )
 
     plot_two_dimensional_figure(
-        "collector_temperature_1200",
+        "absorber_temperature_1200",
         logger,
         data,
-        "layer_temperature_map_collector",
+        "layer_temperature_map_absorber",
         axis_label="Temperature / degC",
         hour=12,
         minute=0,
@@ -1055,10 +1080,10 @@ def analyse_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
     )
 
     plot_two_dimensional_figure(
-        "collector_temperature_1800",
+        "absorber_temperature_1800",
         logger,
         data,
-        "layer_temperature_map_collector",
+        "layer_temperature_map_absorber",
         axis_label="Temperature / degC",
         hour=18,
         minute=0,
@@ -1161,9 +1186,9 @@ def analyse_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
         "tank_temperature",
         data,
         [
-            "collector_temperature",
+            "absorber_temperature",
             "collector_output_temperature",
-            "collector_temperature_gain",
+            "absorber_temperature_gain",
             "tank_temperature",
             # "tank_output_temperature",
             "ambient_temperature",
@@ -1177,9 +1202,9 @@ def analyse_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
         "all_temperatures",
         data,
         [
-            "collector_temperature",
+            "absorber_temperature",
             "collector_output_temperature",
-            "collector_temperature_gain",
+            "absorber_temperature_gain",
             "tank_temperature",
             # "tank_output_temperature",
             "ambient_temperature",
@@ -1197,7 +1222,7 @@ def analyse_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
         [
             "glass_temperature",
             "pv_temperature",
-            "collector_temperature",
+            "absorber_temperature",
             "ambient_temperature",
             "sky_temperature",
         ],
@@ -1210,19 +1235,19 @@ def analyse_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
         data,
         [
             "pv_temperature",
-            "collector_temperature",
+            "absorber_temperature",
             "ambient_temperature",
             "sky_temperature",
         ],
         "Temperature / degC",
     )
 
-    # * Plotting thermal-collector-only temperatures
+    # * Plotting thermal-absorber-only temperatures
     plot_figure(
-        "isolated_thermal_collector",
+        "isolated_thermal_absorber",
         data,
         [
-            "collector_temperature",
+            "absorber_temperature",
             "ambient_temperature",
             "sky_temperature",
         ],
@@ -1252,33 +1277,33 @@ def analyse_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
         second_axis_label="Thermal Energy Supplied / Wh",
     )
 
-    # * Plotting the collector input, output, gain, and temperature.
+    # * Plotting the absorber input, output, gain, and temperature.
     plot_figure(
-        "collector_temperatures",
+        "absorber_temperatures",
         data,
         [
-            "collector_temperature",
+            "absorber_temperature",
             "collector_output_temperature",
             "collector_input_temperature",
-            "collector_temperature_gain",
+            "absorber_temperature_gain",
             "tank_temperature",
         ],
         "Temperature / K",
     )
 
-    # * Plotting the tank temperature, collector temperature, and heat inputted into the
+    # * Plotting the tank temperature, absorber temperature, and heat inputted into the
     # * tank.
     plot_figure(
         "tank_heat_gain_profile",
         data,
-        first_axis_things_to_plot=["tank_temperature", "collector_temperature"],
+        first_axis_things_to_plot=["tank_temperature", "absorber_temperature"],
         first_axis_label="Temperature / deg C",
         first_axis_y_limits=(0, 100),
         second_axis_things_to_plot=["tank_heat_addition"],
         second_axis_label="Tank Heat Input / Watts",
     )
 
-    # * Plotting the tank temperature, collector temperature, and heat inputted into the
+    # * Plotting the tank temperature, absorber temperature, and heat inputted into the
     # * tank.
     """  # pylint: disable=pointless-string-statement
 
@@ -1321,13 +1346,13 @@ def analyse_steady_state_data(data: Dict[Any, Any], logger: Logger) -> None:
 
     # Collector Temperatures
     plot_two_dimensional_figure(
-        "steady_state_collector_layer_350K_input",
+        "steady_state_absorber_layer_350K_input",
         logger,
         data,
         axis_label="Temperature / deg C",
         entry_number=350,
         plot_title="Collector layer temperature with 350 K input HTF",
-        thing_to_plot="layer_temperature_map_collector",
+        thing_to_plot="layer_temperature_map_absorber",
     )
 
     # Pipe Temperatures
@@ -1349,6 +1374,120 @@ def analyse_steady_state_data(data: Dict[Any, Any], logger: Logger) -> None:
         axis_label="Bulk-water temperature / deg C",
         entry_number=350,
         plot_title="Bulk-water temperature with 350 K input HTF",
+        thing_to_plot="layer_temperature_map_bulk_water",
+    )
+
+    # Plot 280 K temperatures:
+
+    # Glass Temperatures
+    plot_two_dimensional_figure(
+        "steady_state_glass_layer_280K_input",
+        logger,
+        data,
+        axis_label="Temperature / deg C",
+        entry_number=280,
+        plot_title="Glass layer temperature with 280 K input HTF",
+        thing_to_plot="layer_temperature_map_glass",
+    )
+
+    # PV Temperatures
+    plot_two_dimensional_figure(
+        "steady_state_pv_layer_280K_input",
+        logger,
+        data,
+        axis_label="Temperature / deg C",
+        entry_number=280,
+        plot_title="PV layer temperature with 280 K input HTF",
+        thing_to_plot="layer_temperature_map_pv",
+    )
+
+    # Collector Temperatures
+    plot_two_dimensional_figure(
+        "steady_state_absorber_layer_280K_input",
+        logger,
+        data,
+        axis_label="Temperature / deg C",
+        entry_number=280,
+        plot_title="Collector layer temperature with 280 K input HTF",
+        thing_to_plot="layer_temperature_map_absorber",
+    )
+
+    # Pipe Temperatures
+    plot_two_dimensional_figure(
+        "steady_state_pipe_280K_input",
+        logger,
+        data,
+        axis_label="Pipe temperature / deg C",
+        entry_number=280,
+        plot_title="Pipe temperature with 280 K input HTF",
+        thing_to_plot="layer_temperature_map_pipe",
+    )
+
+    # Bulk-water Temperatures
+    plot_two_dimensional_figure(
+        "steady_state_bulk_water_280K_input",
+        logger,
+        data,
+        axis_label="Bulk-water temperature / deg C",
+        entry_number=280,
+        plot_title="Bulk-water temperature with 280 K input HTF",
+        thing_to_plot="layer_temperature_map_bulk_water",
+    )
+
+    # Plot 300 K temperatures:
+
+    # Glass Temperatures
+    plot_two_dimensional_figure(
+        "steady_state_glass_layer_300K_input",
+        logger,
+        data,
+        axis_label="Temperature / deg C",
+        entry_number=300,
+        plot_title="Glass layer temperature with 300 K input HTF",
+        thing_to_plot="layer_temperature_map_glass",
+    )
+
+    # PV Temperatures
+    plot_two_dimensional_figure(
+        "steady_state_pv_layer_300K_input",
+        logger,
+        data,
+        axis_label="Temperature / deg C",
+        entry_number=300,
+        plot_title="PV layer temperature with 300 K input HTF",
+        thing_to_plot="layer_temperature_map_pv",
+    )
+
+    # Collector Temperatures
+    plot_two_dimensional_figure(
+        "steady_state_absorber_layer_300K_input",
+        logger,
+        data,
+        axis_label="Temperature / deg C",
+        entry_number=300,
+        plot_title="Collector layer temperature with 300 K input HTF",
+        thing_to_plot="layer_temperature_map_absorber",
+    )
+
+    # Pipe Temperatures
+    plot_two_dimensional_figure(
+        "steady_state_pipe_300K_input",
+        logger,
+        data,
+        axis_label="Pipe temperature / deg C",
+        entry_number=300,
+        plot_title="Pipe temperature with 300 K input HTF",
+        thing_to_plot="layer_temperature_map_pipe",
+    )
+
+    # Bulk-water Temperatures
+    plot_two_dimensional_figure(
+        "steady_state_bulk_water_300K_input",
+        logger,
+        data,
+        axis_label="Bulk-water temperature / deg C",
+        entry_number=300,
+        plot_title="Bulk-water temperature with 300 K input HTF",
         thing_to_plot="layer_temperature_map_bulk_water",
     )
 

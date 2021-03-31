@@ -51,13 +51,13 @@ def _get_index(  # pylint: disable=too-many-branches
         The name of the temperature being indexed.
 
     :param number_of_pipes:
-        The number of HTF pipes in the collector.
+        The number of HTF pipes in the absorber.
 
     :param number_of_x_segments:
-        The number of segments in the x direction for the collector model being run.
+        The number of segments in the x direction for the absorber model being run.
 
     :param number_of_y_segments:
-        The number of segments in the y direction for the collector model being run.
+        The number of segments in the y direction for the absorber model being run.
 
     :param pipe_number:
         The pipe number for which a coordinate should be returned.
@@ -98,7 +98,7 @@ def _get_index(  # pylint: disable=too-many-branches
                 "pv layer index_handler."
             )
         index = int(number_of_x_segments * (number_of_y_segments + y_coord) + x_coord)
-    if temperature_name == TemperatureName.collector:
+    if temperature_name == TemperatureName.absorber:
         if (
             number_of_x_segments is None
             or number_of_y_segments is None
@@ -195,7 +195,7 @@ def _get_index(  # pylint: disable=too-many-branches
         ):
             raise ProgrammerJudgementFault(
                 "Not all parameters needed were passed in to uniquely determine the "
-                "collector input index_handler."
+                "absorber input index_handler."
             )
         index = int(
             (3 * number_of_x_segments + 4 * number_of_pipes) * number_of_y_segments
@@ -208,7 +208,7 @@ def _get_index(  # pylint: disable=too-many-branches
         ):
             raise ProgrammerJudgementFault(
                 "Not all parameters needed were passed in to uniquely determine the "
-                "collector output index_handler."
+                "absorber output index_handler."
             )
         index = int(
             (
@@ -285,7 +285,7 @@ def index_from_pipe_coordinates(
     Computes an index for a segmented pipe based on the coordinates of the segment.
 
     :param number_of_pipes:
-        The number of HTF pipes in the collector.
+        The number of HTF pipes in the absorber.
 
     :param number_of_x_segments:
         The number of segments in the x direction along the panel.
@@ -366,7 +366,7 @@ def index_from_temperature_name(
     Computes an index for a body/temperature based solely on the name.
 
     :param number_of_pipes:
-        The number of pipes in the collector.
+        The number of pipes in the absorber.
 
     :param number_of_x_segments:
         The number of segments in the x direction along the panel.
@@ -399,13 +399,13 @@ def num_temperatures(
     Returns the number of temperature variables being modelled.
 
     :param number_of_pipes:
-        The number of pipes in the collector.
+        The number of pipes in the absorber.
 
     :param number_of_x_segments:
-        The number of x segments in the collector.
+        The number of x segments in the absorber.
 
     :param number_of_y_segments:
-        The number of y segments in the collector.
+        The number of y segments in the absorber.
 
     :return:
         The total number of temperatures being modelled.
@@ -432,13 +432,13 @@ def temperature_name_from_index(  # pylint: disable=too-many-branches
         The index of the temperature for which to return the temperature name.
 
     :param number_of_pipes:
-        The number of HTF pipes in the collector.
+        The number of HTF pipes in the absorber.
 
     :param number_of_x_segments:
-        The number of segments in the x direction for the collector model being run.
+        The number of segments in the x direction for the absorber model being run.
 
     :param number_of_y_segments:
-        The number of segments in the y direction for the collector model being run.
+        The number of segments in the y direction for the absorber model being run.
 
     :return:
         The temperature name, as a :class:`TemperatureName` instance, based on the index
@@ -456,7 +456,7 @@ def temperature_name_from_index(  # pylint: disable=too-many-branches
     elif index < 2 * number_of_x_segments * number_of_y_segments:
         temperature_name = TemperatureName.pv
     elif index < 3 * number_of_x_segments * number_of_y_segments:
-        temperature_name = TemperatureName.collector
+        temperature_name = TemperatureName.absorber
     elif index < ((3 * number_of_x_segments + number_of_pipes) * number_of_y_segments):
         temperature_name = TemperatureName.pipe
     elif index < (

@@ -20,10 +20,20 @@ module for the model.
 import argparse
 
 from logging import Logger
+from typing import Set
 
-from .__utils__ import BColours
+from .__utils__ import BColours, TemperatureName
 
 __all__ = ("check_args", "parse_args")
+
+# Used to keep track of the temperature layers based on the CLI arguments passsed in.
+layer_map = {
+    "g": TemperatureName.glass,
+    "pv": TemperatureName.pv,
+    "a": TemperatureName.absorber,
+    "p": TemperatureName.pipe,
+    "f": TemperatureName.htf,
+}
 
 
 class ArgumentMismatchError(Exception):
@@ -46,7 +56,7 @@ class ArgumentMismatchError(Exception):
 
 def check_args(
     parsed_args: argparse.Namespace, logger: Logger, number_of_pipes: int
-) -> None:
+) -> Set[TemperatureName]:
     """
     Enforces rules on the command-line arguments passed in in addition to argparse rules
 
@@ -57,7 +67,7 @@ def check_args(
         The logger used for the run.
 
     :param number_of_pipes:
-        The number of pipes attached to the collector being modelled.
+        The number of pipes attached to the absorber being modelled.
 
     :raises: ArgumentMismatchError
         Raised if the command-line arguments mismatch.
@@ -163,6 +173,22 @@ def check_args(
             + "specified with `--start-time`.{}".format(BColours.ENDC)
         )
 
+    # Enforce the layer names are of the correct type.
+    if not all([entry in layer_map for entry in parsed_args.layers]):
+        raise ArgumentMismatchError(
+            "{}If using the --layers developer argument, only layers {} can be "
+            "specified. Rogue layer name: '{}'.{}".format(
+                BColours.FAIL,
+                ", ".join(layer_map.keys()),
+                ", ".join(
+                    [entry for entry in parsed_args.layers if entry not in layer_map]
+                ),
+                BColours.ENDC,
+            )
+        )
+
+    return {layer_map[entry] for entry in parsed_args.layers}
+
 
 def parse_args(args) -> argparse.Namespace:
     """
@@ -177,13 +203,14 @@ def parse_args(args) -> argparse.Namespace:
     """
 
     parser = argparse.ArgumentParser()
+    developer_arguments = parser.add_argument_group("developer arguments")
     required_named_arguments = parser.add_argument_group("required named arguments")
 
     parser.add_argument(
         "--ambient-temperature",
         "-at",
         type=float,
-        help="[decoupled] The ambient temperature surrounding the collector, in "
+        help="[decoupled] The ambient temperature surrounding the absorber, in "
         "degrees Celcius, needs to be specified if running a decoupled system.",
     )
     parser.add_argument(
@@ -201,12 +228,12 @@ def parse_args(args) -> argparse.Namespace:
         help="The effect that the cloud cover has, rated between 0 (no effect) and 1.",
     )
     parser.add_argument(
-        "--collector-input-temperature",
+        "--absorber-input-temperature",
         "-ci",
         default=None,
         type=float,
         help="[decoupled] The input temperature in degrees Celcius of HTF to use when "
-        "modelling a decoupled PVT collector.",
+        "modelling a decoupled PVT absorber.",
     )
     parser.add_argument(
         "--days",
@@ -218,7 +245,7 @@ def parse_args(args) -> argparse.Namespace:
         "--decoupled",
         action="store_true",
         default=False,
-        help="If specified, the model will be run with a decoupled PVT collector.",
+        help="If specified, the model will be run with a decoupled PVT absorber.",
     )
     parser.add_argument(
         "--dynamic",
@@ -245,6 +272,14 @@ def parse_args(args) -> argparse.Namespace:
         help="If specified, this will override the internal initial system "
         "temperature vector.",
     )
+    developer_arguments.add_argument(
+        "--layers",
+        default=layer_map.keys(),
+        nargs="+",
+        type=str,
+        help="Used to specifiy layers present. Options are 'g', 'pv', 'a', 'p', and "
+        "'f'.",
+    )
     required_named_arguments.add_argument(
         "--location", "-l", help="The location for which to run the simulation."
     )
@@ -254,12 +289,6 @@ def parse_args(args) -> argparse.Namespace:
         help="The number of months for which to run the simulation. Default is 12.",
         default=12,
         type=int,
-    )
-    parser.add_argument(
-        "--no-pv",
-        action="store_true",
-        default=False,
-        help="Used to specify a PV-T panel with no PV layer: ie, a Thermal collector.",
     )
     parser.add_argument(
         "--number-of-people",
@@ -314,7 +343,7 @@ def parse_args(args) -> argparse.Namespace:
         default=None,
         type=float,
         help="[decoupled] The solar irradiance in Watts per meter squared to use when "
-        "running the system as a decoupled PVT collector.",
+        "running the system as a decoupled PVT absorber.",
     )
     parser.add_argument(
         "--start-time",

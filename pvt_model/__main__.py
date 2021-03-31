@@ -20,7 +20,7 @@ import sys
 from argparse import Namespace
 from logging import Logger
 from statistics import mean
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 import json
 import yaml
@@ -105,22 +105,22 @@ def _get_system_fourier_numbers(
         ),
         2,
     )
-    fourier_number_map[TemperatureName.collector] = round(
+    fourier_number_map[TemperatureName.absorber] = round(
         fourier_number(
-            pvt_panel.collector.thickness,
-            pvt_panel.collector.conductivity,
-            pvt_panel.collector.density,
-            pvt_panel.collector.heat_capacity,
+            pvt_panel.absorber.thickness,
+            pvt_panel.absorber.conductivity,
+            pvt_panel.absorber.density,
+            pvt_panel.absorber.heat_capacity,
             resolution,
         ),
         2,
     )
     fourier_number_map[TemperatureName.htf] = round(
         fourier_number(
-            pvt_panel.collector.inner_pipe_diameter,
+            pvt_panel.absorber.inner_pipe_diameter,
             THERMAL_CONDUCTIVITY_OF_WATER,
             DENSITY_OF_WATER,
-            pvt_panel.collector.htf_heat_capacity,
+            pvt_panel.absorber.htf_heat_capacity,
             resolution,
         ),
         2,
@@ -253,6 +253,7 @@ def _determine_fourier_numbers(
 
 def _determine_consistent_conditions(
     number_of_pipes: int,
+    layers: Set[TemperatureName],
     logger: Logger,
     operating_mode: OperatingMode,
     parsed_args: Namespace,
@@ -266,7 +267,10 @@ def _determine_consistent_conditions(
     Determines the initial system temperatures for the run.
 
     :param number_of_pipes:
-        The number of pipes on the base of the hot-water collector.
+        The number of pipes on the base of the hot-water absorber.
+
+    :param layers:
+        The layer being used for the run.
 
     :param logger:
         The logger for the run.
@@ -326,6 +330,7 @@ def _determine_consistent_conditions(
         parsed_args.exchanger_data_file,
         parsed_args.initial_month,
         running_system_temperature_vector,
+        layers,
         parsed_args.location,
         operating_mode,
         parsed_args.portion_covered,
@@ -347,81 +352,7 @@ def _determine_consistent_conditions(
 
     # If in verbose mode, output average, min, and max temperatures.
     if parsed_args.verbose:
-        # Determine the average, minimum, and maximum temperatures.
-        average_temperature_map = {
-            "glass": round(
-                mean({entry.glass_temperature for entry in system_data.values()}), 3
-            ),
-            "pv": round(
-                mean({entry.pv_temperature for entry in system_data.values()}), 3
-            ),
-            "absorber": round(
-                mean({entry.collector_temperature for entry in system_data.values()}), 3
-            ),
-            "htf": round(
-                mean({entry.bulk_water_temperature for entry in system_data.values()}),
-                3,
-            ),
-            "tank": round(
-                mean({entry.tank_temperature for entry in system_data.values()}), 3
-            ),
-        }
-        maximum_temperature_map = {
-            "glass": max(
-                {round(entry.glass_temperature, 3) for entry in system_data.values()}
-            ),
-            "pv": max(
-                {round(entry.pv_temperature, 3) for entry in system_data.values()}
-            ),
-            "absorber": max(
-                {
-                    round(entry.collector_temperature, 3)
-                    for entry in system_data.values()
-                }
-            ),
-            "htf": max(
-                {
-                    round(entry.bulk_water_temperature, 3)
-                    for entry in system_data.values()
-                }
-            ),
-            "tank": max(
-                {round(entry.tank_temperature, 3) for entry in system_data.values()}
-            ),
-        }
-        minimum_temperature_map = {
-            "glass": min(
-                {round(entry.glass_temperature, 3) for entry in system_data.values()}
-            ),
-            "pv": min(
-                {round(entry.pv_temperature, 3) for entry in system_data.values()}
-            ),
-            "absorber": min(
-                {
-                    round(entry.collector_temperature, 3)
-                    for entry in system_data.values()
-                }
-            ),
-            "htf": min(
-                {
-                    round(entry.bulk_water_temperature, 3)
-                    for entry in system_data.values()
-                }
-            ),
-            "tank": min(
-                {round(entry.tank_temperature, 3) for entry in system_data.values()}
-            ),
-        }
-
-        # Print these out to the console.
-        logger.info("Average, minimum, and maximum temperatures determined.")
-        _print_temperature_info(
-            average_temperature_map,
-            logger,
-            maximum_temperature_map,
-            minimum_temperature_map,
-            True,
-        )
+        _output_temperature_info(logger, parsed_args, system_data)
 
     # If all the temperatures are within the desired limit, return the temperatures.
     if operating_mode.dynamic:
@@ -446,6 +377,7 @@ def _determine_consistent_conditions(
     # Otherwise, call the method recursively.
     return _determine_consistent_conditions(
         number_of_pipes,
+        layers,
         logger,
         operating_mode,
         parsed_args,
@@ -685,6 +617,87 @@ def _print_temperature_info(
     )
 
 
+def _output_temperature_info(
+    logger: Logger, parsed_args: Namespace, system_data: Dict[int, SystemData]
+) -> None:
+    """
+    Determines and prints information about the system temperatures.
+
+    The average, minimum, and maximum temperatures of the various components are
+    outputted to the console and the logs.
+
+    :param logger:
+        The logger used for the run.
+
+    :param parsed_args:
+        The parsed command-line arguments.
+
+    :param system_data:
+        The system data ouputted by the run.
+
+    """
+
+    # Determine the average, minimum, and maximum temperatures.
+    average_temperature_map = {
+        "glass": round(
+            mean({entry.glass_temperature for entry in system_data.values()}), 3
+        ),
+        "pv": round(mean({entry.pv_temperature for entry in system_data.values()}), 3),
+        "absorber": round(
+            mean({entry.absorber_temperature for entry in system_data.values()}), 3
+        ),
+        "htf": round(
+            mean({entry.bulk_water_temperature for entry in system_data.values()}),
+            3,
+        ),
+    }
+    maximum_temperature_map = {
+        "glass": max(
+            {round(entry.glass_temperature, 3) for entry in system_data.values()}
+        ),
+        "pv": max({round(entry.pv_temperature, 3) for entry in system_data.values()}),
+        "absorber": max(
+            {round(entry.absorber_temperature, 3) for entry in system_data.values()}
+        ),
+        "htf": max(
+            {round(entry.bulk_water_temperature, 3) for entry in system_data.values()}
+        ),
+    }
+    minimum_temperature_map = {
+        "glass": min(
+            {round(entry.glass_temperature, 3) for entry in system_data.values()}
+        ),
+        "pv": min({round(entry.pv_temperature, 3) for entry in system_data.values()}),
+        "absorber": min(
+            {round(entry.absorber_temperature, 3) for entry in system_data.values()}
+        ),
+        "htf": min(
+            {round(entry.bulk_water_temperature, 3) for entry in system_data.values()}
+        ),
+    }
+
+    if not parsed_args.decoupled:
+        average_temperature_map["tank"] = round(
+            mean({entry.tank_temperature for entry in system_data.values()}), 3
+        )
+        maximum_temperature_map["tank"] = max(
+            {round(entry.tank_temperature, 3) for entry in system_data.values()}
+        )
+        minimum_temperature_map["tank"] = min(
+            {round(entry.tank_temperature, 3) for entry in system_data.values()}
+        )
+
+    # Print these out to the console.
+    logger.info("Average, minimum, and maximum temperatures determined.")
+    _print_temperature_info(
+        average_temperature_map,
+        logger,
+        maximum_temperature_map,
+        minimum_temperature_map,
+        True,
+    )
+
+
 def _save_data(
     file_type: FileType,
     operating_mode: OperatingMode,
@@ -792,14 +805,15 @@ def main(args) -> None:
     )
 
     # Check that all CLI args are valid.
-    argparser.check_args(
+    layers = argparser.check_args(
         parsed_args,
         logger,
-        read_yaml(parsed_args.pvt_data_file)["collector"]["number_of_pipes"],
+        read_yaml(parsed_args.pvt_data_file)["absorber"]["number_of_pipes"],
     )
 
     # Parse the PVT system information and generate a PVT panel based on the args.
     pvt_panel = pvt_panel_from_path(
+        layers,
         logger,
         parsed_args.portion_covered,
         parsed_args.pvt_data_file,
@@ -881,14 +895,15 @@ def main(args) -> None:
             f"{COARSE_RUN_RESOLUTION}s resolution."
         )
         initial_system_temperature_vector, _ = _determine_consistent_conditions(
-            pvt_panel.collector.number_of_pipes, logger, operating_mode, parsed_args
+            pvt_panel.absorber.number_of_pipes, layers, logger, operating_mode, parsed_args
         )
         print(
             "Rough initial conditions determined at coarse resolution, refining via "
             f"successive runs at CLI resolution of {parsed_args.resolution}s."
         )
         initial_system_temperature_vector, _ = _determine_consistent_conditions(
-            pvt_panel.collector.number_of_pipes,
+            pvt_panel.absorber.number_of_pipes,
+            layers,
             logger,
             operating_mode,
             parsed_args,
@@ -916,6 +931,7 @@ def main(args) -> None:
             parsed_args.exchanger_data_file,
             parsed_args.initial_month,
             initial_system_temperature_vector,
+            layers,
             parsed_args.location,
             operating_mode,
             parsed_args.portion_covered,
@@ -945,7 +961,7 @@ def main(args) -> None:
         # Call `_determine_consistent_conditions` to determine the solution for the
         # model in a steady-state and decoupled configuration.
         _, system_data = _determine_consistent_conditions(
-            pvt_panel.collector.number_of_pipes,
+            pvt_panel.absorber.number_of_pipes, layers,
             logger,
             operating_mode,
             parsed_args,
@@ -965,81 +981,7 @@ def main(args) -> None:
 
     # If in verbose mode, output average, min, and max temperatures.
     if parsed_args.verbose:
-        # Determine the average, minimum, and maximum temperatures.
-        average_temperature_map = {
-            "glass": round(
-                mean({entry.glass_temperature for entry in system_data.values()}), 3
-            ),
-            "pv": round(
-                mean({entry.pv_temperature for entry in system_data.values()}), 3
-            ),
-            "absorber": round(
-                mean({entry.collector_temperature for entry in system_data.values()}), 3
-            ),
-            "htf": round(
-                mean({entry.bulk_water_temperature for entry in system_data.values()}),
-                3,
-            ),
-            "tank": round(
-                mean({entry.tank_temperature for entry in system_data.values()}), 3
-            ),
-        }
-        maximum_temperature_map = {
-            "glass": max(
-                {round(entry.glass_temperature, 3) for entry in system_data.values()}
-            ),
-            "pv": max(
-                {round(entry.pv_temperature, 3) for entry in system_data.values()}
-            ),
-            "absorber": max(
-                {
-                    round(entry.collector_temperature, 3)
-                    for entry in system_data.values()
-                }
-            ),
-            "htf": max(
-                {
-                    round(entry.bulk_water_temperature, 3)
-                    for entry in system_data.values()
-                }
-            ),
-            "tank": max(
-                {round(entry.tank_temperature, 3) for entry in system_data.values()}
-            ),
-        }
-        minimum_temperature_map = {
-            "glass": min(
-                {round(entry.glass_temperature, 3) for entry in system_data.values()}
-            ),
-            "pv": min(
-                {round(entry.pv_temperature, 3) for entry in system_data.values()}
-            ),
-            "absorber": min(
-                {
-                    round(entry.collector_temperature, 3)
-                    for entry in system_data.values()
-                }
-            ),
-            "htf": min(
-                {
-                    round(entry.bulk_water_temperature, 3)
-                    for entry in system_data.values()
-                }
-            ),
-            "tank": min(
-                {round(entry.tank_temperature, 3) for entry in system_data.values()}
-            ),
-        }
-
-        # Print these out to the console.
-        logger.info("Average, minimum, and maximum temperatures determined.")
-        _print_temperature_info(
-            average_temperature_map,
-            logger,
-            maximum_temperature_map,
-            minimum_temperature_map,
-            False,
-        )
+        _output_temperature_info(logger, parsed_args, system_data)
 
     # Conduct analysis of the data.
     logger.info("Conducting analysis.")

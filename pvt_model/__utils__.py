@@ -368,8 +368,8 @@ class SystemData:
     .. attribute:: bulk_water_temperature
         The temperature of the bulk water, measured in Celcius.
 
-    .. attribute:: collector_temperature
-        The temperature of the collector layer, measured in Celcius.
+    .. attribute:: absorber_temperature
+        The temperature of the absorber layer, measured in Celcius.
 
     .. attribute:: date
         A `str` giving the current date.
@@ -388,7 +388,7 @@ class SystemData:
         The temperature of the PV layer, measured in Celcius.
 
     .. attribute:: reduced_temperature
-        The reduced temperature of the PV-T collector, measured in Celcius.
+        The reduced temperature of the PV-T absorber, measured in Celcius.
 
     .. attribute:: sky_temperature
         The temperature of the sky, measured in Celcius.
@@ -400,19 +400,19 @@ class SystemData:
         The thermal efficiency of the system.
 
     .. attribute:: collector_input_temperature
-        The temperature of the HTF inputted into the collector, measured in Celcius.
+        The temperature of the HTF inputted into the absorber, measured in Celcius.
         This can be set to `None` if no data is recorded.
 
     .. attribute:: collector_output_temperature
-        The temperature of the HTF outputted from the collector, measured in Celcius.
+        The temperature of the HTF outputted from the absorber, measured in Celcius.
         This can be set to `None` if no data is recorded.
 
     .. attribute:: layer_temperature_map_bulk_water
         A mapping between coordinate and temperature for the bulk water within the
         pipes.
 
-    .. attribute:: layer_temperature_map_collector
-        A mapping between coordinate and temperature for segments within the collector
+    .. attribute:: layer_temperature_map_absorber
+        A mapping between coordinate and temperature for segments within the absorber
         layer.
 
     .. attribute:: layer_temperature_map_glass
@@ -431,7 +431,7 @@ class SystemData:
 
     ambient_temperature: float
     bulk_water_temperature: float
-    collector_temperature: float
+    absorber_temperature: float
     date: str
     glass_temperature: float
     exchanger_temperature_drop: float
@@ -444,7 +444,7 @@ class SystemData:
     collector_input_temperature: Optional[float] = None
     collector_output_temperature: Optional[float] = None
     layer_temperature_map_bulk_water: Optional[Dict[str, float]] = None
-    layer_temperature_map_collector: Optional[Dict[str, float]] = None
+    layer_temperature_map_absorber: Optional[Dict[str, float]] = None
     layer_temperature_map_glass: Optional[Dict[str, float]] = None
     layer_temperature_map_pipe: Optional[Dict[str, float]] = None
     layer_temperature_map_pv: Optional[Dict[str, float]] = None
@@ -459,7 +459,7 @@ class TemperatureName(enum.Enum):
 
     glass = 0
     pv = 1
-    collector = 2
+    absorber = 2
     pipe = 3
     htf = 4
     htf_in = 5

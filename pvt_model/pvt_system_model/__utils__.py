@@ -509,28 +509,28 @@ class OpticalLayerParameters(LayerParameters):
 @dataclass
 class CollectorParameters(OpticalLayerParameters):
     """
-    Contains parameters needed to instantiate a collector layer within the PV-T panel.
+    Contains parameters needed to instantiate a absorber layer within the PV-T panel.
 
     .. attribute:: htf_heat_capacity
-        The heat capacity of the heat-transfer fluid through the collector, measured in
+        The heat capacity of the heat-transfer fluid through the absorber, measured in
         Joules per kilogram Kelvin.
 
     .. attribute:: inner_pipe_diameter
         The diameter of the inner wall of the pipes, in meters.
 
     .. attribute:: length
-        The legnth of the collector, measured in meters.
+        The legnth of the absorber, measured in meters.
 
     .. attribute:: mass_flow_rate
-        The mass flow rate of heat-transfer fluid through the collector. Measured in
+        The mass flow rate of heat-transfer fluid through the absorber. Measured in
         litres per hour.
 
     .. attribute:: number_of_pipes
-        The number of pipes attached to the back of the thermal collector.
+        The number of pipes attached to the back of the thermal absorber.
         NOTE: This parameter is very geography/design-specific, and will only be
-        relevant/useful to the current design of collector being modeled. Namely, when
-        multiple pipes flow linearly down the length of the collector, with the HTF
-        taking a single pass through the collector.
+        relevant/useful to the current design of absorber being modeled. Namely, when
+        multiple pipes flow linearly down the length of the absorber, with the HTF
+        taking a single pass through the absorber.
 
     .. attribute:: outer_pipe_diameter
         The diameter of the outer wall of the pipes, in meters.

@@ -29,9 +29,9 @@ pvt_system:
   # The timezone offset in Hours from UTC.
   timezone: 0 # [hours]
   # The conductance, measured in Watts per meter squared Kelvin, between the PV
-  # layer and collector layers of the panel.
-  pv_to_collector_conductance: 500 # [W/m^2*K]
-  # The length of the collector is measured in meters.
+  # layer and absorber layers of the panel.
+  pv_to_absorber_conductance: 500 # [W/m^2*K]
+  # The length of the absorber is measured in meters.
   length: 1 # [m]
   # The area is measured in meters squared.
   area: 15 # [m^2]
@@ -92,7 +92,7 @@ adhesive:
 tedlar:
   thickenss: 0.0001 # [m]
   thermal_conductivity: 0.2 # [W/m*K]
-collector:
+absorber:
   absorptivity: 0.95 # [unitless]
   # @@@ Value NOT taken from Maria's paper.
   # density: 8960 # [kg/m^3]

@@ -1,6 +1,6 @@
 #!/usr/bin/python3.7
 ########################################################################################
-# pvt_panel/test_collector.py - MUT for the Collector module.
+# pvt_panel/test_absorber.py - MUT for the Collector module.
 #
 # Author: Ben Winchester
 # Copyright: Ben Winchester, 2021
@@ -21,7 +21,7 @@ import numpy
 
 from ...__utils__ import CollectorParameters
 from ...constants import NUSSELT_NUMBER, THERMAL_CONDUCTIVITY_OF_WATER
-from .. import collector
+from .. import absorber
 from .test_utils import PYTEST_PRECISION
 
 
@@ -29,7 +29,7 @@ class TestProperties(unittest.TestCase):
     """
     Tests the various publically exposed private attributes and method properties.
 
-    Some properties of the :class:`collector.Collector` instance are internally held
+    Some properties of the :class:`absorber.Collector` instance are internally held
     and publically exposed through these methods, while other "properties" are
     determined by calculations within the class. This class contains test code that
     checks both kinds.
@@ -44,7 +44,7 @@ class TestProperties(unittest.TestCase):
 
         super().setUp()
 
-        collector_parameters = CollectorParameters(
+        absorber_parameters = CollectorParameters(
             conductivity=140,
             mass=100,
             heat_capacity=4000,
@@ -62,27 +62,27 @@ class TestProperties(unittest.TestCase):
             pipe_diameter=0.05,
         )
 
-        self.collector = collector.Collector(collector_parameters)
+        self.absorber = absorber.Collector(absorber_parameters)
 
-    def test_collector_to_htf_efficiency(self) -> None:
+    def test_absorber_to_htf_efficiency(self) -> None:
         """
-        Tests the calculation for the efficiency for collector-to-htf efficiency.
+        Tests the calculation for the efficiency for absorber-to-htf efficiency.
 
         Tests that the correct calculation is done to determine the efficiency of the
-        heat transfer process from the collector to the HTF in the riser tubes.
+        heat transfer process from the absorber to the HTF in the riser tubes.
 
         NOTE: This equation is taken, with permission, from the second model Gan sent
         through.
 
         :equation:
-            collector_to_htf_efficiency = 1 - exp(
-                -number_of_collectors
+            absorber_to_htf_efficiency = 1 - exp(
+                -number_of_absorbers
                 * (
                     1 / (
                         convective_heat_transfer_coefficient_of_water
                         * pi
                         * pipe_diameter
-                        * collector_width a.k.a. collector length
+                        * absorber_width a.k.a. absorber length
                         * number_of_riser_tubes
                     ) + 0.001 / (
                         @@@ Unknown value and derivation
@@ -90,7 +90,7 @@ class TestProperties(unittest.TestCase):
                         @@@ Unknown value and derivation
                         * 0.2
                         * pipe_diameter
-                        * collector_width a.k.a. collector length
+                        * absorber_width a.k.a. absorber length
                         * number_of_riser_tubes
                     ) + 1 / 500
                 ) ^ (-1 / (mass_flow_rate * htf_heat_capacity))
@@ -115,32 +115,32 @@ class TestProperties(unittest.TestCase):
                 (
                     1
                     / (
-                        self.collector.convective_heat_transfer_coefficient_of_water
+                        self.absorber.convective_heat_transfer_coefficient_of_water
                         * numpy.pi
-                        * self.collector.pipe_diameter
-                        * self.collector.length
-                        * self.collector.number_of_pipes
+                        * self.absorber.pipe_diameter
+                        * self.absorber.length
+                        * self.absorber.number_of_pipes
                     )
                     + 0.001
                     / (
                         385
                         * 0.2
-                        * self.collector.pipe_diameter
-                        * self.collector.length
-                        * self.collector.number_of_pipes
+                        * self.absorber.pipe_diameter
+                        * self.absorber.length
+                        * self.absorber.number_of_pipes
                     )
                     + 1 / 500
                 )
                 ** (
                     -1
-                    / (self.collector.mass_flow_rate * self.collector.htf_heat_capacity)
+                    / (self.absorber.mass_flow_rate * self.absorber.htf_heat_capacity)
                 )
             )
         )
 
         self.assertEqual(
             pytest.approx(expected_efficiency, PYTEST_PRECISION),
-            pytest.approx(self.collector.collector_to_htf_efficiency, PYTEST_PRECISION),
+            pytest.approx(self.absorber.absorber_to_htf_efficiency, PYTEST_PRECISION),
         )
 
     def test_convective_heat_transfer_coefficient_of_water(self) -> None:
@@ -165,11 +165,11 @@ class TestProperties(unittest.TestCase):
         self.assertEqual(THERMAL_CONDUCTIVITY_OF_WATER, 0.5918)
         expectected_heat_transfer_coefficient = (
             NUSSELT_NUMBER * THERMAL_CONDUCTIVITY_OF_WATER
-        ) / self.collector.pipe_diameter
+        ) / self.absorber.pipe_diameter
 
         self.assertEqual(
             pytest.approx(expectected_heat_transfer_coefficient, PYTEST_PRECISION),
-            pytest.approx(self.collector.convective_heat_transfer_coefficient_of_water),
+            pytest.approx(self.absorber.convective_heat_transfer_coefficient_of_water),
             PYTEST_PRECISION,
         )
 
@@ -177,8 +177,8 @@ class TestProperties(unittest.TestCase):
         """
         Tests that the correct calculation is done for the HTF surface area.
 
-        The contact area, in meters squared, between the collector and the HTF should be
-        computed. This is the internal area of the pipes in the collector.
+        The contact area, in meters squared, between the absorber and the HTF should be
+        computed. This is the internal area of the pipes in the absorber.
 
         :equation:
             area = number_of_tubes * tube_length * PI * tube_diameter
@@ -189,22 +189,22 @@ class TestProperties(unittest.TestCase):
         """
 
         expected_htf_area = (
-            self.collector.number_of_pipes
-            * self.collector.length
+            self.absorber.number_of_pipes
+            * self.absorber.length
             * numpy.pi
-            * self.collector.pipe_diameter
+            * self.absorber.pipe_diameter
         )
 
         self.assertEqual(
             pytest.approx(expected_htf_area, PYTEST_PRECISION),
-            pytest.approx(self.collector.htf_surface_area, PYTEST_PRECISION),
+            pytest.approx(self.absorber.htf_surface_area, PYTEST_PRECISION),
         )
 
     def test_htf_volume(self) -> None:
         """
-        Tests that the correct calculation is done for the HTF volume in the collector.
+        Tests that the correct calculation is done for the HTF volume in the absorber.
 
-        The volume of HTF, in meters cubed, within the thermal collector riser tubes
+        The volume of HTF, in meters cubed, within the thermal absorber riser tubes
         should be computed.
 
         :equation:
@@ -216,23 +216,23 @@ class TestProperties(unittest.TestCase):
         """
 
         expected_htf_volume = (
-            self.collector.number_of_pipes
-            * self.collector.length
+            self.absorber.number_of_pipes
+            * self.absorber.length
             * numpy.pi
-            * (self.collector.pipe_diameter / 2) ** 2
+            * (self.absorber.pipe_diameter / 2) ** 2
         )
 
         self.assertEqual(
             pytest.approx(expected_htf_volume, PYTEST_PRECISION),
-            pytest.approx(self.collector.htf_volume, PYTEST_PRECISION),
+            pytest.approx(self.absorber.htf_volume, PYTEST_PRECISION),
         )
 
     def test_mass_flow_rate(self) -> None:
         """
         Tests that the correct internal calculation of the mass flow rate is done.
 
-        The mass flow rate of the collector, as inputted, is measured in litres per
-        hour. The collector needs to return the mass flow rate in kilograms (or litres)
+        The mass flow rate of the absorber, as inputted, is measured in litres per
+        hour. The absorber needs to return the mass flow rate in kilograms (or litres)
         per second. This is checked here.
 
         :equation:
@@ -247,9 +247,9 @@ class TestProperties(unittest.TestCase):
         """
 
         self.assertEqual(
-            pytest.approx(self.collector.mass_flow_rate, PYTEST_PRECISION),
+            pytest.approx(self.absorber.mass_flow_rate, PYTEST_PRECISION),
             pytest.approx(
-                self.collector._mass_flow_rate  # pylint: disable=protected-access
+                self.absorber._mass_flow_rate  # pylint: disable=protected-access
                 / 3600,
                 PYTEST_PRECISION,
             ),

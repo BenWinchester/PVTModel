@@ -21,12 +21,17 @@ happens within this module.
 import datetime
 
 from logging import Logger
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Set, Tuple
 
 from .pvt_panel import adhesive, bond, eva, pvt, segment, tedlar
 from . import exchanger, tank, pump
 
-from ..__utils__ import InvalidParametersError, MissingParametersError, read_yaml
+from ..__utils__ import (
+    InvalidParametersError,
+    MissingParametersError,
+    read_yaml,
+    TemperatureName,
+)
 from .constants import (
     EDGE_LENGTH,
     EDGE_WIDTH,
@@ -162,15 +167,15 @@ def pump_from_path(pump_data_file: str) -> pump.Pump:
 ##################
 
 
-def _collector_params_from_data(
+def _absorber_params_from_data(
     length: float,
-    collector_data: Dict[str, Any],
+    absorber_data: Dict[str, Any],
 ) -> CollectorParameters:
     """
-    Generate a :class:`CollectorParameters` containing collector-layer info from data.
+    Generate a :class:`CollectorParameters` containing absorber-layer info from data.
 
     The HTF is assumed to be water unless the HTF heat capacity is supplied in the
-    collector data.
+    absorber data.
 
     :param area:
         The area of the PV-T system, measured in meters squared.
@@ -178,42 +183,42 @@ def _collector_params_from_data(
     :param length:
         The length of the PV-T system, measured in meters.
 
-    :param initial_collector_htf_tempertaure:
-        The initial temperature of heat-transfer fluid in the collector.
+    :param initial_absorber_htf_tempertaure:
+        The initial temperature of heat-transfer fluid in the absorber.
 
-    :param collector_data:
-        The raw collector data extracted from the YAML data file.
+    :param absorber_data:
+        The raw absorber data extracted from the YAML data file.
 
     :return:
-        The collector data, as a :class:`__utils__.CollectorParameters`, ready to
+        The absorber data, as a :class:`__utils__.CollectorParameters`, ready to
         instantiate a :class:`pvt.Collector` layer instance.
 
     """
 
     try:
         return CollectorParameters(
-            absorptivity=collector_data["absorptivity"],  # [unitless]
-            conductivity=collector_data["thermal_conductivity"]
-            if "thermal_conductivity" in collector_data
+            absorptivity=absorber_data["absorptivity"],  # [unitless]
+            conductivity=absorber_data["thermal_conductivity"]
+            if "thermal_conductivity" in absorber_data
             else None,
-            density=collector_data["density"] if "density" in collector_data else None,
-            emissivity=collector_data["emissivity"],  # [unitless]
-            heat_capacity=collector_data["heat_capacity"],  # [J/kg*K]
-            htf_heat_capacity=collector_data["htf_heat_capacity"]  # [J/kg*K]
-            if "htf_heat_capacity" in collector_data
+            density=absorber_data["density"] if "density" in absorber_data else None,
+            emissivity=absorber_data["emissivity"],  # [unitless]
+            heat_capacity=absorber_data["heat_capacity"],  # [J/kg*K]
+            htf_heat_capacity=absorber_data["htf_heat_capacity"]  # [J/kg*K]
+            if "htf_heat_capacity" in absorber_data
             else HEAT_CAPACITY_OF_WATER,  # [J/kg*K]
-            inner_pipe_diameter=collector_data["inner_pipe_diameter"],  # [m]
+            inner_pipe_diameter=absorber_data["inner_pipe_diameter"],  # [m]
             length=length,  # [m]
-            mass_flow_rate=collector_data["mass_flow_rate"],  # [Litres/hour]
-            number_of_pipes=collector_data["number_of_pipes"],  # [pipes]
-            outer_pipe_diameter=collector_data["outer_pipe_diameter"],  # [m]
-            pipe_density=collector_data["pipe_density"],  # [kg/m^3]
-            thickness=collector_data["thickness"],  # [m]
-            transmissivity=collector_data["transmissivity"],  # [unitless]
+            mass_flow_rate=absorber_data["mass_flow_rate"],  # [Litres/hour]
+            number_of_pipes=absorber_data["number_of_pipes"],  # [pipes]
+            outer_pipe_diameter=absorber_data["outer_pipe_diameter"],  # [m]
+            pipe_density=absorber_data["pipe_density"],  # [kg/m^3]
+            thickness=absorber_data["thickness"],  # [m]
+            transmissivity=absorber_data["transmissivity"],  # [unitless]
         )
     except KeyError as e:
         raise MissingDataError(
-            "Not all needed collector-layer data provided. Potential problem: collector"
+            "Not all needed absorber-layer data provided. Potential problem: absorber"
             "mass must be specified, either as 'mass' or 'density' and 'area' and "
             f"'thickness' params: {str(e)}"
         ) from None
@@ -307,6 +312,7 @@ def _pv_params_from_data(pv_data: Optional[Dict[str, Any]]) -> PVParameters:
 def _segments_from_data(
     edge_length: float,
     edge_width: float,
+    layers: Set[TemperatureName],
     logger: Logger,
     portion_covered: float,
     pvt_data: Dict[Any, Any],
@@ -324,11 +330,14 @@ def _segments_from_data(
         The maximum width of an edge segment along the side edges of the panel, measured
         in meters.
 
+    :param layers:
+        The `set` of layers to include in the system.
+
     :param logger:
         The :class:`logging.Logger` logger instance used for the run.
 
     :param portion_covered:
-        The portion of the PVT collector that is covered with PV cells. The uncovered
+        The portion of the PVT absorber that is covered with PV cells. The uncovered
         section is mapped as solar absorber only with glazing as appropriate.
 
     :param pvt_data:
@@ -368,10 +377,10 @@ def _segments_from_data(
 
     # Extract the necessary parameters from the system data.
     try:
-        number_of_pipes = pvt_data["collector"]["number_of_pipes"]
+        number_of_pipes = pvt_data["absorber"]["number_of_pipes"]
     except KeyError as e:
         raise MissingParametersError(
-            "Segment", "The number of pipes attached to the collector must be supplied."
+            "Segment", "The number of pipes attached to the absorber must be supplied."
         ) from None
     try:
         panel_length = pvt_data["pvt_system"]["length"]
@@ -437,24 +446,30 @@ def _segments_from_data(
                 x_coordinate(segment_number, x_resolution),
                 y_coordinate(segment_number, x_resolution),
             ): segment.Segment(
-                True,
-                True,
-                edge_length
+                absorber=True if TemperatureName.absorber in layers else False,
+                glass=True if TemperatureName.glass in layers else False,
+                length=edge_length
                 if y_coordinate(segment_number, x_resolution) in {0, y_resolution - 1}
                 else nominal_segment_length,
-                x_coordinate(segment_number, x_resolution) in pipe_positions,
-                y_coordinate(segment_number, x_resolution) <= pv_coordinate_cutoff,
+                pipe=x_coordinate(segment_number, x_resolution) in pipe_positions
+                if TemperatureName.pipe in layers
+                else False,
+                pv=y_coordinate(segment_number, x_resolution) <= pv_coordinate_cutoff
+                if TemperatureName.pv in layers
+                else False,
                 # Use the edge with if the segment is an edge segment.
-                edge_width
+                width=edge_width
                 if x_coordinate(segment_number, x_resolution) in {0, x_resolution - 1}
                 # Otherwise, use the bond width if the segment is a pipe segment.
                 else bond_width
                 if x_coordinate(segment_number, x_resolution) in pipe_positions
                 # Otherwise, use the nominal segment width.
                 else nominal_segment_width,
-                x_coordinate(segment_number, x_resolution),
-                y_coordinate(segment_number, x_resolution),
-                pipe_positions.index(x_coordinate(segment_number, x_resolution))
+                x_index=x_coordinate(segment_number, x_resolution),
+                y_index=y_coordinate(segment_number, x_resolution),
+                pipe_index=pipe_positions.index(
+                    x_coordinate(segment_number, x_resolution)
+                )
                 if x_coordinate(segment_number, x_resolution) in pipe_positions
                 else None,
             )
@@ -469,6 +484,7 @@ def _segments_from_data(
 
 
 def pvt_panel_from_path(
+    layers: Set[TemperatureName],
     logger: Logger,
     portion_covered: float,
     pvt_data_file: str,
@@ -477,6 +493,9 @@ def pvt_panel_from_path(
 ) -> pvt.PVT:
     """
     Generate a :class:`pvt.PVT` instance based on the path to the data file.
+
+    :param layers:
+        The `set` of layers that should be included in the panel.
 
     :param logger:
         The :class:`logging.Logger` used for the run.
@@ -504,14 +523,15 @@ def pvt_panel_from_path(
         pvt_data["glass"]
     )
     pv_parameters = _pv_params_from_data(pvt_data["pv"] if "pv" in pvt_data else None)
-    collector_parameters = _collector_params_from_data(
+    absorber_parameters = _absorber_params_from_data(
         pvt_data["pvt_system"]["length"],  # [m]
-        pvt_data["collector"],
+        pvt_data["absorber"],
     )
 
     segments = _segments_from_data(
         EDGE_LENGTH,
         EDGE_WIDTH,
+        layers,
         logger,
         portion_covered,
         pvt_data,
@@ -535,7 +555,7 @@ def pvt_panel_from_path(
             if "area" in pvt_data["pvt_system"]
             else pvt_data["pvt_system"]["width"]
             * pvt_data["pvt_system"]["length"],  # [m^2]
-            collector_parameters=collector_parameters,
+            absorber_parameters=absorber_parameters,
             diffuse_reflection_coefficient=diffuse_reflection_coefficient,
             eva=eva.EVA(
                 pvt_data["eva"]["thermal_conductivity"], pvt_data["eva"]["thickness"]
@@ -550,8 +570,8 @@ def pvt_panel_from_path(
             longitude=pvt_data["pvt_system"]["longitude"],  # [deg]
             portion_covered=portion_covered,  # [unitless]
             pv_parameters=pv_parameters,
-            pv_to_collector_thermal_conductance=pvt_data["pvt_system"][
-                "pv_to_collector_conductance"
+            pv_to_absorber_thermal_conductance=pvt_data["pvt_system"][
+                "pv_to_absorber_conductance"
             ],  # [W/m^2*K]
             segments=segments,
             tedlar=tedlar.Tedlar(
