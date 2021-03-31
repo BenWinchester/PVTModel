@@ -639,6 +639,7 @@ def plot_two_dimensional_figure(
     thing_to_plot: str,
     *,
     axis_label: str,
+    plot_title: str,
     entry_number: Optional[int] = None,
     hold: bool = False,
     hour: Optional[int] = None,
@@ -661,6 +662,9 @@ def plot_two_dimensional_figure(
 
     :param axis_label:
         The label for the y-axis of the plot.
+
+    :param plot_title:
+        The title to use for the plot.
 
     :param entry_number:
         If provided, this is used to compute the entry to plot. Otherwise, hour and
@@ -721,7 +725,7 @@ def plot_two_dimensional_figure(
         return
 
     # Reshape the data for plotting.
-    array_shape = (len(set(x_series)), len(set(y_series)))
+    array_shape = (len(set(y_series)), len(set(x_series)))
 
     # If the data is only 1D, then plot a standard 1D profile through the collector.
     if 1 in array_shape:
@@ -738,28 +742,25 @@ def plot_two_dimensional_figure(
 
         return
 
-    x_array = numpy.reshape(x_series, array_shape)
-    y_array = numpy.reshape(y_series, array_shape)
-    z_array = numpy.reshape(z_series, array_shape)
+    z_array = numpy.zeros(array_shape)
+    for index, value in enumerate(z_series):
+        z_array[len(set(y_series)) - (y_series[index] + 1), x_series[index]] = value
 
     # Plot the figure.
     fig3D = plt.figure()
-    axes3D = fig3D.gca(projection="3d")
-    surface = plt3D.scatter(
-        axes3D,
-        x_array,
-        y_array,
+    surface = plt.imshow(
+        # axes3D,
         z_array,
         cmap=cm.coolwarm,  # pylint: disable=no-member
-        linewidth=0,
-        antialiased=False,
+        # linewidth=0,
+        # antialiased=False,
     )
+    plt.title(plot_title)
+    plt.xlabel("Segment x index")
+    plt.ylabel("Segment y index")
 
     # Add axes and colour scale.
-    fig3D.colorbar(surface, shrink=0.5, aspect=5)
-    axes3D.set_xlabel("X index")
-    axes3D.set_ylabel("Y index")
-    axes3D.set_zlabel(axis_label)
+    fig3D.colorbar(surface, shrink=0.5, aspect=5, label=axis_label)
 
     save_figure(figure_name)
 
@@ -938,6 +939,7 @@ def analyse_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
         axis_label="Temperature / degC",
         hour=0,
         minute=0,
+        plot_title="Glass layer temperature profile at 00:00",
     )
 
     plot_two_dimensional_figure(
@@ -948,6 +950,7 @@ def analyse_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
         axis_label="Temperature / degC",
         hour=6,
         minute=0,
+        plot_title="Glass layer temperature profile at 06:00",
     )
 
     plot_two_dimensional_figure(
@@ -958,6 +961,7 @@ def analyse_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
         axis_label="Temperature / degC",
         hour=12,
         minute=0,
+        plot_title="Glass layer temperature profile at 12:00",
     )
 
     plot_two_dimensional_figure(
@@ -968,6 +972,7 @@ def analyse_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
         axis_label="Temperature / degC",
         hour=18,
         minute=0,
+        plot_title="Glass layer temperature profile at 18:00",
     )
 
     # Plot PV layer temperatures at midnight, 6 am, noon, and 6 pm.
@@ -979,6 +984,7 @@ def analyse_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
         axis_label="Temperature / degC",
         hour=0,
         minute=0,
+        plot_title="PV layer temperature profile at 00:00",
     )
 
     plot_two_dimensional_figure(
@@ -989,6 +995,7 @@ def analyse_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
         axis_label="Temperature / degC",
         hour=6,
         minute=0,
+        plot_title="PV layer temperature profile at 06:00",
     )
 
     plot_two_dimensional_figure(
@@ -999,6 +1006,7 @@ def analyse_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
         axis_label="Temperature / degC",
         hour=12,
         minute=0,
+        plot_title="PV layer temperature profile at 12:00",
     )
 
     plot_two_dimensional_figure(
@@ -1009,6 +1017,7 @@ def analyse_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
         axis_label="Temperature / degC",
         hour=18,
         minute=0,
+        plot_title="PV layer temperature profile at 18:00",
     )
 
     # Plot collector layer temperatures at midnight, 6 am, noon, and 6 pm.
@@ -1020,6 +1029,7 @@ def analyse_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
         axis_label="Temperature / degC",
         hour=0,
         minute=0,
+        plot_title="Absorber layer temperature profile at 00:00",
     )
 
     plot_two_dimensional_figure(
@@ -1030,6 +1040,7 @@ def analyse_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
         axis_label="Temperature / degC",
         hour=6,
         minute=0,
+        plot_title="Absorber layer temperature profile at 06:00",
     )
 
     plot_two_dimensional_figure(
@@ -1040,6 +1051,7 @@ def analyse_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
         axis_label="Temperature / degC",
         hour=12,
         minute=0,
+        plot_title="Absorber layer temperature profile at 12:00",
     )
 
     plot_two_dimensional_figure(
@@ -1050,6 +1062,7 @@ def analyse_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
         axis_label="Temperature / degC",
         hour=18,
         minute=0,
+        plot_title="Absorber layer temperature profile at 18:00",
     )
 
     # Plot bulk water temperatures at midnight, 6 am, noon, and 6 pm.
@@ -1061,6 +1074,7 @@ def analyse_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
         axis_label="Temperature / degC",
         hour=0,
         minute=0,
+        plot_title="Pipe temperature profile at 00:00",
     )
 
     plot_two_dimensional_figure(
@@ -1071,6 +1085,7 @@ def analyse_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
         axis_label="Temperature / degC",
         hour=6,
         minute=0,
+        plot_title="Pipe temperature profile at 06:00",
     )
 
     plot_two_dimensional_figure(
@@ -1081,6 +1096,7 @@ def analyse_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
         axis_label="Temperature / degC",
         hour=12,
         minute=0,
+        plot_title="Pipe temperature profile at 12:00",
     )
 
     plot_two_dimensional_figure(
@@ -1091,6 +1107,7 @@ def analyse_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
         axis_label="Temperature / degC",
         hour=18,
         minute=0,
+        plot_title="Pipe temperature profile at 18:00",
     )
 
     # Plot bulk water temperatures at midnight, 6 am, noon, and 6 pm.
@@ -1102,6 +1119,7 @@ def analyse_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
         axis_label="Temperature / degC",
         hour=0,
         minute=0,
+        plot_title="Bulk-water temperature profile at 00:00",
     )
 
     plot_two_dimensional_figure(
@@ -1112,6 +1130,7 @@ def analyse_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
         axis_label="Temperature / degC",
         hour=6,
         minute=0,
+        plot_title="Bulk-water temperature profile at 06:00",
     )
 
     plot_two_dimensional_figure(
@@ -1122,6 +1141,7 @@ def analyse_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
         axis_label="Temperature / degC",
         hour=12,
         minute=0,
+        plot_title="Bulk-water temperature profile at 12:00",
     )
 
     plot_two_dimensional_figure(
@@ -1132,6 +1152,7 @@ def analyse_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
         axis_label="Temperature / degC",
         hour=18,
         minute=0,
+        plot_title="Bulk-water temperature profile at 18:00",
     )
 
     """  # pylint: disable=pointless-string-statement
@@ -1277,23 +1298,25 @@ def analyse_steady_state_data(data: Dict[Any, Any], logger: Logger) -> None:
     logger.info("Beginning steady-state analysis.")
 
     # Glass Temperatures
-    # plot_two_dimensional_figure(
-    #     "steady_state_glass_layer_350K_input",
-    #     logger,
-    #     data,
-    #     thing_to_plot="layer_temperature_map_glass",
-    #     axis_label="Glass layer temperature / deg C",
-    #     entry_number=350,
-    # )
+    plot_two_dimensional_figure(
+        "steady_state_glass_layer_350K_input",
+        logger,
+        data,
+        axis_label="Temperature / deg C",
+        entry_number=350,
+        plot_title="Glass layer temperature with 350 K input HTF",
+        thing_to_plot="layer_temperature_map_glass",
+    )
 
     # PV Temperatures
     plot_two_dimensional_figure(
         "steady_state_pv_layer_350K_input",
         logger,
         data,
-        thing_to_plot="layer_temperature_map_pv",
-        axis_label="PV layer temperature / deg C",
+        axis_label="Temperature / deg C",
         entry_number=350,
+        plot_title="PV layer temperature with 350 K input HTF",
+        thing_to_plot="layer_temperature_map_pv",
     )
 
     # Collector Temperatures
@@ -1301,30 +1324,33 @@ def analyse_steady_state_data(data: Dict[Any, Any], logger: Logger) -> None:
         "steady_state_collector_layer_350K_input",
         logger,
         data,
-        thing_to_plot="layer_temperature_map_collector",
-        axis_label="Collector layer temperature / deg C",
+        axis_label="Temperature / deg C",
         entry_number=350,
+        plot_title="Collector layer temperature with 350 K input HTF",
+        thing_to_plot="layer_temperature_map_collector",
     )
 
     # Pipe Temperatures
-    # plot_two_dimensional_figure(
-    #     "steady_state_pipe_350K_input",
-    #     logger,
-    #     data,
-    #     thing_to_plot="layer_temperature_map_pipe",
-    #     axis_label="Pipe temperature / deg C",
-    #     entry_number=350,
-    # )
+    plot_two_dimensional_figure(
+        "steady_state_pipe_350K_input",
+        logger,
+        data,
+        axis_label="Pipe temperature / deg C",
+        entry_number=350,
+        plot_title="Pipe temperature with 350 K input HTF",
+        thing_to_plot="layer_temperature_map_pipe",
+    )
 
-    # # # Bulk-water Temperatures
-    # plot_two_dimensional_figure(
-    #     "steady_state_bulk_water_350K_input",
-    #     logger,
-    #     data,
-    #     thing_to_plot="layer_temperature_map_bulk_water",
-    #     axis_label="Pipe temperature / deg C",
-    #     entry_number=350,
-    # )
+    # Bulk-water Temperatures
+    plot_two_dimensional_figure(
+        "steady_state_bulk_water_350K_input",
+        logger,
+        data,
+        axis_label="Bulk-water temperature / deg C",
+        entry_number=350,
+        plot_title="Bulk-water temperature with 350 K input HTF",
+        thing_to_plot="layer_temperature_map_bulk_water",
+    )
 
 
 def analyse(data_file_name: str, show_output: Optional[bool] = False) -> None:
