@@ -41,8 +41,8 @@ pvt_system:
   timezone: 0 # [hours]
   vertical_tracking: false
   # The width of the absorber is measured in meters.
-  width: 0.86 #[m]
-  # width: 0.06142857142 # [m]
+  # width: 0.86 #[m]
+  width: 0.06142857142 # [m]
 glass:
   absorptivity: 0.01 # [unitless]
   # @@@ Value NOT taken from Maria's paper.
@@ -104,8 +104,8 @@ absorber:
   heat_capacity: 386 # [J/kg*K]
   inner_pipe_diameter: 0.007717 #[m]
   length: 1.66 # [m]
-  mass_flow_rate: 108 # [L/h]
-  # mass_flow_rate: 7.71 # [L/h]
+  # mass_flow_rate: 108 # [L/h]
+  mass_flow_rate: 7.71 # [L/h]
   maximum_operating_pressure: 3.5 # [bar]
   number_of_pipes: 1 # [pipes]
   outer_pipe_diameter: 0.008 # [m]
