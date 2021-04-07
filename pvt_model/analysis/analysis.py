@@ -355,21 +355,36 @@ def _annotate_maximum(
 
 def plot(
     label: str,
+    use_data_keys: bool,
+    x_axis_key: str,
+    x_label: str,
     y_label: str,
     model_data: Dict[Any, Any],
-    hold=False,
+    *,
+    disable_lines: bool,
     axes=None,
-    shape: str = "x",
-    colour: str = None,
     bar_plot: bool = False,
+    colour: str = None,
+    hold=False,
+    shape: str = "x",
 ) -> Optional[Any]:
     """
     Plots some model_data based on input parameters.
 
     :param label:
-        The name of the model_data label to plot. For example, this could be "pv_temperature",
-        in which case, the pv temperature would be plotted at the tine steps specified
-        in the model.
+        The name of the model_data label to plot. For example, this could be
+        "pv_temperature", in which case, the pv temperature would be plotted at the time
+        steps specified in the model.
+
+    :param use_data_keys:
+        If specified, the keys of the data will be used. Otherwise, the value provided
+        via the x-axis key will be used.
+
+    :param x_axis_key:
+        Key used for the x-axis data set. This defaults to the time of day.
+
+    :param x_label:
+        The x-axis label.
 
     :param y_label:
         The label to assign to the y axis when plotting.
@@ -379,6 +394,9 @@ def plot(
 
     :param model_data:
         The model_data, loaded from the model's output file.
+
+    :param disable_lines:
+        If specified, lines will be disabled from the output.
 
     :param axes:
         If provided, a separate axis is used for plotting the model_data.
@@ -398,14 +416,22 @@ def plot(
 
     """
 
+    # Use the data keys themselves if appropriate, otherwise use the x-label provided.
+    if use_data_keys:
+        x_model_data = [float(entry) for entry in model_data.keys()]
+    else:
+        x_model_data = [entry[x_axis_key] for entry in model_data.values()]
+    y_model_data = [entry[label] for entry in model_data.values()]
+
+    # Sort the data series based on increasing x values.
     x_model_data, y_model_data = (
-        [entry["time"] for entry in model_data.values()],
-        [entry[label] for entry in model_data.values()],
+        list(entry) for entry in zip(*sorted(zip(x_model_data, y_model_data)))
     )
 
     # If we are not holding the graph, then clear the model_data.
     if not hold:
         plt.clf()
+        plt.close("all")
 
     # Reduce the values on the x axis to be times.
     # x_model_data = [float(item) / (resolution / 60) for item in x_model_data]
@@ -433,20 +459,25 @@ def plot(
         #  otherwise, the model_data needs to be plotted on just on axis.
         else:
             axes.scatter(x_model_data, y_model_data, label=label, marker=shape)
-            if colour is None:
-                (line,) = axes.plot(
-                    x_model_data, y_model_data, label=label, marker=shape
-                )
-            else:
-                (line,) = axes.plot(
-                    x_model_data, y_model_data, label=label, marker=shape, color=colour
-                )
+            if not disable_lines:
+                if colour is None:
+                    (line,) = axes.plot(
+                        x_model_data, y_model_data, label=label, marker=shape
+                    )
+                else:
+                    (line,) = axes.plot(
+                        x_model_data,
+                        y_model_data,
+                        label=label,
+                        marker=shape,
+                        color=colour,
+                    )
 
     # Set the labels for the axes.
-    plt.xlabel("Time of Day")
+    plt.xlabel(x_label)
     plt.ylabel(y_label)
 
-    return line
+    return line if not disable_lines else None
 
 
 def save_figure(figure_name: str) -> None:
@@ -514,11 +545,16 @@ def plot_figure(
     *,
     first_axis_shape: str = "x",
     first_axis_y_limits: Optional[Tuple[int, int]] = None,
+    use_data_keys_as_x_axis: bool = False,
+    x_axis_thing_to_plot: str = "time",
+    x_axis_label: str = "Time of day",
     second_axis_things_to_plot: Optional[List[str]] = None,
     second_axis_label: Optional[str] = None,
     second_axis_y_limits: Optional[Tuple[int, int]] = None,
     annotate_maximum: bool = False,
     bar_plot: bool = False,
+    disable_lines: bool = False,
+    plot_title: Optional[str] = None,
 ) -> None:
     """
     Does all the work needed to plot a figure with up to two axes and save it.
@@ -542,6 +578,16 @@ def plot_figure(
     :param first_axis_shape:
         A `str` giving an optional override shape for the first axis.
 
+    :param use_data_keys_as_x_axis:
+        If set to `True`, then the keys of the data set will be used for the plotting
+        rather than the data set specified via the x-axis label.
+
+    :param x_axis_thing_to_plot:
+        The variable name to plot on the x-axis.
+
+    :param x_axis_label:
+        The label to assign to the x-axis.
+
     :param second_axis_things_to_plot:
         The list of variable names (keys in the JSON model_data) to plot on the second axis.
 
@@ -558,6 +604,12 @@ def plot_figure(
     :param bar_plot:
         If specified, a bar plot will be generated, rather than a line plot.
 
+    :param disable_lines:
+        If specified, lines will be disabled from the plotting.
+
+    :param plot_title:
+        If specified, a title is addded to the plot.
+
     """
 
     _, ax1 = plt.subplots()
@@ -565,17 +617,24 @@ def plot_figure(
     lines = [
         plot(
             entry,
+            use_data_keys_as_x_axis,
+            x_axis_thing_to_plot,
+            x_axis_label,
             first_axis_label,
             model_data,
             hold=True,
             axes=ax1,
             shape=first_axis_shape,
             bar_plot=bar_plot,
+            disable_lines=disable_lines,
         )
         for entry in first_axis_things_to_plot
     ]
 
-    ax1.set_xticks(ax1.get_xticks()[::X_TICK_SEPARATION])
+    # Adjust the x-tick separation if appropriate.
+    locs, _ = plt.xticks()
+    if len(locs) > 2 * X_TICK_SEPARATION:
+        ax1.set_xticks(ax1.get_xticks()[::X_TICK_SEPARATION])
 
     # Set the y limits if appropriate
     if first_axis_y_limits is not None:
@@ -588,6 +647,10 @@ def plot_figure(
             first_axis_things_to_plot,
             ax1,
         )
+
+    # Plot a title if specified.
+    if plot_title is not None:
+        plt.title(plot_title)
 
     # Save the figure and return if only one axis is plotted.
     if second_axis_things_to_plot is None:
@@ -602,12 +665,16 @@ def plot_figure(
         [
             plot(
                 entry,
+                use_data_keys_as_x_axis,
+                x_axis_thing_to_plot,
+                x_axis_label,
                 second_axis_label,
                 model_data,
                 hold=True,
                 axes=ax2,
                 shape=".",
                 bar_plot=bar_plot,
+                disable_lines=disable_lines,
             )
             for entry in second_axis_things_to_plot
         ]
@@ -644,6 +711,7 @@ def plot_two_dimensional_figure(
     hold: bool = False,
     hour: Optional[int] = None,
     minute: Optional[int] = None,
+    x_axis_label: str = "Y segment index",
 ) -> None:
     """
     Plots a two-dimensional figure.
@@ -678,6 +746,9 @@ def plot_two_dimensional_figure(
 
     :param minute:
         The minute at which to plot the two-dimensional temperature profile.
+
+    :param x_axis_label:
+        The label to use for the x-axis if the plot is 1D.
 
     """
 
@@ -732,9 +803,10 @@ def plot_two_dimensional_figure(
         # If we are not holding the graph, then clear the model_data.
         if not hold:
             plt.clf()
+        plt.scatter(y_series, z_series)
         lines = plt.plot(y_series, z_series)
         # Set the labels for the axes.
-        plt.xlabel("Segment y index")
+        plt.xlabel(x_axis_label)
         plt.ylabel(axis_label)
         # Add the legend.
         plt.legend(lines, [thing_to_plot])
@@ -788,6 +860,8 @@ def plot_two_dimensional_figure(
     axes3D.set_zlabel(axis_label)
 
     save_figure(f"{figure_name}_3d")
+    if not hold:
+        plt.close("all")
 
 
 def analyse_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
@@ -1322,230 +1396,94 @@ def analyse_steady_state_data(data: Dict[Any, Any], logger: Logger) -> None:
 
     logger.info("Beginning steady-state analysis.")
 
-    # Glass Temperatures
-    plot_two_dimensional_figure(
-        "steady_state_glass_layer_350K_input",
-        logger,
+    for temperature in data.keys():
+        # Glass Temperatures
+        plot_two_dimensional_figure(
+            "steady_state_glass_layer_{:.2f}degC_input".format(
+                float(str(temperature).replace(".", "_"))
+            ),
+            logger,
+            data,
+            axis_label="Temperature / deg C",
+            entry_number=temperature,
+            plot_title=f"Glass layer temperature with {temperature} K input HTF",
+            thing_to_plot="layer_temperature_map_glass",
+        )
+
+        # PV Temperatures
+        plot_two_dimensional_figure(
+            "steady_state_pv_layer_{:.2f}degC_input".format(
+                float(str(temperature).replace(".", "_"))
+            ),
+            logger,
+            data,
+            axis_label="Temperature / deg C",
+            entry_number=temperature,
+            plot_title=f"PV layer temperature with {temperature} K input HTF",
+            thing_to_plot="layer_temperature_map_pv",
+        )
+
+        # Collector Temperatures
+        plot_two_dimensional_figure(
+            "steady_state_absorber_layer_{:.2f}degC_input".format(
+                float(str(temperature).replace(".", "_"))
+            ),
+            logger,
+            data,
+            axis_label="Temperature / deg C",
+            entry_number=temperature,
+            plot_title=f"Collector layer temperature with {temperature} K input HTF",
+            thing_to_plot="layer_temperature_map_absorber",
+        )
+
+        # Pipe Temperatures
+        plot_two_dimensional_figure(
+            "steady_state_pipe_{:.2f}degC_input".format(
+                float(str(temperature).replace(".", "_"))
+            ),
+            logger,
+            data,
+            axis_label="Pipe temperature / deg C",
+            entry_number=temperature,
+            plot_title=f"Pipe temperature with {temperature} K input HTF",
+            thing_to_plot="layer_temperature_map_pipe",
+        )
+
+        # Bulk-water Temperatures
+        plot_two_dimensional_figure(
+            "steady_state_bulk_water_{:.2f}degC_input".format(
+                float(str(temperature).replace(".", "_"))
+            ),
+            logger,
+            data,
+            axis_label="Bulk-water temperature / deg C",
+            entry_number=temperature,
+            plot_title=f"Bulk-water temperature with {temperature} K input HTF",
+            thing_to_plot="layer_temperature_map_bulk_water",
+        )
+
+    # Collector temperature gain plot.
+    plot_figure(
+        "thermal_efficiency_against_reduced_temperature",
         data,
-        axis_label="Temperature / deg C",
-        entry_number=350,
-        plot_title="Glass layer temperature with 350 K input HTF",
-        thing_to_plot="layer_temperature_map_glass",
+        first_axis_things_to_plot=["thermal_efficiency"],
+        first_axis_label="Thermal efficiency",
+        x_axis_label="Reduced temperature / K m^2 / W",
+        x_axis_thing_to_plot="reduced_collector_temperature",
+        plot_title="Thermal efficiency against reduced temperature",
+        disable_lines=True,
     )
 
-    # PV Temperatures
-    plot_two_dimensional_figure(
-        "steady_state_pv_layer_350K_input",
-        logger,
+    # Thermal efficiency plot.
+    plot_figure(
+        "collector_tempreature_gain_against_input_temperature",
         data,
-        axis_label="Temperature / deg C",
-        entry_number=350,
-        plot_title="PV layer temperature with 350 K input HTF",
-        thing_to_plot="layer_temperature_map_pv",
-    )
-
-    # Collector Temperatures
-    plot_two_dimensional_figure(
-        "steady_state_absorber_layer_350K_input",
-        logger,
-        data,
-        axis_label="Temperature / deg C",
-        entry_number=350,
-        plot_title="Collector layer temperature with 350 K input HTF",
-        thing_to_plot="layer_temperature_map_absorber",
-    )
-
-    # Pipe Temperatures
-    plot_two_dimensional_figure(
-        "steady_state_pipe_350K_input",
-        logger,
-        data,
-        axis_label="Pipe temperature / deg C",
-        entry_number=350,
-        plot_title="Pipe temperature with 350 K input HTF",
-        thing_to_plot="layer_temperature_map_pipe",
-    )
-
-    # Bulk-water Temperatures
-    plot_two_dimensional_figure(
-        "steady_state_bulk_water_350K_input",
-        logger,
-        data,
-        axis_label="Bulk-water temperature / deg C",
-        entry_number=350,
-        plot_title="Bulk-water temperature with 350 K input HTF",
-        thing_to_plot="layer_temperature_map_bulk_water",
-    )
-
-    # Plot 280 K temperatures:
-
-    # Glass Temperatures
-    plot_two_dimensional_figure(
-        "steady_state_glass_layer_280K_input",
-        logger,
-        data,
-        axis_label="Temperature / deg C",
-        entry_number=280,
-        plot_title="Glass layer temperature with 280 K input HTF",
-        thing_to_plot="layer_temperature_map_glass",
-    )
-
-    # PV Temperatures
-    plot_two_dimensional_figure(
-        "steady_state_pv_layer_280K_input",
-        logger,
-        data,
-        axis_label="Temperature / deg C",
-        entry_number=280,
-        plot_title="PV layer temperature with 280 K input HTF",
-        thing_to_plot="layer_temperature_map_pv",
-    )
-
-    # Collector Temperatures
-    plot_two_dimensional_figure(
-        "steady_state_absorber_layer_280K_input",
-        logger,
-        data,
-        axis_label="Temperature / deg C",
-        entry_number=280,
-        plot_title="Collector layer temperature with 280 K input HTF",
-        thing_to_plot="layer_temperature_map_absorber",
-    )
-
-    # Pipe Temperatures
-    plot_two_dimensional_figure(
-        "steady_state_pipe_280K_input",
-        logger,
-        data,
-        axis_label="Pipe temperature / deg C",
-        entry_number=280,
-        plot_title="Pipe temperature with 280 K input HTF",
-        thing_to_plot="layer_temperature_map_pipe",
-    )
-
-    # Bulk-water Temperatures
-    plot_two_dimensional_figure(
-        "steady_state_bulk_water_280K_input",
-        logger,
-        data,
-        axis_label="Bulk-water temperature / deg C",
-        entry_number=280,
-        plot_title="Bulk-water temperature with 280 K input HTF",
-        thing_to_plot="layer_temperature_map_bulk_water",
-    )
-
-    # Plot 300 K temperatures:
-
-    # Glass Temperatures
-    plot_two_dimensional_figure(
-        "steady_state_glass_layer_300K_input",
-        logger,
-        data,
-        axis_label="Temperature / deg C",
-        entry_number=300,
-        plot_title="Glass layer temperature with 300 K input HTF",
-        thing_to_plot="layer_temperature_map_glass",
-    )
-
-    # PV Temperatures
-    plot_two_dimensional_figure(
-        "steady_state_pv_layer_300K_input",
-        logger,
-        data,
-        axis_label="Temperature / deg C",
-        entry_number=300,
-        plot_title="PV layer temperature with 300 K input HTF",
-        thing_to_plot="layer_temperature_map_pv",
-    )
-
-    # Collector Temperatures
-    plot_two_dimensional_figure(
-        "steady_state_absorber_layer_300K_input",
-        logger,
-        data,
-        axis_label="Temperature / deg C",
-        entry_number=300,
-        plot_title="Collector layer temperature with 300 K input HTF",
-        thing_to_plot="layer_temperature_map_absorber",
-    )
-
-    # Pipe Temperatures
-    plot_two_dimensional_figure(
-        "steady_state_pipe_300K_input",
-        logger,
-        data,
-        axis_label="Pipe temperature / deg C",
-        entry_number=300,
-        plot_title="Pipe temperature with 300 K input HTF",
-        thing_to_plot="layer_temperature_map_pipe",
-    )
-
-    # Bulk-water Temperatures
-    plot_two_dimensional_figure(
-        "steady_state_bulk_water_300K_input",
-        logger,
-        data,
-        axis_label="Bulk-water temperature / deg C",
-        entry_number=300,
-        plot_title="Bulk-water temperature with 300 K input HTF",
-        thing_to_plot="layer_temperature_map_bulk_water",
-    )
-
-    # Plot 400 K temperatures:
-
-    # Glass Temperatures
-    plot_two_dimensional_figure(
-        "steady_state_glass_layer_400K_input",
-        logger,
-        data,
-        axis_label="Temperature / deg C",
-        entry_number=400,
-        plot_title="Glass layer temperature with 400 K input HTF",
-        thing_to_plot="layer_temperature_map_glass",
-    )
-
-    # PV Temperatures
-    plot_two_dimensional_figure(
-        "steady_state_pv_layer_400K_input",
-        logger,
-        data,
-        axis_label="Temperature / deg C",
-        entry_number=400,
-        plot_title="PV layer temperature with 400 K input HTF",
-        thing_to_plot="layer_temperature_map_pv",
-    )
-
-    # Collector Temperatures
-    plot_two_dimensional_figure(
-        "steady_state_absorber_layer_400K_input",
-        logger,
-        data,
-        axis_label="Temperature / deg C",
-        entry_number=400,
-        plot_title="Collector layer temperature with 400 K input HTF",
-        thing_to_plot="layer_temperature_map_absorber",
-    )
-
-    # Pipe Temperatures
-    plot_two_dimensional_figure(
-        "steady_state_pipe_400K_input",
-        logger,
-        data,
-        axis_label="Pipe temperature / deg C",
-        entry_number=400,
-        plot_title="Pipe temperature with 400 K input HTF",
-        thing_to_plot="layer_temperature_map_pipe",
-    )
-
-    # Bulk-water Temperatures
-    plot_two_dimensional_figure(
-        "steady_state_bulk_water_400K_input",
-        logger,
-        data,
-        axis_label="Bulk-water temperature / deg C",
-        entry_number=400,
-        plot_title="Bulk-water temperature with 400 K input HTF",
-        thing_to_plot="layer_temperature_map_bulk_water",
+        first_axis_things_to_plot=["collector_temperature_gain"],
+        first_axis_label="Collector temperature gain / K",
+        x_axis_label="Collector input temperature / degC",
+        use_data_keys_as_x_axis=True,
+        plot_title="Collector temperature gain against input temperature",
+        disable_lines=True,
     )
 
 

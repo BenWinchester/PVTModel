@@ -59,12 +59,13 @@ from .__utils__ import (
 )
 
 from .constants import (
-    COLLECTOR_INPUT_TEMPERATURES,
     CONVERGENT_SOLUTION_PRECISION,
     MAXIMUM_RECURSION_DEPTH,
     WARN_RECURSION_DEPTH,
     ZERO_CELCIUS_OFFSET,
 )
+
+from .physics_utils import reduced_temperature
 
 from .pvt_panel.segment import Segment, SegmentCoordinates
 
@@ -852,15 +853,17 @@ def _system_data_from_run(
         glass_temperature=average_glass_temperature - ZERO_CELCIUS_OFFSET,
         pv_temperature=average_pv_temperature - ZERO_CELCIUS_OFFSET,
         absorber_temperature=average_absorber_temperature - ZERO_CELCIUS_OFFSET,
-        collector_input_temperature=collector_input_temperature,
-        collector_output_temperature=collector_output_temperature,
+        collector_input_temperature=collector_input_temperature - ZERO_CELCIUS_OFFSET,
+        collector_output_temperature=collector_output_temperature - ZERO_CELCIUS_OFFSET,
         pipe_temperature=average_pipe_temperature - ZERO_CELCIUS_OFFSET,
         bulk_water_temperature=average_bulk_water_temperature - ZERO_CELCIUS_OFFSET,
         ambient_temperature=weather_conditions.ambient_temperature
         - ZERO_CELCIUS_OFFSET,
         exchanger_temperature_drop=exchanger_temperature_drop,
-        tank_temperature=tank_temperature,
         sky_temperature=weather_conditions.sky_temperature - ZERO_CELCIUS_OFFSET,
+        tank_temperature=tank_temperature,
+        collector_temperature_gain=collector_output_temperature
+        - collector_input_temperature,
         layer_temperature_map_bulk_water=temperature_map_bulk_water_layer
         if save_2d_output
         else None,
@@ -874,13 +877,17 @@ def _system_data_from_run(
         if save_2d_output
         else None,
         layer_temperature_map_pv=temperature_map_pv_layer if save_2d_output else None,
+        reduced_collector_temperature=reduced_temperature(
+            weather_conditions.ambient_temperature,
+            average_bulk_water_temperature,
+            weather_conditions.irradiance,
+        ),
         thermal_efficiency=efficiency.thermal_efficiency(
             pvt_panel.area,
             pvt_panel.absorber.mass_flow_rate,
             weather_conditions.irradiance,
             collector_output_temperature - collector_input_temperature,
         ),
-        reduced_temperature=300,
     )
 
 
@@ -1225,6 +1232,7 @@ def main(
     y_resolution: int,
     *,
     override_ambient_temperature: Optional[float],
+    override_collector_input_temperature: Optional[float],
     override_irradiance: Optional[float],
     run_number: Optional[int],
     start_time: Optional[int],
@@ -1294,6 +1302,11 @@ def main(
     :param override_ambient_temperature:
         In decoupled instances, the ambient temperature can be specified as a constant
         value which will override the ambient-temperature profiles.
+
+    :param override_collector_input_temperature:
+        In decoupled instances, the collector input temperature can be specified as a
+        constant value which will override the dynamic behaviour. This should be
+        specified in Kelvin.
 
     :param override_irradiance:
         In decoupled instances, the solar irradiance can be specified as a constant
@@ -1483,8 +1496,9 @@ def main(
         )
     elif operating_mode.steady_state:
         system_data = {
-            collector_input_temperature: _steady_state_run(
-                collector_input_temperature,
+            override_collector_input_temperature
+            - ZERO_CELCIUS_OFFSET: _steady_state_run(
+                override_collector_input_temperature,
                 cloud_efficacy_factor,
                 DEFAULT_INITIAL_DATE_AND_TIME.replace(month=initial_month),
                 initial_system_temperature_vector,
@@ -1498,7 +1512,6 @@ def main(
                 save_2d_output,
                 weather_forecaster,
             )[1][1]
-            for collector_input_temperature in COLLECTOR_INPUT_TEMPERATURES
         }
         final_run_temperature_vector = None
     else:

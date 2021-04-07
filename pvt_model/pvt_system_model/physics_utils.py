@@ -26,6 +26,7 @@ __all__ = (
     "conductive_heat_transfer_coefficient_with_gap",
     "convective_heat_transfer_to_fluid",
     "radiative_heat_transfer_coefficient",
+    "reduced_temperature",
     "transmissivity_absorptivity_product",
     "upward_loss_terms",
 )
@@ -160,6 +161,33 @@ def radiative_heat_transfer_coefficient(
         * (source_temperature ** 2 + destination_temperature ** 2)  # [K^2]
         * (source_temperature + destination_temperature)  # [K]
     ) / ((1 / source_emissivity) + (1 / destination_emissivity) - 1)
+
+
+def reduced_temperature(
+    ambient_temperature: float, average_temperature: float, solar_irradiance: float
+) -> float:
+    """
+    Computes the reduced temperature of the collector.
+
+    NOTE: The ambient temperature and average temperature need to be measured in the
+    same units, whether it's Kelvin or Celcius, but it does not matter which of these
+    two is used.
+
+    :param ambient_temperature:
+        The ambient temperature surrounding the collector.
+
+    :param average_temperature:
+        The average temperature of the collector.
+
+    :param solar_irradiance:
+        The solar irradiance, measured in Watts per meter squared.
+
+    :return:
+        The reduced temperature of the collector in Kelvin meter squared per Watt.
+
+    """
+
+    return (average_temperature - ambient_temperature) / solar_irradiance
 
 
 def transmissivity_absorptivity_product(

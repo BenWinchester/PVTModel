@@ -47,7 +47,7 @@ NUMBER_OF_COLLECTORS = 1
 ZERO_CELCIUS_OFFSET: float = 273.15
 
 # Collector input temperatures.
-COLLECTOR_INPUT_TEMPERATURES = {280, 300, 350, 400}
+COLLECTOR_INPUT_TEMPERATURES = {288.15, 298.15, 310.15, 325.15}
 # The precision at which to calculate the convergent solution: 1 -> 0.1, 2 -> 0.01, etc.
 CONVERGENT_SOLUTION_PRECISION = 1
 # The default system temperature, used for instantiating runs.

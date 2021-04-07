@@ -407,6 +407,9 @@ class SystemData:
         The temperature of the HTF outputted from the absorber, measured in Celcius.
         This can be set to `None` if no data is recorded.
 
+    .. attribute:: collector_temperature_gain
+        The temperature gain of the HTF through the thermal collector.
+
     .. attribute:: layer_temperature_map_bulk_water
         A mapping between coordinate and temperature for the bulk water within the
         pipes.
@@ -424,6 +427,9 @@ class SystemData:
     .. attribute:: layer_temperature_map_pv
         A mapping between coordinate and temperature for segments within the pv layer.
 
+    .. attribute:: reduced_collector_temperature
+        The reduced temperature of the collector.
+
     .. attribute:: time
         A `str` giving the current time, can be set to `None` for steady-state runs.
 
@@ -437,17 +443,19 @@ class SystemData:
     exchanger_temperature_drop: float
     pipe_temperature: float
     pv_temperature: float
-    reduced_temperature: float
+    reduced_collector_temperature: float
     sky_temperature: float
     tank_temperature: float
     thermal_efficiency: float
     collector_input_temperature: Optional[float] = None
     collector_output_temperature: Optional[float] = None
+    collector_temperature_gain: Optional[float] = None
     layer_temperature_map_bulk_water: Optional[Dict[str, float]] = None
     layer_temperature_map_absorber: Optional[Dict[str, float]] = None
     layer_temperature_map_glass: Optional[Dict[str, float]] = None
     layer_temperature_map_pipe: Optional[Dict[str, float]] = None
     layer_temperature_map_pv: Optional[Dict[str, float]] = None
+    reduced_temperature: Optional[float] = None
     time: Optional[str] = None
 
 

@@ -1,0 +1,122 @@
+---
+################################################################################
+# autotherm.yaml - Steady-state experimental data used for verification.
+#
+# Copyright 2021, Ben Winchester
+################################################################################
+
+# Data values obtained from.
+# http://intergeo.sk/wp-content/uploads/GLAZED-TR-UNIEN12975-2-ENG-ITA-COMPLETO-1.pdf
+#
+
+# Ambient temperature measured in Celcius.
+# Collector input temperatures measured in Celcius.
+# Irradiance measured in Watts per meter squared.
+# Mass flow rate is measured in litres per minute.
+# Wind speed measured in meters per second.
+#
+
+- ambient_temperature: 22.2
+  average_bulk_water_temperature: 17.85
+  collector_input_temperature: 15
+  collector_temperature_gain: 5.7
+  irradiance: 983
+  mass_flow_rate: 1.72
+  thermal_efficiency: 0.5
+  thermal_power: 684
+  wind_speed: 1.63
+- ambient_temperature: 22.4
+  average_bulk_water_temperature: 18.05
+  collector_input_temperature: 15.08
+  collector_temperature_gain: 5.94
+  irradiance: 977
+  mass_flow_rate: 1.72
+  thermal_efficiency: 0.52
+  thermal_power: 711
+  wind_speed: 1.57
+- ambient_temperature: 22.3
+  average_bulk_water_temperature: 17.85
+  collector_input_temperature: 15.09
+  collector_temperature_gain: 5.51
+  irradiance: 951
+  mass_flow_rate: 1.73
+  thermal_efficiency: 0.50
+  thermal_power: 664
+  wind_speed: 1.96
+- ambient_temperature: 22.6
+  average_bulk_water_temperature: 17.96
+  collector_input_temperature: 15.12
+  collector_temperature_gain: 5.67
+  irradiance: 944
+  mass_flow_rate: 1.73
+  thermal_efficiency: 0.52
+  thermal_power: 686
+  wind_speed: 1.99
+- ambient_temperature: 23.8
+  average_bulk_water_temperature: 28.61
+  collector_input_temperature: 26
+  collector_temperature_gain: 5.22
+  irradiance: 918
+  mass_flow_rate: 1.71
+  thermal_efficiency: 0.48
+  thermal_power: 622
+  wind_speed: 2.09
+- ambient_temperature: 24.2
+  average_bulk_water_temperature: 28.65
+  collector_input_temperature: 26.10
+  collector_temperature_gain: 5.11
+  irradiance: 934
+  mass_flow_rate: 1.73
+  thermal_efficiency: 0.47
+  thermal_power: 615
+  wind_speed: 2.18
+- ambient_temperature: 24.8
+  collector_input_temperature: 26.28
+  irradiance: 957
+  mass_flow_rate: 1.71
+  wind_speed: 2.23
+- ambient_temperature: 23.9
+  collector_input_temperature: 26.05
+  irradiance: 893
+  mass_flow_rate: 1.72
+  wind_speed: 1.57
+- ambient_temperature: 23.1
+  collector_input_temperature: 38.81
+  mass_flow_rate: 1.72
+  irradiance: 1006
+  wind_speed: 1.51
+- ambient_temperature: 22.8
+  collector_input_temperature: 37.96
+  mass_flow_rate: 1.73
+  irradiance: 976
+  wind_speed: 1.41
+- ambient_temperature: 22.7
+  collector_input_temperature: 37.4
+  mass_flow_rate: 1.72
+  irradiance: 893
+  wind_speed: 1.78
+- ambient_temperature: 23.3
+  collector_input_temperature: 38.18
+  irradiance: 925
+  mass_flow_rate: 1.74
+  wind_speed: 1.58
+- ambient_temperature: 27.4
+  collector_input_temperature: 53.03
+  irradiance: 964
+  mass_flow_rate: 1.72
+  wind_speed: 1.33
+- ambient_temperature: 26
+  collector_input_temperature: 51.69
+  irradiance: 948
+  mass_flow_rate: 1.72
+  wind_speed: 2.31
+- ambient_temperature: 26.8
+  collector_input_temperature: 56.55
+  irradiance: 973
+  mass_flow_rate: 1.73
+  wind_speed: 2.36
+- ambient_temperature: 28
+  collector_input_temperature: 54.21
+  irradiance: 992
+  mass_flow_rate: 1.73
+  wind_speed: 1.1

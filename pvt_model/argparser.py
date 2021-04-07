@@ -134,21 +134,12 @@ def check_args(
         )
 
     # Enforce that, if decoupled is specified, solar irradiance is specified.
-    if parsed_args.decoupled and not parsed_args.solar_irradiance:
+    if parsed_args.decoupled and not parsed_args.steady_state_data_file:
         raise ArgumentMismatchError(
-            "{}If `--decoupled` is specified, the solar irradiance must be ".format(
+            "{}If `--decoupled` is specified, the steady-state data file must ".format(
                 BColours.FAIL
             )
-            + "specified with `--solar-irradiance`.{}".format(BColours.ENDC)
-        )
-
-    # Enforce that, if decoupled if specified, ambient temperature is specified.
-    if parsed_args.decoupled and not parsed_args.ambient_temperature:
-        raise ArgumentMismatchError(
-            "{}If `--decoupled` is specified, the ambient temperature must be ".format(
-                BColours.FAIL
-            )
-            + "specified with `--ambient-temperature`.{}".format(BColours.ENDC)
+            + "be specified with `--steady-state-data-file`.{}".format(BColours.ENDC)
         )
 
     # Enforce that, if decoupled is not specified, either days or months is specified.
@@ -204,9 +195,11 @@ def parse_args(args) -> argparse.Namespace:
 
     parser = argparse.ArgumentParser()
     developer_arguments = parser.add_argument_group("developer arguments")
+    dynamic_arguements = parser.add_argument_group("dynamic arguments")
     required_named_arguments = parser.add_argument_group("required named arguments")
+    steady_state_arguments = parser.add_argument_group("steady-state arguments")
 
-    parser.add_argument(
+    steady_state_arguments.add_argument(
         "--ambient-temperature",
         "-at",
         type=float,
@@ -221,14 +214,8 @@ def parse_args(args) -> argparse.Namespace:
         help="Whether to average the solar irradiance intensities on a monthly basis, "
         "or to use the data for each day individually.",
     )
-    parser.add_argument(
-        "--cloud-efficacy-factor",
-        "-c",
-        type=float,
-        help="The effect that the cloud cover has, rated between 0 (no effect) and 1.",
-    )
-    parser.add_argument(
-        "--absorber-input-temperature",
+    steady_state_arguments.add_argument(
+        "--collector-input-temperature",
         "-ci",
         default=None,
         type=float,
@@ -236,6 +223,12 @@ def parse_args(args) -> argparse.Namespace:
         "modelling a decoupled PVT absorber.",
     )
     parser.add_argument(
+        "--cloud-efficacy-factor",
+        "-c",
+        type=float,
+        help="The effect that the cloud cover has, rated between 0 (no effect) and 1.",
+    )
+    dynamic_arguements.add_argument(
         "--days",
         "-d",
         type=int,
@@ -254,12 +247,12 @@ def parse_args(args) -> argparse.Namespace:
         help="If specified, Fourier number calculation will be skipped and a dynamic "
         "model will be used for the run.",
     )
-    parser.add_argument(
+    dynamic_arguements.add_argument(
         "--exchanger-data-file",
         "-e",
         help="The location of the Exchanger system YAML data file.",
     )
-    required_named_arguments.add_argument(
+    dynamic_arguements.add_argument(
         "--initial-month",
         "-i",
         type=int,
@@ -283,7 +276,7 @@ def parse_args(args) -> argparse.Namespace:
     required_named_arguments.add_argument(
         "--location", "-l", help="The location for which to run the simulation."
     )
-    parser.add_argument(
+    dynamic_arguements.add_argument(
         "--months",
         "-m",
         help="The number of months for which to run the simulation. Default is 12.",
@@ -308,7 +301,7 @@ def parse_args(args) -> argparse.Namespace:
         help="The portion of the panel which is covered in PV, "
         "from 1 (all) to 0 (none).",
     )
-    parser.add_argument(
+    dynamic_arguements.add_argument(
         "--pump-data-file",
         "-pm",
         help="The location of the pump YAML data file for the PV-T system pump.",
@@ -316,7 +309,7 @@ def parse_args(args) -> argparse.Namespace:
     required_named_arguments.add_argument(
         "--pvt-data-file", "-p", help="The location of the PV-T system YAML data file."
     )
-    required_named_arguments.add_argument(
+    dynamic_arguements.add_argument(
         "--resolution",
         "-r",
         help="The resolution, in seconds, used to solve the panel temperatures.",
@@ -337,7 +330,7 @@ def parse_args(args) -> argparse.Namespace:
         help="If specified, the 2D output will not be saved, and only 1D info, and "
         "plots, will be saved and generated.",
     )
-    parser.add_argument(
+    steady_state_arguments.add_argument(
         "--solar-irradiance",
         "-sol",
         default=None,
@@ -345,7 +338,7 @@ def parse_args(args) -> argparse.Namespace:
         help="[decoupled] The solar irradiance in Watts per meter squared to use when "
         "running the system as a decoupled PVT absorber.",
     )
-    parser.add_argument(
+    dynamic_arguements.add_argument(
         "--start-time",
         "-st",
         type=int,
@@ -354,13 +347,21 @@ def parse_args(args) -> argparse.Namespace:
     )
     parser.add_argument(
         "--steady-state",
-        "--ss",
+        "-ss",
         action="store_true",
         default=False,
         help="If specified, Fourier-number calculation will be skipped and the model "
         "will be run without transient/dynamic terms.",
     )
-    parser.add_argument(
+    steady_state_arguments.add_argument(
+        "--steady-state-data-file",
+        "-ssdf",
+        default=None,
+        type=str,
+        help="The path to the data file containing information specifying the steady-"
+        "state runs that should be carried out.",
+    )
+    dynamic_arguements.add_argument(
         "--tank-data-file",
         "-t",
         help="The location of the Hot-Water Tank system YAML data file.",

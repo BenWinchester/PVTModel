@@ -56,6 +56,7 @@ from .pvt_system_model.constants import (
     DENSITY_OF_WATER,
     HEAT_CAPACITY_OF_WATER,
     THERMAL_CONDUCTIVITY_OF_WATER,
+    ZERO_CELCIUS_OFFSET,
 )
 from .pvt_system_model.process_pvt_system_data import (
     hot_water_tank_from_path,
@@ -259,6 +260,8 @@ def _determine_consistent_conditions(
     parsed_args: Namespace,
     *,
     override_ambient_temperature: Optional[float] = None,
+    override_collector_input_temperature: Optional[float] = None,
+    override_irradiance: Optional[float] = None,
     resolution: int = COARSE_RUN_RESOLUTION,
     run_depth: int = 1,
     running_system_temperature_vector: Optional[List[float]] = None,
@@ -345,7 +348,8 @@ def _determine_consistent_conditions(
         days=parsed_args.days,
         months=parsed_args.months,
         override_ambient_temperature=override_ambient_temperature,
-        override_irradiance=parsed_args.solar_irradiance,
+        override_collector_input_temperature=override_collector_input_temperature,
+        override_irradiance=override_irradiance,
         run_number=run_depth,
         start_time=parsed_args.start_time,
     )
@@ -895,7 +899,11 @@ def main(args) -> None:
             f"{COARSE_RUN_RESOLUTION}s resolution."
         )
         initial_system_temperature_vector, _ = _determine_consistent_conditions(
-            pvt_panel.absorber.number_of_pipes, layers, logger, operating_mode, parsed_args
+            pvt_panel.absorber.number_of_pipes,
+            layers,
+            logger,
+            operating_mode,
+            parsed_args,
         )
         print(
             "Rough initial conditions determined at coarse resolution, refining via "
@@ -946,6 +954,7 @@ def main(args) -> None:
             days=parsed_args.days,
             months=parsed_args.months,
             override_ambient_temperature=parsed_args.ambient_temperature,
+            override_collector_input_temperature=parsed_args.collector_input_temperature,
             override_irradiance=parsed_args.solar_irradiance,
             run_number=1,
             start_time=parsed_args.start_time,
@@ -958,16 +967,61 @@ def main(args) -> None:
             "Running a steady-state and decoupled system."
             f"{BColours.ENDC}"
         )
-        # Call `_determine_consistent_conditions` to determine the solution for the
-        # model in a steady-state and decoupled configuration.
-        _, system_data = _determine_consistent_conditions(
-            pvt_panel.absorber.number_of_pipes, layers,
-            logger,
-            operating_mode,
-            parsed_args,
-            override_ambient_temperature=parsed_args.ambient_temperature,
-        )
+        # Set up a holder for information about the system.
+        system_data: Dict[int, SystemData] = dict()
 
+        if parsed_args.steady_state_data_file is not None:
+            # If specified, parse the steady-state data file.
+            steady_state_runs = read_yaml(parsed_args.steady_state_data_file)
+
+            logger.info(
+                "%s runs will be attempted based on the input data file.",
+                len(steady_state_runs),
+            )
+            print(
+                f"{BColours.OKGREEN}"
+                f"{len(steady_state_runs)} runs will be attempted based on the "
+                f"information in {parsed_args.steady_state_data_file}."
+                f"{BColours.ENDC}"
+            )
+
+            for run_number, steady_state_run in enumerate(steady_state_runs):
+                logger.info(
+                    "Carrying out steady-state run number %s at %s W/m^2, %s degC "
+                    "input and %s degC ambient.",
+                    run_number + 1,
+                    steady_state_run["irradiance"],
+                    steady_state_run["collector_input_temperature"],
+                    steady_state_run["ambient_temperature"],
+                )
+
+                # Call `_determine_consistent_conditions` to determine the solution for the
+                # model in a steady-state and decoupled configuration.
+                _, system_data_entry = _determine_consistent_conditions(
+                    pvt_panel.absorber.number_of_pipes,
+                    layers,
+                    logger,
+                    operating_mode,
+                    parsed_args,
+                    override_ambient_temperature=steady_state_run[
+                        "ambient_temperature"
+                    ],
+                    override_collector_input_temperature=steady_state_run[
+                        "collector_input_temperature"
+                    ]
+                    + ZERO_CELCIUS_OFFSET,
+                    override_irradiance=steady_state_run["irradiance"],
+                )
+
+                logger.info(
+                    "Run %s of %s complete.", run_number + 1, len(steady_state_runs)
+                )
+                system_data.update(system_data_entry)
+
+        else:
+            raise ProgrammerJudgementFault(
+                "Steady-state data must be specified with a JSON data file."
+            )
     else:
         raise ProgrammerJudgementFault(
             "The system needs to either be run in steady-state or dynamic modes, with "
@@ -985,6 +1039,7 @@ def main(args) -> None:
 
     # Conduct analysis of the data.
     logger.info("Conducting analysis.")
+    print("Conducting analysis.")
     analysis.analyse(f"{parsed_args.output}.json")
     print("Analysis complete. Figures can be found in `./figures`.")
     logger.info("Analysis complete.")
