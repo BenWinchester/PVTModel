@@ -31,18 +31,19 @@ pvt_system:
   # The length of the absorber is measured in meters.
   length: 1.66 # [m]
   # length: 0.11857142857 # [m]
-  # The conductance, measured in Watts per meter squared Kelvin, between the PV
-  # laye and absorber layers of the panel.
-  pv_to_absorber_conductance: 500 # [W/m^2*K]
   # These parameters set up how the panel is orientated.
   # All angles are measured in degrees
-  tilt: 35 # [deg]
+  tilt: 45 # [deg]
   # The timezone offset in Hours from UTC.
   timezone: 0 # [hours]
   vertical_tracking: false
   # The width of the absorber is measured in meters.
+  # Full absorber width.
   # width: 0.86 #[m]
+  # One fourteenth of the absorber width.
   width: 0.06142857142 # [m]
+  # Ilaria's absorber width of 0.1m.
+  # width: 0.1 #[m]
 glass:
   absorptivity: 0.01 # [unitless]
   # @@@ Value NOT taken from Maria's paper.

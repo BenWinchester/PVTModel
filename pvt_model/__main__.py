@@ -262,6 +262,7 @@ def _determine_consistent_conditions(
     override_ambient_temperature: Optional[float] = None,
     override_collector_input_temperature: Optional[float] = None,
     override_irradiance: Optional[float] = None,
+    override_wind_speed: Optional[float] = None,
     resolution: int = COARSE_RUN_RESOLUTION,
     run_depth: int = 1,
     running_system_temperature_vector: Optional[List[float]] = None,
@@ -350,6 +351,7 @@ def _determine_consistent_conditions(
         override_ambient_temperature=override_ambient_temperature,
         override_collector_input_temperature=override_collector_input_temperature,
         override_irradiance=override_irradiance,
+        override_wind_speed=override_wind_speed,
         run_number=run_depth,
         start_time=parsed_args.start_time,
     )
@@ -956,6 +958,7 @@ def main(args) -> None:
             override_ambient_temperature=parsed_args.ambient_temperature,
             override_collector_input_temperature=parsed_args.collector_input_temperature,
             override_irradiance=parsed_args.solar_irradiance,
+            override_wind_speed=parsed_args.wind_speed,
             run_number=1,
             start_time=parsed_args.start_time,
         )
@@ -988,11 +991,12 @@ def main(args) -> None:
             for run_number, steady_state_run in enumerate(steady_state_runs):
                 logger.info(
                     "Carrying out steady-state run number %s at %s W/m^2, %s degC "
-                    "input and %s degC ambient.",
+                    "input and %s degC ambient. Wind speed is %s m/s.",
                     run_number + 1,
                     steady_state_run["irradiance"],
                     steady_state_run["collector_input_temperature"],
                     steady_state_run["ambient_temperature"],
+                    steady_state_run["wind_speed"],
                 )
 
                 # Call `_determine_consistent_conditions` to determine the solution for the
@@ -1011,6 +1015,7 @@ def main(args) -> None:
                     ]
                     + ZERO_CELCIUS_OFFSET,
                     override_irradiance=steady_state_run["irradiance"],
+                    override_wind_speed=steady_state_run["wind_speed"],
                 )
 
                 logger.info(

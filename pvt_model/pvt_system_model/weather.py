@@ -391,6 +391,10 @@ class WeatherForecaster:
     #   The solar irradiance, measured in Watts per meter squared, to use as a constant
     #   value rather than time-specific data.
     #
+    # .. attribute:: _override_wind_speed
+    #   The wind speed, measured in meters per second, used as a constant value rather
+    #   than time-specific data.
+    #
     # .. attribute:: _solar_insolation
     #   The solar insolation, measured in Watts per meter squared, that would hit the
     #   UK on a clear day with no other factors present.
@@ -412,6 +416,7 @@ class WeatherForecaster:
         monthly_temperature_profiles: Dict[Date, _DailyProfile],
         override_ambient_temperature: Optional[float],
         override_irradiance: Optional[float],
+        overridw_wind_speed: Optional[float],
     ) -> None:
         """
         Instantiate a weather forecaster class.
@@ -439,11 +444,15 @@ class WeatherForecaster:
         :param override_irradiance:
             Used to override the solar-irradiance profiles with a constant value.
 
+        :param override_wind_speed:
+            Used to override the wind-speed profiles with a constant value.
+
         """
 
         self._average_irradiance = average_irradiance
         self._override_ambient_temperature = override_ambient_temperature
         self._override_irradiance = override_irradiance
+        self._override_wind_speed = overridw_wind_speed
         self.ambient_tank_temperature = ambient_tank_temperature
         self.mains_water_temperature = mains_water_temperature + ZERO_CELCIUS_OFFSET
 
@@ -492,7 +501,8 @@ class WeatherForecaster:
             f"mains_water_temperature: {self.mains_water_temperature}K, "
             f"num_months: {len(self._monthly_weather_data.keys())}, "
             f"override_ambient_temperature: {self._override_ambient_temperature}K, "
-            f"override_irradiance: {self._override_irradiance}W/m^2"
+            f"override_irradiance: {self._override_irradiance}W/m^2, "
+            f"overridw_wind_speed: {self._override_wind_speed}m/s"
             ")"
         )
 
@@ -607,6 +617,7 @@ class WeatherForecaster:
         weather_data_path: str,
         override_ambient_temperature: Optional[float] = None,
         override_irradiance: Optional[float] = None,
+        override_wind_speed: Optional[float] = None,
         use_pvgis: bool = False,
     ) -> Any:  # type: ignore
         """
@@ -635,6 +646,10 @@ class WeatherForecaster:
         :param override_irradiance:
             If specified, the value will be used to override the internal solar
             irradiance profile(s).
+
+        :param override_wind_speed:
+            If specified, the value will be used to override the internal wind-speed
+            profile(s).
 
         :param use_pvgis:
             Whether to use data obtained from PVGIS (True) or not (False).
@@ -821,6 +836,7 @@ class WeatherForecaster:
             if override_ambient_temperature is not None
             else None,
             override_irradiance,
+            override_wind_speed,
         )
 
     def get_weather(
@@ -894,7 +910,7 @@ class WeatherForecaster:
             ambient_temperature = self._override_ambient_temperature
 
         # * Compute the wind speed
-        wind_speed: float = 5  # [m/s]
+        wind_speed: float = self._override_wind_speed  # [m/s]
 
         # Return all of these in a WeatherConditions variable.
         return WeatherConditions(

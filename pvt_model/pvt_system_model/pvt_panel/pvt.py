@@ -97,10 +97,6 @@ class PVT:
          Represents the middle (pv) layer of the panel. Can be set to `None` if not
         present in the panel.
 
-    .. attribute:: pv_to_absorber_thermal_conductance
-        The thermal conductance, in Watts per meter squared Kelvin, between the PV layer
-        and absorber layer of the panel.
-
     .. attribute:: segments
         A mapping between segment coordinates and the segment.
 
@@ -143,7 +139,6 @@ class PVT:
         longitude: float,
         portion_covered: float,
         pv_parameters: PVParameters,
-        pv_to_absorber_thermal_conductance: float,
         segments: Dict[SegmentCoordinates, Segment],
         tedlar: MicroLayer,
         timezone: datetime.timezone,
@@ -247,7 +242,6 @@ class PVT:
         self.length = length
         self.longitude = longitude
         self.portion_covered = portion_covered
-        self.pv_to_absorber_thermal_conductance = pv_to_absorber_thermal_conductance
         self.segments = segments
         self.timezone = timezone
         self.width = width

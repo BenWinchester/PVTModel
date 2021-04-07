@@ -570,9 +570,6 @@ def pvt_panel_from_path(
             longitude=pvt_data["pvt_system"]["longitude"],  # [deg]
             portion_covered=portion_covered,  # [unitless]
             pv_parameters=pv_parameters,
-            pv_to_absorber_thermal_conductance=pvt_data["pvt_system"][
-                "pv_to_absorber_conductance"
-            ],  # [W/m^2*K]
             segments=segments,
             tedlar=tedlar.Tedlar(
                 pvt_data["tedlar"]["thermal_conductivity"],

@@ -1399,66 +1399,66 @@ def analyse_steady_state_data(data: Dict[Any, Any], logger: Logger) -> None:
     for temperature in data.keys():
         # Glass Temperatures
         plot_two_dimensional_figure(
-            "steady_state_glass_layer_{:.2f}degC_input".format(
-                float(str(temperature).replace(".", "_"))
+            "steady_state_glass_layer_{}degC_input".format(
+                str(round(float(temperature), 2)).replace(".", "_")
             ),
             logger,
             data,
             axis_label="Temperature / deg C",
             entry_number=temperature,
-            plot_title=f"Glass layer temperature with {temperature} K input HTF",
+            plot_title=f"Glass layer temperature with {round(float(temperature), 2)} K input HTF",
             thing_to_plot="layer_temperature_map_glass",
         )
 
         # PV Temperatures
         plot_two_dimensional_figure(
-            "steady_state_pv_layer_{:.2f}degC_input".format(
-                float(str(temperature).replace(".", "_"))
+            "steady_state_pv_layer_{}degC_input".format(
+                str(round(float(temperature), 2)).replace(".", "_")
             ),
             logger,
             data,
             axis_label="Temperature / deg C",
             entry_number=temperature,
-            plot_title=f"PV layer temperature with {temperature} K input HTF",
+            plot_title=f"PV layer temperature with {round(float(temperature), 2)} K input HTF",
             thing_to_plot="layer_temperature_map_pv",
         )
 
         # Collector Temperatures
         plot_two_dimensional_figure(
-            "steady_state_absorber_layer_{:.2f}degC_input".format(
-                float(str(temperature).replace(".", "_"))
+            "steady_state_absorber_layer_{}degC_input".format(
+                str(round(float(temperature), 2)).replace(".", "_")
             ),
             logger,
             data,
             axis_label="Temperature / deg C",
             entry_number=temperature,
-            plot_title=f"Collector layer temperature with {temperature} K input HTF",
+            plot_title=f"Collector layer temperature with {round(float(temperature), 2)} K input HTF",
             thing_to_plot="layer_temperature_map_absorber",
         )
 
         # Pipe Temperatures
         plot_two_dimensional_figure(
-            "steady_state_pipe_{:.2f}degC_input".format(
-                float(str(temperature).replace(".", "_"))
+            "steady_state_pipe_{}degC_input".format(
+                str(round(float(temperature), 2)).replace(".", "_")
             ),
             logger,
             data,
             axis_label="Pipe temperature / deg C",
             entry_number=temperature,
-            plot_title=f"Pipe temperature with {temperature} K input HTF",
+            plot_title=f"Pipe temperature with {round(float(temperature), 2)} K input HTF",
             thing_to_plot="layer_temperature_map_pipe",
         )
 
         # Bulk-water Temperatures
         plot_two_dimensional_figure(
-            "steady_state_bulk_water_{:.2f}degC_input".format(
-                float(str(temperature).replace(".", "_"))
+            "steady_state_bulk_water_{}degC_input".format(
+                str(round(float(temperature), 2)).replace(".", "_")
             ),
             logger,
             data,
             axis_label="Bulk-water temperature / deg C",
             entry_number=temperature,
-            plot_title=f"Bulk-water temperature with {temperature} K input HTF",
+            plot_title=f"Bulk-water temperature with {round(float(temperature), 2)} K input HTF",
             thing_to_plot="layer_temperature_map_bulk_water",
         )
 

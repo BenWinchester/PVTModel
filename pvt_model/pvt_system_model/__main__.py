@@ -231,6 +231,7 @@ def _get_weather_forecaster(
     use_pvgis: bool,
     override_ambient_temperature: float,
     override_irradiance: float,
+    override_wind_speed: float,
 ) -> weather.WeatherForecaster:
     """
     Instantiates a :class:`weather.WeatherForecaster` instance based on the file data.
@@ -248,6 +249,9 @@ def _get_weather_forecaster(
 
     :param override_irradiance:
         Overrides the irradiance value. The value should be in Watts per meter squared.
+
+    :param override_wind_speed:
+        Overrides the wind speed value. The value should be in meters per second.
 
     :param use_pvgis:
         Whether data from the PVGIS (Photovoltaic Geographic Information Survey) should
@@ -275,6 +279,7 @@ def _get_weather_forecaster(
         os.path.join(location, WEATHER_DATA_FILENAME),
         override_ambient_temperature,
         override_irradiance,
+        override_wind_speed,
         use_pvgis,
     )
     return weather_forecaster
@@ -1234,6 +1239,7 @@ def main(
     override_ambient_temperature: Optional[float],
     override_collector_input_temperature: Optional[float],
     override_irradiance: Optional[float],
+    override_wind_speed: Optional[float],
     run_number: Optional[int],
     start_time: Optional[int],
     days: Optional[int] = None,
@@ -1312,6 +1318,10 @@ def main(
         In decoupled instances, the solar irradiance can be specified as a constant
         value which will override the solar-irradiance profiles.
 
+    :param override_wind_speed:
+        In decoupled instances, the wind speed can be specified as a cosntant value
+        which will override the wind-speed profiles.
+
     :param run_number:
         The number of the run being carried out. This is used for categorising logs.
 
@@ -1356,6 +1366,7 @@ def main(
         use_pvgis,
         override_ambient_temperature,
         override_irradiance,
+        override_wind_speed,
     )
     logger.info("Weather forecaster successfully instantiated: %s", weather_forecaster)
 
