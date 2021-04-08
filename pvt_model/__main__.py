@@ -266,7 +266,7 @@ def _determine_consistent_conditions(
     resolution: int = COARSE_RUN_RESOLUTION,
     run_depth: int = 1,
     running_system_temperature_vector: Optional[List[float]] = None,
-) -> Tuple[Optional[List[float]], Dict[int, SystemData]]:
+) -> Tuple[Optional[List[float]], Dict[float, SystemData]]:
     """
     Determines the initial system temperatures for the run.
 
@@ -624,7 +624,7 @@ def _print_temperature_info(
 
 
 def _output_temperature_info(
-    logger: Logger, parsed_args: Namespace, system_data: Dict[int, SystemData]
+    logger: Logger, parsed_args: Namespace, system_data: Dict[float, SystemData]
 ) -> None:
     """
     Determines and prints information about the system temperatures.
@@ -708,7 +708,7 @@ def _save_data(
     file_type: FileType,
     operating_mode: OperatingMode,
     output_file_name: str,
-    system_data: Dict[int, SystemData],
+    system_data: Dict[float, SystemData],
     carbon_emissions: Optional[CarbonEmissions] = None,
     total_power_data: Optional[TotalPowerData] = None,
 ) -> None:
@@ -736,7 +736,7 @@ def _save_data(
     """
 
     # Convert the system data entry to JSON-readable format
-    system_data_dict: Dict[Union[int, str], Union[str, Dict[str, Any]]] = {
+    system_data_dict: Dict[Union[float, str], Union[str, Dict[str, Any]]] = {
         key: dataclasses.asdict(value) for key, value in system_data.items()
     }
 

@@ -921,7 +921,7 @@ def _dynamic_system_run(
     save_2d_output: bool,
     start_time: int,
     weather_forecaster: weather.WeatherForecaster,
-) -> Tuple[numpy.ndarray, Dict[int, SystemData]]:
+) -> Tuple[numpy.ndarray, Dict[float, SystemData]]:
     """
     Carries out a dynamic run of the system.
 
@@ -995,7 +995,7 @@ def _dynamic_system_run(
     """
 
     # Set up a holder for information about the system.
-    system_data: Dict[int, SystemData] = dict()
+    system_data: Dict[float, SystemData] = dict()
 
     # Set up the time iterator.
     num_months = (
@@ -1142,14 +1142,14 @@ def _steady_state_run(
     pvt_panel: pvt.PVT,
     save_2d_output: bool,
     weather_forecaster: weather.WeatherForecaster,
-) -> Tuple[numpy.ndarray, Dict[int, SystemData]]:
+) -> Tuple[numpy.ndarray, Dict[float, SystemData]]:
     """
     Carries out a steady-state run of the system.
 
     """
 
     # Set up a holder for information about the system.
-    system_data: Dict[int, SystemData] = dict()
+    system_data: Dict[float, SystemData] = dict()
 
     # Set up various variables needed to model the system.
     weather_conditions = weather_forecaster.get_weather(
@@ -1244,7 +1244,7 @@ def main(
     start_time: Optional[int],
     days: Optional[int] = None,
     months: Optional[int] = None,
-) -> Tuple[numpy.ndarray, Dict[int, SystemData]]:
+) -> Tuple[numpy.ndarray, Dict[float, SystemData]]:
     """
     The main module for the code. Calling this method executes a run of the simulation.
 
