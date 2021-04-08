@@ -10,7 +10,7 @@
 The PV-T module for the PV-T model.
 
 This module models the PV-T panel and its components, including the glass cover, PV
-panel, and thermal collector. The model works by incrimenting the parameters through at
+panel, and thermal absorber. The model works by incrimenting the parameters through at
 increasing time steps, and the code here aims to emaulate this.
 
 """
@@ -18,20 +18,26 @@ increasing time steps, and the code here aims to emaulate this.
 import datetime
 import math
 
-from typing import Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 
-from . import back_plate, collector, glass, pv
+from . import bond, absorber, glass, pv
+
+from ...__utils__ import MissingParametersError
 
 from ..__utils__ import (
-    MissingParametersError,
-    ProgrammerJudgementFault,
-    LayerParameters,
     CollectorParameters,
     OpticalLayerParameters,
     PVParameters,
     WeatherConditions,
 )
+from ..constants import (
+    FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR,
+    THERMAL_CONDUCTIVITY_OF_AIR,
+)
+
+from .__utils__ import MicroLayer
+from .segment import Segment, SegmentCoordinates
 
 __all__ = ("PVT",)
 
@@ -51,18 +57,32 @@ MAXIMUM_SOLAR_DIFF_ANGLE = 88
 
 class PVT:
     """
-    Represents an entire PV-T collector.
+    Represents an entire PV-T absorber.
+
+    .. attribute:: adhesive
+        Represents the adhesive layer between the pv layer and the thermal absorber
+        layer.
 
     .. attribute:: air_gap_thickness
-        The thickness of the air gap between the glass and PV (or collector) layers,
+        The thickness of the air gap between the glass and PV (or absorber) layers,
         measured in meters.
 
-    .. attribute:: collector
-      Represents the lower (thermal-collector) layer of the panel.
+    .. attribute:: bond
+        Represents the bond between the absorber (absorber) layer and the riser tube
+        pipes.
+
+    .. attribute:: absorber
+        Represents the lower (thermal-absorber) layer of the panel.
+
+    .. attribute:: eva
+        Represents the EVA layer between the PV panel and the absorber layer.
 
     .. attribute:: glass
-      Represents the upper (glass) layer of the panel. This is set to `None` if the
-      panel is unglazed.
+        Represents the upper (glass) layer of the panel. This is set to `None` if the
+        panel is unglazed.
+
+    .. attribute:: insulation
+        Represents the thermal insulation on the back of the PV-T absorber.
 
     .. attribute:: latitude
         The latitude of the panel, measured in degrees.
@@ -72,6 +92,16 @@ class PVT:
 
     .. attribute:: portion_covered
         The portion of the PV-T panel which is covered with PV.
+
+    .. attribute:: pv
+         Represents the middle (pv) layer of the panel. Can be set to `None` if not
+        present in the panel.
+
+    .. attribute:: segments
+        A mapping between segment coordinates and the segment.
+
+    .. attribute:: tedlar
+        Represents the tedlar back plate to the PV layer, situated above the PV layer.
 
     .. attribute:: timezone
         The timezone that the PVT system is based in.
@@ -86,14 +116,6 @@ class PVT:
     # .. attribute:: _horizontal_tracking
     #   A `bool` giving whether or not the panel tracks horizontally.
     #
-    # .. attribute:: pv
-    #   Represents the middle (pv) layer of the panel. Can be set to `None` if not
-    #   present in the panel.
-    #
-    # .. attribute:: pv_to_collector_thermal_conductance
-    #   The thermal conductance, in Watts per meter squared Kelvin, between the PV layer
-    #   and collector layer of the panel.
-    #
     # .. attribute:: _tilt
     #   The angle between the normal to the panel's surface and the horizontal.
     #
@@ -103,19 +125,24 @@ class PVT:
 
     def __init__(
         self,
+        absorber_pipe_bond: bond.Bond,
+        adhesive: MicroLayer,
         air_gap_thickness: float,
         area: float,
-        back_params: LayerParameters,
-        collector_parameters: CollectorParameters,
+        absorber_parameters: CollectorParameters,
         diffuse_reflection_coefficient: float,
+        eva: MicroLayer,
         glass_parameters: OpticalLayerParameters,
-        glazed: bool,
+        insulation: MicroLayer,
         latitude: float,
+        length: float,
         longitude: float,
         portion_covered: float,
-        pv_parameters: Optional[PVParameters],
-        pv_to_collector_thermal_conductance: float,
+        pv_parameters: PVParameters,
+        segments: Dict[SegmentCoordinates, Segment],
+        tedlar: MicroLayer,
         timezone: datetime.timezone,
+        width: float,
         *,
         azimuthal_orientation: Optional[float] = None,
         horizontal_tracking: bool = False,
@@ -123,7 +150,10 @@ class PVT:
         vertical_tracking: bool = False,
     ) -> None:
         """
-        Instantiate an instance of the PV-T collector class.
+        Instantiate an instance of the PV-T absorber class.
+
+        :param adhesive:
+            A :class:`MicroLayer` instance representing the adhesive layer.
 
         :param air_gap_thickness:
             The thickness, in meters, of the air gap between the PV and glass layers.
@@ -131,24 +161,31 @@ class PVT:
         :param area:
             The area of the panel, measured in meters squared.
 
-        :param back_params:
-            Parameters used to instantiate the back layer.
+        :param bond:
+            A :class:`Bond` instance representing the bond layer.
 
-        :param collector_parameters:
-            Parametsrs used to instantiate the collector layer.
+        :param absorber_parameters:
+            Parametsrs used to instantiate the absorber layer.
 
         :param diffuse_reflection_coefficient:
             The coefficient of diffuse reflectivity of the upper layer.
 
+        :param eva:
+            A :class:`MicroLayer` instance representing the eva layer.
+
         :param glass_parameters:
             Parameters used to instantiate the glass layer.
 
-        :param glazed:
-            Whether the panel is glazed. I.E., whether the panel has a glass layer.
+        :param insulation:
+            A :class:`MicroLayer` instance representing the insulation on the back of
+            the PV-T absorber.
 
         :param latitude:
             The latitude of the PV-T system, defined in degrees relative to the equator
             in the standard way.
+
+        :param length:
+            The length of the absorber in meters.
 
         :param longitude:
             The longitude of the PV-T system, defined in degrees relative to the
@@ -163,6 +200,19 @@ class PVT:
 
         :param pv_parameters:
             Parameters used to instantiate the PV layer.
+
+        :param segments:
+            A mapping between segment coordinate and segment for all segments to be
+            included in the layer.
+
+        :param tedlar:
+            A :class:`MicroLayer` instance representing the tedlar layer.
+
+        :param timezone:
+            The timezone in which the PV-T system is installed.
+
+        :param width:
+            The width of the absorber in meters.
 
         :param azimuthal_orientation:
             The orientation of the surface of the panel, defined relative to True North,
@@ -182,17 +232,19 @@ class PVT:
 
         """
 
-        self.air_gap_thickness = air_gap_thickness
         self._azimuthal_orientation = azimuthal_orientation
         self._horizontal_tracking = horizontal_tracking
+        self._tilt = tilt
+        self._vertical_tracking = vertical_tracking
+        self.air_gap_thickness = air_gap_thickness
+        self.area = area
         self.latitude = latitude
+        self.length = length
         self.longitude = longitude
         self.portion_covered = portion_covered
-        self.pv_to_collector_thermal_conductance = pv_to_collector_thermal_conductance
-        self._vertical_tracking = vertical_tracking
-        self._tilt = tilt
-        self.area = area
+        self.segments = segments
         self.timezone = timezone
+        self.width = width
 
         # If the orientation parameters have not been specified correctly, then raise an
         # error.
@@ -208,36 +260,19 @@ class PVT:
                 "orientation must be given.",
             )
 
-        # Instantiate the glass layer.
-        if glazed:
-            self.glass: glass.Glass = glass.Glass(
-                diffuse_reflection_coefficient, glass_parameters
-            )
-        else:
-            raise ProgrammerJudgementFault(
-                "A glass layer is required in the current set up."
-            )
+        # Instantiate the layers.
+        self.adhesive = adhesive
+        self.bond = absorber_pipe_bond
+        self.absorber = absorber.Collector(absorber_parameters)
+        self.eva = eva
+        self.glass: glass.Glass = glass.Glass(
+            diffuse_reflection_coefficient, glass_parameters
+        )
+        self.insulation = insulation
+        self.pv: pv.PV = pv.PV(pv_parameters)
+        self.tedlar = tedlar
 
-        # Instantiate the PV layer.
-        if portion_covered != 0 and pv_parameters is not None:
-            pv_parameters.area *= portion_covered
-            self.pv: pv.PV = pv.PV(pv_parameters)
-        # If the PV layer parameters have not been specified, then raise an error.
-        elif portion_covered != 0 and pv_parameters is None:
-            raise MissingParametersError(
-                "PVT",
-                "PV-layer parameters must be provided if including a PV layer.",
-            )
-        else:
-            raise ProgrammerJudgementFault(
-                "A PV layer is required in the current set up."
-            )
-
-        # Instantiate the collector layer.
-        self.collector = collector.Collector(collector_parameters)
-
-        # Instantiate the back_plate layer.
-        self.back_plate = back_plate.BackPlate(back_params)
+        # * Instantiate and store the segments on the class.
 
     def __repr__(self) -> str:
         """
@@ -249,14 +284,20 @@ class PVT:
         """
 
         return (
-            "PVT("
-            f"back_plate: {self.back_plate}_"
-            f"collector: {self.collector}, "
-            f"glass: {self.glass}, "
-            f"pv: {self.pv}, "
+            "PVT(\n"
+            f"  glass: {self.glass},\n"
+            f"  pv: {self.pv},\n"
+            f"  eva: {self.eva},\n"
+            f"  adhesive: {self.adhesive}\n"
+            f"  tedlar: {self.tedlar}\n"
+            f"  absorber: {self.absorber},\n"
+            f"  bond: {self.bond},\n"
+            f"  outer_pipe_diameter: {self.absorber.outer_pipe_diameter}m\n"
+            "  additional_params: "
             f"azimuthal_orientation: {self._azimuthal_orientation}, "
             f"coordinates: {self.latitude}N {self.longitude}E, "
-            f"tilt: {self._tilt}deg, "
+            f"tilt: {self._tilt}deg"
+            "\n)"
         )
 
     def _get_solar_orientation_diff(
@@ -299,6 +340,45 @@ class PVT:
                 math.cos(math.radians(horizontal_diff))
                 * math.cos(math.radians(vertical_diff))
             )
+        )
+
+    @property
+    def air_gap_heat_transfer_coefficient(self) -> float:
+        """
+        Gives the heat-transfer coefficient for heat transfer across the air gap.
+
+        :return:
+            The heat transfer coefficient across the air gap, measured in Watts per
+            meter Kelvin.
+
+        """
+
+        return (
+            THERMAL_CONDUCTIVITY_OF_AIR
+            / self.air_gap_thickness
+            * (
+                1
+                # @@@ FIXME - Additional code needed here to more accurately match
+                # Ilaria's model. See page 75 of the equation specification.
+            )
+        )
+
+    @property
+    def air_gap_resistance(self) -> float:
+        """
+        Returns the thermal resistance of the air gap between the PV and glass layers.
+
+        :return:
+            The thermal resistance, measured in Kelvin meter squared per Watt.
+
+        """
+
+        return (
+            self.eva.thickness / self.eva.conductivity
+            + self.glass.thickness / self.glass.conductivity
+            + self.pv.thickness / (2 * self.pv.conductivity)
+            + self.glass.thickness / (2 * self.glass.conductivity)
+            + 1 / self.air_gap_heat_transfer_coefficient
         )
 
     @property
@@ -380,3 +460,40 @@ class PVT:
         # >>> Beginning of Maria's profile fetching.
         return weather_conditions.irradiance
         # <<< End of Maria's profile fetching.
+
+    @property
+    def insulation_thermal_resistance(self) -> float:
+        """
+        Returns the thermal resistance between the back layer of the absorber and air.
+
+        Insulation on the back of the PV-T absorber causes there to be some thermal
+        resistance to the heat transfer out of the back of the thermal absorber. This
+        value is computed here and returned.
+
+        :return:
+            The thermal resistance between the back layer of the absorber and the
+            surrounding air, measured in meter squared Kelvin per Watt.
+
+        """
+
+        return (
+            self.insulation.thickness / self.insulation.conductivity
+            + 1 / FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR
+        )
+
+    @property
+    def pv_to_absorber_thermal_resistance(self) -> float:
+        """
+        Returns the thermal resistance between the PV and absorber layers.
+
+        :return:
+            The thermal resistance, in meters squared Kelvin per Watt, between the PV
+            and absorber layers.
+
+        """
+
+        return (
+            self.eva.thickness / self.eva.conductivity
+            + self.tedlar.thickness / self.tedlar.conductivity
+            + self.adhesive.thickness / self.adhesive.conductivity
+        )

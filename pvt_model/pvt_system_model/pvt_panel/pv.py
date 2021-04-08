@@ -1,6 +1,6 @@
 #!/usr/bin/python3.7
 ########################################################################################
-# pvt_panel/pv.py - Represents a collector within a PVT panel.
+# pvt_panel/pv.py - Represents a absorber within a PVT panel.
 #
 # Author: Ben Winchester
 # Copyright: Ben Winchester, 2021
@@ -56,11 +56,9 @@ class PV(OpticalLayer):
 
         super().__init__(
             OpticalLayerParameters(
-                pv_params.area,
                 pv_params.conductivity,
                 pv_params.density,
                 pv_params.heat_capacity,
-                pv_params.mass,
                 pv_params.thickness,
                 pv_params.transmissivity,
                 pv_params.absorptivity,
@@ -86,9 +84,7 @@ class PV(OpticalLayer):
             f"absorptivity: {self.absorptivity}, "
             f"heat_capacity: {self.heat_capacity}J/kg*K, "
             f"_transmissicity: {self.transmissivity}, "
-            f"area: {self.area}m^2, "
             f"emissivity: {self.emissivity}, "
-            f"mass: {self.mass}kg, "
             f"reference_efficiency: {self.reference_efficiency}, "
             f"reference_temperature: {self.reference_temperature}K, "
             f"thermal_coefficient: {self.thermal_coefficient}K^(-1), "

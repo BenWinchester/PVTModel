@@ -5,52 +5,184 @@
 # Copyright 2021, Ben Winchester
 ########################################################################################
 
-- file: pvt_model/pvt_system_model/load.py
-  justification: "Method cannot reference the class name."
-  line: 467
-  usage: "def from_data(cls, data_file_paths: Set[str]) -> Any:"
-- file: pvt_model/pvt_system_model/__main__.py
-  justification: "Scipy module does not expose correctly with mypy."
-  line: 32
-  usage: "from scipy import linalg"
-- file: pvt_model/pvt_system_model/__main__.py
-  justification: "FIXME: Dictionary update method requires better type-checking"
-  line: 252
+- file: pvt_model/__main__.py
+  justification: "Mypy incorrectly reports analysis module missing."
+  line: 1055
+  usage: 'analysis.analyse(f"{parsed_args.output}.json")'
+- file: pvt_model/__main__.py
+  justification: "Tank temperature cannot be `None`, already processed."
+  line: 687
+  usage: "mean({entry.tank_temperature for entry in system_data.values()}), 3"
+- file: pvt_model/__main__.py
+  justification: "Tank temperature cannot be `None`, already processed."
+  line: 690
+  usage: "{round(entry.tank_temperature, 3) for entry in system_data.values()}"
+- file: pvt_model/__main__.py
+  line: 693
+  justification: "Tank temperature cannot be `None`, already processed."
+  usage: "{round(entry.tank_temperature, 3) for entry in system_data.values()}"
+- file: pvt_model/__main__.py
+  justification: "Further investigation required - FIXME"
+  line: 755
   usage: "system_data_dict.update(dataclasses.asdict(total_power_data))"
-- file: pvt_model/pvt_system_model/__main__.py
-  justification: "FIXME: Dictionary update method requires better type-checking"
-  line: 254
+- file: pvt_model/__main__.py
+  justification: "Further investigation required - FIXME"
+  line: 757
   usage: "system_data_dict.update(dataclasses.asdict(carbon_emissions))"
-- file: pvt_model/pvt_system_model/__main__.py
-  justification: "Mypy array does not correctly expose its type annotation."
-  line: 390
-  usage: "run_two_temperature_vector: numpy.ndarray = numpy.asarray("
-- file: pvt_model/pvt_system_model/__main__.py
-  justification: "Mypy array does not correctly expose its type annotation."
-  line: 586
-  usage: "previous_run_temperature_vector: numpy.ndarray = numpy.asarray("
-- file: pvt_model/pvt_system_model/analysis.py
-  justification: "Type annotations not needed in the analysis module."
+- file: pvt_model/analysis/analysis.py
+  justification: "Anslysis module should be ignored where possible."
   line: 2
   usage: ""
   whole_file: true
+- file: pvt_model/__main__.py
+  justification: "Mypy incorrectly reports analysis module missing."
+  line: 1055
+  usage: 'analysis.analyse(f"{parsed_args.output}.json")'
+- file: pvt_model/enforcement/mypy_enforcement.py
+  justification: "Not a usage of enforcement - direct string."
+  line: 152
+  usage: 'f"grep ''type: ignore'' {directory_prefix}pvt_model -rn --exclude \\*.yaml",'
+- file: pvt_model/enforcement/mypy_enforcement.py
+  justification: "Not a usage of enforcement - direct string."
+  line: 161
+  usage: 'entry.replace("", "") for entry in type_ignore_uses'
+- file: pvt_model/enforcement/mypy_enforcement.py
+  justification: "Not a usage of enforcement - direct string."
+  line: 52
+  usage: 'Represents a single use of the "type: ignore" declaration.'
+- file: pvt_model/pvt_system_model/__main__.py
+  justification: "Scipy module does not expose annotations and should be ignored."
+  line: 28
+  usage: "from scipy import linalg"
+- file: pvt_model/pvt_system_model/__main__.py
+  justification: "Pipe index cannot be `None` here due to internal checks."
+  line: 320
+  usage: "segment.pipe_index,"
+- file: pvt_model/pvt_system_model/__main__.py
+  justification: "This is just laziness with type annotations."
+  line: 497
+  usage: "run_two_temperature_vector: Union[List[float], numpy.ndarray] = numpy.asarray("
+- file: pvt_model/pvt_system_model/matrix.py
+  justification: "The resolution cannot be zero here due to internal checks."
+  line: 1011
+  usage: "/ resolution    # [s]"
+- file: pvt_model/pvt_system_model/matrix.py
+  justification: "Pipe index cannot be `None` here due to internal checks."
+  line: 1029
+  usage: "segment.pipe_index,"
+- file: pvt_model/pvt_system_model/matrix.py
+  justification: "Pipe index cannot be `None` here due to internal checks."
+  line: 1043
+  usage: "segment.pipe_index,"
+- file: pvt_model/pvt_system_model/matrix.py
+  justification: "Pipe index cannot be `None` here due to internal checks."
+  line: 1057
+  usage: "segment.pipe_index,"
+- file: pvt_model/pvt_system_model/matrix.py
+  justification: "Pipe index cannot be `None` here due to internal checks."
+  line: 1069
+  usage: "segment.pipe_index,"
+- file: pvt_model/pvt_system_model/matrix.py
+  justification: "Previous temperature vector cannot be `None` here."
+  line: 1083
+  usage: "* previous_temperature_vector["
+- file: pvt_model/pvt_system_model/matrix.py
+  justification: "Pipe index cannot be `None` here due to internal checks."
+  line: 1089
+  usage: "segment.pipe_index,"
+- file: pvt_model/pvt_system_model/matrix.py
+  justification: "The resolution cannot be zero here due to internal checks."
+  line: 108
+  usage: "/ resolution    # [s]"
+- file: pvt_model/pvt_system_model/matrix.py
+  justification: "The resolution cannot be zero here due to internal checks."
+  line: 1139
+  usage: "/ resolution    # [s]"
+- file: pvt_model/pvt_system_model/matrix.py
+  justification: "Pipe index cannot be `None` here due to internal checks."
+  line: 1158
+  usage: "segment.pipe_index,"
+- file: pvt_model/pvt_system_model/matrix.py
+  justification: "Pipe index cannot be `None` here due to internal checks."
+  line: 1186
+  usage: "segment.pipe_index,"
+- file: pvt_model/pvt_system_model/matrix.py
+  justification: "Previous temperature vector cannot be `None` here."
+  line: 1202
+  usage: "* previous_temperature_vector["
+- file: pvt_model/pvt_system_model/matrix.py
+  justification: "Pipe index cannot be `None` here due to internal checks."
+  line: 1208
+  usage: "segment.pipe_index,"
+- file: pvt_model/pvt_system_model/matrix.py
+  justification: "The resolution cannot be zero here due to internal checks."
+  line: 1276
+  usage: "/ resolution    # [s]"
+- file: pvt_model/pvt_system_model/matrix.py
+  justification: "Previous temperature vector cannot be `None` here."
+  line: 1501
+  usage: "* previous_temperature_vector["
+- file: pvt_model/pvt_system_model/matrix.py
+  justification: "The resolution cannot be zero here due to internal checks."
+  line: 1770
+  usage: "/ resolution    # [s]"
+- file: pvt_model/pvt_system_model/matrix.py
+  justification: "Previous temperature vector cannot be `None` here."
+  line: 1836
+  usage: "* previous_temperature_vector["
+- file: pvt_model/pvt_system_model/matrix.py
+  justification: "Previous temperature vector cannot be `None` here."
+  line: 359
+  usage: "* previous_temperature_vector["
+- file: pvt_model/pvt_system_model/matrix.py
+  justification: "Pipe index cannot be `None` here due to internal checks."
+  line: 629
+  usage: "segment.pipe_index,"
+- file: pvt_model/pvt_system_model/matrix.py
+  justification: "Pipe index cannot be `None` here due to internal checks."
+  line: 640
+  usage: "segment.pipe_index,"
+- file: pvt_model/pvt_system_model/matrix.py
+  justification: "The resolution cannot be zero here due to internal checks."
+  line: 690
+  usage: "/ resolution    # [s]"
+- file: pvt_model/pvt_system_model/matrix.py
+  justification: "Previous temperature vector cannot be `None` here."
+  line: 892
+  usage: "* previous_temperature_vector["
+- file: pvt_model/pvt_system_model/matrix.py
+  justification: "Pipe index cannot be `None` here due to internal checks."
+  line: 944
+  usage: "segment.pipe_index,"
+- file: pvt_model/pvt_system_model/matrix.py
+  justification: "Pipe index cannot be `None` here due to internal checks."
+  line: 956
+  usage: "segment.pipe_index,"
+- file: pvt_model/pvt_system_model/matrix.py
+  justification: "Pipe index cannot be `None` here due to internal checks."
+  line: 968
+  usage: "segment.pipe_index,"
 - file: pvt_model/pvt_system_model/weather.py
-  justification: "Internal __add__ method cannot reference the class name."
-  line: 76
-  usage: "def __add__(self, other) -> Any:"
-- file: pvt_model/pvt_system_model/weather.py
-  justification: "Internal __truediv__ method cannot reference the class name."
-  line: 97
-  usage: "def __truediv__(self, divisor: float) -> Any:"
-- file: pvt_model/pvt_system_model/weather.py
-  justification: "Instnatiation method cannot reference the class name."
-  line: 202
+  justification: "Further investigation required - FIXME"
+  line: 203
   usage: ") -> Any:"
 - file: pvt_model/pvt_system_model/weather.py
-  line: 433
-  justification: "FIXME: Unknown declaration of `type:ignore`."
+  justification: "Further investigation required - FIXME"
+  line: 461
   usage: "month, month_data"
 - file: pvt_model/pvt_system_model/weather.py
-  line: 476
-  justification: "Instnatiation method cannot reference the class name."
+  justification: "Further investigation required - FIXME"
+  line: 622
   usage: ") -> Any:"
+- file: pvt_model/pvt_system_model/weather.py
+  justification: "Type annotation of `Any` is needed here due to forgive-and-forget."
+  line: 77
+  usage: "def __add__(self, other) -> Any:"
+- file: pvt_model/pvt_system_model/weather.py
+  justification: "Type annotation of `Any` is needed here due to forgive-and-forget."
+  line: 98
+  usage: "def __truediv__(self, divisor: float) -> Any:"
+- file: pvt_model/pvt_system_model/load.py
+  justification: "Type annotation of `Any` is needed here due to forgive-and-forget."
+  line: 467
+  usage: "def from_data(cls, data_file_paths: Set[str]) -> Any:"

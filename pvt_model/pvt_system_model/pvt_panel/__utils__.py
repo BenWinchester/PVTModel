@@ -14,6 +14,8 @@ various modules throughout the PVT panel component.
 
 """
 
+from dataclasses import dataclass
+
 from ..__utils__ import (
     LayerParameters,
     OpticalLayerParameters,
@@ -29,9 +31,6 @@ class Layer:
     """
     Represents a layer within the PV-T panel.
 
-    .. attribute:: area
-        The area of the layer, measured in meters squared.
-
     .. attribute:: conductivity
         The conductivity of the layer, measured in Watts per meter Kelvin.
 
@@ -40,9 +39,6 @@ class Layer:
 
     .. attribute:: heat_capacity
       The heat capacity of the layer, measured in Joules per kilogram Kelvin.
-
-    .. attribute:: mass
-      The mass of the layer in kilograms.
 
     .. attribute:: thickenss
         The thickness (depth) of the layer, measured in meters.
@@ -55,35 +51,50 @@ class Layer:
 
         """
 
-        self.area = layer_params.area
         self.conductivity = layer_params.conductivity
         self.density = layer_params.density
         self.heat_capacity = layer_params.heat_capacity  # [J/kg*K]
-        self.mass = layer_params.mass  # [kg]
         self.thickness = layer_params.thickness
+
+
+@dataclass
+class MicroLayer:
+    """
+    Represents a layer within the panel which is small enough to ignore dynamic terms.
+
+    Such layers, such as the adhesive between two layers, are too small to be treated in
+    the same way as actual layers as their dynamic (heat capacity) terms are too small
+    to warrant consideration.
+
+    .. attribute:: conductivity
+        The conductivity of the layer, measured in Watts per meter Kelvin.
+
+    .. attribute:: thickenss
+        The thickness (depth) of the layer, measured in meters.
+
+    """
+
+    conductivity: float
+    thickness: float
 
 
 class OpticalLayer(Layer):
     """
     Represents a layer within the PV-T panel that has optical properties.
 
+    .. attribute:: absorptivity
+        The absorptivity of the layer: a dimensionless number between 0 (nothing is
+        absorbed by the layer) and 1 (all light is absorbed).
+
     .. attribute:: emissivity
         The emissivity of the layer; a dimensionless number between 0 (nothing is
         emitted by the layer) and 1 (the layer re-emits all incident light).
 
+    .. attribute:: transmissivity
+        The transmissivity of the layer: a dimensionless number between 0 (nothing is
+        transmitted through the layer) and 1 (all light is transmitted).
+
     """
-
-    # Private Attributes:
-    #
-    # .. attribute:: _absorptivity
-    #   The absorptivity of the layer: a dimensionless number between 0 (nothing is
-    #   absorbed by the layer) and 1 (all light is absorbed).
-    #
-
-    # .. attribute:: _transmissivity
-    #   The transmissivity of the layer: a dimensionless number between 0 (nothing is
-    #   transmitted through the layer) and 1 (all light is transmitted).
-    #
 
     def __init__(self, optical_params: OpticalLayerParameters) -> None:
         """
@@ -96,11 +107,9 @@ class OpticalLayer(Layer):
 
         super().__init__(
             LayerParameters(
-                optical_params.area,
                 optical_params.conductivity,
                 optical_params.density,
                 optical_params.heat_capacity,
-                optical_params.mass,  # [kg]
                 optical_params.thickness,
             )
         )
@@ -121,10 +130,8 @@ class OpticalLayer(Layer):
         return (
             "OpticalLayer("
             f"absorptivity: {self.absorptivity}, "
-            f"area: {self.area}, "
             f"emissivitiy: {self.emissivity}, "
             f"heat_capacity: {self.heat_capacity}, "
-            f"mass: {self.mass}, "
             f"thickness: {self.thickness}, "
             f"transmissivity: {self.transmissivity}"
             ")"

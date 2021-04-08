@@ -11,22 +11,26 @@ The physics utility module for the PVT model.
 
 """
 
-from typing import Optional
+from typing import List, Optional, Tuple, Union
+
+from numpy import ndarray
 
 from .constants import (
     STEFAN_BOLTZMAN_CONSTANT,
     THERMAL_CONDUCTIVITY_OF_AIR,
 )
+from .pvt_panel import pvt
+from .pvt_panel.segment import Segment
 
-from .__utils__ import (
-    ProgrammerJudgementFault,
-)
+from .__utils__ import ProgrammerJudgementFault, WeatherConditions
 
 __all__ = (
     "conductive_heat_transfer_coefficient_with_gap",
     "convective_heat_transfer_to_fluid",
     "radiative_heat_transfer_coefficient",
+    "reduced_temperature",
     "transmissivity_absorptivity_product",
+    "upward_loss_terms",
 )
 
 
@@ -98,11 +102,11 @@ def convective_heat_transfer_to_fluid(
 
 def radiative_heat_transfer_coefficient(
     *,
-    destination_emissivity: Optional[float] = None,
     destination_temperature: float,
-    radiating_to_sky: Optional[bool] = False,
     source_emissivity: float,
     source_temperature: float,
+    destination_emissivity: Optional[float] = None,
+    radiating_to_sky: Optional[bool] = False,
 ) -> float:
     """
     Computes the radiative heat transfer coefficient between two layers.
@@ -117,22 +121,22 @@ def radiative_heat_transfer_coefficient(
 
     The value for the heat transfer is returned in Watts per meter squared Kelvin.
 
-    :param destination_emissivity:
-        The emissivity of the layer that is receiving the radiation, defined between 0
-        and 1. This parameter can be set to `None` in instances where the destination
-        has no well-defined emissivity, such as when radiating to the sky.
-
     :param destination_temperature:
         The temperature of the destination layer/material, measured in Kelvin.
-
-    :param radiating_to_sky:
-        Specifies whether the source of the radiation is the sky (True).
 
     :param source_temperature:
         The temperature of the source layer/material, measured in Kelvin.
 
     :param source_emissivity:
         The emissivity of the layer that is radiating, defined between 0 and 1.
+
+    :param destination_emissivity:
+        The emissivity of the layer that is receiving the radiation, defined between 0
+        and 1. This parameter can be set to `None` in instances where the destination
+        has no well-defined emissivity, such as when radiating to the sky.
+
+    :param radiating_to_sky:
+        Specifies whether the source of the radiation is the sky (True).
 
     :return:
         The heat transfer coefficient, in Watts per meter squared Kelvin, between two
@@ -159,6 +163,33 @@ def radiative_heat_transfer_coefficient(
         * (source_temperature ** 2 + destination_temperature ** 2)  # [K^2]
         * (source_temperature + destination_temperature)  # [K]
     ) / ((1 / source_emissivity) + (1 / destination_emissivity) - 1)
+
+
+def reduced_temperature(
+    ambient_temperature: float, average_temperature: float, solar_irradiance: float
+) -> float:
+    """
+    Computes the reduced temperature of the collector.
+
+    NOTE: The ambient temperature and average temperature need to be measured in the
+    same units, whether it's Kelvin or Celcius, but it does not matter which of these
+    two is used.
+
+    :param ambient_temperature:
+        The ambient temperature surrounding the collector.
+
+    :param average_temperature:
+        The average temperature of the collector.
+
+    :param solar_irradiance:
+        The solar irradiance, measured in Watts per meter squared.
+
+    :return:
+        The reduced temperature of the collector in Kelvin meter squared per Watt.
+
+    """
+
+    return (average_temperature - ambient_temperature) / solar_irradiance
 
 
 def transmissivity_absorptivity_product(
@@ -193,3 +224,55 @@ def transmissivity_absorptivity_product(
     return (layer_absorptivity * glass_transmissivity) / (
         1 - (1 - layer_absorptivity) * diffuse_reflection_coefficient
     )
+
+
+def upward_loss_terms(
+    best_guess_temperature_vector: Union[List[float], ndarray],
+    pvt_panel: pvt.PVT,
+    segment: Segment,
+    source_index: int,
+    weather_conditions: WeatherConditions,
+) -> Tuple[float, float]:
+    """
+    Computes the upward convective/conductive and radiative loss terms.
+
+    :param best_guess_temperature_vector:
+        The best guess at the temperature vector at the current time step.
+
+    :param pvt_panel:
+        The pvt panel being modelled.
+
+    :param segment:
+        The segment currently being considered.
+
+    :param source_index:
+        The index of the source segment.
+
+    :param weather_conditions:
+        The weather conditions at the time step being modelled.
+
+    :return:
+        A `tuple` containing:
+        - the convective/conductive heat transfer upward from the layer,
+        - the radiative heat transfer upward from the layer.
+
+    """
+
+    upward_conduction = (
+        segment.width  # [m]
+        * segment.length  # [m]
+        * weather_conditions.wind_heat_transfer_coefficient  # [W/m^2*K]
+    )
+
+    upward_radiation = (
+        segment.width  # [m]
+        * segment.length  # [m]
+        * radiative_heat_transfer_coefficient(
+            destination_temperature=weather_conditions.sky_temperature,
+            radiating_to_sky=True,
+            source_emissivity=pvt_panel.glass.emissivity,
+            source_temperature=best_guess_temperature_vector[source_index],
+        )
+    )
+
+    return upward_conduction, upward_radiation

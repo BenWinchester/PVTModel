@@ -3,7 +3,7 @@
 #
 # Copyright 2021, Ben Winchester
 ########################################################################################
-- file: "pvt_model/pvt_panel/tests/test_collector.py"
+- file: "pvt_model/pvt_panel/tests/test_absorber.py"
   flag: "protected-access"
   justification: "Test module is permitted to access protected members."
   line: 251

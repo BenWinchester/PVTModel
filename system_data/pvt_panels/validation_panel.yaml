@@ -56,7 +56,7 @@ glass:
   heat_capacity: 750 # [840J/kg*K]
   thermal_conductivity: 1.80 # [W/m*K]
   thickness: 0.004 # [m]
-  transmissivity: 0.95 # [unitless]
+  transmissivity: 0.89 # [unitless]
 air_gap:
   thickness: 0.005 # [m]
   thermal_conductivity: 0.025 # [W/m*K]
