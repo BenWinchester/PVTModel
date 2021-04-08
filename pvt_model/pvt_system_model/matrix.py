@@ -27,7 +27,7 @@ The temperatures represented in the vector T are:
 
 """
 
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
 import logging
 import numpy
@@ -66,7 +66,7 @@ def _absorber_equation(
     number_of_x_segments: int,
     number_of_y_segments: int,
     operating_mode: OperatingMode,
-    previous_temperature_vector: numpy.ndarray,
+    previous_temperature_vector: Optional[numpy.ndarray],
     pv_to_absorber_conduction: float,
     pvt_panel: pvt.PVT,
     resolution: int,
@@ -546,7 +546,7 @@ def _decoupled_system_continuity_equation(
 
     # Equation 2: Fluid entering the absorber is the same across all pipes.
     for pipe_number in range(number_of_pipes):
-        row_equation: List[float] = [0] * number_of_temperatures
+        row_equation = [0] * number_of_temperatures
         row_equation[
             index_handler.index_from_pipe_coordinates(
                 number_of_pipes,
@@ -1517,7 +1517,7 @@ def _system_continuity_equations(
     number_of_temperatures: int,
     number_of_x_segments: int,
     number_of_y_segments: int,
-    previous_temperature_vector: List[float],
+    previous_temperature_vector: Union[List[float], numpy.ndarray],
 ) -> List[Tuple[List[float], float]]:
     """
     Returns matrix rows and resultant vector values representing system continuities.
@@ -1741,7 +1741,7 @@ def _tank_equation(
     number_of_temperatures: int,
     number_of_x_segments: int,
     number_of_y_segments: int,
-    previous_temperature_vector: numpy.ndarray,
+    previous_temperature_vector: Optional[numpy.ndarray],
     pvt_panel: pvt.PVT,
     resolution: int,
     weather_conditions: WeatherConditions,
@@ -2147,6 +2147,13 @@ def calculate_matrix_equation(
 
     # If the system is decoupled, do not compute and add the tank-related equations.
     if operating_mode.decoupled:
+        if collector_input_temperature is None:
+            raise ProgrammerJudgementFault(
+                "{}No collector input temperature passed to the matrix module ".format(
+                    BColours.FAIL
+                )
+                + "for decoupled operation.{}".format(BColours.ENDC)
+            )
         decoupled_system_continuity_equations = _decoupled_system_continuity_equation(
             collector_input_temperature,
             number_of_pipes,
@@ -2166,10 +2173,22 @@ def calculate_matrix_equation(
 
         return matrix, resultant_vector
 
-    if heat_exchanger is None or hot_water_load is None or hot_water_tank is None:
+    if (
+        heat_exchanger is None
+        or hot_water_load is None
+        or hot_water_tank is None
+        or previous_temperature_vector is None
+    ):
         raise ProgrammerJudgementFault(
-            "{}Insufficient parameters for dynamic run.{}".format(
-                BColours.FAIL, BColours.ENDC
+            "{}Insufficient parameters for dynamic run:{}{}{}{}{}".format(
+                " Heat exchanger missing." if heat_exchanger is None else "",
+                " Hot water load missing." if hot_water_load is None else "",
+                " Hot-water tank missing." if hot_water_tank is None else "",
+                " Previous temperature vector is missing."
+                if previous_temperature_vector is None
+                else "",
+                BColours.FAIL,
+                BColours.ENDC,
             )
         )
 
