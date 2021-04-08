@@ -20,7 +20,7 @@ import sys
 from argparse import Namespace
 from logging import Logger
 from statistics import mean
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 import json
 import yaml
@@ -266,7 +266,7 @@ def _determine_consistent_conditions(
     resolution: int = COARSE_RUN_RESOLUTION,
     run_depth: int = 1,
     running_system_temperature_vector: Optional[List[float]] = None,
-) -> Tuple[List[float], Dict[int, SystemData]]:
+) -> Tuple[Optional[List[float]], Dict[int, SystemData]]:
     """
     Determines the initial system temperatures for the run.
 
@@ -301,7 +301,8 @@ def _determine_consistent_conditions(
 
     :return:
         A `tuple` containing:
-        - the initial system temperature which fits within the desired resolution;
+        - the initial system temperature which fits within the desired resolution, if
+          applicable, else `None`;
         - the system data from the sun which satisfies the desired consistency.
 
     """
@@ -736,7 +737,7 @@ def _save_data(
     """
 
     # Convert the system data entry to JSON-readable format
-    system_data_dict: Dict[int, Dict[str, Any]] = {
+    system_data_dict: Dict[Union[int, str], Union[str, Dict[str, Any]]] = {
         key: dataclasses.asdict(value) for key, value in system_data.items()
     }
 
@@ -920,6 +921,13 @@ def main(args) -> None:
             resolution=parsed_args.resolution,
             running_system_temperature_vector=initial_system_temperature_vector,
         )
+        if initial_system_temperature_vector is None:
+            raise ProgrammerJudgementFault(
+                "{}The initial system conditions were not returned as ".format(
+                    BColours.FAIL
+                )
+                + "expected when performing a coupled run.{}".format(BColours.ENDC)
+            )
         logger.info(
             "Initial system temperatures successfully determined to %sK precision.",
             INITIAL_CONDITION_PRECISION,
@@ -971,7 +979,7 @@ def main(args) -> None:
             f"{BColours.ENDC}"
         )
         # Set up a holder for information about the system.
-        system_data: Dict[int, SystemData] = dict()
+        system_data = dict()
 
         if parsed_args.steady_state_data_file is not None:
             # If specified, parse the steady-state data file.
@@ -1045,7 +1053,7 @@ def main(args) -> None:
     # Conduct analysis of the data.
     logger.info("Conducting analysis.")
     print("Conducting analysis.")
-    analysis.analyse(f"{parsed_args.output}.json")
+    analysis.analyse(f"{parsed_args.output}.json")  # type: ignore
     print("Analysis complete. Figures can be found in `./figures`.")
     logger.info("Analysis complete.")
 
