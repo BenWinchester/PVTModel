@@ -910,7 +910,10 @@ class WeatherForecaster:
             ambient_temperature = self._override_ambient_temperature
 
         # * Compute the wind speed
-        wind_speed: float = self._override_wind_speed  # [m/s]
+        if self._override_wind_speed is not None:
+            wind_speed: float = self._override_wind_speed  # [m/s]
+        else:
+            wind_speed = 5
 
         # Return all of these in a WeatherConditions variable.
         return WeatherConditions(
