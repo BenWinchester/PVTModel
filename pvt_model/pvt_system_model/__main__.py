@@ -1192,7 +1192,7 @@ def _steady_state_run(
     return numpy.asarray(current_run_temperature_vector), system_data
 
 
-def main(
+def main(  # pylint: disable=too-many-branches
     average_irradiance: bool,
     cloud_efficacy_factor: float,
     exchanger_data_file: str,

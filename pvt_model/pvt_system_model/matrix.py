@@ -57,7 +57,7 @@ __all__ = ("calculate_matrix_equation",)
 ####################
 
 
-def _absorber_equation(
+def _absorber_equation(  # pylint: disable=too-many-branches
     absorber_to_pipe_conduction: float,
     best_guess_temperature_vector: Union[List[float], numpy.ndarray],
     logger: logging.Logger,
@@ -645,7 +645,7 @@ def _fluid_continuity_equation(
     return row_equation, 0
 
 
-def _glass_equation(
+def _glass_equation(  # pylint: disable=too-many-branches
     best_guess_temperature_vector: Union[List[float], numpy.ndarray],
     glass_to_pv_conduction: float,
     glass_to_pv_radiation: float,
@@ -1222,7 +1222,7 @@ def _pipe_equation(
     return row_equation, resultant_vector_value
 
 
-def _pv_equation(
+def _pv_equation(  # pylint: disable=too-many-branches
     best_guess_temperature_vector: Union[List[float], numpy.ndarray],
     logger: logging.Logger,
     number_of_temperatures: int,

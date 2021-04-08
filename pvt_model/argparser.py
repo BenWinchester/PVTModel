@@ -165,7 +165,7 @@ def check_args(
         )
 
     # Enforce the layer names are of the correct type.
-    if not all([entry in layer_map for entry in parsed_args.layers]):
+    if not all((entry in layer_map for entry in parsed_args.layers)):
         raise ArgumentMismatchError(
             "{}If using the --layers developer argument, only layers {} can be "
             "specified. Rogue layer name: '{}'.{}".format(

@@ -411,10 +411,9 @@ def _segments_from_data(
         )
 
     # * Determine the indicies of segments that have pipes attached.
-    pipe_positions = [
-        value
-        for value in range(int(pipe_spacing), x_resolution - 2, int(pipe_spacing) + 1)
-    ]
+    pipe_positions = list(
+        range(int(pipe_spacing), x_resolution - 2, int(pipe_spacing) + 1)
+    )
 
     # Determine whether the width of the segments is greater than or less than the edge
     # width and adjust accordingly.
@@ -446,8 +445,8 @@ def _segments_from_data(
                 x_coordinate(segment_number, x_resolution),
                 y_coordinate(segment_number, x_resolution),
             ): segment.Segment(
-                absorber=True if TemperatureName.absorber in layers else False,
-                glass=True if TemperatureName.glass in layers else False,
+                absorber=TemperatureName.absorber in layers,
+                glass=TemperatureName.glass in layers,
                 length=edge_length
                 if y_coordinate(segment_number, x_resolution) in {0, y_resolution - 1}
                 else nominal_segment_length,

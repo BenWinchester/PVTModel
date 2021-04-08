@@ -74,6 +74,14 @@ class TypeIgnoreUsage:
 
         return str(self) == str(other)
 
+    def __hash__(self) -> str:
+        """
+        Returns a unique string.
+
+        """
+
+        return hash(self.__repr__())
+
     def __lt__(self, other) -> bool:
         """
         Determines if the instance is less than the other.
@@ -109,19 +117,23 @@ def main() -> None:
     with open(YAML_ENFORCEMENT_FILE) as f:
         type_ignore_declarations = yaml.safe_load(f)
 
-    processed_type_ignore_declarations = sorted(
-        [
-            TypeIgnoreUsage(entry["file"], entry["line"], entry["usage"])
-            for entry in type_ignore_declarations
-        ]
-    )
+    try:
+        processed_type_ignore_declarations = set(
+            [
+                TypeIgnoreUsage(entry["file"], entry["line"], entry["usage"])
+                for entry in type_ignore_declarations
+            ]
+        )
+    except KeyError as e:
+        print(f"Not all data entries conform in the enforcement file: {str(e)}")
+        raise
 
-    if not all([JUSTIFICATION_STRING in entry for entry in type_ignore_declarations]):
+    if not all((JUSTIFICATION_STRING in entry for entry in type_ignore_declarations)):
         raise EnforcementError(
-            "Not all entries were justified: {}".format(
-                "; ".join(
+            "Not all entries were justified:\n  {}".format(
+                "\n  ".join(
                     [
-                        entry
+                        f"{entry['file']}:{entry['line']}: {entry['usage']}"
                         for entry in type_ignore_declarations
                         if JUSTIFICATION_STRING not in entry
                     ]
@@ -138,7 +150,7 @@ def main() -> None:
     # Determine the actual uses
     type_ignore_uses = (
         subprocess.run(
-            f"grep 'type: ignore' {directory_prefix}pvt_model -rn",
+            f"grep 'type: ignore' {directory_prefix}pvt_model -rn --exclude \\*.yaml",
             capture_output=True,
             check=True,
             shell=True,
@@ -152,7 +164,7 @@ def main() -> None:
     type_ignore_uses = [entry for entry in type_ignore_uses if entry != ""]
 
     # Process this into usable data.
-    processed_type_ignore_uses = sorted(
+    processed_type_ignore_uses = set(
         [
             TypeIgnoreUsage(
                 entry.split(":")[0],

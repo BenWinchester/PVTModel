@@ -785,7 +785,7 @@ def _save_data(
                 )
 
 
-def main(args) -> None:
+def main(args) -> None:  # pylint: disable=too-many-branches
     """
     The main module for the code.
 
@@ -1057,7 +1057,6 @@ def main(args) -> None:
     logger.info("Analysis complete.")
 
     logger.info("Exiting.")
-    return
 
 
 if __name__ == "__main__":

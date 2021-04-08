@@ -23,8 +23,9 @@ from logging import Logger
 from typing import Any, List, Dict, Optional, Tuple, Union
 
 import json
-import numpy
 import re
+
+import numpy
 
 from matplotlib import cm
 from matplotlib import pyplot as plt
@@ -112,7 +113,7 @@ def _resolution_from_graph_detail(
     return int(num_data_points / graph_detail.value)
 
 
-def _reduce_data(
+def _reduce_data(  # pylint: disable=too-many-branches
     data_to_reduce: Dict[str, Dict[Any, Any]],
     graph_detail: GraphDetail,
     logger: Logger,
@@ -163,7 +164,9 @@ def _reduce_data(
 
     # Depending on the type of data entry, i.e., whether it is a temperature, load,
     # demand covered, or irradiance (or other), the way that it is processed will vary.
-    for data_entry_name in data_to_reduce["0"].keys():
+    for data_entry_name in data_to_reduce[  # pylint: disable=too-many-nested-blocks
+        "0"
+    ].keys():
         # pdb.set_trace(header="Beginning of reduction loop.")
         # * If the entry is a date or time, just take the value
         if data_entry_name in ["date", "time"]:
@@ -176,7 +179,7 @@ def _reduce_data(
         # * If the data entry is a temperature, or a power output, then take a rolling
         # average
         if any(
-            [
+            (
                 key in data_entry_name
                 for key in [
                     "temperature",
@@ -185,7 +188,7 @@ def _reduce_data(
                     "hot_water_load",
                     "electrical_load",
                 ]
-            ]
+            )
         ):
             for outer_index, _ in enumerate(reduced_data):
                 # Attempt to process as a dict or float first.
@@ -235,7 +238,7 @@ def _reduce_data(
                     continue
 
         # * If the data entry is a load, then take a sum
-        elif any([key in data_entry_name for key in ["load", "output"]]):
+        elif any((key in data_entry_name for key in {"load", "output"})):
             # @@@
             # * Here, the data is divided by 3600 to convert from Joules to Watt Hours.
             # * This only works provided that we are dealing with values in Joules...
@@ -360,7 +363,7 @@ def _annotate_maximum(
     axis.annotate(box_text, xy=(x_max, y_max), xytext=(0.8, 0.8), **kwargs)
 
 
-def plot(
+def plot(  # pylint: disable=too-many-branches
     label: str,
     use_data_keys: bool,
     x_axis_key: str,
@@ -1420,7 +1423,9 @@ def analyse_steady_state_data(data: Dict[Any, Any], logger: Logger) -> None:
             data,
             axis_label="Temperature / deg C",
             entry_number=temperature,
-            plot_title=f"Glass layer temperature with {round(float(temperature), 2)} K input HTF",
+            plot_title="Glass layer temperature with {} K input HTF".format(
+                round(float(temperature), 2)
+            ),
             thing_to_plot="layer_temperature_map_glass",
         )
 
@@ -1432,7 +1437,9 @@ def analyse_steady_state_data(data: Dict[Any, Any], logger: Logger) -> None:
             data,
             axis_label="Temperature / deg C",
             entry_number=temperature,
-            plot_title=f"PV layer temperature with {round(float(temperature), 2)} K input HTF",
+            plot_title="PV layer temperature with {} K input HTF".format(
+                round(float(temperature), 2)
+            ),
             thing_to_plot="layer_temperature_map_pv",
         )
 
@@ -1444,7 +1451,9 @@ def analyse_steady_state_data(data: Dict[Any, Any], logger: Logger) -> None:
             data,
             axis_label="Temperature / deg C",
             entry_number=temperature,
-            plot_title=f"Collector layer temperature with {round(float(temperature), 2)} K input HTF",
+            plot_title="Collector layer temperature with {} K input HTF".format(
+                round(float(temperature), 2)
+            ),
             thing_to_plot="layer_temperature_map_absorber",
         )
 
@@ -1460,7 +1469,9 @@ def analyse_steady_state_data(data: Dict[Any, Any], logger: Logger) -> None:
             data,
             axis_label="Pipe temperature / deg C",
             entry_number=temperature,
-            plot_title=f"Pipe temperature with {round(float(temperature), 2)} K input HTF",
+            plot_title="Pipe temperature with {} K input HTF".format(
+                round(float(temperature), 2)
+            ),
             thing_to_plot="layer_temperature_map_pipe",
         )
 
@@ -1476,7 +1487,9 @@ def analyse_steady_state_data(data: Dict[Any, Any], logger: Logger) -> None:
             data,
             axis_label="Bulk-water temperature / deg C",
             entry_number=temperature,
-            plot_title=f"Bulk-water temperature with {round(float(temperature), 2)} K input HTF",
+            plot_title="Bulk-water temperature with {} K input HTF".format(
+                round(float(temperature), 2)
+            ),
             thing_to_plot="layer_temperature_map_bulk_water",
         )
 
@@ -1543,7 +1556,7 @@ def analyse(data_file_name: str, show_output: Optional[bool] = False) -> None:
         analyse_steady_state_data(data, logger)
     else:
         logger.error("Data type was neither 'dynamic' nor 'steady_state'. Exiting...")
-        exit(1)
+        sys.exit(1)
 
     logger.info("Analysis complete - all figures saved successfully.")
 
