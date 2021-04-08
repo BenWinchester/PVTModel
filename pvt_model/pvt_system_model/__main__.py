@@ -1521,6 +1521,13 @@ def main(
             save_2d_output,
             weather_forecaster,
         )
+        if override_collector_input_temperature is None:
+            raise ProgrammerJudgementFault(
+                "{}Override collector temperature not specified in decoupled ".format(
+                    BColours.FAIL
+                )
+                + "run.{}".format(BColours.ENDC)
+            )
         system_data = {
             override_collector_input_temperature
             - ZERO_CELCIUS_OFFSET: system_data_entry[1]
