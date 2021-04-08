@@ -362,20 +362,15 @@ def _determine_consistent_conditions(
         _output_temperature_info(logger, parsed_args, system_data)
 
     # If all the temperatures are within the desired limit, return the temperatures.
-    if operating_mode.dynamic:
-        if all(
-            abs(final_temperature_vector - running_system_temperature_vector)
-            <= INITIAL_CONDITION_PRECISION
-        ):
-            logger.info(
-                "Initial temperatures consistent. Max difference: %sK",
-                max(abs(final_temperature_vector - running_system_temperature_vector)),
-            )
-            return final_temperature_vector.tolist(), system_data
-    # For steady-state data, there is no need to itterate through days.
-    if operating_mode.steady_state:
-        logger.info("Consistent temperatures determined for steady-state run.")
-        return None, system_data
+    if all(
+        abs(final_temperature_vector - running_system_temperature_vector)
+        <= INITIAL_CONDITION_PRECISION
+    ):
+        logger.info(
+            "Initial temperatures consistent. Max difference: %sK",
+            max(abs(final_temperature_vector - running_system_temperature_vector)),
+        )
+        return final_temperature_vector.tolist(), system_data
 
     logger.info(
         "Initial temperatures not consistent. Max difference: %sK",
@@ -388,6 +383,10 @@ def _determine_consistent_conditions(
         logger,
         operating_mode,
         parsed_args,
+        override_ambient_temperature=override_ambient_temperature,
+        override_collector_input_temperature=override_collector_input_temperature,
+        override_irradiance=override_irradiance,
+        override_wind_speed=override_wind_speed,
         resolution=resolution,
         run_depth=run_depth + 1,
         running_system_temperature_vector=final_temperature_vector.tolist(),

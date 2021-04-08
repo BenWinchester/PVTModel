@@ -1506,25 +1506,25 @@ def main(
             weather_forecaster,
         )
     elif operating_mode.steady_state:
+        final_run_temperature_vector, system_data_entry = _steady_state_run(
+            override_collector_input_temperature,
+            cloud_efficacy_factor,
+            DEFAULT_INITIAL_DATE_AND_TIME.replace(month=initial_month),
+            initial_system_temperature_vector,
+            logger,
+            number_of_pipes,
+            number_of_temperatures,
+            number_of_x_segments,
+            number_of_y_segments,
+            operating_mode,
+            pvt_panel,
+            save_2d_output,
+            weather_forecaster,
+        )
         system_data = {
             override_collector_input_temperature
-            - ZERO_CELCIUS_OFFSET: _steady_state_run(
-                override_collector_input_temperature,
-                cloud_efficacy_factor,
-                DEFAULT_INITIAL_DATE_AND_TIME.replace(month=initial_month),
-                initial_system_temperature_vector,
-                logger,
-                number_of_pipes,
-                number_of_temperatures,
-                number_of_x_segments,
-                number_of_y_segments,
-                operating_mode,
-                pvt_panel,
-                save_2d_output,
-                weather_forecaster,
-            )[1][1]
+            - ZERO_CELCIUS_OFFSET: system_data_entry[1]
         }
-        final_run_temperature_vector = None
     else:
         raise ProgrammerJudgementFault(
             "The system model was called with an operating mode "
