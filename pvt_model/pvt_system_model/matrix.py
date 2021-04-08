@@ -36,7 +36,12 @@ from . import exchanger, index_handler, physics_utils, tank
 from .pvt_panel import pvt
 from .pvt_panel.segment import Segment, SegmentCoordinates
 
-from ..__utils__ import TemperatureName, OperatingMode, ProgrammerJudgementFault
+from ..__utils__ import (
+    BColours,
+    TemperatureName,
+    OperatingMode,
+    ProgrammerJudgementFault,
+)
 from .__utils__ import WeatherConditions
 from .constants import DENSITY_OF_WATER, HEAT_CAPACITY_OF_WATER
 from .physics_utils import (
@@ -60,8 +65,8 @@ def _absorber_equation(
     number_of_temperatures: int,
     number_of_x_segments: int,
     number_of_y_segments: int,
-    operating_mode: Optional[OperatingMode],
-    previous_temperature_vector: numpy.ndarray,
+    operating_mode: OperatingMode,
+    previous_temperature_vector: Optional[numpy.ndarray],
     pv_to_absorber_conduction: float,
     pvt_panel: pvt.PVT,
     resolution: int,
@@ -351,7 +356,7 @@ def _absorber_equation(
         resultant_vector_value += (
             # Internal heat change term.
             collector_internal_energy_change  # [W/K]
-            * previous_temperature_vector[
+            * previous_temperature_vector[  # type: ignore
                 index_handler.index_from_segment_coordinates(
                     number_of_x_segments,
                     number_of_y_segments,
@@ -541,7 +546,7 @@ def _decoupled_system_continuity_equation(
 
     # Equation 2: Fluid entering the absorber is the same across all pipes.
     for pipe_number in range(number_of_pipes):
-        row_equation: List[float] = [0] * number_of_temperatures
+        row_equation * number_of_temperatures
         row_equation[
             index_handler.index_from_pipe_coordinates(
                 number_of_pipes,
@@ -884,7 +889,7 @@ def _glass_equation(
         resultant_vector_value += (
             # Previous glass temperature term.
             glass_internal_energy  # [W/K]
-            * previous_temperature_vector[
+            * previous_temperature_vector[  # type: ignore
                 index_handler.index_from_segment_coordinates(
                     number_of_x_segments,
                     number_of_y_segments,
@@ -1075,7 +1080,7 @@ def _htf_equation(
         resultant_vector_value += (
             # Internal heat change.
             bulk_water_internal_energy
-            * previous_temperature_vector[
+            * previous_temperature_vector[  # type: ignore
                 index_handler.index_from_pipe_coordinates(
                     number_of_pipes,
                     number_of_x_segments,
@@ -1194,7 +1199,7 @@ def _pipe_equation(
         resultant_vector_value += (
             # Internal heat change.
             pipe_internal_heat_change
-            * previous_temperature_vector[
+            * previous_temperature_vector[  # type: ignore
                 index_handler.index_from_pipe_coordinates(
                     number_of_pipes,
                     number_of_x_segments,
@@ -1493,7 +1498,7 @@ def _pv_equation(
         resultant_vector_value += (
             # Internal energy change
             pv_internal_energy  # [W/K]
-            * previous_temperature_vector[
+            * previous_temperature_vector[  # type: ignore
                 index_handler.index_from_segment_coordinates(
                     number_of_x_segments,
                     number_of_y_segments,
@@ -1512,7 +1517,7 @@ def _system_continuity_equations(
     number_of_temperatures: int,
     number_of_x_segments: int,
     number_of_y_segments: int,
-    previous_temperature_vector: List[float],
+    previous_temperature_vector: Optional[numpy.ndarray],
 ) -> List[Tuple[List[float], float]]:
     """
     Returns matrix rows and resultant vector values representing system continuities.
@@ -1552,7 +1557,7 @@ def _system_continuity_equations(
                 0,
             )
         ] = 1
-        resultant_value = previous_temperature_vector[
+        resultant_value = previous_temperature_vector[  # type: ignore
             index_handler.index_from_temperature_name(
                 number_of_pipes,
                 number_of_x_segments,
@@ -1736,7 +1741,7 @@ def _tank_equation(
     number_of_temperatures: int,
     number_of_x_segments: int,
     number_of_y_segments: int,
-    previous_temperature_vector: numpy.ndarray,
+    previous_temperature_vector: Optional[numpy.ndarray],
     pvt_panel: pvt.PVT,
     resolution: int,
     weather_conditions: WeatherConditions,
@@ -1828,7 +1833,7 @@ def _tank_equation(
     resultant_vector_value = (
         # Internal heat change
         tank_internal_energy  # [W/K]
-        * previous_temperature_vector[
+        * previous_temperature_vector[  # type: ignore
             index_handler.index_from_temperature_name(
                 number_of_pipes,
                 number_of_x_segments,
@@ -1884,6 +1889,15 @@ def calculate_matrix_equation(
         "dynamic" if operating_mode.dynamic else "steady-state",
         "decoupled" if operating_mode.decoupled else "coupled",
     )
+
+    # Raise an error if a dynamic run is attempted but no previous vector is provided.
+    if operating_mode.dynamic and previous_temperature_vector is None:
+        raise ProgrammerJudgementFault(
+            "{}The matrix module was called with no previous temperature ".format(
+                BColours.FAIL
+            )
+            + "vector and a dynamic run specification.{}".format(BColours.ENDC)
+        )
 
     # Instantiate an empty matrix and array based on the number of temperatures present.
     matrix = numpy.zeros([0, number_of_temperatures])
@@ -2142,6 +2156,13 @@ def calculate_matrix_equation(
 
     # If the system is decoupled, do not compute and add the tank-related equations.
     if operating_mode.decoupled:
+        if collector_input_temperature is None:
+            raise ProgrammerJudgementFault(
+                "{}No collector input temperature was provided to the matrix ".format(
+                    BColours.FAIL
+                )
+                + "module in decoupled operation.{}".format(BColours.ENDC)
+            )
         decoupled_system_continuity_equations = _decoupled_system_continuity_equation(
             collector_input_temperature,
             number_of_pipes,
@@ -2160,6 +2181,18 @@ def calculate_matrix_equation(
         logger.info("Matrix equation computed, matrix dimensions: %s", matrix.shape)
 
         return matrix, resultant_vector
+
+    if heat_exchanger is None or hot_water_tank is None or hot_water_load is None:
+        raise ProgrammerJudgementFault(
+            "{}Tank equation when computing matrix equation relies on hot-".format(
+                BColours.FAIL
+            )
+            + "water tank and heat exchanger.{}{}{}".format(
+                " Hot-water tank is None." if hot_water_tank is None else "",
+                " Heat exchanger is None." if heat_exchanger is None else "",
+                BColours.ENDC,
+            )
+        )
 
     # Calculate the tank equations.
     equation, resultant_value = _tank_equation(
