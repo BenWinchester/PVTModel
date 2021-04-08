@@ -66,6 +66,7 @@ typed-ast>=1.4.2
 typing-extensions>=3.7.4.3
 urllib3>=1.26.4
 wcwidth>=0.2.5
+wheel>=0.32.3
 wrapt>=1.12.1
 yamllint>=1.15.0
 zipp>=3.4.1
