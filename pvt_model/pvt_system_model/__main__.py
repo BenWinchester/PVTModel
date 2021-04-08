@@ -193,9 +193,9 @@ def _get_weather_forecaster(
     average_irradiance: bool,
     location: str,
     use_pvgis: bool,
-    override_ambient_temperature: float,
-    override_irradiance: float,
-    override_wind_speed: float,
+    override_ambient_temperature: Optional[float],
+    override_irradiance: Optional[float],
+    override_wind_speed: Optional[float],
 ) -> weather.WeatherForecaster:
     """
     Instantiates a :class:`weather.WeatherForecaster` instance based on the file data.
@@ -784,12 +784,12 @@ def _system_data_from_run(
         tank_temperature = None
     # Set the variables that depend on a dynamic vs steady-state system.
     if operating_mode.dynamic:
-        time = (
+        formatted_time: Optional[str] = (
             str((date.day - initial_date_and_time.day) * 24 + time.hour)
             + time.strftime("%H:%M:%S")[2:]
         )
     else:
-        time = None
+        formatted_time = None
 
     # Compute variables in common to both.
     collector_input_temperature = (
@@ -818,7 +818,7 @@ def _system_data_from_run(
     # Return the system data.
     return SystemData(
         date=date.strftime("%d/%m/%Y"),
-        time=time,
+        time=formatted_time,
         glass_temperature=average_glass_temperature - ZERO_CELCIUS_OFFSET,
         pv_temperature=average_pv_temperature - ZERO_CELCIUS_OFFSET,
         absorber_temperature=average_absorber_temperature - ZERO_CELCIUS_OFFSET,
@@ -867,14 +867,14 @@ def _system_data_from_run(
 
 def _dynamic_system_run(
     cloud_efficacy_factor: float,
-    days: int,
+    days: Optional[int],
     heat_exchanger: exchanger.Exchanger,
     hot_water_tank: tank.Tank,
     initial_month: int,
     initial_system_temperature_vector: List[float],
     load_system: load.LoadSystem,
     logger: logging.Logger,
-    months: int,
+    months: Optional[int],
     number_of_pipes: int,
     number_of_temperatures: int,
     number_of_x_segments: int,
@@ -961,9 +961,18 @@ def _dynamic_system_run(
     # Set up a holder for information about the system.
     system_data: Dict[float, SystemData] = dict()
 
+    if days is None and months is None:
+        raise ProgrammerJudgementFault(
+            "{}Either days or months must be specified for dynamic runs.{}".format(
+                BColours.FAIL, BColours.ENDC
+            )
+        )
+
     # Set up the time iterator.
     num_months = (
-        (initial_month if initial_month is not None else 1) - 1 + months
+        (initial_month if initial_month is not None else 1)
+        - 1
+        + (months if months is not None else 0)
     )  # [months]
     start_month = (
         initial_month
@@ -1205,7 +1214,7 @@ def main(
     override_irradiance: Optional[float],
     override_wind_speed: Optional[float],
     run_number: Optional[int],
-    start_time: Optional[int],
+    start_time: int,
     days: Optional[int] = None,
     months: Optional[int] = None,
 ) -> Tuple[numpy.ndarray, Dict[float, SystemData]]:
@@ -1415,7 +1424,7 @@ def main(
             number_of_pipes, number_of_x_segments, number_of_y_segments
         )
     else:
-        number_of_temperatures: int = (
+        number_of_temperatures = (
             index_handler.num_temperatures(
                 number_of_pipes, number_of_x_segments, number_of_y_segments
             )
@@ -1448,6 +1457,27 @@ def main(
     )
 
     if operating_mode.dynamic:
+        if heat_exchanger is None or hot_water_tank is None:
+            raise ProgrammerJudgementFault(
+                "{}{} not defined in dynamic operation.{}".format(
+                    BColours.FAIL,
+                    ", ".join(
+                        {
+                            entry
+                            for entry in {
+                                "heat exchanger"
+                                if heat_exchanger is not None
+                                else None,
+                                "hot-water tank"
+                                if hot_water_tank is not None
+                                else None,
+                            }
+                            if entry is not None
+                        }
+                    ),
+                    BColours.ENDC,
+                )
+            )
         final_run_temperature_vector, system_data = _dynamic_system_run(
             cloud_efficacy_factor,
             days,
@@ -1470,6 +1500,12 @@ def main(
             weather_forecaster,
         )
     elif operating_mode.steady_state:
+        if override_collector_input_temperature is None:
+            raise ProgrammerJudgementFault(
+                "{}Override collector input temperature not provided.{}".format(
+                    BColours.FAIL, BColours.ENDC
+                )
+            )
         final_run_temperature_vector, system_data_entry = _steady_state_run(
             override_collector_input_temperature,
             cloud_efficacy_factor,
