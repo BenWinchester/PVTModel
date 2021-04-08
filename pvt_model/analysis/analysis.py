@@ -1500,7 +1500,7 @@ def analyse(data_file_name: str, show_output: Optional[bool] = False) -> None:
     """
 
     # * Set up the logger
-    logger = get_logger("pvt_analysis", True)
+    logger = get_logger(os.path.join("logs", "pvt_analysis"), True)
 
     # * Extract the data.
     data = load_model_data(data_file_name)
