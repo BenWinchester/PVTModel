@@ -17,7 +17,7 @@ various modules throughout the PVT model.
 import datetime
 import enum
 
-from typing import Any, Dict, Generator
+from typing import Any, Dict, Generator, List, Union
 
 from dataclasses import dataclass
 from dateutil.relativedelta import relativedelta
@@ -66,9 +66,9 @@ class DivergentSolutionError(Exception):
         self,
         convergence_run_number: int,
         run_one_temperature_difference: float,
-        run_one_temperature_vector: numpy.ndarray,
+        run_one_temperature_vector: Union[List[float], numpy.ndarray],
         run_two_temperature_difference: float,
-        run_two_temperature_vector: numpy.ndarray,
+        run_two_temperature_vector: Union[List[float], numpy.ndarray],
     ) -> None:
         """
         Instantiate a :class:`DivergentSolutionError`.

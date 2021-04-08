@@ -89,7 +89,7 @@ def _average_layer_temperature(
     number_of_x_segments: int,
     number_of_y_segments: int,
     temperature_name: TemperatureName,
-    temperature_vector: numpy.ndarray,
+    temperature_vector: Union[List[float], numpy.ndarray],
 ) -> float:
     """
     Determines the average temperature for a layer.
@@ -136,8 +136,8 @@ def _average_layer_temperature(
 
 
 def _calculate_vector_difference(
-    first_vector: numpy.ndarray,
-    second_vector: numpy.ndarray,
+    first_vector: Union[List[float], numpy.ndarray],
+    second_vector: Union[List[float], numpy.ndarray],
 ) -> float:
     """
     Computes a measure of the difference between two vectors.
@@ -255,7 +255,7 @@ def _layer_temperature_profile(
     number_of_y_segments: int,
     segments: Dict[SegmentCoordinates, Segment],
     temperature_name: TemperatureName,
-    temperature_vector: numpy.ndarray,
+    temperature_vector: Union[List[float], numpy.ndarray],
 ) -> Dict[str, float]:
     """
     Returns a map between coordinates and temperature in celcius for a layer.
@@ -343,7 +343,7 @@ def _solve_temperature_vector_convergence_method(
     number_of_y_segments: int,
     operating_mode: OperatingMode,
     pvt_panel: pvt.PVT,
-    run_one_temperature_vector: numpy.ndarray,
+    run_one_temperature_vector: Union[List[float], numpy.ndarray],
     weather_conditions: WeatherConditions,
     convergence_run_number: int = 0,
     run_one_temperature_difference: float = 5 * ZERO_CELCIUS_OFFSET ** 2,
@@ -352,9 +352,9 @@ def _solve_temperature_vector_convergence_method(
     heat_exchanger: Optional[exchanger.Exchanger] = None,
     hot_water_tank: Optional[tank.Tank] = None,
     next_date_and_time: Optional[datetime.datetime] = None,
-    previous_run_temperature_vector: Optional[numpy.ndarray] = None,
+    previous_run_temperature_vector: Optional[Union[List[float], numpy.ndarray]] = None,
     resolution: Optional[int] = None,
-) -> numpy.ndarray:
+) -> Union[List[float], numpy.ndarray]:
     """
     Itteratively solves for the temperature vector to find a convergent solution.
 
@@ -457,7 +457,7 @@ def _solve_temperature_vector_convergence_method(
             number_of_x_segments=number_of_x_segments,
             number_of_y_segments=number_of_y_segments,
             operating_mode=operating_mode,
-            previous_temperature_vector=previous_run_temperature_vector,
+            previous_temperature_vector=numpy.asarray(previous_run_temperature_vector),
             pvt_panel=pvt_panel,
             resolution=resolution,
             weather_conditions=weather_conditions,
@@ -494,7 +494,7 @@ def _solve_temperature_vector_convergence_method(
         )
         raise
     # run_two_output = linalg.lstsq(a=coefficient_matrix, b=resultant_vector)
-    run_two_temperature_vector: numpy.ndarray = numpy.asarray(  # type: ignore
+    run_two_temperature_vector: Union[List[float], numpy.ndarray] = numpy.asarray(  # type: ignore
         [run_two_output[index][0] for index in range(len(run_two_output))]
     )
     # run_two_temperature_vector = run_two_output[0].transpose()[0]
@@ -603,7 +603,7 @@ def _system_data_from_run(
     operating_mode: OperatingMode,
     pvt_panel: pvt.PVT,
     save_2d_output: bool,
-    temperature_vector: numpy.ndarray,
+    temperature_vector: Union[List[float], numpy.ndarray],
     time: datetime.time,
     weather_conditions: WeatherConditions,
 ) -> SystemData:
@@ -1100,7 +1100,7 @@ def _dynamic_system_run(
         )
         previous_run_temperature_vector = current_run_temperature_vector
 
-    return current_run_temperature_vector, system_data
+    return numpy.asarray(current_run_temperature_vector), system_data
 
 
 def _steady_state_run(
@@ -1189,7 +1189,7 @@ def _steady_state_run(
         weather_conditions,
     )
 
-    return current_run_temperature_vector, system_data
+    return numpy.asarray(current_run_temperature_vector), system_data
 
 
 def main(

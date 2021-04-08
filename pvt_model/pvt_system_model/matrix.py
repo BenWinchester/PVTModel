@@ -59,7 +59,7 @@ __all__ = ("calculate_matrix_equation",)
 
 def _absorber_equation(
     absorber_to_pipe_conduction: float,
-    best_guess_temperature_vector: numpy.ndarray,
+    best_guess_temperature_vector: Union[List[float], numpy.ndarray],
     logger: logging.Logger,
     number_of_pipes: int,
     number_of_temperatures: int,
@@ -646,7 +646,7 @@ def _fluid_continuity_equation(
 
 
 def _glass_equation(
-    best_guess_temperature_vector: numpy.ndarray,
+    best_guess_temperature_vector: Union[List[float], numpy.ndarray],
     glass_to_pv_conduction: float,
     glass_to_pv_radiation: float,
     logger: logging.Logger,
@@ -1223,7 +1223,7 @@ def _pipe_equation(
 
 
 def _pv_equation(
-    best_guess_temperature_vector: numpy.ndarray,
+    best_guess_temperature_vector: Union[List[float], numpy.ndarray],
     logger: logging.Logger,
     number_of_temperatures: int,
     number_of_x_segments: int,
@@ -1636,7 +1636,7 @@ def _system_continuity_equations(
 
 
 def _tank_continuity_equation(
-    best_guess_temperature_vector: numpy.ndarray,
+    best_guess_temperature_vector: Union[List[float], numpy.ndarray],
     heat_exchanger: exchanger.Exchanger,
     number_of_pipes: int,
     number_of_temperatures: int,
@@ -1732,7 +1732,7 @@ def _tank_continuity_equation(
 
 
 def _tank_equation(
-    best_guess_temperature_vector: numpy.ndarray,
+    best_guess_temperature_vector: Union[List[float], numpy.ndarray],
     heat_exchanger: exchanger.Exchanger,
     hot_water_load: float,
     hot_water_tank: tank.Tank,
@@ -1858,7 +1858,7 @@ def _tank_equation(
 
 def calculate_matrix_equation(
     *,
-    best_guess_temperature_vector: numpy.ndarray,
+    best_guess_temperature_vector: Union[List[float], numpy.ndarray],
     logger: logging.Logger,
     number_of_pipes: int,
     number_of_temperatures: int,

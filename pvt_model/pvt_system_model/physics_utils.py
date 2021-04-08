@@ -11,7 +11,7 @@ The physics utility module for the PVT model.
 
 """
 
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
 from numpy import ndarray
 
@@ -227,7 +227,7 @@ def transmissivity_absorptivity_product(
 
 
 def upward_loss_terms(
-    best_guess_temperature_vector: ndarray,
+    best_guess_temperature_vector: Union[List[float], ndarray],
     pvt_panel: pvt.PVT,
     segment: Segment,
     source_index: int,
