@@ -65,7 +65,7 @@ def _absorber_equation(
     number_of_temperatures: int,
     number_of_x_segments: int,
     number_of_y_segments: int,
-    operating_mode: Optional[OperatingMode],
+    operating_mode: OperatingMode,
     previous_temperature_vector: numpy.ndarray,
     pv_to_absorber_conduction: float,
     pvt_panel: pvt.PVT,
@@ -356,7 +356,7 @@ def _absorber_equation(
         resultant_vector_value += (
             # Internal heat change term.
             collector_internal_energy_change  # [W/K]
-            * previous_temperature_vector[
+            * previous_temperature_vector[  # type: ignore
                 index_handler.index_from_segment_coordinates(
                     number_of_x_segments,
                     number_of_y_segments,
@@ -889,7 +889,7 @@ def _glass_equation(
         resultant_vector_value += (
             # Previous glass temperature term.
             glass_internal_energy  # [W/K]
-            * previous_temperature_vector[
+            * previous_temperature_vector[  # type: ignore
                 index_handler.index_from_segment_coordinates(
                     number_of_x_segments,
                     number_of_y_segments,
@@ -1080,7 +1080,7 @@ def _htf_equation(
         resultant_vector_value += (
             # Internal heat change.
             bulk_water_internal_energy
-            * previous_temperature_vector[
+            * previous_temperature_vector[  # type: ignore
                 index_handler.index_from_pipe_coordinates(
                     number_of_pipes,
                     number_of_x_segments,
@@ -1199,7 +1199,7 @@ def _pipe_equation(
         resultant_vector_value += (
             # Internal heat change.
             pipe_internal_heat_change
-            * previous_temperature_vector[
+            * previous_temperature_vector[  # type: ignore
                 index_handler.index_from_pipe_coordinates(
                     number_of_pipes,
                     number_of_x_segments,
@@ -1498,7 +1498,7 @@ def _pv_equation(
         resultant_vector_value += (
             # Internal energy change
             pv_internal_energy  # [W/K]
-            * previous_temperature_vector[
+            * previous_temperature_vector[  # type: ignore
                 index_handler.index_from_segment_coordinates(
                     number_of_x_segments,
                     number_of_y_segments,
@@ -1833,7 +1833,7 @@ def _tank_equation(
     resultant_vector_value = (
         # Internal heat change
         tank_internal_energy  # [W/K]
-        * previous_temperature_vector[
+        * previous_temperature_vector[  # type: ignore
             index_handler.index_from_temperature_name(
                 number_of_pipes,
                 number_of_x_segments,
