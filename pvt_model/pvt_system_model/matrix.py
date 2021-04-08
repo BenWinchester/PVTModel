@@ -36,7 +36,12 @@ from . import exchanger, index_handler, physics_utils, tank
 from .pvt_panel import pvt
 from .pvt_panel.segment import Segment, SegmentCoordinates
 
-from ..__utils__ import TemperatureName, OperatingMode, ProgrammerJudgementFault
+from ..__utils__ import (
+    BColours,
+    TemperatureName,
+    OperatingMode,
+    ProgrammerJudgementFault,
+)
 from .__utils__ import WeatherConditions
 from .constants import DENSITY_OF_WATER, HEAT_CAPACITY_OF_WATER
 from .physics_utils import (
@@ -2160,6 +2165,13 @@ def calculate_matrix_equation(
         logger.info("Matrix equation computed, matrix dimensions: %s", matrix.shape)
 
         return matrix, resultant_vector
+
+    if heat_exchanger is None or hot_water_load is None or hot_water_tank is None:
+        raise ProgrammerJudgementFault(
+            "{}Insufficient parameters for dynamic run.{}".format(
+                BColours.FAIL, BColours.ENDC
+            )
+        )
 
     # Calculate the tank equations.
     equation, resultant_value = _tank_equation(
