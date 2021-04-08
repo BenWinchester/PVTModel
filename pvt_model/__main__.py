@@ -684,13 +684,13 @@ def _output_temperature_info(
 
     if not parsed_args.decoupled:
         average_temperature_map["tank"] = round(
-            mean({entry.tank_temperature for entry in system_data.values()}), 3
+            mean({entry.tank_temperature for entry in system_data.values()}), 3  # type: ignore
         )
         maximum_temperature_map["tank"] = max(
-            {round(entry.tank_temperature, 3) for entry in system_data.values()}
+            {round(entry.tank_temperature, 3) for entry in system_data.values()}  # type: ignore
         )
         minimum_temperature_map["tank"] = min(
-            {round(entry.tank_temperature, 3) for entry in system_data.values()}
+            {round(entry.tank_temperature, 3) for entry in system_data.values()}  # type: ignore
         )
 
     # Print these out to the console.
