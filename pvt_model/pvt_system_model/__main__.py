@@ -169,42 +169,6 @@ def _calculate_vector_difference(
     return sum([value ** 2 for value in diff_vector])
 
 
-def _date_and_time_from_time_step(
-    initial_date_and_time: datetime.datetime,
-    final_date_and_time: datetime.datetime,
-    time_step: numpy.float64,
-) -> datetime.datetime:
-    """
-    Returns a :class:`datetime.datetime` instance representing the current time.
-
-    :param initial_date_and_time:
-        The initial date and time for the model run.
-
-    :param final_date_and_time:
-        The final date and time for the model run.
-
-    :param time_step:
-        The current time step, measured in seconds from the start of the run.
-
-    :return:
-        The current date and time, based on the iterative point.
-
-    :raises: ProgrammerJudgementFault
-        Raised if the date and time being returned is greater than the maximum for the
-        run.
-
-    """
-
-    date_and_time = initial_date_and_time + relativedelta(seconds=time_step)
-
-    if date_and_time > final_date_and_time:
-        raise ProgrammerJudgementFault(
-            "The model reached a time step greater than the maximum time step."
-        )
-
-    return date_and_time
-
-
 def _get_load_system(location: str) -> load.LoadSystem:
     """
     Instantiates a :class:`load.LoadSystem` instance based on the file data.
@@ -353,7 +317,7 @@ def _layer_temperature_profile(
                     number_of_x_segments,
                     number_of_y_segments,
                     temperature_name,
-                    segment.pipe_index,
+                    segment.pipe_index,  # type: ignore
                     segment.y_index,
                 )
             ]

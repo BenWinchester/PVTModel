@@ -69,7 +69,7 @@ def _absorber_equation(
     previous_temperature_vector: Optional[numpy.ndarray],
     pv_to_absorber_conduction: float,
     pvt_panel: pvt.PVT,
-    resolution: int,
+    resolution: Optional[int],
     segment: Segment,
     weather_conditions: WeatherConditions,
 ) -> Tuple[List[float], float]:
@@ -105,7 +105,7 @@ def _absorber_equation(
             * pvt_panel.absorber.thickness  # [m]
             * pvt_panel.absorber.density  # [kg/m^3]
             * pvt_panel.absorber.heat_capacity  # [J/kg*K]
-            / resolution  # [s]
+            / resolution  # type: ignore  # [s]
         )
     else:
         collector_internal_energy_change = 0
@@ -656,7 +656,7 @@ def _glass_equation(
     operating_mode: OperatingMode,
     previous_temperature_vector: Optional[numpy.ndarray],
     pvt_panel: pvt.PVT,
-    resolution: int,
+    resolution: Optional[int],
     segment: Segment,
     weather_conditions: WeatherConditions,
 ) -> Tuple[List[float], float]:
@@ -687,7 +687,7 @@ def _glass_equation(
             * pvt_panel.glass.thickness  # [m]
             * pvt_panel.glass.density  # [kg/m^3]
             * pvt_panel.glass.heat_capacity  # [J/kg*K]
-            / resolution  # [s]
+            / resolution  # type: ignore  # [s]
         )
     else:
         glass_internal_energy = 0
@@ -982,7 +982,7 @@ def _htf_equation(
     pipe_to_bulk_water_heat_transfer: float,
     previous_temperature_vector: Optional[numpy.ndarray],
     pvt_panel: pvt.PVT,
-    resolution: int,
+    resolution: Optional[int],
     segment: Segment,
 ) -> Tuple[List[float], float]:
     """
@@ -1008,7 +1008,7 @@ def _htf_equation(
             * segment.length  # [m]
             * DENSITY_OF_WATER  # [kg/m^3]
             * pvt_panel.absorber.htf_heat_capacity  # [J/kg*K]
-            / resolution  # [s]
+            / resolution  # type: ignore  # [s]
         )  # [W/K]
     else:
         bulk_water_internal_energy = 0
@@ -1106,7 +1106,7 @@ def _pipe_equation(
     pipe_to_htf_heat_transfer: float,
     previous_temperature_vector: Optional[numpy.ndarray],
     pvt_panel: pvt.PVT,
-    resolution: int,
+    resolution: Optional[int],
     segment: Segment,
     weather_conditions: WeatherConditions,
 ) -> Tuple[List[float], float]:
@@ -1136,7 +1136,7 @@ def _pipe_equation(
             * segment.length  # [m]
             * pvt_panel.absorber.pipe_density  # [kg/m^3]
             * pvt_panel.absorber.heat_capacity  # [J/kg*K]
-            / resolution  # [s]
+            / resolution  # type: ignore  # [s]
         )
     else:
         pipe_internal_heat_change = 0
@@ -1234,7 +1234,7 @@ def _pv_equation(
     pv_to_glass_conduction: float,
     pv_to_glass_radiation: float,
     pvt_panel: pvt.PVT,
-    resolution: int,
+    resolution: Optional[int],
     segment: Segment,
     weather_conditions: WeatherConditions,
 ) -> Tuple[List[float], float]:
@@ -1273,7 +1273,7 @@ def _pv_equation(
             * pvt_panel.pv.thickness  # [m]
             * pvt_panel.pv.density  # [kg/m^3]
             * pvt_panel.pv.heat_capacity  # [J/kg*K]
-            / resolution  # [s]
+            / resolution  # type: ignore  # [s]
         )
     else:
         pv_internal_energy = 0
@@ -1743,7 +1743,7 @@ def _tank_equation(
     number_of_y_segments: int,
     previous_temperature_vector: Optional[numpy.ndarray],
     pvt_panel: pvt.PVT,
-    resolution: int,
+    resolution: Optional[int],
     weather_conditions: WeatherConditions,
 ) -> Tuple[List[float], float]:
     """
@@ -1767,7 +1767,7 @@ def _tank_equation(
     tank_internal_energy = (
         hot_water_tank.mass  # [kg]
         * HEAT_CAPACITY_OF_WATER  # [J/kg*K]
-        / resolution  # [s]
+        / resolution  # type: ignore  # [s]
     )
     logger.debug("Tank internal energy term: %s W/K", tank_internal_energy)
 
@@ -1866,7 +1866,7 @@ def calculate_matrix_equation(
     number_of_y_segments: int,
     operating_mode: OperatingMode,
     pvt_panel: pvt.PVT,
-    resolution: int,
+    resolution: Optional[int],
     weather_conditions: WeatherConditions,
     collector_input_temperature: Optional[float] = None,
     heat_exchanger: Optional[exchanger.Exchanger] = None,
