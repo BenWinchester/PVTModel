@@ -74,7 +74,7 @@ class TypeIgnoreUsage:
 
         return str(self) == str(other)
 
-    def __hash__(self) -> str:
+    def __hash__(self) -> int:
         """
         Returns a unique string.
 
