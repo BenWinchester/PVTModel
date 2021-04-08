@@ -135,9 +135,16 @@ def _reduce_data(
 
     """
 
+    logger.info("Beginning data reduction.")
+
     # Determine the number of data points to be amalgamated per graph point.
     data_points_per_graph_point: int = _resolution_from_graph_detail(
         graph_detail, len(data_to_reduce)
+    )
+
+    logger.info(
+        "%s data points will be condensed to each graph point.",
+        data_points_per_graph_point,
     )
 
     if data_points_per_graph_point <= 1:
@@ -876,11 +883,17 @@ def analyse_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
 
     """
 
+    logger.info("Beginning analysis of dynamic data set.")
+
     # * Reduce the resolution of the data.
     data = _reduce_data(data, GRAPH_DETAIL, logger)
+    logger.info(
+        "Data successfully reduced to %s graph detail level.", GRAPH_DETAIL.name
+    )
 
     # * Create new data values where needed.
     data = _post_process_data(data)
+    logger.info("Post-processing of data complete.")
 
     # Plot All Temperatures
     plot_figure(
@@ -1397,11 +1410,12 @@ def analyse_steady_state_data(data: Dict[Any, Any], logger: Logger) -> None:
     logger.info("Beginning steady-state analysis.")
 
     for temperature in data.keys():
+        temperature_string = str(round(float(temperature), 2)).replace(".", "_")
+
         # Glass Temperatures
+        logger.info("Plotting 3D glass profile at %s degC.", temperature_string)
         plot_two_dimensional_figure(
-            "steady_state_glass_layer_{}degC_input".format(
-                str(round(float(temperature), 2)).replace(".", "_")
-            ),
+            "steady_state_glass_layer_{}degC_input".format(temperature_string),
             logger,
             data,
             axis_label="Temperature / deg C",
@@ -1411,10 +1425,9 @@ def analyse_steady_state_data(data: Dict[Any, Any], logger: Logger) -> None:
         )
 
         # PV Temperatures
+        logger.info("Plotting 3D PV profile at %s degC.", temperature_string)
         plot_two_dimensional_figure(
-            "steady_state_pv_layer_{}degC_input".format(
-                str(round(float(temperature), 2)).replace(".", "_")
-            ),
+            "steady_state_pv_layer_{}degC_input".format(temperature_string),
             logger,
             data,
             axis_label="Temperature / deg C",
@@ -1424,10 +1437,9 @@ def analyse_steady_state_data(data: Dict[Any, Any], logger: Logger) -> None:
         )
 
         # Collector Temperatures
+        logger.info("Plotting 3D absorber profile at %s degC.", temperature_string)
         plot_two_dimensional_figure(
-            "steady_state_absorber_layer_{}degC_input".format(
-                str(round(float(temperature), 2)).replace(".", "_")
-            ),
+            "steady_state_absorber_layer_{}degC_input".format(temperature_string),
             logger,
             data,
             axis_label="Temperature / deg C",
@@ -1437,10 +1449,13 @@ def analyse_steady_state_data(data: Dict[Any, Any], logger: Logger) -> None:
         )
 
         # Pipe Temperatures
+        logger.info(
+            "Plotting 3D pipe profile at %s degC. NOTE: The profile will appear 2D if "
+            "only one pipe is present.",
+            temperature_string,
+        )
         plot_two_dimensional_figure(
-            "steady_state_pipe_{}degC_input".format(
-                str(round(float(temperature), 2)).replace(".", "_")
-            ),
+            "steady_state_pipe_{}degC_input".format(temperature_string),
             logger,
             data,
             axis_label="Pipe temperature / deg C",
@@ -1450,10 +1465,13 @@ def analyse_steady_state_data(data: Dict[Any, Any], logger: Logger) -> None:
         )
 
         # Bulk-water Temperatures
+        logger.info(
+            "Plotting 3D bulk-water profile at %s degC. NOTE: The profile will appear "
+            "2D if only one pipe is present.",
+            temperature_string,
+        )
         plot_two_dimensional_figure(
-            "steady_state_bulk_water_{}degC_input".format(
-                str(round(float(temperature), 2)).replace(".", "_")
-            ),
+            "steady_state_bulk_water_{}degC_input".format(temperature_string),
             logger,
             data,
             axis_label="Bulk-water temperature / deg C",
@@ -1462,7 +1480,8 @@ def analyse_steady_state_data(data: Dict[Any, Any], logger: Logger) -> None:
             thing_to_plot="layer_temperature_map_bulk_water",
         )
 
-    # Collector temperature gain plot.
+    # Thermal efficiency plot.
+    logger.info("Plotting thermal efficiency against the reduced temperature.")
     plot_figure(
         "thermal_efficiency_against_reduced_temperature",
         data,
@@ -1474,7 +1493,10 @@ def analyse_steady_state_data(data: Dict[Any, Any], logger: Logger) -> None:
         disable_lines=True,
     )
 
-    # Thermal efficiency plot.
+    # Collector temperature gain plot.
+    logger.info(
+        "Plotting collector temperature gain against the input HTF temperature."
+    )
     plot_figure(
         "collector_tempreature_gain_against_input_temperature",
         data,
@@ -1522,6 +1544,8 @@ def analyse(data_file_name: str, show_output: Optional[bool] = False) -> None:
     else:
         logger.error("Data type was neither 'dynamic' nor 'steady_state'. Exiting...")
         exit(1)
+
+    logger.info("Analysis complete - all figures saved successfully.")
 
     if show_output:
         plt.show()
