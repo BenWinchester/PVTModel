@@ -116,6 +116,7 @@ def _get_index(  # pylint: disable=too-many-branches
         if (
             number_of_x_segments is None
             or number_of_y_segments is None
+            or number_of_pipes is None
             or pipe_number is None
             or y_coord is None
         ):
