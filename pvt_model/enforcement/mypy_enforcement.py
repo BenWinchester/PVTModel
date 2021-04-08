@@ -118,12 +118,11 @@ def main() -> None:
         type_ignore_declarations = yaml.safe_load(f)
 
     try:
-        processed_type_ignore_declarations = set(
-            [
-                TypeIgnoreUsage(entry["file"], entry["line"], entry["usage"])
-                for entry in type_ignore_declarations
-            ]
-        )
+        processed_type_ignore_declarations = {
+            TypeIgnoreUsage(entry["file"], entry["line"], entry["usage"])
+            for entry in type_ignore_declarations
+        }
+
     except KeyError as e:
         print(f"Not all data entries conform in the enforcement file: {str(e)}")
         raise
@@ -164,16 +163,14 @@ def main() -> None:
     type_ignore_uses = [entry for entry in type_ignore_uses if entry != ""]
 
     # Process this into usable data.
-    processed_type_ignore_uses = set(
-        [
-            TypeIgnoreUsage(
-                entry.split(":")[0],
-                int(entry.split(":")[1]),
-                ":".join(entry.split(":")[2:]).strip(),
-            )
-            for entry in type_ignore_uses
-        ]
-    )
+    processed_type_ignore_uses = {
+        TypeIgnoreUsage(
+            entry.split(":")[0],
+            int(entry.split(":")[1]),
+            ":".join(entry.split(":")[2:]).strip(),
+        )
+        for entry in type_ignore_uses
+    }
 
     if processed_type_ignore_declarations != processed_type_ignore_uses:
         raise EnforcementError(

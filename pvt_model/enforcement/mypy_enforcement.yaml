@@ -40,11 +40,11 @@
   usage: 'analysis.analyse(f"{parsed_args.output}.json")'
 - file: pvt_model/enforcement/mypy_enforcement.py
   justification: "Not a usage of enforcement - direct string."
-  line: 153
+  line: 152
   usage: 'f"grep ''type: ignore'' {directory_prefix}pvt_model -rn --exclude \\*.yaml",'
 - file: pvt_model/enforcement/mypy_enforcement.py
   justification: "Not a usage of enforcement - direct string."
-  line: 162
+  line: 161
   usage: 'entry.replace("", "") for entry in type_ignore_uses'
 - file: pvt_model/enforcement/mypy_enforcement.py
   justification: "Not a usage of enforcement - direct string."
