@@ -7,7 +7,7 @@
 
 - file: pvt_model/__main__.py
   justification: "Mypy incorrectly reports analysis module missing."
-  line: 1055
+  line: 1058
   usage: 'analysis.analyse(f"{parsed_args.output}.json")'
 - file: pvt_model/__main__.py
   justification: "Tank temperature cannot be `None`, already processed."
