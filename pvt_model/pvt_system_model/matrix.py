@@ -1462,24 +1462,25 @@ def _pv_equation(  # pylint: disable=too-many-branches
         * weather_conditions.irradiance  # [W/m^2]
         * segment.width  # [m]
         * segment.length  # [m]
+    ) - (
+        weather_conditions.irradiance  # [W/m^2]
+        * segment.width  # [m]
+        * segment.length  # [m]
+        * pvt_panel.pv.reference_efficiency
         * (
             1
-            - pvt_panel.pv.reference_efficiency
+            - pvt_panel.pv.thermal_coefficient
             * (
-                1
-                - pvt_panel.pv.thermal_coefficient
-                * (
-                    best_guess_temperature_vector[
-                        index_handler.index_from_segment_coordinates(
-                            number_of_x_segments,
-                            number_of_y_segments,
-                            TemperatureName.pv,
-                            segment.x_index,
-                            segment.y_index,
-                        )
-                    ]
-                    - pvt_panel.pv.reference_temperature
-                )
+                best_guess_temperature_vector[
+                    index_handler.index_from_segment_coordinates(
+                        number_of_x_segments,
+                        number_of_y_segments,
+                        TemperatureName.pv,
+                        segment.x_index,
+                        segment.y_index,
+                    )
+                ]
+                - pvt_panel.pv.reference_temperature
             )
         )
     )

@@ -116,15 +116,15 @@
   usage: "/ resolution    # [s]"
 - file: pvt_model/pvt_system_model/matrix.py
   justification: "Previous temperature vector cannot be `None` here."
-  line: 1501
+  line: 1502
   usage: "* previous_temperature_vector["
 - file: pvt_model/pvt_system_model/matrix.py
   justification: "The resolution cannot be zero here due to internal checks."
-  line: 1770
+  line: 1771
   usage: "/ resolution    # [s]"
 - file: pvt_model/pvt_system_model/matrix.py
   justification: "Previous temperature vector cannot be `None` here."
-  line: 1836
+  line: 1837
   usage: "* previous_temperature_vector["
 - file: pvt_model/pvt_system_model/matrix.py
   justification: "Previous temperature vector cannot be `None` here."
