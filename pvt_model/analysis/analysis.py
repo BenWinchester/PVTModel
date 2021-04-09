@@ -664,7 +664,10 @@ def plot_figure(
 
     # Save the figure and return if only one axis is plotted.
     if second_axis_things_to_plot is None:
-        plt.legend(lines, first_axis_things_to_plot)  # , loc="upper left")
+        if lines is not None:
+            plt.legend(lines, first_axis_things_to_plot)  # , loc="upper left")
+        else:
+            ax1.legend(first_axis_things_to_plot)
         save_figure(figure_name)
         return
 
@@ -690,7 +693,10 @@ def plot_figure(
         ]
     )
 
-    plt.legend(lines, first_axis_things_to_plot + second_axis_things_to_plot)
+    if lines is not None:
+        plt.legend(lines, first_axis_things_to_plot + second_axis_things_to_plot)
+    else:
+        ax2.legend(first_axis_things_to_plot + second_axis_things_to_plot)
 
     ax2.set_xticks(ax2.get_xticks()[::X_TICK_SEPARATION])
 
@@ -819,7 +825,11 @@ def plot_two_dimensional_figure(
         plt.xlabel(x_axis_label)
         plt.ylabel(axis_label)
         # Add the legend.
-        plt.legend(lines, [thing_to_plot])
+        axis = plt.gca()
+        if lines is not None:
+            plt.legend(lines, [thing_to_plot])
+        else:
+            axis.legend([thing_to_plot])
         save_figure(figure_name)
 
         return
