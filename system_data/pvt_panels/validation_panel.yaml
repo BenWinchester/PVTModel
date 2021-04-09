@@ -63,7 +63,7 @@ air_gap:
   thickness: 0.005 # [m]
   thermal_conductivity: 0.025 # [W/m*K]
 pv:
-  absorptivity: 0.8 # [unitless]
+  absorptivity: 0.93 # [unitless]
   # @@@ Value NOT taken from Maria's paper.
   cell_material: "silicon"
   cell_type: "monocrystalline"
