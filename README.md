@@ -1,8 +1,11 @@
 # FirstPVTModel
-First attempt at creating a model for a PVT system.
+2D model for a PVT system.
 
 ## Model basics.
-The model can be run as a python module from the command-line interface. An analysis module, for creating figures for interpreting the data files produced by the model.
+The model can be run as a python module from the command-line interface. The model exposes:
+* an overall method, for running the entire model including analysis;
+* an analysis module, which can be executed to run the figure generation only;
+* and an enforcement module.
 
 The model aims to simulate the running of an integrated PV-T, hot-water, and load system. The system modelled consists of a PV-T panel component, a hot-water tank, and a system for simulating the demands placed on the system by the end user.
 
@@ -10,19 +13,27 @@ The model aims to simulate the running of an integrated PV-T, hot-water, and loa
 The model can be executed with python3.7 from a command line by calling:
 `python3.7 -m pvt_model`.
 
-At a minimum, the following arguments are needed:
-* `--cloud-efficacy-factor <float>` - The effect to which the cloud cover should influence the solar irradiance;
-* `--days <int>` - The number of days for which to run the model;
-* `--exchanger-data-file <heat_exchangers/my_first_exchanger.yaml>` - Path to the heat-exchanger data file to use. An example data file is provided in the `heat_exchangers` folder.
-* `--initial-month <int>` - The month for which to run the model, where 1 represents January and 12 December;
-* `--location <location_folder_name>` - Path to the location folder to use. An example location, `london`, is provided;
-* `--portion-covered <float>` - Portion of the panel that is covered with a photovoltaic layer;
-* `--pvt-data-file <pvt_panels/marias_panel.yaml>` - Path to the pv data file;
-* `--tank-data-file <tanks/my_first_hot_water_tank.yaml>` - Path to the tank data file. An example data file is provided in the `tanks` folder;
-* `--resolution 1800` - The resolution, in seconds, for which to run the model. E.G., for an internal resolution of 5 minutes, `--resolution 300` should be used;
-* `--output <output_file_path>` - The name and location, irrespective of file extension, for the output data from the model to be saved.
+The model can be run as a decoupled panel or as an integrated (coupled) system.
 
-For ease of use, the following command-line arguments are recommended:
+For running the model, the following CLI arguments are required as a minimum:
+* `--initial-month <month_number>` - Specifies the month for which weather data should be used.
+* `--location <location_folder>` - Specifies the location-related information. For an example location, see the `system_data/london` folder.
+* `--portion-covered <0-1>` - Must be used to specify the portion of the panel which is covered with PV cells.
+* `--pvt-data-file <pv_data_file.yaml>` - The PV-T data YAML file must be specified.
+* `--output <extension-independent output file name>` - The name of the output file, to which data should be saved, independent of file extension, should be specified.
+
+For running the model as a stand-alone (decoupled) panel, the following requirements are required as an addition to the minimum above:
+* `--decoupled --steady-state` - Must be used to specify that the run is decoupled and steady-state.
+* `--steady-state-data-file <steady-state system data file>` - Information about the runs that should be conducted needs to be specified.
+* `--x-resolution <int>` - Specifies the number of segments to use in the x-direction.
+* `--y-resolution <int>` - Specifies the number of segments to use in the y-direction.
+
+For running the model as an integrated (coupled) panel, the following requirements are required as an addition to the minimum above:
+* `--dynamic` - Must be used to specifiy that the run is coupled and dynamic.
+* `--exchanger-data-file <exchanger_data_file.yaml>` - Must be used to specify the YAML data file for the heat exchanger.
+* `--tank-data-file <tank_data_file.yaml>` - Must be used to specify the YAML data file for the hot-water tank.
+
+For ease of use, the following command-line arguments are recommended when conducting a dynamic and coupled run:
 * `--average-irradiance` - Stipulates that an average irradiance profile for the month must be used.
 * `--start-time <int>` - The start time, in hours from midnight, for which to run the simularion. `0` is the default;
 
