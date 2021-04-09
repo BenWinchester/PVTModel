@@ -31,6 +31,7 @@ For running the model as a stand-alone (decoupled) panel, the following requirem
 For running the model as an integrated (coupled) panel, the following requirements are required as an addition to the minimum above:
 * `--dynamic` - Must be used to specifiy that the run is coupled and dynamic.
 * `--exchanger-data-file <exchanger_data_file.yaml>` - Must be used to specify the YAML data file for the heat exchanger.
+* `--resolution <int>` - The temporal resolution to use for the model.
 * `--tank-data-file <tank_data_file.yaml>` - Must be used to specify the YAML data file for the hot-water tank.
 
 For ease of use, the following command-line arguments are recommended when conducting a dynamic and coupled run:
