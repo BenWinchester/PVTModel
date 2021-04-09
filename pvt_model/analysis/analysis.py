@@ -26,7 +26,9 @@ import json
 import re
 
 import numpy
+import yaml
 
+from matplotlib.axes import Axes
 from matplotlib import cm
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D as plt3D
@@ -36,6 +38,7 @@ try:
     from ..pvt_system_model.constants import (  # pylint: disable=unused-import
         HEAT_CAPACITY_OF_WATER,
     )
+    from ..pvt_system_model.physics_utils import reduced_temperature
     from .__utils__ import GraphDetail
 except ModuleNotFoundError:
     import logging
@@ -57,6 +60,8 @@ TIME_KEY = "time"
 OLD_FIGURES_DIRECTORY: str = "old_figures"
 # Used to distinguish steady-state data sets.
 STEADY_STATE_DATA_TYPE = "steady_state"
+# Name of the steady-state data file.
+STEADY_STATE_DATA_FILE_NAME = "autotherm.yaml"
 # How detailed the graph should be
 GRAPH_DETAIL: GraphDetail = GraphDetail.lowest
 # How many values there should be between each tick on the x-axis
@@ -377,7 +382,7 @@ def plot(  # pylint: disable=too-many-branches
     axes=None,
     bar_plot: bool = False,
     colour: str = None,
-    hold=False,
+    hold: bool = False,
     shape: str = "x",
 ) -> Optional[Any]:
     """
@@ -567,6 +572,7 @@ def plot_figure(
     annotate_maximum: bool = False,
     bar_plot: bool = False,
     disable_lines: bool = False,
+    override_axis: Optional[Axes] = None,
     plot_title: Optional[str] = None,
 ) -> None:
     """
@@ -620,12 +626,18 @@ def plot_figure(
     :param disable_lines:
         If specified, lines will be disabled from the plotting.
 
+    :param override_axis:
+        If specified, this overrides the fetching of internal axes.
+
     :param plot_title:
         If specified, a title is addded to the plot.
 
     """
 
-    _, ax1 = plt.subplots()
+    if override_axis is None:
+        _, ax1 = plt.subplots()
+    else:
+        ax1 = override_axis
 
     lines = [
         plot(
@@ -1428,89 +1440,114 @@ def analyse_steady_state_data(data: Dict[Any, Any], logger: Logger) -> None:
     print(f"{int(len(data.keys()) * 5 + 2)} figures will be plotted.")
     logger.info("%s figures will be plotted.", int(len(data.keys()) * 5 + 2))
 
-    for temperature in data.keys():
-        temperature_string = str(round(float(temperature), 2)).replace(".", "_")
+    # for temperature in data.keys():
+    #     temperature_string = str(round(float(temperature), 2)).replace(".", "_")
 
-        # Glass Temperatures
-        logger.info("Plotting 3D glass profile at %s degC.", temperature_string)
-        plot_two_dimensional_figure(
-            "steady_state_glass_layer_{}degC_input".format(temperature_string),
-            logger,
-            data,
-            axis_label="Temperature / deg C",
-            entry_number=temperature,
-            plot_title="Glass layer temperature with {} K input HTF".format(
-                round(float(temperature), 2)
-            ),
-            thing_to_plot="layer_temperature_map_glass",
-        )
+    #     # Glass Temperatures
+    #     logger.info("Plotting 3D glass profile at %s degC.", temperature_string)
+    #     plot_two_dimensional_figure(
+    #         "steady_state_glass_layer_{}degC_input".format(temperature_string),
+    #         logger,
+    #         data,
+    #         axis_label="Temperature / deg C",
+    #         entry_number=temperature,
+    #         plot_title="Glass layer temperature with {} K input HTF".format(
+    #             round(float(temperature), 2)
+    #         ),
+    #         thing_to_plot="layer_temperature_map_glass",
+    #     )
 
-        # PV Temperatures
-        logger.info("Plotting 3D PV profile at %s degC.", temperature_string)
-        plot_two_dimensional_figure(
-            "steady_state_pv_layer_{}degC_input".format(temperature_string),
-            logger,
-            data,
-            axis_label="Temperature / deg C",
-            entry_number=temperature,
-            plot_title="PV layer temperature with {} K input HTF".format(
-                round(float(temperature), 2)
-            ),
-            thing_to_plot="layer_temperature_map_pv",
-        )
+    #     # PV Temperatures
+    #     logger.info("Plotting 3D PV profile at %s degC.", temperature_string)
+    #     plot_two_dimensional_figure(
+    #         "steady_state_pv_layer_{}degC_input".format(temperature_string),
+    #         logger,
+    #         data,
+    #         axis_label="Temperature / deg C",
+    #         entry_number=temperature,
+    #         plot_title="PV layer temperature with {} K input HTF".format(
+    #             round(float(temperature), 2)
+    #         ),
+    #         thing_to_plot="layer_temperature_map_pv",
+    #     )
 
-        # Collector Temperatures
-        logger.info("Plotting 3D absorber profile at %s degC.", temperature_string)
-        plot_two_dimensional_figure(
-            "steady_state_absorber_layer_{}degC_input".format(temperature_string),
-            logger,
-            data,
-            axis_label="Temperature / deg C",
-            entry_number=temperature,
-            plot_title="Collector layer temperature with {} K input HTF".format(
-                round(float(temperature), 2)
-            ),
-            thing_to_plot="layer_temperature_map_absorber",
-        )
+    #     # Collector Temperatures
+    #     logger.info("Plotting 3D absorber profile at %s degC.", temperature_string)
+    #     plot_two_dimensional_figure(
+    #         "steady_state_absorber_layer_{}degC_input".format(temperature_string),
+    #         logger,
+    #         data,
+    #         axis_label="Temperature / deg C",
+    #         entry_number=temperature,
+    #         plot_title="Collector layer temperature with {} K input HTF".format(
+    #             round(float(temperature), 2)
+    #         ),
+    #         thing_to_plot="layer_temperature_map_absorber",
+    #     )
 
-        # Pipe Temperatures
-        logger.info(
-            "Plotting 3D pipe profile at %s degC. NOTE: The profile will appear 2D if "
-            "only one pipe is present.",
-            temperature_string,
-        )
-        plot_two_dimensional_figure(
-            "steady_state_pipe_{}degC_input".format(temperature_string),
-            logger,
-            data,
-            axis_label="Pipe temperature / deg C",
-            entry_number=temperature,
-            plot_title="Pipe temperature with {} K input HTF".format(
-                round(float(temperature), 2)
-            ),
-            thing_to_plot="layer_temperature_map_pipe",
-        )
+    #     # Pipe Temperatures
+    #     logger.info(
+    #         "Plotting 3D pipe profile at %s degC. NOTE: The profile will appear 2D if "
+    #         "only one pipe is present.",
+    #         temperature_string,
+    #     )
+    #     plot_two_dimensional_figure(
+    #         "steady_state_pipe_{}degC_input".format(temperature_string),
+    #         logger,
+    #         data,
+    #         axis_label="Pipe temperature / deg C",
+    #         entry_number=temperature,
+    #         plot_title="Pipe temperature with {} K input HTF".format(
+    #             round(float(temperature), 2)
+    #         ),
+    #         thing_to_plot="layer_temperature_map_pipe",
+    #     )
 
-        # Bulk-water Temperatures
-        logger.info(
-            "Plotting 3D bulk-water profile at %s degC. NOTE: The profile will appear "
-            "2D if only one pipe is present.",
-            temperature_string,
-        )
-        plot_two_dimensional_figure(
-            "steady_state_bulk_water_{}degC_input".format(temperature_string),
-            logger,
-            data,
-            axis_label="Bulk-water temperature / deg C",
-            entry_number=temperature,
-            plot_title="Bulk-water temperature with {} K input HTF".format(
-                round(float(temperature), 2)
-            ),
-            thing_to_plot="layer_temperature_map_bulk_water",
+    #     # Bulk-water Temperatures
+    #     logger.info(
+    #         "Plotting 3D bulk-water profile at %s degC. NOTE: The profile will appear "
+    #         "2D if only one pipe is present.",
+    #         temperature_string,
+    #     )
+    #     plot_two_dimensional_figure(
+    #         "steady_state_bulk_water_{}degC_input".format(temperature_string),
+    #         logger,
+    #         data,
+    #         axis_label="Bulk-water temperature / deg C",
+    #         entry_number=temperature,
+    #         plot_title="Bulk-water temperature with {} K input HTF".format(
+    #             round(float(temperature), 2)
+    #         ),
+    #         thing_to_plot="layer_temperature_map_bulk_water",
+    #     )
+
+    # Parse the thermal-efficiency data.
+    with open(
+        os.path.join("system_data", "steady_state_data", STEADY_STATE_DATA_FILE_NAME),
+        "r",
+    ) as f:  #
+        experimental_steady_state_data = yaml.load(f)
+
+    # Post-process this data.
+    for entry in experimental_steady_state_data:
+        entry["reduced_temperature"] = reduced_temperature(
+            entry["ambient_temperature"],
+            entry["average_bulk_water_temperature"],
+            entry["irradiance"],
         )
 
     # Thermal efficiency plot.
     logger.info("Plotting thermal efficiency against the reduced temperature.")
+
+    # Plot the experimental data.
+    _, ax1 = plt.subplots()
+    ax1.scatter(
+        [entry["reduced_temperature"] for entry in experimental_steady_state_data],
+        [entry["thermal_efficiency"] for entry in experimental_steady_state_data],
+        marker="s",
+    )
+
+    # Add the model data.
     plot_figure(
         "thermal_efficiency_against_reduced_temperature",
         data,
@@ -1520,12 +1557,29 @@ def analyse_steady_state_data(data: Dict[Any, Any], logger: Logger) -> None:
         x_axis_thing_to_plot="reduced_collector_temperature",
         plot_title="Thermal efficiency against reduced temperature",
         disable_lines=True,
+        override_axis=ax1,
     )
 
     # Collector temperature gain plot.
     logger.info(
         "Plotting collector temperature gain against the input HTF temperature."
     )
+
+    # Plot the experimental data.
+    _, ax1 = plt.subplots()
+    ax1.scatter(
+        [
+            entry["collector_input_temperature"]
+            for entry in experimental_steady_state_data
+        ],
+        [
+            entry["collector_temperature_gain"]
+            for entry in experimental_steady_state_data
+        ],
+        marker="s",
+    )
+
+    # Add the model data.
     plot_figure(
         "collector_tempreature_gain_against_input_temperature",
         data,
@@ -1535,6 +1589,7 @@ def analyse_steady_state_data(data: Dict[Any, Any], logger: Logger) -> None:
         use_data_keys_as_x_axis=True,
         plot_title="Collector temperature gain against input temperature",
         disable_lines=True,
+        override_axis=ax1,
     )
 
 

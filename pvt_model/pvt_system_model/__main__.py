@@ -162,12 +162,12 @@ def main(  # pylint: disable=too-many-branches
     x_resolution: int,
     y_resolution: int,
     *,
+    run_number: Optional[int],
+    start_time: int,
     override_ambient_temperature: Optional[float] = None,
     override_collector_input_temperature: Optional[float] = None,
     override_irradiance: Optional[float] = None,
     override_wind_speed: Optional[float] = None,
-    run_number: Optional[int],
-    start_time: int,
     days: Optional[int] = None,
     months: Optional[int] = None,
 ) -> Tuple[numpy.ndarray, Dict[float, SystemData]]:
@@ -231,6 +231,13 @@ def main(  # pylint: disable=too-many-branches
     :param y_resolution:
         The y resolution of the simulation being run.
 
+    :param run_number:
+        The number of the run being carried out. This is used for categorising logs.
+
+    :param start_time:
+        The time of day at which to start the simulation, specified between 0 and 23.
+        This can be `None` if a steady-state simulation is being run.
+
     :param override_ambient_temperature:
         In decoupled instances, the ambient temperature can be specified as a constant
         value which will override the ambient-temperature profiles.
@@ -247,13 +254,6 @@ def main(  # pylint: disable=too-many-branches
     :param override_wind_speed:
         In decoupled instances, the wind speed can be specified as a cosntant value
         which will override the wind-speed profiles.
-
-    :param run_number:
-        The number of the run being carried out. This is used for categorising logs.
-
-    :param start_time:
-        The time of day at which to start the simulation, specified between 0 and 23.
-        This can be `None` if a steady-state simulation is being run.
 
     :param days:
         The number of days for which the simulation is being run. This can be `None` if
