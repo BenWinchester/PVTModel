@@ -34,10 +34,6 @@
   line: 2
   usage: ""
   whole_file: true
-- file: pvt_model/__main__.py
-  justification: "Mypy incorrectly reports analysis module missing."
-  line: 1055
-  usage: 'analysis.analyse(f"{parsed_args.output}.json")'
 - file: pvt_model/enforcement/mypy_enforcement.py
   justification: "Not a usage of enforcement - direct string."
   line: 152
