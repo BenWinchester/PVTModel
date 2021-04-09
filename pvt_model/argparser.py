@@ -54,7 +54,7 @@ class ArgumentMismatchError(Exception):
         super().__init__(f"Mismatch in command-line arguments: {msg}")
 
 
-def check_args(
+def check_args(  # pylint: disable=too-many-branches
     parsed_args: argparse.Namespace, logger: Logger, number_of_pipes: int
 ) -> Set[TemperatureName]:
     """

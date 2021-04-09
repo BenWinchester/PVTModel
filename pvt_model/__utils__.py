@@ -443,10 +443,10 @@ class SystemData:
     exchanger_temperature_drop: Optional[float]
     pipe_temperature: float
     pv_temperature: float
-    reduced_collector_temperature: float
+    reduced_collector_temperature: Optional[float]
     sky_temperature: float
     tank_temperature: Optional[float]
-    thermal_efficiency: float
+    thermal_efficiency: Optional[float]
     collector_input_temperature: Optional[float] = None
     collector_output_temperature: Optional[float] = None
     collector_temperature_gain: Optional[float] = None
