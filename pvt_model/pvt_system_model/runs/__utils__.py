@@ -393,6 +393,23 @@ def system_data_from_run(
         - ZERO_CELCIUS_OFFSET
     )
 
+    # Determine the reduced temperature of the system.
+    if weather_conditions.irradiance > 0:
+        reduced_system_temperature: Optional[float] = reduced_temperature(
+            weather_conditions.ambient_temperature,
+            average_bulk_water_temperature,
+            weather_conditions.irradiance,
+        )
+        thermal_efficiency: Optional[float] = efficiency.thermal_efficiency(
+            pvt_panel.area,
+            pvt_panel.absorber.mass_flow_rate,
+            weather_conditions.irradiance,
+            collector_output_temperature - collector_input_temperature,
+        )
+    else:
+        reduced_system_temperature = None
+        thermal_efficiency = None
+
     # Return the system data.
     return SystemData(
         date=date.strftime("%d/%m/%Y"),
@@ -424,15 +441,6 @@ def system_data_from_run(
         if save_2d_output
         else None,
         layer_temperature_map_pv=temperature_map_pv_layer if save_2d_output else None,
-        reduced_collector_temperature=reduced_temperature(
-            weather_conditions.ambient_temperature,
-            average_bulk_water_temperature,
-            weather_conditions.irradiance,
-        ),
-        thermal_efficiency=efficiency.thermal_efficiency(
-            pvt_panel.area,
-            pvt_panel.absorber.mass_flow_rate,
-            weather_conditions.irradiance,
-            collector_output_temperature - collector_input_temperature,
-        ),
+        reduced_collector_temperature=reduced_system_temperature,
+        thermal_efficiency=thermal_efficiency,
     )

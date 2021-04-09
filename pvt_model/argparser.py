@@ -74,6 +74,39 @@ def check_args(
 
     """
 
+    # Enforce that all required arguments are specified.
+    if parsed_args.portion_covered is None:
+        raise ArgumentMismatchError(
+            "{}The argument `--portion-covered` must be used when running ".format(
+                BColours.FAIL
+            )
+            + "the model.{}".format(BColours.ENDC)
+        )
+
+    if parsed_args.initial_month is None:
+        raise ArgumentMismatchError(
+            "{}The argument `--initial-month` must be used when running ".format(
+                BColours.FAIL
+            )
+            + "the model to specify the weather data to use.{}".format(BColours.ENDC)
+        )
+
+    if parsed_args.output is None:
+        raise ArgumentMismatchError(
+            "{}The argument `--output` must be used when running the model to".format(
+                BColours.FAIL
+            )
+            + "specify the name of the output file.{}".format(BColours.ENDC)
+        )
+
+    if parsed_args.pvt_data_file is None:
+        raise ArgumentMismatchError(
+            "{}The argument `--pvt-data-file` must be used when running ".format(
+                BColours.FAIL
+            )
+            + "the model to specify the PVT YAML file.{}".format(BColours.ENDC)
+        )
+
     # Enforce the resolution requirements.
     if parsed_args.x_resolution == 1 and parsed_args.y_resolution == 1:
         logger.warn(
@@ -312,9 +345,10 @@ def parse_args(args) -> argparse.Namespace:
     dynamic_arguements.add_argument(
         "--resolution",
         "-r",
-        help="The resolution, in seconds, used to solve the panel temperatures.",
+        help="The resolution, in seconds, used to solve the panel temperatures. "
+        "Defaults to one minute.",
         type=int,
-        default=1,
+        default=60,
     )
     parser.add_argument(
         "--return-system-data",

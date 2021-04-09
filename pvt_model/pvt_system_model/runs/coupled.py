@@ -219,12 +219,16 @@ def coupled_run(
         )  # [kg/s]
 
         # Determine the "i+1" current weather conditions.
-        weather_conditions = weather_forecaster.get_weather(
-            pvt_panel.latitude,
-            pvt_panel.longitude,
-            cloud_efficacy_factor,
-            next_date_and_time,
-        )
+        try:
+            weather_conditions = weather_forecaster.get_weather(
+                pvt_panel.latitude,
+                pvt_panel.longitude,
+                cloud_efficacy_factor,
+                next_date_and_time,
+            )
+        except KeyError as e:
+            logger.error("Failed to get weather conditions, do all days have profiles?")
+            raise
 
         try:
             current_run_temperature_vector = (
