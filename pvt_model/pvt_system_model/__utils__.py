@@ -24,7 +24,10 @@ from dateutil.relativedelta import relativedelta
 
 import numpy
 
-from ..__utils__ import ProgrammerJudgementFault
+
+from ..__utils__ import (
+    ProgrammerJudgementFault,
+)
 
 __all__ = (
     "BaseDailyProfile",
@@ -39,9 +42,11 @@ __all__ = (
     "OpticalLayerParameters",
     "PVParameters",
     "PVT_SYSTEM_MODEL_LOGGER_NAME",
+    "TEMPERATURE_FOLDERNAME",
     "time_iterator",
     "UtilityType",
     "WeatherConditions",
+    "WEATHER_DATA_FILENAME",
 )
 
 
@@ -49,7 +54,14 @@ __all__ = (
 # Constants #
 #############
 
+# Name of the logger used
 PVT_SYSTEM_MODEL_LOGGER_NAME = "pvt_system_model.{tag}_run_{run_number}"
+# Folder containing the solar irradiance profiles
+SOLAR_IRRADIANCE_FOLDERNAME = "solar_irradiance_profiles"
+# Folder containing the temperature profiles
+TEMPERATURE_FOLDERNAME = "temperature_profiles"
+# Name of the weather data file.
+WEATHER_DATA_FILENAME = "weather.yaml"
 
 ##############
 # Exceptions #

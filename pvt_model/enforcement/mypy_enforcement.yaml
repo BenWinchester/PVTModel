@@ -50,17 +50,17 @@
   justification: "Not a usage of enforcement - direct string."
   line: 52
   usage: 'Represents a single use of the "type: ignore" declaration.'
-- file: pvt_model/pvt_system_model/__main__.py
+- file: pvt_model/pvt_system_model/convergent_solver.py
   justification: "Scipy module does not expose annotations and should be ignored."
-  line: 28
+  line: 23
   usage: "from scipy import linalg"
-- file: pvt_model/pvt_system_model/__main__.py
+- file: pvt_model/pvt_system_model/runs/__utils__.py
   justification: "Pipe index cannot be `None` here due to internal checks."
-  line: 320
+  line: 158
   usage: "segment.pipe_index,"
-- file: pvt_model/pvt_system_model/__main__.py
+- file: pvt_model/pvt_system_model/convergent_solver.py
   justification: "This is just laziness with type annotations."
-  line: 497
+  line: 238
   usage: "run_two_temperature_vector: Union[List[float], numpy.ndarray] = numpy.asarray("
 - file: pvt_model/pvt_system_model/matrix.py
   justification: "The resolution cannot be zero here due to internal checks."

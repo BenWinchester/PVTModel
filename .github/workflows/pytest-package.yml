@@ -40,4 +40,4 @@ jobs:
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
       - name: Test with pytest
         run: |
-          pytest pvt_model
+          sh -c 'pytest pvt_model; ret=$?; [ $ret = 5 ] && exit 0 || exit $ret'

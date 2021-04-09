@@ -7,21 +7,27 @@
 ########################################################################################
 
 """
-The Physics utility module for the PV-T panel component.
+The Constants utility module for the pvt model component.
 
-This module contains formulae for calculating Physical values in relation to the PVT
-panel.
+This module contains various physical constants and internal model-specific constants
+which are accessed across multiple files.
 
 """
+
+import datetime
+import pytz
 
 __all__ = (
     "COLLECTOR_INPUT_TEMPERATURES",
     "CONVERGENT_SOLUTION_PRECISION",
+    "DEFAULT_INITIAL_DATE_AND_TIME",
     "DENSITY_OF_WATER",
     "EDGE_WIDTH",
     "EDGE_LENGTH",
     "FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR",
     "HEAT_CAPACITY_OF_WATER",
+    "HOT_WATER_DEMAND_TEMP",
+    "INTERNAL_HOUSEHOLD_AMBIENT_TEMPERATURE",
     "MAXIMUM_RECURSION_DEPTH",
     "NUMBER_OF_COLLECTORS",
     "NUSSELT_NUMBER",
@@ -45,6 +51,13 @@ NUMBER_OF_COLLECTORS = 1
 # The temperature of absolute zero in Kelvin, used for converting Celcius to Kelvin and
 # vice-a-versa.
 ZERO_CELCIUS_OFFSET: float = 273.15
+# The temperature of hot-water required by the end-user, measured in Kelvin.
+HOT_WATER_DEMAND_TEMP = 60 + ZERO_CELCIUS_OFFSET
+# The initial date and time for the simultion to run from.
+DEFAULT_INITIAL_DATE_AND_TIME = datetime.datetime(2005, 1, 1, 0, 0, tzinfo=pytz.UTC)
+# The average temperature of the air surrounding the tank, which is internal to the
+# household, measured in Kelvin.
+INTERNAL_HOUSEHOLD_AMBIENT_TEMPERATURE = ZERO_CELCIUS_OFFSET + 20  # [K]
 
 # Collector input temperatures.
 COLLECTOR_INPUT_TEMPERATURES = {288.15, 298.15, 310.15, 325.15}

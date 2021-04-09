@@ -1422,6 +1422,9 @@ def analyse_steady_state_data(data: Dict[Any, Any], logger: Logger) -> None:
 
     logger.info("Beginning steady-state analysis.")
 
+    print(f"{int(len(data.keys()) * 5 + 2)} figures will be plotted.")
+    logger.info("%s figures will be plotted.", int(len(data.keys()) * 5 + 2))
+
     for temperature in data.keys():
         temperature_string = str(round(float(temperature), 2)).replace(".", "_")
 
