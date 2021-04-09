@@ -260,7 +260,7 @@ def coupled_run(
 
         # Save the system data output and 2D profiles.
         system_data[run_number + 1] = system_data_from_run(
-            date_and_time.date(),
+            next_date_and_time.date(),
             initial_date_and_time,
             number_of_pipes,
             number_of_x_segments,
@@ -269,7 +269,7 @@ def coupled_run(
             pvt_panel,
             save_2d_output,
             current_run_temperature_vector,
-            date_and_time.time(),
+            next_date_and_time.time(),
             weather_conditions,
         )
         previous_run_temperature_vector = current_run_temperature_vector

@@ -370,28 +370,22 @@ def system_data_from_run(
         formatted_time = None
 
     # Compute variables in common to both.
-    collector_input_temperature = (
-        temperature_vector[
-            index_handler.index_from_temperature_name(
-                number_of_pipes,
-                number_of_x_segments,
-                number_of_y_segments,
-                TemperatureName.collector_in,
-            )
-        ]
-        - ZERO_CELCIUS_OFFSET
-    )
-    collector_output_temperature = (
-        temperature_vector[
-            index_handler.index_from_temperature_name(
-                number_of_pipes,
-                number_of_x_segments,
-                number_of_y_segments,
-                TemperatureName.collector_out,
-            )
-        ]
-        - ZERO_CELCIUS_OFFSET
-    )
+    collector_input_temperature = temperature_vector[
+        index_handler.index_from_temperature_name(
+            number_of_pipes,
+            number_of_x_segments,
+            number_of_y_segments,
+            TemperatureName.collector_in,
+        )
+    ]
+    collector_output_temperature = temperature_vector[
+        index_handler.index_from_temperature_name(
+            number_of_pipes,
+            number_of_x_segments,
+            number_of_y_segments,
+            TemperatureName.collector_out,
+        )
+    ]
 
     # Determine the reduced temperature of the system.
     if weather_conditions.irradiance > 0:

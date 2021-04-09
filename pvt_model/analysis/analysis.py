@@ -51,6 +51,8 @@ __all__ = ("analyse",)
 DYNAMIC_DATA_TYPE = "dynamic"
 # The directory into which which should be saved
 NEW_FIGURES_DIRECTORY: str = "figures"
+# Used to identify the "time" data set.
+TIME_KEY = "time"
 # The directory in which old figures are saved and stored for long-term access
 OLD_FIGURES_DIRECTORY: str = "old_figures"
 # Used to distinguish steady-state data sets.
@@ -169,7 +171,7 @@ def _reduce_data(  # pylint: disable=too-many-branches
     ].keys():
         # pdb.set_trace(header="Beginning of reduction loop.")
         # * If the entry is a date or time, just take the value
-        if data_entry_name in ["date", "time"]:
+        if data_entry_name in ["date", TIME_KEY]:
             for index, _ in enumerate(reduced_data):
                 reduced_data[index][data_entry_name] = data_to_reduce[
                     str(index * data_points_per_graph_point)
@@ -338,7 +340,7 @@ def _annotate_maximum(
 
     # * For each series, determine the maximum data points:
     box_text = ""
-    x_series = [data_entry["time"] for data_entry in model_data.values()]
+    x_series = [data_entry[TIME_KEY] for data_entry in model_data.values()]
     for y_lab in y_axis_labels:
         y_series = [data_entry[y_lab] for data_entry in model_data.values()]
         x_max = x_series[max(enumerate(y_series))[0]]
@@ -433,10 +435,11 @@ def plot(  # pylint: disable=too-many-branches
         x_model_data = [entry[x_axis_key] for entry in model_data.values()]
     y_model_data = [entry[label] for entry in model_data.values()]
 
-    # Sort the data series based on increasing x values.
-    x_model_data, y_model_data = (
-        list(entry) for entry in zip(*sorted(zip(x_model_data, y_model_data)))
-    )
+    # Sort the data series based on increasing x values if the data is not time.
+    if x_axis_key != TIME_KEY:
+        x_model_data, y_model_data = (
+            list(entry) for entry in zip(*sorted(zip(x_model_data, y_model_data)))
+        )
 
     # If we are not holding the graph, then clear the model_data.
     if not hold:
@@ -556,7 +559,7 @@ def plot_figure(
     first_axis_shape: str = "x",
     first_axis_y_limits: Optional[Tuple[int, int]] = None,
     use_data_keys_as_x_axis: bool = False,
-    x_axis_thing_to_plot: str = "time",
+    x_axis_thing_to_plot: str = TIME_KEY,
     x_axis_label: str = "Time of day",
     second_axis_things_to_plot: Optional[List[str]] = None,
     second_axis_label: Optional[str] = None,

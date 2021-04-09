@@ -907,6 +907,10 @@ def main(args) -> None:  # pylint: disable=too-many-branches
             operating_mode,
             parsed_args,
         )
+        logger.info("Consistent initial conditions determined at coarse resolution.")
+        logger.info(
+            "Running at the fine CLI resolution of %ss.", parsed_args.resolution
+        )
         print(
             "Rough initial conditions determined at coarse resolution, refining via "
             f"successive runs at CLI resolution of {parsed_args.resolution}s."
@@ -965,7 +969,6 @@ def main(args) -> None:  # pylint: disable=too-many-branches
             override_ambient_temperature=parsed_args.ambient_temperature,
             override_collector_input_temperature=parsed_args.collector_input_temperature,
             override_irradiance=parsed_args.solar_irradiance,
-            override_wind_speed=parsed_args.wind_speed,
             run_number=1,
             start_time=parsed_args.start_time,
         )
@@ -1062,6 +1065,6 @@ def main(args) -> None:  # pylint: disable=too-many-branches
 if __name__ == "__main__":
     try:
         main(sys.argv[1:])
-    except Exception:
-        print("An exception occured. See /logs for details.")
+    except Exception as e:
+        print(f"An exception occured. See /logs for details: {str(e)}")
         raise
