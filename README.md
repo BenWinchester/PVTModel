@@ -40,6 +40,8 @@ For ease of use, the following command-line arguments are recommended when condu
 For help with the arguments needed in order to run the model, use the inbuilt help display:
 `python3.7 -m pvt_model --help`.
 
+__NOTE__: If you receive a `KeyError: <int>` on the command-line, it is likely that the argument `--average-irradiance` must be used. This is because solar-irradiance profiles are missing for certain days, and the command must be used to average over those profiles which are specified.
+
 ## Running the Analysis Module
 The analysis module can also be run from the command-line interface. This should be executed as a python module: `py -m pvt_model.analysis -df <output_file_path_with_extension>`.
 
