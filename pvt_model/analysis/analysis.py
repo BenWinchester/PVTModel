@@ -555,7 +555,7 @@ def save_figure(figure_name: str) -> None:
     plt.savefig(os.path.join(NEW_FIGURES_DIRECTORY, f"figure_{figure_name}.jpg"))
 
 
-def plot_figure(
+def plot_figure(  # pylint: disable=too-many-branches
     figure_name: str,
     model_data: Dict[Any, Any],
     first_axis_things_to_plot: List[str],
