@@ -1056,12 +1056,16 @@ def main(args) -> None:  # pylint: disable=too-many-branches
     if parsed_args.verbose:
         _output_temperature_info(logger, parsed_args, system_data)
 
-    # Conduct analysis of the data.
-    logger.info("Conducting analysis.")
-    print("Conducting analysis.")
-    analysis.analyse(f"{parsed_args.output}.json")  # type: ignore
-    print("Analysis complete. Figures can be found in `./figures`.")
-    logger.info("Analysis complete.")
+    if parsed_args.skip_analysis:
+        logger.info("Analysis will be skippted.")
+        print("Skipping analysis. This can be run manually later.")
+    else:
+        # Conduct analysis of the data.
+        logger.info("Conducting analysis.")
+        print("Conducting analysis.")
+        analysis.analyse(f"{parsed_args.output}.json")  # type: ignore
+        print("Analysis complete. Figures can be found in `./figures`.")
+        logger.info("Analysis complete.")
 
     logger.info("Exiting.")
 
