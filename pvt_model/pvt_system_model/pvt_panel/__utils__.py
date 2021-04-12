@@ -140,7 +140,7 @@ class OpticalLayer(Layer):
         )
 
     @property
-    def reflectance(self) -> str:
+    def reflectance(self) -> float:
         """
         Returns the reflectance of the layer.
 
@@ -152,7 +152,7 @@ class OpticalLayer(Layer):
         return self.reflectivity ** 2
 
     @property
-    def reflectivity(self) -> str:
+    def reflectivity(self) -> float:
         """
         Returns the reflectivity of the layer.
 
@@ -164,7 +164,7 @@ class OpticalLayer(Layer):
         return sqrt(1 - self.absorptivity ** 2 - self.transmissivity ** 2)
 
     @property
-    def transmittance(self) -> str:
+    def transmittance(self) -> float:
         """
         Returns the transmittance of the layer.
 
