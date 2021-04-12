@@ -15,8 +15,10 @@
 data_*
 output_*
 **/output_files
+*.png
 # Additional files
 foo.txt
 # Private scripts
 *data_processor.py
-
+# Document files.
+*.ods
