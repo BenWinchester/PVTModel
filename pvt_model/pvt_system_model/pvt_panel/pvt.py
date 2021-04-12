@@ -462,6 +462,29 @@ class PVT:
         # <<< End of Maria's profile fetching.
 
     @property
+    def glass_transmissivity_absorptivity_product(self) -> float:
+        """
+        Returns the transmissivity-absorptivity product of the glass layer.
+
+        Due to internal reflections etc., an estimate is needed for the overall fraction
+        of incident solar light that is absorbed by the glass layer.
+
+        :return:
+            The TA product of the glass layer.
+
+        """
+
+        ta_product: float = (
+            1
+            - self.glass.reflectance
+            - self.glass.transmittance
+            * (1 - self.pv.reflectance + self.pv.reflectance * self.glass.transmittance)
+            / (1 - self.pv.reflectance * self.glass.reflectance)
+        )
+
+        return ta_product
+
+    @property
     def insulation_thermal_resistance(self) -> float:
         """
         Returns the thermal resistance between the back layer of the absorber and air.
@@ -497,3 +520,22 @@ class PVT:
             + self.tedlar.thickness / self.tedlar.conductivity
             + self.adhesive.thickness / self.adhesive.conductivity
         )
+
+    @property
+    def pv_transmissivity_absorptivity_product(self) -> float:
+        """
+        Returns the transmissivity-absorptivity product of the PV layer.
+
+        Due to internal reflections etc., an estimate is needed for the overall fraction
+        of incident solar light that is absorbed by the PV layer.
+
+        :return:
+            The TA product of the PV layer.
+
+        """
+
+        ta_product: float = (
+            (1 - self.pv.reflectance - self.pv.transmittance) * self.glass.transmittance
+        ) / (1 - self.pv.reflectance * self.glass.reflectance)
+
+        return ta_product

@@ -29,7 +29,6 @@ __all__ = (
     "convective_heat_transfer_to_fluid",
     "radiative_heat_transfer_coefficient",
     "reduced_temperature",
-    "transmissivity_absorptivity_product",
     "upward_loss_terms",
 )
 
@@ -190,40 +189,6 @@ def reduced_temperature(
     """
 
     return (average_temperature - ambient_temperature) / solar_irradiance
-
-
-def transmissivity_absorptivity_product(
-    *,
-    diffuse_reflection_coefficient: float,
-    glass_transmissivity: float,
-    layer_absorptivity: float,
-) -> float:
-    """
-    Computes the transmissivity-absorptivity product for a layer.
-
-    Due to diffuse reflection at the upper (glass) layer of a PVT panel, along with the
-    effects of only partial transmission through the layer, the transmissivity-
-    absorptivity product for the layer depends on the transmissivity of the layer
-    above, as well as the absorptivity of the layer in questiopn, along nwith the
-    diffuse reflectivity coefficient.
-
-    :param diffuse_reflection_coefficient:
-        The diffuse reflectivity coefficient.
-
-    :param glass_transmissivity:
-        The transmissivity of the upper glass layer.
-
-    :param layer_absorptivity:
-        The absorptivity of the layer taking in the sunlight.
-
-    :return:
-        The transmissivity-absorptivity product for light being absorbed by the layer.
-
-    """
-
-    return (layer_absorptivity * glass_transmissivity) / (
-        1 - (1 - layer_absorptivity) * diffuse_reflection_coefficient
-    )
 
 
 def upward_loss_terms(

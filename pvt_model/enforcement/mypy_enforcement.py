@@ -54,16 +54,12 @@ class TypeIgnoreUsage:
     .. attribute:: filename
         The name of the file containing the usage.
 
-    .. attribute:: line
-        The line number of the usage.
-
     .. attribute:: usage
         The actual usage within the file.
 
     """
 
     filename: str
-    line: int
     usage: str
 
     def __eq__(self, other) -> bool:
@@ -96,7 +92,7 @@ class TypeIgnoreUsage:
 
         """
 
-        return f"{self.filename}:{self.line}:{self.usage}"
+        return f"{self.filename}:{self.usage}"
 
     def __str__(self) -> str:
         """
@@ -104,7 +100,7 @@ class TypeIgnoreUsage:
 
         """
 
-        return f"{self.filename}:{self.line}:{self.usage}"
+        return f"{self.filename}:{self.usage}"
 
 
 def main() -> None:
@@ -119,7 +115,7 @@ def main() -> None:
 
     try:
         processed_type_ignore_declarations = {
-            TypeIgnoreUsage(entry["file"], entry["line"], entry["usage"])
+            TypeIgnoreUsage(entry["file"], entry["usage"])
             for entry in type_ignore_declarations
         }
 
@@ -132,7 +128,7 @@ def main() -> None:
             "Not all entries were justified:\n  {}".format(
                 "\n  ".join(
                     [
-                        f"{entry['file']}:{entry['line']}: {entry['usage']}"
+                        f"{entry['file']}: {entry['usage']}"
                         for entry in type_ignore_declarations
                         if JUSTIFICATION_STRING not in entry
                     ]
@@ -166,7 +162,6 @@ def main() -> None:
     processed_type_ignore_uses = {
         TypeIgnoreUsage(
             entry.split(":")[0],
-            int(entry.split(":")[1]),
             ":".join(entry.split(":")[2:]).strip(),
         )
         for entry in type_ignore_uses

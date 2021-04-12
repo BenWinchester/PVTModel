@@ -15,6 +15,7 @@ various modules throughout the PVT panel component.
 """
 
 from dataclasses import dataclass
+from math import sqrt
 
 from ..__utils__ import (
     LayerParameters,
@@ -132,7 +133,44 @@ class OpticalLayer(Layer):
             f"absorptivity: {self.absorptivity}, "
             f"emissivitiy: {self.emissivity}, "
             f"heat_capacity: {self.heat_capacity}, "
+            f"reflectivity: {self.reflectivity:.3f}, "
             f"thickness: {self.thickness}, "
             f"transmissivity: {self.transmissivity}"
             ")"
         )
+
+    @property
+    def reflectance(self) -> float:
+        """
+        Returns the reflectance of the layer.
+
+        :return:
+            The reflectance of the layer.
+
+        """
+
+        return self.reflectivity ** 2
+
+    @property
+    def reflectivity(self) -> float:
+        """
+        Returns the reflectivity of the layer.
+
+        :return:
+            The reflectivity of the layer, based on its other optical properties.
+
+        """
+
+        return sqrt(1 - self.absorptivity ** 2 - self.transmissivity ** 2)
+
+    @property
+    def transmittance(self) -> float:
+        """
+        Returns the transmittance of the layer.
+
+        :return:
+            The transmittance of the layer.
+
+        """
+
+        return self.transmissivity ** 2

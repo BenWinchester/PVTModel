@@ -267,6 +267,16 @@ def solve_temperature_vector_convergence_method(
         )
         return run_two_temperature_vector
 
+    logger.debug(
+        "Date and time: %s; Run number: %s: Solution not convergent. "
+        "Convergent difference: %s",
+        next_date_and_time.strftime("%d/%m/%Y %H:%M:%S")
+        if next_date_and_time is not None
+        else "[time-independent]",
+        convergence_run_number,
+        run_two_temperature_difference,
+    )
+
     if convergence_run_number == WARN_RECURSION_DEPTH:
         logger.warn(
             "%sRun depth greater than, or equal, to 10 reached when attempting a "

@@ -41,9 +41,9 @@ pvt_system:
   # Full absorber width.
   # width: 0.86 #[m]
   # One fourteenth of the absorber width.
-  width: 0.06142857142 # [m]
+  # width: 0.06142857142 # [m]
   # Ilaria's absorber width of 0.1m.
-  # width: 0.1 #[m]
+  width: 0.1 #[m]
 glass:
   absorptivity: 0.01 # [unitless]
   # @@@ Value NOT taken from Maria's paper.
@@ -81,7 +81,7 @@ pv:
   # @@@ Value NOT taken from Maria's paper.
   thermal_conductivity: 140 # [W/m*K]
   thickness: 0.00035 # [m]
-  transmissivity: 0.9 # [unitless]
+  transmissivity: 0.01 # [unitless]
   reference_efficiency: 0.126 # [unitless]
   reference_temperature: 298.15 # [K]
   # reference_temperature: 318.15 # [K]

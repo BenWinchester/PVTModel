@@ -26,7 +26,9 @@ import json
 import re
 
 import numpy
+import yaml
 
+from matplotlib.axes import Axes
 from matplotlib import cm
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D as plt3D
@@ -36,6 +38,7 @@ try:
     from ..pvt_system_model.constants import (  # pylint: disable=unused-import
         HEAT_CAPACITY_OF_WATER,
     )
+    from ..pvt_system_model.physics_utils import reduced_temperature
     from .__utils__ import GraphDetail
 except ModuleNotFoundError:
     import logging
@@ -57,6 +60,8 @@ TIME_KEY = "time"
 OLD_FIGURES_DIRECTORY: str = "old_figures"
 # Used to distinguish steady-state data sets.
 STEADY_STATE_DATA_TYPE = "steady_state"
+# Name of the steady-state data file.
+STEADY_STATE_DATA_FILE_NAME = "autotherm.yaml"
 # How detailed the graph should be
 GRAPH_DETAIL: GraphDetail = GraphDetail.lowest
 # How many values there should be between each tick on the x-axis
@@ -377,7 +382,7 @@ def plot(  # pylint: disable=too-many-branches
     axes=None,
     bar_plot: bool = False,
     colour: str = None,
-    hold=False,
+    hold: bool = False,
     shape: str = "x",
 ) -> Optional[Any]:
     """
@@ -550,7 +555,7 @@ def save_figure(figure_name: str) -> None:
     plt.savefig(os.path.join(NEW_FIGURES_DIRECTORY, f"figure_{figure_name}.jpg"))
 
 
-def plot_figure(
+def plot_figure(  # pylint: disable=too-many-branches
     figure_name: str,
     model_data: Dict[Any, Any],
     first_axis_things_to_plot: List[str],
@@ -567,6 +572,7 @@ def plot_figure(
     annotate_maximum: bool = False,
     bar_plot: bool = False,
     disable_lines: bool = False,
+    override_axis: Optional[Axes] = None,
     plot_title: Optional[str] = None,
 ) -> None:
     """
@@ -620,12 +626,18 @@ def plot_figure(
     :param disable_lines:
         If specified, lines will be disabled from the plotting.
 
+    :param override_axis:
+        If specified, this overrides the fetching of internal axes.
+
     :param plot_title:
         If specified, a title is addded to the plot.
 
     """
 
-    _, ax1 = plt.subplots()
+    if override_axis is None:
+        _, ax1 = plt.subplots()
+    else:
+        ax1 = override_axis
 
     lines = [
         plot(
@@ -849,6 +861,7 @@ def plot_two_dimensional_figure(
         cmap=cm.coolwarm,  # pylint: disable=no-member
         # linewidth=0,
         # antialiased=False,
+        aspect=array_shape[1] / array_shape[0],
     )
     plt.title(plot_title)
     plt.xlabel("Segment x index")
@@ -1509,8 +1522,33 @@ def analyse_steady_state_data(data: Dict[Any, Any], logger: Logger) -> None:
             thing_to_plot="layer_temperature_map_bulk_water",
         )
 
+    # Parse the thermal-efficiency data.
+    with open(
+        os.path.join("system_data", "steady_state_data", STEADY_STATE_DATA_FILE_NAME),
+        "r",
+    ) as f:  #
+        experimental_steady_state_data = yaml.load(f)
+
+    # Post-process this data.
+    for entry in experimental_steady_state_data:
+        entry["reduced_temperature"] = reduced_temperature(
+            entry["ambient_temperature"],
+            entry["average_bulk_water_temperature"],
+            entry["irradiance"],
+        )
+
     # Thermal efficiency plot.
     logger.info("Plotting thermal efficiency against the reduced temperature.")
+
+    # Plot the experimental data.
+    _, ax1 = plt.subplots()
+    ax1.scatter(
+        [entry["reduced_temperature"] for entry in experimental_steady_state_data],
+        [entry["thermal_efficiency"] for entry in experimental_steady_state_data],
+        marker="s",
+    )
+
+    # Add the model data.
     plot_figure(
         "thermal_efficiency_against_reduced_temperature",
         data,
@@ -1520,12 +1558,29 @@ def analyse_steady_state_data(data: Dict[Any, Any], logger: Logger) -> None:
         x_axis_thing_to_plot="reduced_collector_temperature",
         plot_title="Thermal efficiency against reduced temperature",
         disable_lines=True,
+        override_axis=ax1,
     )
 
     # Collector temperature gain plot.
     logger.info(
         "Plotting collector temperature gain against the input HTF temperature."
     )
+
+    # Plot the experimental data.
+    _, ax1 = plt.subplots()
+    ax1.scatter(
+        [
+            entry["collector_input_temperature"]
+            for entry in experimental_steady_state_data
+        ],
+        [
+            entry["collector_temperature_gain"]
+            for entry in experimental_steady_state_data
+        ],
+        marker="s",
+    )
+
+    # Add the model data.
     plot_figure(
         "collector_tempreature_gain_against_input_temperature",
         data,
@@ -1535,6 +1590,7 @@ def analyse_steady_state_data(data: Dict[Any, Any], logger: Logger) -> None:
         use_data_keys_as_x_axis=True,
         plot_title="Collector temperature gain against input temperature",
         disable_lines=True,
+        override_axis=ax1,
     )
 
 

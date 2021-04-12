@@ -46,7 +46,6 @@ from .__utils__ import WeatherConditions
 from .constants import DENSITY_OF_WATER, HEAT_CAPACITY_OF_WATER
 from .physics_utils import (
     radiative_heat_transfer_coefficient,
-    transmissivity_absorptivity_product,
 )
 
 __all__ = ("calculate_matrix_equation",)
@@ -881,7 +880,7 @@ def _glass_equation(  # pylint: disable=too-many-branches
         # Solar absorption term.
         + segment.width  # [m]
         * segment.length  # [m]
-        * pvt_panel.glass.absorptivity
+        * pvt_panel.glass_transmissivity_absorptivity_product
         * weather_conditions.irradiance  # [W/m^2]
     )
 
@@ -1454,11 +1453,7 @@ def _pv_equation(  # pylint: disable=too-many-branches
         ] = -1 * (pv_to_absorber_conduction)
 
     solar_thermal_resultant_vector_absorbtion_term = (
-        transmissivity_absorptivity_product(
-            diffuse_reflection_coefficient=pvt_panel.glass.diffuse_reflection_coefficient,
-            glass_transmissivity=pvt_panel.glass.transmissivity,
-            layer_absorptivity=pvt_panel.pv.absorptivity,
-        )
+        pvt_panel.pv_transmissivity_absorptivity_product
         * weather_conditions.irradiance  # [W/m^2]
         * segment.width  # [m]
         * segment.length  # [m]

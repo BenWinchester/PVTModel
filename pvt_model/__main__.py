@@ -372,6 +372,10 @@ def _determine_consistent_conditions(
         )
         return final_temperature_vector.tolist(), system_data
 
+    if operating_mode.decoupled:
+        logger.info("Steady-state run determined at convergence precision.")
+        return final_temperature_vector.tolist(), system_data
+
     logger.info(
         "Initial temperatures not consistent. Max difference: %sK",
         max(abs(final_temperature_vector - running_system_temperature_vector)),
@@ -826,7 +830,7 @@ def main(args) -> None:  # pylint: disable=too-many-branches
         parsed_args.x_resolution,
         parsed_args.y_resolution,
     )
-    logger.info(
+    logger.debug(
         "PV-T panel segments:\n  %s",
         "\n  ".join(
             [
