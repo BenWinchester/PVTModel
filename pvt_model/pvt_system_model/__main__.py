@@ -278,7 +278,9 @@ def main(  # pylint: disable=too-many-branches
         )
     else:
         logger = get_logger(
-            PVT_SYSTEM_MODEL_LOGGER_NAME.format(tag="dynamic", run_number=run_number),
+            PVT_SYSTEM_MODEL_LOGGER_NAME.format(
+                tag="steady_state", run_number=run_number
+            ),
             verbose,
         )
 
@@ -320,7 +322,7 @@ def main(  # pylint: disable=too-many-branches
         y_resolution,
     )
     logger.info("PV-T panel successfully instantiated: %s", pvt_panel)
-    logger.info(
+    logger.debug(
         "PV-T panel segments:\n  %s",
         "\n  ".join(
             [
