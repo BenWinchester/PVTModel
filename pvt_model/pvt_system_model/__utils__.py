@@ -24,6 +24,8 @@ from dateutil.relativedelta import relativedelta
 
 import numpy
 
+from .constants import SPECIFIC_GAS_CONSTANT_OF_AIR
+
 
 from ..__utils__ import (
     ProgrammerJudgementFault,
@@ -364,11 +366,15 @@ class WeatherConditions:
     .. attribute:: azimuthal_angle
         The azimuthal angle of the sun, defined clockwise from True North.
 
+    .. attribute:: mains_water_temperature
+        The temperature of the mains water, measured in Kelvin.
+
+    .. attribute:: pressure
+        The air pressure, measured in Pascals = Newtons per meter squared.
+
     .. attribute:: wind_speed
         The wind speed in meters per second.
 
-    .. attribute:: mains_water_temperature
-        The temperature of the mains water, measured in Kelvin.
 
     """
 
@@ -384,7 +390,57 @@ class WeatherConditions:
     azimuthal_angle: float
     declination: float
     mains_water_temperature: float
+    pressure: float
     wind_speed: float
+
+    @property
+    def density_of_air(self) -> float:
+        """
+        The density of air varies as a function of temperature.
+
+        The data for the density is obtained from:
+        https://onlinelibrary.wiley.com/doi/pdf/10.1002/9780470516430.app2
+
+        :return:
+            The density of air, measured in kilograms per meter cubed.
+
+        """
+
+        return self.pressure / (SPECIFIC_GAS_CONSTANT_OF_AIR * self.ambient_temperature)
+
+    @property
+    def dynamic_viscosity_of_air(self) -> float:
+        """
+        The dynamic viscosity of air varies as a function of temperature.
+
+        The data for the dynamic viscosity is obtained from:
+        https://onlinelibrary.wiley.com/doi/pdf/10.1002/9780470516430.app2
+
+        :return:
+            The dynamic viscosity of air, measured in kilograms per meter second.
+
+        """
+
+        return (1.458 * (10 ** (-6)) * (self.ambient_temperature ** 1.5)) / (
+            self.ambient_temperature + 110.4
+        )
+
+    @property
+    def heat_capacity_of_air(self) -> float:
+        """
+        Return the heat capacity of air in Joules perkilogram Kelvin.
+
+        The heat capacity of air varies with a function of temperature and is given by
+        an empirically-derived formula.
+
+        https://onlinelibrary.wiley.com/doi/pdf/10.1002/9780470516430.app2
+
+        :return:
+            The heat capacity of air in Joules per kilogram Kelvin.
+
+        """
+
+        return 1002.5 + 275 * (10 ** (-6)) * (self.ambient_temperature - 200) ** 2
 
     @property
     def irradiance(self) -> float:
@@ -392,13 +448,29 @@ class WeatherConditions:
         The irradiance should only be definied if the sun is above the horizon.
 
         :return:
-            The solar irradiance, adjusted for the day-night cycle.
+            The solar irradiance, adjusted for the day-night cycle, measured in Watts
+            per meter squared.
 
         """
 
         if self.declination > 0:
             return self._irradiance
         return 0
+
+    @property
+    def kinematic_viscosity_of_air(self) -> float:
+        """
+        The kinematic viscosity of air varies as a function of temperature.
+
+        The data for the dynamic viscosity is obtained from:
+        https://onlinelibrary.wiley.com/doi/pdf/10.1002/9780470516430.app2
+
+        :return:
+            The kinematic viscosity of air, measured in meters squared per second.
+
+        """
+
+        return self.dynamic_viscosity_of_air / self.density_of_air
 
     @property
     def sky_temperature(self) -> float:
@@ -415,6 +487,42 @@ class WeatherConditions:
         """
 
         return 0.0552 * (self.ambient_temperature ** 1.5)
+
+    @property
+    def thermal_conductivity_of_air(self) -> float:
+        """
+        The thermal conductivity of air varies as a function of temperature.
+
+        The data for the thermal conductivity is obtained from:
+        https://onlinelibrary.wiley.com/doi/pdf/10.1002/9780470516430.app2
+
+        :return:
+            The thermal conductivity of air, measured in Watts per meter Kelvin.
+
+        """
+
+        # This more accurate equation is not used by the paper.
+        # return (0.02646 * self.ambient_temperature ** 1.5) / (
+        #     self.ambient_temperature + 254.4 * (10 ** (-12 / self.ambient_temperature))
+        # )
+
+        # The reference suggests this equation is accurate to 1%.
+        return 0.02646 * (self.ambient_temperature / 300) ** 0.8646
+
+    @property
+    def thermal_expansivity_of_air(self) -> float:
+        """
+        The thermal expansion coefficient of air varies as a function of temperature.
+
+        The data for the thermal expansion coefficient is obtained from:
+        https://onlinelibrary.wiley.com/doi/pdf/10.1002/9780470516430.app2
+
+        :return:
+            The thermal expansion coefficient of air, measured in Kelvin to the minus 1.
+
+        """
+
+        return 1 / self.ambient_temperature
 
     @property
     def wind_heat_transfer_coefficient(self) -> float:
@@ -447,13 +555,19 @@ class WeatherConditions:
 
         return (
             "WeatherConditions("
-            f"irradiance: {self.irradiance}, "
-            f"declination: {self.declination}, "
-            f"azimuthal_angle: {self.azimuthal_angle}, "
-            f"wind_speed: {self.wind_speed}, "
-            f"ambient_temperature: {self.ambient_temperature}, "
-            f"sky_temperature: {self.sky_temperature}, "
-            f"wind_heat_transfer_coefficient: {self.wind_heat_transfer_coefficient:2f}"
+            f"ambient_temperature: {self.ambient_temperature:.3f}K, "
+            f"azimuthal_angle: {self.azimuthal_angle}deg, "
+            f"declination: {self.declination}deg, "
+            f"density: {self.density_of_air:.3f}kg/m^3, "
+            f"dynamic_viscosity: {self.dynamic_viscosity_of_air:.3f}kg/m*s, "
+            f"heat_capacity: {self.heat_capacity_of_air}:.3fJ/kg*K, "
+            f"irradiance: {self.irradiance:.3f}W/m^2, "
+            f"kinematic_viscosity: {self.kinematic_viscosity_of_air:.3f}m^2/s, "
+            f"sky_temperature: {self.sky_temperature:.3f}K, "
+            f"thermal_conductivity: {self.thermal_conductivity_of_air:.3f}W/m*K, "
+            f"thermal_expansion_coefficient: {self.thermal_expansivity_of_air:.3f}K^-1, "
+            f"wind_heat_transfer_coefficient: {self.wind_heat_transfer_coefficient:2f}W/m*K, "
+            f"wind_speed: {self.wind_speed:.3f}m/s, "
             ")"
         )
 
