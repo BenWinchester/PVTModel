@@ -24,6 +24,7 @@
 solar_insolation: 540
 mains_water_temp: 12
 average_ambient_household_temperature: 20
+average_air_pressure: 101325 # [Pa]
 jan:
   num_days: 31
   cloud_cover: 0.55
