@@ -35,7 +35,9 @@ import pysolar
 from ..__utils__ import MissingParametersError, read_yaml
 
 
-from .constants import ZERO_CELCIUS_OFFSET
+from .constants import (
+    ZERO_CELCIUS_OFFSET,
+)
 from .__utils__ import (
     BaseDailyProfile,
     Date,
@@ -375,6 +377,9 @@ class WeatherForecaster:
     #   A `bool` giving whether to average the solar irradiance intensities (True), or
     #   use the data for each day as called (False).
     #
+    # .. attribute:: _average_air_pressure
+    #   The average air pressure measured in Pascals.
+    #
     # .. attribute:: _month_abbr_to_num
     #   A mapping from month abbreviated name (eg, "jan", "feb" etc) to the number of
     #   the month in the year.
@@ -409,6 +414,7 @@ class WeatherForecaster:
     def __init__(
         self,
         ambient_tank_temperature: float,
+        average_air_pressure: float,
         average_irradiance: bool,
         mains_water_temperature: float,
         monthly_weather_data: Dict[str, Dict[str, Union[str, float]]],
@@ -423,6 +429,9 @@ class WeatherForecaster:
 
         :param ambient_tank_temperature:
             The average ambient temperature surrounding the hot-water wank.
+
+        :param average_air_pressure:
+            The average air pressure, measured in Pascals.
 
         :param average_irradiance:
             Whether to average the solar intensity for each month (True), or use the
@@ -449,6 +458,7 @@ class WeatherForecaster:
 
         """
 
+        self._average_air_pressure = average_air_pressure
         self._average_irradiance = average_irradiance
         self._override_ambient_temperature = override_ambient_temperature
         self._override_irradiance = override_irradiance
@@ -706,6 +716,20 @@ class WeatherForecaster:
                 ),
             ) from None
 
+        try:
+            average_air_pressure = data.pop("average_air_pressure")
+        except KeyError:
+            logger.error(
+                "Weather forecaster from %s is missing " "'average_air_pressure' data.",
+                weather_data_path,
+            )
+            raise MissingParametersError(
+                "WeatherForecaster",
+                "The average air pressure param is missing from {}.".format(
+                    weather_data_path
+                ),
+            ) from None
+
         # NOTE:
         # > Here, PVGIS code exists in a block s.t. the override profiles obtained from
         # > Maria's paper using a highly scientific method :p can be used instead.
@@ -827,6 +851,7 @@ class WeatherForecaster:
         # Instantiate and return a Weather Forecaster based off of this weather data.
         return cls(
             ambient_tank_temperature,
+            average_air_pressure,
             average_irradiance,
             mains_water_temp,
             data,
@@ -923,5 +948,6 @@ class WeatherForecaster:
             ambient_temperature=ambient_temperature,
             declination=declination,
             mains_water_temperature=self.mains_water_temperature,
+            pressure=self._average_air_pressure,
             wind_speed=wind_speed,
         )
