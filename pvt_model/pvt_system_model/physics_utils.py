@@ -16,8 +16,8 @@ from typing import List, Optional, Tuple, Union
 from numpy import ndarray
 
 from .constants import (
+    ACCELERATION_DUE_TO_GRAVITY,
     STEFAN_BOLTZMAN_CONSTANT,
-    THERMAL_CONDUCTIVITY_OF_AIR,
 )
 from .pvt_panel import pvt
 from .pvt_panel.segment import Segment
@@ -27,14 +27,17 @@ from .__utils__ import ProgrammerJudgementFault, WeatherConditions
 __all__ = (
     "conductive_heat_transfer_coefficient_with_gap",
     "convective_heat_transfer_to_fluid",
+    "grashof_number",
+    "prandtl_number",
     "radiative_heat_transfer_coefficient",
+    "rayleigh_number",
     "reduced_temperature",
     "upward_loss_terms",
 )
 
 
 def conductive_heat_transfer_coefficient_with_gap(
-    air_gap_thickness: float,
+    air_gap_thickness: float, weather_conditions: WeatherConditions
 ) -> float:
     """
     Computes the conductive heat transfer between the two layers, measured in W/m^2*K.
@@ -48,9 +51,8 @@ def conductive_heat_transfer_coefficient_with_gap(
     :param air_gap_thickness:
         The thickness of the air gap between the PV and glass layers.
 
-    :param contact_area:
-        The area of contact between the two layers over which conduction can occur,
-        measured in meters squared.
+    :param weather_conditions:
+        The weather conditions at the time step being investigated.
 
     :return:
         The heat transfer coefficient, in Watts per meter squared Kelvin, between the
@@ -58,7 +60,9 @@ def conductive_heat_transfer_coefficient_with_gap(
 
     """
 
-    return THERMAL_CONDUCTIVITY_OF_AIR / air_gap_thickness  # [W/m*K] / [m]
+    return (
+        weather_conditions.thermal_conductivity_of_air / air_gap_thickness
+    )  # [W/m*K] / [m]
 
 
 def convective_heat_transfer_to_fluid(
@@ -96,6 +100,61 @@ def convective_heat_transfer_to_fluid(
         convective_heat_transfer_coefficient  # [W/m^2*K]
         * contact_area  # [m^2]
         * (wall_temperature - fluid_temperature)  # [K]
+    )
+
+
+def grashof_number(
+    length_scale: float,
+    surface_temperature: float,
+    weather_conditions: WeatherConditions,
+) -> float:
+    """
+    Computes the dimensionless Grashof number.
+
+    :param length_scale:
+        The length scale over which the Grashof number should be computed.
+
+    :param surface_temperature:
+        The temperature of the bluff surface for which the Grashof number should be
+        computed.
+
+    :param weather_conditions:
+        The weather conditions at the time step where the Grashof number should be
+        computed.
+
+    :return:
+        The dimensionless Grashof number.
+
+    """
+
+    return (
+        weather_conditions.thermal_expansivity_of_air  # [1/K]
+        * ACCELERATION_DUE_TO_GRAVITY  # [m/s^2]
+        * weather_conditions.density_of_air ** 2  # [kg/m^3]
+        * length_scale ** 3  # [m^3]
+        * (surface_temperature - weather_conditions.ambient_temperature)  # [K]
+    ) / (
+        weather_conditions.dynamic_viscosity_of_air ** 2
+    )  # [kg/m*s]
+
+
+def prandtl_number(weather_conditions: WeatherConditions) -> float:
+    """
+    Computes the dimensionless Prandtl number.
+
+    :param weather_conditions:
+        The weather conditions at the time step where the Prandtl number should be
+        computed.
+
+    :return:
+        The dimensionless Prandtl number.
+
+    """
+
+    return (
+        weather_conditions.heat_capacity_of_air
+        * weather_conditions.dynamic_viscosity_of_air
+        / weather_conditions.thermal_conductivity_of_air
     )
 
 
@@ -162,6 +221,35 @@ def radiative_heat_transfer_coefficient(
         * (source_temperature ** 2 + destination_temperature ** 2)  # [K^2]
         * (source_temperature + destination_temperature)  # [K]
     ) / ((1 / source_emissivity) + (1 / destination_emissivity) - 1)
+
+
+def rayleigh_number(
+    length_scale: float,
+    surface_temperature: float,
+    weather_conditions: WeatherConditions,
+) -> float:
+    """
+    Computes the non-dimensional Rayleigh number.
+
+    :param length_scale:
+        The length scale over which the Grashof number should be computed.
+
+    :param surface_temperature:
+        The temperature of the bluff surface for which the Grashof number should be
+        computed.
+
+    :param weather_conditions:
+        The weather conditions at the time step where the Grashof number should be
+        computed.
+
+    :return:
+        The dimensionless Grashof number.
+
+    """
+
+    return grashof_number(
+        length_scale, surface_temperature, weather_conditions
+    ) * prandtl_number(weather_conditions)
 
 
 def reduced_temperature(

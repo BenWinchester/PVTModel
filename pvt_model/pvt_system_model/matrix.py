@@ -1894,7 +1894,9 @@ def calculate_matrix_equation(
         logger.debug("Calculating equations for segment %s", segment_coordinates)
         # Compute the various shared values.
         glass_to_pv_conduction = (
-            segment.width * segment.length / pvt_panel.air_gap_resistance
+            segment.width
+            * segment.length
+            / pvt_panel.air_gap_resistance(weather_conditions)
         )
         logger.debug("Glass to pv conduction %s W/K", glass_to_pv_conduction)
 

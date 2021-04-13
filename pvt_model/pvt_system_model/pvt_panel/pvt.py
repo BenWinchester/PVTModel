@@ -33,8 +33,8 @@ from ..__utils__ import (
 )
 from ..constants import (
     FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR,
-    THERMAL_CONDUCTIVITY_OF_AIR,
 )
+from ..physics_utils import conductive_heat_transfer_coefficient_with_gap
 
 from .__utils__ import MicroLayer
 from .segment import Segment, SegmentCoordinates
@@ -342,31 +342,12 @@ class PVT:
             )
         )
 
-    @property
-    def air_gap_heat_transfer_coefficient(self) -> float:
-        """
-        Gives the heat-transfer coefficient for heat transfer across the air gap.
-
-        :return:
-            The heat transfer coefficient across the air gap, measured in Watts per
-            meter Kelvin.
-
-        """
-
-        return (
-            THERMAL_CONDUCTIVITY_OF_AIR
-            / self.air_gap_thickness
-            * (
-                1
-                # @@@ FIXME - Additional code needed here to more accurately match
-                # Ilaria's model. See page 75 of the equation specification.
-            )
-        )
-
-    @property
-    def air_gap_resistance(self) -> float:
+    def air_gap_resistance(self, weather_conditions: WeatherConditions) -> float:
         """
         Returns the thermal resistance of the air gap between the PV and glass layers.
+
+        :param weather_conditions:
+            The weather conditions at the time step being investigated.
 
         :return:
             The thermal resistance, measured in Kelvin meter squared per Watt.
@@ -378,7 +359,10 @@ class PVT:
             + self.glass.thickness / self.glass.conductivity
             + self.pv.thickness / (2 * self.pv.conductivity)
             + self.glass.thickness / (2 * self.glass.conductivity)
-            + 1 / self.air_gap_heat_transfer_coefficient
+            + 1
+            / conductive_heat_transfer_coefficient_with_gap(
+                self.air_gap_thickness, weather_conditions
+            )
         )
 
     @property
