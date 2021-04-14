@@ -20,6 +20,8 @@ from numpy import ndarray, pi
 from .constants import (
     ACCELERATION_DUE_TO_GRAVITY,
     STEFAN_BOLTZMAN_CONSTANT,
+    THERMAL_CONDUCTIVITY_OF_WATER,
+    ZERO_CELCIUS_OFFSET,
 )
 from .pvt_panel import pvt
 from .pvt_panel.segment import Segment
@@ -27,13 +29,16 @@ from .pvt_panel.segment import Segment
 from .__utils__ import ProgrammerJudgementFault, WeatherConditions
 
 __all__ = (
-    "convective_heat_transfer_to_fluid",
+    "convective_heat_transfer_coefficient_of_water",
+    "density_of_water",
+    "dynamic_viscosity_of_water",
     "free_heat_transfer_coefficient_of_air",
     "grashof_number",
     "prandtl_number",
     "radiative_heat_transfer_coefficient",
     "rayleigh_number",
     "reduced_temperature",
+    "reynolds_number",
     "upward_loss_terms",
 )
 
@@ -74,28 +79,22 @@ def _top_heat_transfer_coefficient(
     return heat_transfer_coefficient
 
 
-def convective_heat_transfer_to_fluid(
-    contact_area: float,
-    convective_heat_transfer_coefficient: float,
+def convective_heat_transfer_coefficient_of_water(
     fluid_temperature: float,
-    wall_temperature: float,
+    pvt_panel: pvt.PVT,
+    weather_conditions: WeatherConditions,
 ) -> float:
     """
     Computes the convective heat transfer to a fluid in Watts.
 
-    :param contact_area:
-        The surface area that the fluid and solid have in common, i.e., for which they
-        are in thermal contact, measured in meters squared.
-
-    :param convective_heat_transfer_coefficient:
-        The convective heat transfer coefficient of the fluid, measured in Watts per
-        meter squared Kelvin.
-
     :param fluid_temperature:
-        The temperature of the fluid, measured in Kelvin.
+        The temperature of the fluid segment, measured in Kelvin.
 
-    :param wall_temperature:
-        The temperature of the walls of the container or pipe surrounding the fluid.
+    :param pvt_panel:
+        The PVT panel being modelled.
+
+    :param weather_conditions:
+        The weather conditions at the current time step.
 
     :return:
         The convective heat transfer to the fluid, measured in Watts. If the value is
@@ -105,11 +104,82 @@ def convective_heat_transfer_to_fluid(
 
     """
 
-    return (
-        convective_heat_transfer_coefficient  # [W/m^2*K]
-        * contact_area  # [m^2]
-        * (wall_temperature - fluid_temperature)  # [K]
+    # Convert the mass-flow rate into a flow speed.
+    flow_speed: float = pvt_panel.absorber.mass_flow_rate / (
+        density_of_water(fluid_temperature)
+        * pi
+        * (pvt_panel.absorber.inner_pipe_diameter / 2) ** 2
     )
+
+    # Compute the current Reynolds number.
+    current_reynolds_number = reynolds_number(
+        density_of_water(fluid_temperature),
+        dynamic_viscosity_of_water(fluid_temperature),
+        flow_speed,
+        pvt_panel.absorber.inner_pipe_diameter,
+    )
+
+    if flow_speed == 0:
+        return (
+            2 * THERMAL_CONDUCTIVITY_OF_WATER / pvt_panel.absorber.inner_pipe_diameter
+        )
+
+    if current_reynolds_number < 2300:
+        return (
+            4.36
+            * THERMAL_CONDUCTIVITY_OF_WATER
+            / pvt_panel.absorber.inner_pipe_diameter
+        )
+
+    return (
+        0.23
+        * (current_reynolds_number ** 0.8)
+        * (prandtl_number(weather_conditions) ** 0.4)
+        * THERMAL_CONDUCTIVITY_OF_WATER
+        / pvt_panel.absorber.inner_pipe_diameter
+    )
+
+
+def density_of_water(fluid_temperature: float) -> float:
+    """
+    The density of water varies as a function of temperature.
+
+    The formula for the density is obtained from:
+    https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4909168/
+
+    :param fluid_temperature:
+        The temperature of the fluid, measured in Kelvin.
+
+    :return:
+        The density of water, measured in kilograms per meter cubed.
+
+    """
+
+    return (
+        999.85308
+        + 6.32693 * (10 ** (-2)) * (fluid_temperature - ZERO_CELCIUS_OFFSET)
+        - 8.523892 * (10 ** (-3)) * (fluid_temperature - ZERO_CELCIUS_OFFSET) ** 2
+        + 6.943249 * (10 ** (-5)) * (fluid_temperature - ZERO_CELCIUS_OFFSET) ** 3
+        - 3.82126 * (10 ** (-7)) * (fluid_temperature - ZERO_CELCIUS_OFFSET) ** 4
+    )
+
+
+def dynamic_viscosity_of_water(fluid_temperature: float) -> float:
+    """
+    The dynamic viscosity of water varies as a function of temperature.
+
+    The formula comes from the Vogel-Fulcher-Tammann equation via Wiki:
+    https://en.wikipedia.org/wiki/Viscosity#Water
+
+    :param fluid_temperature:
+        The temperature of the fluid being modelled, measured in Kelvin.
+
+    :return:
+        The dynamic viscosity of water, measured in kilograms per meter second.
+
+    """
+
+    return 0.00002939 * math.exp(507.88 / (fluid_temperature - 149.3))
 
 
 def free_heat_transfer_coefficient_of_air(
@@ -360,6 +430,37 @@ def rayleigh_number(
     return grashof_number(
         length_scale, surface_temperature, tilt_in_radians, weather_conditions
     ) * prandtl_number(weather_conditions)
+
+
+def reynolds_number(
+    density: float, dynamic_viscosity: float, flow_speed: float, length_scale: float
+) -> float:
+    """
+    Computes the Reynolds number of the flow.
+
+    :param density:
+        The density of the fluid, measured in kilograms per meter cubed.
+
+    :param dynamic_viscosity:
+        The dynamic viscosity, measured in kilograms per meter second.
+
+    :param flow_speed:
+        The speed of the flow, measured in meters per second.
+
+    :param length_scale:
+        A characteristic length scale over which Physics in the fluid is occurring.
+
+    :return:
+        The dimensionless Reynolds number.
+
+    """
+
+    return (
+        density  # [kg/m^3]
+        * flow_speed  # [m/s]
+        * length_scale  # [m]
+        / dynamic_viscosity  # [kg/m*s]
+    )
 
 
 def reduced_temperature(
