@@ -115,24 +115,6 @@ class Collector(OpticalLayer):
         )
 
     @property
-    def convective_heat_transfer_coefficient_of_water(self) -> float:
-        """
-        Returns the convective heat transfer coefficient of water, measured in W/m^2*K.
-
-        :return:
-            The convective heat transfer coefficient of water, calculated from the
-            Nusselt number for the flow, the conductivity of water, and the pipe
-            diameter.
-
-        """
-
-        h_f: float = 4.36 * THERMAL_CONDUCTIVITY_OF_WATER / self.inner_pipe_diameter
-
-        return h_f
-
-        # return 6500
-
-    @property
     def htf_surface_area(self) -> float:
         """
         Returns the contact area between the HTF and the absorber, measured in m^2.

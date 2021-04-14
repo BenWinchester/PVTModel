@@ -43,8 +43,10 @@ from ..__utils__ import (
     ProgrammerJudgementFault,
 )
 from .__utils__ import WeatherConditions
-from .constants import DENSITY_OF_WATER, HEAT_CAPACITY_OF_WATER
+from .constants import HEAT_CAPACITY_OF_WATER
 from .physics_utils import (
+    convective_heat_transfer_coefficient_of_water,
+    density_of_water,
     radiative_heat_transfer_coefficient,
 )
 from .pvt_panel.physics_utils import air_gap_resistance, insulation_thermal_resistance
@@ -994,6 +996,7 @@ def _htf_continuity_equation(
 
 
 def _htf_equation(
+    best_guess_temperature_vector: Union[List[float], numpy.ndarray],
     number_of_pipes: int,
     number_of_temperatures: int,
     number_of_x_segments: int,
@@ -1026,7 +1029,18 @@ def _htf_equation(
             numpy.pi
             * (pvt_panel.absorber.inner_pipe_diameter / 2) ** 2  # [m^2]
             * segment.length  # [m]
-            * DENSITY_OF_WATER  # [kg/m^3]
+            * density_of_water(
+                best_guess_temperature_vector[
+                    index_handler.index_from_pipe_coordinates(
+                        number_of_pipes,
+                        number_of_x_segments,
+                        number_of_y_segments,
+                        TemperatureName.htf,
+                        segment.pipe_index,  # type: ignore
+                        segment.y_index,
+                    )
+                ]
+            )  # [kg/m^3]
             * pvt_panel.absorber.htf_heat_capacity  # [J/kg*K]
             / resolution  # type: ignore  # [s]
         )  # [W/K]
@@ -2003,14 +2017,6 @@ def calculate_matrix_equation(
         )
         logger.debug("Absorber to pipe conduction: %s W/K", absorber_to_pipe_conduction)
 
-        pipe_to_htf_heat_transfer = (
-            segment.length  # [m]
-            * numpy.pi
-            * pvt_panel.absorber.inner_pipe_diameter  # [m]
-            * pvt_panel.absorber.convective_heat_transfer_coefficient_of_water  # [W/m^2*K]
-        )
-        logger.debug("Pipe to HTF heat transfer: %s W/K", pipe_to_htf_heat_transfer)
-
         if segment.glass:
             glass_equation, glass_resultant_value = _glass_equation(
                 best_guess_temperature_vector,
@@ -2095,6 +2101,27 @@ def calculate_matrix_equation(
             logger.debug("3 equations for segment %s", segment_coordinates)
             continue
 
+        pipe_to_htf_heat_transfer = (
+            segment.length  # [m]
+            * numpy.pi
+            * pvt_panel.absorber.inner_pipe_diameter  # [m]
+            * convective_heat_transfer_coefficient_of_water(
+                best_guess_temperature_vector[
+                    index_handler.index_from_pipe_coordinates(
+                        number_of_pipes,
+                        number_of_x_segments,
+                        number_of_y_segments,
+                        TemperatureName.htf,
+                        segment.pipe_index,  # type: ignore
+                        segment.y_index,
+                    )
+                ],
+                pvt_panel,
+                weather_conditions,
+            )  # [W/m^2*K]
+        )
+        logger.debug("Pipe to HTF heat transfer: %s W/K", pipe_to_htf_heat_transfer)
+
         pipe_equation, pipe_resultant_value = _pipe_equation(
             absorber_to_pipe_conduction,
             best_guess_temperature_vector,
@@ -2121,6 +2148,7 @@ def calculate_matrix_equation(
         resultant_vector = numpy.vstack((resultant_vector, pipe_resultant_value))
 
         htf_equation, htf_resultant_value = _htf_equation(
+            best_guess_temperature_vector,
             number_of_pipes,
             number_of_temperatures,
             number_of_x_segments,
