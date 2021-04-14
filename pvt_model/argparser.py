@@ -177,7 +177,9 @@ def check_args(  # pylint: disable=too-many-branches
 
     # Enforce that, if decoupled is not specified, either days or months is specified.
     if not parsed_args.decoupled and not (
-        parsed_args.months is not None or parsed_args.days is not None
+        parsed_args.months is not None
+        or parsed_args.days is not None
+        or parsed_args.minutes is not None
     ):
         raise ArgumentMismatchError(
             "{}If running a coupled system, the number of days or months for ".format(
@@ -228,7 +230,7 @@ def parse_args(args) -> argparse.Namespace:
 
     parser = argparse.ArgumentParser()
     developer_arguments = parser.add_argument_group("developer arguments")
-    dynamic_arguements = parser.add_argument_group("dynamic arguments")
+    dynamic_arguments = parser.add_argument_group("dynamic arguments")
     required_named_arguments = parser.add_argument_group("required named arguments")
     steady_state_arguments = parser.add_argument_group("steady-state arguments")
 
@@ -261,7 +263,7 @@ def parse_args(args) -> argparse.Namespace:
         type=float,
         help="The effect that the cloud cover has, rated between 0 (no effect) and 1.",
     )
-    dynamic_arguements.add_argument(
+    dynamic_arguments.add_argument(
         "--days",
         "-d",
         type=int,
@@ -280,12 +282,12 @@ def parse_args(args) -> argparse.Namespace:
         help="If specified, Fourier number calculation will be skipped and a dynamic "
         "model will be used for the run.",
     )
-    dynamic_arguements.add_argument(
+    dynamic_arguments.add_argument(
         "--exchanger-data-file",
         "-e",
         help="The location of the Exchanger system YAML data file.",
     )
-    dynamic_arguements.add_argument(
+    dynamic_arguments.add_argument(
         "--initial-month",
         "-i",
         type=int,
@@ -309,7 +311,14 @@ def parse_args(args) -> argparse.Namespace:
     required_named_arguments.add_argument(
         "--location", "-l", help="The location for which to run the simulation."
     )
-    dynamic_arguements.add_argument(
+    dynamic_arguments.add_argument(
+        "--minutes",
+        "-min",
+        default=0,
+        help="Can be used to specify only a small number of minutes for which to run the model.",
+        type=int,
+    )
+    dynamic_arguments.add_argument(
         "--months",
         "-m",
         help="The number of months for which to run the simulation. Default is 12.",
@@ -334,7 +343,7 @@ def parse_args(args) -> argparse.Namespace:
         help="The portion of the panel which is covered in PV, "
         "from 1 (all) to 0 (none).",
     )
-    dynamic_arguements.add_argument(
+    dynamic_arguments.add_argument(
         "--pump-data-file",
         "-pm",
         help="The location of the pump YAML data file for the PV-T system pump.",
@@ -342,7 +351,7 @@ def parse_args(args) -> argparse.Namespace:
     required_named_arguments.add_argument(
         "--pvt-data-file", "-p", help="The location of the PV-T system YAML data file."
     )
-    dynamic_arguements.add_argument(
+    dynamic_arguments.add_argument(
         "--resolution",
         "-r",
         help="The resolution, in seconds, used to solve the panel temperatures. "
@@ -378,7 +387,7 @@ def parse_args(args) -> argparse.Namespace:
         help="[decoupled] The solar irradiance in Watts per meter squared to use when "
         "running the system as a decoupled PVT absorber.",
     )
-    dynamic_arguements.add_argument(
+    dynamic_arguments.add_argument(
         "--start-time",
         "-st",
         type=int,
@@ -401,7 +410,7 @@ def parse_args(args) -> argparse.Namespace:
         help="The path to the data file containing information specifying the steady-"
         "state runs that should be carried out.",
     )
-    dynamic_arguements.add_argument(
+    dynamic_arguments.add_argument(
         "--tank-data-file",
         "-t",
         help="The location of the Hot-Water Tank system YAML data file.",

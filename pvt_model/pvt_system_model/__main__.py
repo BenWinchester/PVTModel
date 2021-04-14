@@ -169,6 +169,7 @@ def main(  # pylint: disable=too-many-branches
     override_irradiance: Optional[float] = None,
     override_wind_speed: Optional[float] = None,
     days: Optional[int] = None,
+    minutes: Optional[int] = None,
     months: Optional[int] = None,
 ) -> Tuple[numpy.ndarray, Dict[float, SystemData]]:
     """
@@ -258,6 +259,11 @@ def main(  # pylint: disable=too-many-branches
     :param days:
         The number of days for which the simulation is being run. This can be `None` if
         a steady-state simulation is being run.
+
+    :param minutes:
+        The number of minutes for which the simulation is being run. This can be `None`
+        if either a steady-state simulation is being run, or if either days or months
+        have been specified.
 
     :param months:
         The number of months for which to run the simulation. This can be `None` if a
