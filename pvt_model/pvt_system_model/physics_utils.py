@@ -28,6 +28,7 @@ from .__utils__ import ProgrammerJudgementFault, WeatherConditions
 
 __all__ = (
     "convective_heat_transfer_to_fluid",
+    "free_heat_transfer_coefficient_of_air",
     "grashof_number",
     "prandtl_number",
     "radiative_heat_transfer_coefficient",
@@ -37,7 +38,81 @@ __all__ = (
 )
 
 
-def _free_heat_transfer_coefficient_of_air(
+def _top_heat_transfer_coefficient(
+    pvt_panel: pvt.PVT,
+    segment_top_temperature: float,
+    weather_conditions: WeatherConditions,
+) -> float:
+    """
+    Computes the heat-transfer coeffient between the top of the panel and the air.
+
+    NOTE: This includes both conductive (free) and convective (forced) heat transfers.
+
+    :param pvt_panel:
+        The pvt panel being modelled.
+
+    :param segment_top_temperature:
+        The temperature, measured in Kelvin, of the top-layer of the segment.
+
+    :param weather_conditions:
+        The weather conditions at the time step being modelled.
+
+    :return:
+        The heat transfer coefficient between the panel and the air, measured in Watts
+        per meter squared Kelvin.
+
+    """
+
+    heat_transfer_coefficient: float = (
+        weather_conditions.wind_heat_transfer_coefficient ** 3
+        + free_heat_transfer_coefficient_of_air(
+            pvt_panel, segment_top_temperature, weather_conditions
+        )
+        ** 3
+    ) ** (1 / 3)
+
+    return heat_transfer_coefficient
+
+
+def convective_heat_transfer_to_fluid(
+    contact_area: float,
+    convective_heat_transfer_coefficient: float,
+    fluid_temperature: float,
+    wall_temperature: float,
+) -> float:
+    """
+    Computes the convective heat transfer to a fluid in Watts.
+
+    :param contact_area:
+        The surface area that the fluid and solid have in common, i.e., for which they
+        are in thermal contact, measured in meters squared.
+
+    :param convective_heat_transfer_coefficient:
+        The convective heat transfer coefficient of the fluid, measured in Watts per
+        meter squared Kelvin.
+
+    :param fluid_temperature:
+        The temperature of the fluid, measured in Kelvin.
+
+    :param wall_temperature:
+        The temperature of the walls of the container or pipe surrounding the fluid.
+
+    :return:
+        The convective heat transfer to the fluid, measured in Watts. If the value is
+        positive, then the heat flow is from the container walls to the fluid. If the
+        value returned is negative, then the flow is from the fluid to the container
+        walls.
+
+    """
+
+    return (
+        convective_heat_transfer_coefficient  # [W/m^2*K]
+        * contact_area  # [m^2]
+        * (wall_temperature - fluid_temperature)  # [K]
+    )
+
+
+def free_heat_transfer_coefficient_of_air(
     pvt_panel: pvt.PVT,
     segment_top_temperature: float,
     weather_conditions: WeatherConditions,
@@ -89,80 +164,6 @@ def _free_heat_transfer_coefficient_of_air(
             weather_conditions,
         )
         ** (1 / 4)
-    )
-
-
-def _top_heat_transfer_coefficient(
-    pvt_panel: pvt.PVT,
-    segment_top_temperature: float,
-    weather_conditions: WeatherConditions,
-) -> float:
-    """
-    Computes the heat-transfer coeffient between the top of the panel and the air.
-
-    NOTE: This includes both conductive (free) and convective (forced) heat transfers.
-
-    :param pvt_panel:
-        The pvt panel being modelled.
-
-    :param segment_top_temperature:
-        The temperature, measured in Kelvin, of the top-layer of the segment.
-
-    :param weather_conditions:
-        The weather conditions at the time step being modelled.
-
-    :return:
-        The heat transfer coefficient between the panel and the air, measured in Watts
-        per meter squared Kelvin.
-
-    """
-
-    heat_transfer_coefficient: float = (
-        weather_conditions.wind_heat_transfer_coefficient ** 3
-        + _free_heat_transfer_coefficient_of_air(
-            pvt_panel, segment_top_temperature, weather_conditions
-        )
-        ** 3
-    ) ** (1 / 3)
-
-    return heat_transfer_coefficient
-
-
-def convective_heat_transfer_to_fluid(
-    contact_area: float,
-    convective_heat_transfer_coefficient: float,
-    fluid_temperature: float,
-    wall_temperature: float,
-) -> float:
-    """
-    Computes the convective heat transfer to a fluid in Watts.
-
-    :param contact_area:
-        The surface area that the fluid and solid have in common, i.e., for which they
-        are in thermal contact, measured in meters squared.
-
-    :param convective_heat_transfer_coefficient:
-        The convective heat transfer coefficient of the fluid, measured in Watts per
-        meter squared Kelvin.
-
-    :param fluid_temperature:
-        The temperature of the fluid, measured in Kelvin.
-
-    :param wall_temperature:
-        The temperature of the walls of the container or pipe surrounding the fluid.
-
-    :return:
-        The convective heat transfer to the fluid, measured in Watts. If the value is
-        positive, then the heat flow is from the container walls to the fluid. If the
-        value returned is negative, then the flow is from the fluid to the container
-        walls.
-
-    """
-
-    return (
-        convective_heat_transfer_coefficient  # [W/m^2*K]
-        * contact_area  # [m^2]
-        * (wall_temperature - fluid_temperature)  # [K]
     )
 
 

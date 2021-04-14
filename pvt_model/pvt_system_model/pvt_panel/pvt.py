@@ -32,9 +32,6 @@ from ..__utils__ import (
     PVParameters,
     WeatherConditions,
 )
-from ..constants import (
-    FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR,
-)
 
 from .__utils__ import MicroLayer
 from .segment import Segment, SegmentCoordinates
@@ -501,26 +498,6 @@ class PVT:
         )
 
         return ta_product
-
-    @property
-    def insulation_thermal_resistance(self) -> float:
-        """
-        Returns the thermal resistance between the back layer of the absorber and air.
-
-        Insulation on the back of the PV-T absorber causes there to be some thermal
-        resistance to the heat transfer out of the back of the thermal absorber. This
-        value is computed here and returned.
-
-        :return:
-            The thermal resistance between the back layer of the absorber and the
-            surrounding air, measured in meter squared Kelvin per Watt.
-
-        """
-
-        return (
-            self.insulation.thickness / self.insulation.conductivity
-            + 1 / FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR
-        )
 
     @property
     def pv_to_absorber_thermal_resistance(self) -> float:
