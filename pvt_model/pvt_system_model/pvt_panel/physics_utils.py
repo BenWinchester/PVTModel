@@ -11,6 +11,8 @@ The physics utility module for the PVT model's PVT panel component.
 
 """
 
+import math
+
 from typing import List, Union
 
 from numpy import ndarray
@@ -20,7 +22,114 @@ from . import pvt
 
 from ..__utils__ import WeatherConditions
 
-__all__ = ("insulation_thermal_resistance",)
+__all__ = (
+    "air_gap_resistance",
+    "insulation_thermal_resistance",
+)
+
+
+def _conductive_heat_transfer_coefficient_with_gap(
+    air_gap_thickness: float,
+    average_surface_temperature: float,
+    pvt_panel: pvt.PVT,
+    weather_conditions: WeatherConditions,
+) -> float:
+    """
+    Computes the conductive heat transfer between the two layers, measured in W/m^2*K.
+
+    The value computed is positive if the heat transfer is from the source to the
+    destination, as determined by the arguments, and negative if the flow of heat is
+    the reverse of what is implied via the parameters.
+
+    The value for the heat transfer is returned in Watts.
+
+    :param air_gap_thickness:
+        The thickness of the air gap between the PV and glass layers.
+
+    :param average_surface_temperature:
+        The average temperature of the surfaces across which the heat transfer is taking
+        place.
+
+    :param pvt_panel:
+        The PVT panel being modelled.
+
+    :param weather_conditions:
+        The weather conditions at the time step being investigated.
+
+    :return:
+        The heat transfer coefficient, in Watts per meter squared Kelvin, between the
+        two layers.
+
+    """
+
+    air_gap_rayleigh_number = physics_utils.rayleigh_number(
+        pvt_panel.air_gap_thickness,
+        average_surface_temperature,
+        pvt_panel.tilt_in_radians,
+        weather_conditions,
+    )
+
+    first_corrective_term: float = 1 - 1708 / air_gap_rayleigh_number
+    if first_corrective_term < 0:
+        first_corrective_term = 0
+
+    second_corrective_term: float = 1 - (
+        1708 * (math.sin(1.8 * pvt_panel.tilt_in_radians)) ** 1.6
+    ) / (air_gap_rayleigh_number * math.cos(pvt_panel.tilt_in_radians))
+    if second_corrective_term < 0:
+        second_corrective_term = 0
+
+    third_corrective_term: float = (
+        (air_gap_rayleigh_number * math.cos(pvt_panel.tilt_in_radians)) / 5830
+    ) ** 0.33 - 1
+    if third_corrective_term < 0:
+        third_corrective_term = 0
+
+    return (
+        weather_conditions.thermal_conductivity_of_air  # [W/m*K]
+        / air_gap_thickness  # [m]
+    ) * (
+        1
+        + 1.44 * first_corrective_term * second_corrective_term
+        + third_corrective_term
+    )
+
+
+def air_gap_resistance(
+    pvt_panel: pvt.PVT,
+    surface_temperature: float,
+    weather_conditions: WeatherConditions,
+) -> float:
+    """
+    Returns the thermal resistance of the air gap between the PV and glass layers.
+
+    :param pvt_panel:
+        The :class:`pvt.PVT` instance representing the pvt panel being modelled.
+
+    :param surface_temperature:
+        The average temperature of the two surfaces either side of the air gap.
+
+    :param weather_conditions:
+        The weather conditions at the time step being investigated.
+
+    :return:
+        The thermal resistance, measured in Kelvin meter squared per Watt.
+
+    """
+
+    return (
+        pvt_panel.eva.thickness / pvt_panel.eva.conductivity
+        + pvt_panel.glass.thickness / pvt_panel.glass.conductivity
+        + pvt_panel.pv.thickness / (2 * pvt_panel.pv.conductivity)
+        + pvt_panel.glass.thickness / (2 * pvt_panel.glass.conductivity)
+        + 1
+        / _conductive_heat_transfer_coefficient_with_gap(
+            pvt_panel.air_gap_thickness,
+            surface_temperature,
+            pvt_panel,
+            weather_conditions,
+        )
+    )
 
 
 def insulation_thermal_resistance(
