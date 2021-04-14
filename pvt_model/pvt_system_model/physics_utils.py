@@ -155,15 +155,13 @@ def density_of_water(fluid_temperature: float) -> float:
 
     """
 
-    density_of_water: float = (
+    return (
         999.85308
         + 6.32693 * (10 ** (-2)) * (fluid_temperature - ZERO_CELCIUS_OFFSET)
         - 8.523892 * (10 ** (-3)) * (fluid_temperature - ZERO_CELCIUS_OFFSET) ** 2
         + 6.943249 * (10 ** (-5)) * (fluid_temperature - ZERO_CELCIUS_OFFSET) ** 3
         - 3.82126 * (10 ** (-7)) * (fluid_temperature - ZERO_CELCIUS_OFFSET) ** 4
     )
-
-    return density_of_water
 
 
 def dynamic_viscosity_of_water(fluid_temperature: float) -> float:

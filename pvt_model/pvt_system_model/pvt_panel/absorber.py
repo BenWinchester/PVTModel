@@ -21,7 +21,6 @@ from ..__utils__ import (
     PVT_SYSTEM_MODEL_LOGGER_NAME,
     OpticalLayerParameters,
 )
-from ..constants import THERMAL_CONDUCTIVITY_OF_WATER
 from .__utils__ import (
     OpticalLayer,
 )
