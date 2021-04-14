@@ -47,6 +47,7 @@ from .constants import DENSITY_OF_WATER, HEAT_CAPACITY_OF_WATER
 from .physics_utils import (
     radiative_heat_transfer_coefficient,
 )
+from .pvt_panel.physics_utils import insulation_thermal_resistance
 
 __all__ = ("calculate_matrix_equation",)
 
@@ -192,7 +193,18 @@ def _absorber_equation(  # pylint: disable=too-many-branches
         (
             segment.width  # [m]
             * segment.length  # [m]
-            / pvt_panel.insulation_thermal_resistance  # [m^2*K/W]
+            / insulation_thermal_resistance(
+                best_guess_temperature_vector,
+                pvt_panel,
+                index_handler.index_from_segment_coordinates(
+                    number_of_x_segments,
+                    number_of_y_segments,
+                    TemperatureName.absorber,
+                    segment.x_index,
+                    segment.y_index,
+                ),
+                weather_conditions,
+            )  # [m^2*K/W]
         )
         if not segment.pipe
         else 0
@@ -1105,6 +1117,7 @@ def _htf_equation(
 
 def _pipe_equation(
     absorber_to_pipe_conduction: float,
+    best_guess_temperature_vector: Union[List[float], numpy.ndarray],
     logger: logging.Logger,
     number_of_pipes: int,
     number_of_temperatures: int,
@@ -1153,7 +1166,19 @@ def _pipe_equation(
         numpy.pi
         * (pvt_panel.absorber.outer_pipe_diameter / 2)  # [m]
         * segment.length  # [m]
-        / pvt_panel.insulation_thermal_resistance  # [K*m^2/W]
+        / insulation_thermal_resistance(
+            best_guess_temperature_vector,
+            pvt_panel,
+            index_handler.index_from_pipe_coordinates(
+                number_of_pipes,
+                number_of_x_segments,
+                number_of_y_segments,
+                TemperatureName.pipe,
+                segment.pipe_index,  # type: ignore
+                segment.y_index,
+            ),
+            weather_conditions,
+        )  # [K*m^2/W]
     )
 
     # Compute the T_P(#, j) term.
@@ -2048,6 +2073,7 @@ def calculate_matrix_equation(
 
         pipe_equation, pipe_resultant_value = _pipe_equation(
             absorber_to_pipe_conduction,
+            best_guess_temperature_vector,
             logger,
             number_of_pipes,
             number_of_temperatures,

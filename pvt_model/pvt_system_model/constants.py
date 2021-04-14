@@ -24,7 +24,6 @@ __all__ = (
     "DENSITY_OF_WATER",
     "EDGE_WIDTH",
     "EDGE_LENGTH",
-    "FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR",
     "HEAT_CAPACITY_OF_WATER",
     "HOT_WATER_DEMAND_TEMP",
     "INTERNAL_HOUSEHOLD_AMBIENT_TEMPERATURE",
@@ -70,12 +69,6 @@ EDGE_WIDTH = 0.005
 
 # The maximum size allowed for the length of top and bottom-eg
 EDGE_LENGTH = 0.005
-
-# The free convective, heat-transfer coefficient of air. This varies, and potentially
-# could be extended to the weather module and calculated on the fly depending on various
-# environmental conditions etc.. This is measured in Watts per meter squared
-# Kelvin.
-FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR: int = 25
 
 # The heat capacity of air, measured in Joules per kilogram Kelvin.
 HEAT_CAPACITY_OF_AIR: int = 700
