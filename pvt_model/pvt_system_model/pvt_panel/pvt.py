@@ -47,40 +47,6 @@ MINIMUM_SOLAR_DECLINATION = 5
 MAXIMUM_SOLAR_DIFF_ANGLE = 88
 
 
-####################
-# Helper functions #
-####################
-
-
-def _conductive_heat_transfer_coefficient_with_gap(
-    air_gap_thickness: float, weather_conditions: WeatherConditions
-) -> float:
-    """
-    Computes the conductive heat transfer between the two layers, measured in W/m^2*K.
-
-    The value computed is positive if the heat transfer is from the source to the
-    destination, as determined by the arguments, and negative if the flow of heat is
-    the reverse of what is implied via the parameters.
-
-    The value for the heat transfer is returned in Watts.
-
-    :param air_gap_thickness:
-        The thickness of the air gap between the PV and glass layers.
-
-    :param weather_conditions:
-        The weather conditions at the time step being investigated.
-
-    :return:
-        The heat transfer coefficient, in Watts per meter squared Kelvin, between the
-        two layers.
-
-    """
-
-    return (
-        weather_conditions.thermal_conductivity_of_air / air_gap_thickness
-    )  # [W/m*K] / [m]
-
-
 #####################
 # PV-T Panel Layers #
 #####################
@@ -370,29 +336,6 @@ class PVT:
             math.acos(
                 math.cos(math.radians(horizontal_diff))
                 * math.cos(math.radians(vertical_diff))
-            )
-        )
-
-    def air_gap_resistance(self, weather_conditions: WeatherConditions) -> float:
-        """
-        Returns the thermal resistance of the air gap between the PV and glass layers.
-
-        :param weather_conditions:
-            The weather conditions at the time step being investigated.
-
-        :return:
-            The thermal resistance, measured in Kelvin meter squared per Watt.
-
-        """
-
-        return (
-            self.eva.thickness / self.eva.conductivity
-            + self.glass.thickness / self.glass.conductivity
-            + self.pv.thickness / (2 * self.pv.conductivity)
-            + self.glass.thickness / (2 * self.glass.conductivity)
-            + 1
-            / _conductive_heat_transfer_coefficient_with_gap(
-                self.air_gap_thickness, weather_conditions
             )
         )
 

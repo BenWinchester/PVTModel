@@ -47,7 +47,7 @@ from .constants import DENSITY_OF_WATER, HEAT_CAPACITY_OF_WATER
 from .physics_utils import (
     radiative_heat_transfer_coefficient,
 )
-from .pvt_panel.physics_utils import insulation_thermal_resistance
+from .pvt_panel.physics_utils import air_gap_resistance, insulation_thermal_resistance
 
 __all__ = ("calculate_matrix_equation",)
 
@@ -1930,7 +1930,31 @@ def calculate_matrix_equation(
         glass_to_pv_conduction = (
             segment.width
             * segment.length
-            / pvt_panel.air_gap_resistance(weather_conditions)
+            / air_gap_resistance(
+                pvt_panel,
+                0.5
+                * (
+                    best_guess_temperature_vector[
+                        index_handler.index_from_segment_coordinates(
+                            number_of_x_segments,
+                            number_of_y_segments,
+                            TemperatureName.pv,
+                            segment.x_index,
+                            segment.y_index,
+                        )
+                    ]
+                    + best_guess_temperature_vector[
+                        index_handler.index_from_segment_coordinates(
+                            number_of_x_segments,
+                            number_of_y_segments,
+                            TemperatureName.glass,
+                            segment.x_index,
+                            segment.y_index,
+                        )
+                    ]
+                ),
+                weather_conditions,
+            )
         )
         logger.debug("Glass to pv conduction %s W/K", glass_to_pv_conduction)
 
