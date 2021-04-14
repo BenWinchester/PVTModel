@@ -175,12 +175,12 @@ class PVT:
         pv_parameters: PVParameters,
         segments: Dict[SegmentCoordinates, Segment],
         tedlar: MicroLayer,
+        tilt: float,
         timezone: datetime.timezone,
         width: float,
         *,
         azimuthal_orientation: Optional[float] = None,
         horizontal_tracking: bool = False,
-        tilt: Optional[float] = None,
         vertical_tracking: bool = False,
     ) -> None:
         """

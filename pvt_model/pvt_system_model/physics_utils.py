@@ -210,7 +210,7 @@ def nusselt_number(
     length_scale: float,
     surface_temperature: float,
     tilt_in_radians: float,
-    weather_conditions: float,
+    weather_conditions: WeatherConditions,
 ) -> float:
     """
     Computes the dimensionless Nusselt number.
