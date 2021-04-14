@@ -13,7 +13,9 @@ The physics utility module for the PVT model.
 
 from typing import List, Optional, Tuple, Union
 
-from numpy import ndarray
+import math
+
+from numpy import ndarray, pi
 
 from .constants import (
     ACCELERATION_DUE_TO_GRAVITY,
@@ -25,7 +27,6 @@ from .pvt_panel.segment import Segment
 from .__utils__ import ProgrammerJudgementFault, WeatherConditions
 
 __all__ = (
-    "conductive_heat_transfer_coefficient_with_gap",
     "convective_heat_transfer_to_fluid",
     "grashof_number",
     "prandtl_number",
@@ -36,33 +37,95 @@ __all__ = (
 )
 
 
-def conductive_heat_transfer_coefficient_with_gap(
-    air_gap_thickness: float, weather_conditions: WeatherConditions
+def _free_heat_transfer_coefficient_of_air(
+    pvt_panel: pvt.PVT,
+    segment_top_temperature: float,
+    weather_conditions: WeatherConditions,
 ) -> float:
     """
-    Computes the conductive heat transfer between the two layers, measured in W/m^2*K.
+    Computes the free (conductive/convective) heat-transfer coefficient of air.
 
-    The value computed is positive if the heat transfer is from the source to the
-    destination, as determined by the arguments, and negative if the flow of heat is
-    the reverse of what is implied via the parameters.
+    :param pvt_panel:
+        The pvt panel being modelled.
 
-    The value for the heat transfer is returned in Watts.
-
-    :param air_gap_thickness:
-        The thickness of the air gap between the PV and glass layers.
+    :param segment_top_temperature:
+        The temperature, measured in Kelvin, of the top-layer of the segment.
 
     :param weather_conditions:
-        The weather conditions at the time step being investigated.
+        The weather conditions at the time step being modelled.
 
     :return:
-        The heat transfer coefficient, in Watts per meter squared Kelvin, between the
-        two layers.
+        The free heat transfer coefficient between the panel and the air, measured in
+        Watts per meter squared Kelvin.
 
     """
 
-    return (
-        weather_conditions.thermal_conductivity_of_air / air_gap_thickness
-    )  # [W/m*K] / [m]
+    length_scale: float = max(pvt_panel.length, pvt_panel.width)
+
+    current_rayleigh_number = rayleigh_number(
+        length_scale,
+        segment_top_temperature,
+        pvt_panel.tilt_in_radians,
+        weather_conditions,
+    )
+
+    if current_rayleigh_number >= 10 ** 9:
+        return (weather_conditions.thermal_conductivity_of_air / length_scale) * (
+            0.68
+            + (
+                (0.67 * current_rayleigh_number ** 0.25)
+                / (
+                    (1 + (0.492 / prandtl_number(weather_conditions)) ** (9 / 16))
+                    ** (4 / 9)
+                )
+            )
+        )
+
+    return (weather_conditions.thermal_conductivity_of_air / length_scale) * (
+        nusselt_number(
+            length_scale,
+            segment_top_temperature,
+            pvt_panel.tilt_in_radians,
+            weather_conditions,
+        )
+        ** (1 / 4)
+    )
+
+
+def _top_heat_transfer_coefficient(
+    pvt_panel: pvt.PVT,
+    segment_top_temperature: float,
+    weather_conditions: WeatherConditions,
+) -> float:
+    """
+    Computes the heat-transfer coeffient between the top of the panel and the air.
+
+    NOTE: This includes both conductive (free) and convective (forced) heat transfers.
+
+    :param pvt_panel:
+        The pvt panel being modelled.
+
+    :param segment_top_temperature:
+        The temperature, measured in Kelvin, of the top-layer of the segment.
+
+    :param weather_conditions:
+        The weather conditions at the time step being modelled.
+
+    :return:
+        The heat transfer coefficient between the panel and the air, measured in Watts
+        per meter squared Kelvin.
+
+    """
+
+    heat_transfer_coefficient: float = (
+        weather_conditions.wind_heat_transfer_coefficient ** 3
+        + _free_heat_transfer_coefficient_of_air(
+            pvt_panel, segment_top_temperature, weather_conditions
+        )
+        ** 3
+    ) ** (1 / 3)
+
+    return heat_transfer_coefficient
 
 
 def convective_heat_transfer_to_fluid(
@@ -106,6 +169,7 @@ def convective_heat_transfer_to_fluid(
 def grashof_number(
     length_scale: float,
     surface_temperature: float,
+    tilt_in_radians: float,
     weather_conditions: WeatherConditions,
 ) -> float:
     """
@@ -117,6 +181,9 @@ def grashof_number(
     :param surface_temperature:
         The temperature of the bluff surface for which the Grashof number should be
         computed.
+
+    :param tilt_in_radians:
+        The tilt, in radians, between the panel (surface) and the horizontal.
 
     :param weather_conditions:
         The weather conditions at the time step where the Grashof number should be
@@ -130,12 +197,50 @@ def grashof_number(
     return (
         weather_conditions.thermal_expansivity_of_air  # [1/K]
         * ACCELERATION_DUE_TO_GRAVITY  # [m/s^2]
+        * math.cos((pi / 2) - tilt_in_radians)
         * weather_conditions.density_of_air ** 2  # [kg/m^3]
         * length_scale ** 3  # [m^3]
-        * (surface_temperature - weather_conditions.ambient_temperature)  # [K]
+        * abs(surface_temperature - weather_conditions.ambient_temperature)  # [K]
     ) / (
         weather_conditions.dynamic_viscosity_of_air ** 2
     )  # [kg/m*s]
+
+
+def nusselt_number(
+    length_scale: float,
+    surface_temperature: float,
+    tilt_in_radians: float,
+    weather_conditions: float,
+) -> float:
+    """
+    Computes the dimensionless Nusselt number.
+
+    :param length_scale:
+        The length scale over which the Grashof number should be computed.
+
+    :param surface_temperature:
+        The temperature of the bluff surface for which the Grashof number should be
+        computed.
+
+    :param tilt_in_radians:
+        The tilt, in radians, between the panel (surface) and the horizontal.
+
+    :param weather_conditions:
+        The weather conditions at the time step where the Grashof number should be
+        computed.
+
+    :return:
+        The dimensionless Nusselt number.
+
+    """
+
+    return 0.825 + (
+        0.387
+        * rayleigh_number(
+            length_scale, surface_temperature, tilt_in_radians, weather_conditions
+        )
+        ** (1 / 6)
+    ) / ((1 + (0.492 / prandtl_number(weather_conditions) ** (9 / 16))) ** (8 / 27))
 
 
 def prandtl_number(weather_conditions: WeatherConditions) -> float:
@@ -226,6 +331,7 @@ def radiative_heat_transfer_coefficient(
 def rayleigh_number(
     length_scale: float,
     surface_temperature: float,
+    tilt_in_radians: float,
     weather_conditions: WeatherConditions,
 ) -> float:
     """
@@ -238,6 +344,9 @@ def rayleigh_number(
         The temperature of the bluff surface for which the Grashof number should be
         computed.
 
+    :param tilt_in_radians:
+        The tilt, in radians, between the panel (surface) and the horizontal.
+
     :param weather_conditions:
         The weather conditions at the time step where the Grashof number should be
         computed.
@@ -248,7 +357,7 @@ def rayleigh_number(
     """
 
     return grashof_number(
-        length_scale, surface_temperature, weather_conditions
+        length_scale, surface_temperature, tilt_in_radians, weather_conditions
     ) * prandtl_number(weather_conditions)
 
 
@@ -314,7 +423,9 @@ def upward_loss_terms(
     upward_conduction = (
         segment.width  # [m]
         * segment.length  # [m]
-        * weather_conditions.wind_heat_transfer_coefficient  # [W/m^2*K]
+        * _top_heat_transfer_coefficient(
+            pvt_panel, best_guess_temperature_vector[source_index], weather_conditions
+        )  # [W/m^2*K]
     )
 
     upward_radiation = (
@@ -325,7 +436,7 @@ def upward_loss_terms(
             radiating_to_sky=True,
             source_emissivity=pvt_panel.glass.emissivity,
             source_temperature=best_guess_temperature_vector[source_index],
-        )
+        )  # [W/m^2*K]
     )
 
     return upward_conduction, upward_radiation

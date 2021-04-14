@@ -884,6 +884,11 @@ def _glass_equation(  # pylint: disable=too-many-branches
         * weather_conditions.irradiance  # [W/m^2]
     )
 
+    # if len(numpy.argwhere(numpy.isnan(row_equation))) > 0:
+    #     import pdb
+
+    #     pdb.set_trace()
+
     if operating_mode.dynamic:
         resultant_vector_value += (
             # Previous glass temperature term.
@@ -899,13 +904,17 @@ def _glass_equation(  # pylint: disable=too-many-branches
             ]  # [K]
         )
 
-    logger.debug(
-        "Rough Glass Temperature estimate: %s K.",
-        int(
-            resultant_vector_value
-            / (glass_to_air_conduction + glass_to_sky_radiation + glass_internal_energy)
-        ),
-    )
+        logger.debug(
+            "Rough Glass Temperature estimate: %s K.",
+            int(
+                resultant_vector_value
+                / (
+                    glass_to_air_conduction
+                    + glass_to_sky_radiation
+                    + glass_internal_energy
+                )
+            ),
+        )
 
     return row_equation, resultant_vector_value
 
