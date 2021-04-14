@@ -1174,7 +1174,7 @@ def _pipe_equation(
                 number_of_x_segments,
                 number_of_y_segments,
                 TemperatureName.pipe,
-                segment.pipe_index,
+                segment.pipe_index,  # type: ignore
                 segment.y_index,
             ),
             weather_conditions,
