@@ -20,6 +20,7 @@ import math
 
 from typing import Dict, Optional, Tuple
 
+import numpy
 
 from . import bond, absorber, glass, pv
 
@@ -33,7 +34,6 @@ from ..__utils__ import (
 )
 from ..constants import (
     FREE_CONVECTIVE_HEAT_TRANSFER_COEFFICIENT_OF_AIR,
-    THERMAL_CONDUCTIVITY_OF_AIR,
 )
 
 from .__utils__ import MicroLayer
@@ -48,6 +48,40 @@ MINIMUM_SOLAR_DECLINATION = 5
 # The maximum angle at which the panel can still be assumed to gain sunlight. This will
 # limit both edge effects and prevent light reaching the panel from behind.
 MAXIMUM_SOLAR_DIFF_ANGLE = 88
+
+
+####################
+# Helper functions #
+####################
+
+
+def _conductive_heat_transfer_coefficient_with_gap(
+    air_gap_thickness: float, weather_conditions: WeatherConditions
+) -> float:
+    """
+    Computes the conductive heat transfer between the two layers, measured in W/m^2*K.
+
+    The value computed is positive if the heat transfer is from the source to the
+    destination, as determined by the arguments, and negative if the flow of heat is
+    the reverse of what is implied via the parameters.
+
+    The value for the heat transfer is returned in Watts.
+
+    :param air_gap_thickness:
+        The thickness of the air gap between the PV and glass layers.
+
+    :param weather_conditions:
+        The weather conditions at the time step being investigated.
+
+    :return:
+        The heat transfer coefficient, in Watts per meter squared Kelvin, between the
+        two layers.
+
+    """
+
+    return (
+        weather_conditions.thermal_conductivity_of_air / air_gap_thickness
+    )  # [W/m*K] / [m]
 
 
 #####################
@@ -141,12 +175,12 @@ class PVT:
         pv_parameters: PVParameters,
         segments: Dict[SegmentCoordinates, Segment],
         tedlar: MicroLayer,
+        tilt: float,
         timezone: datetime.timezone,
         width: float,
         *,
         azimuthal_orientation: Optional[float] = None,
         horizontal_tracking: bool = False,
-        tilt: Optional[float] = None,
         vertical_tracking: bool = False,
     ) -> None:
         """
@@ -342,31 +376,12 @@ class PVT:
             )
         )
 
-    @property
-    def air_gap_heat_transfer_coefficient(self) -> float:
-        """
-        Gives the heat-transfer coefficient for heat transfer across the air gap.
-
-        :return:
-            The heat transfer coefficient across the air gap, measured in Watts per
-            meter Kelvin.
-
-        """
-
-        return (
-            THERMAL_CONDUCTIVITY_OF_AIR
-            / self.air_gap_thickness
-            * (
-                1
-                # @@@ FIXME - Additional code needed here to more accurately match
-                # Ilaria's model. See page 75 of the equation specification.
-            )
-        )
-
-    @property
-    def air_gap_resistance(self) -> float:
+    def air_gap_resistance(self, weather_conditions: WeatherConditions) -> float:
         """
         Returns the thermal resistance of the air gap between the PV and glass layers.
+
+        :param weather_conditions:
+            The weather conditions at the time step being investigated.
 
         :return:
             The thermal resistance, measured in Kelvin meter squared per Watt.
@@ -378,7 +393,10 @@ class PVT:
             + self.glass.thickness / self.glass.conductivity
             + self.pv.thickness / (2 * self.pv.conductivity)
             + self.glass.thickness / (2 * self.glass.conductivity)
-            + 1 / self.air_gap_heat_transfer_coefficient
+            + 1
+            / _conductive_heat_transfer_coefficient_with_gap(
+                self.air_gap_thickness, weather_conditions
+            )
         )
 
     @property
@@ -539,3 +557,16 @@ class PVT:
         ) / (1 - self.pv.reflectance * self.glass.reflectance)
 
         return ta_product
+
+    @property
+    def tilt_in_radians(self) -> float:
+        """
+        Returns the tilt of the panel from the horizontal, measured in radians.
+
+        :return:
+            The angle between the plane of the panel and the horizontal, measured in
+            radians.
+
+        """
+
+        return numpy.pi * self._tilt / 180
