@@ -190,6 +190,16 @@ def check_args(  # pylint: disable=too-many-branches
             )
         )
 
+    # Enforce that, if minutes is specified, that it is greater than the resolution.
+    if parsed_args.minutes is not None:
+        if resolution * 60 > parsed_args.minutes:
+            raise ArgumentMismatchError(
+                "{}The resolution of the simulation must be less than the time ".format(
+                    BColours.FAIL
+                )
+                + "for which it is being run.{}".format(BColours.ENDC)
+            )
+
     # Enforce that, if decoupled is not specified, start-time is specified.
     if not parsed_args.decoupled and parsed_args.start_time is None:
         raise ArgumentMismatchError(
@@ -314,7 +324,6 @@ def parse_args(args) -> argparse.Namespace:
     dynamic_arguments.add_argument(
         "--minutes",
         "-min",
-        default=0,
         help="Can be used to specify only a small number of minutes for which to run the model.",
         type=int,
     )
