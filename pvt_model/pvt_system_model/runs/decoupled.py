@@ -32,10 +32,10 @@ from ..__utils__ import DivergentSolutionError
 from ..constants import CONVERGENT_SOLUTION_PRECISION
 from .__utils__ import system_data_from_run
 
-__all__ = ("decoupled_run",)
+__all__ = ("decoupled_steady_state_run",)
 
 
-def decoupled_run(
+def decoupled_steady_state_run(
     collector_input_temperature: float,
     cloud_efficacy_factor: float,
     initial_date_and_time: datetime.datetime,

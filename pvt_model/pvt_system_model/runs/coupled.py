@@ -32,10 +32,10 @@ from ..__utils__ import DivergentSolutionError, time_iterator
 from ..constants import DEFAULT_INITIAL_DATE_AND_TIME
 from .__utils__ import system_data_from_run
 
-__all__ = ("coupled_run",)
+__all__ = ("coupled_dynamic_run",)
 
 
-def coupled_run(
+def coupled_dynamic_run(
     cloud_efficacy_factor: float,
     days: Optional[int],
     heat_exchanger: exchanger.Exchanger,

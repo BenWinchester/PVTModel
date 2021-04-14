@@ -411,7 +411,7 @@ def main(  # pylint: disable=too-many-branches
         weather_forecaster,
     )
 
-    if operating_mode.dynamic:
+    if operating_mode.coupled:
         if heat_exchanger is None or hot_water_tank is None:
             raise ProgrammerJudgementFault(
                 "{}{} not defined in dynamic operation.{}".format(
@@ -433,7 +433,7 @@ def main(  # pylint: disable=too-many-branches
                     BColours.ENDC,
                 )
             )
-        final_run_temperature_vector, system_data = coupled.coupled_run(
+        final_run_temperature_vector, system_data = coupled.coupled_dynamic_run(
             cloud_efficacy_factor,
             days,
             heat_exchanger,
@@ -454,14 +454,17 @@ def main(  # pylint: disable=too-many-branches
             start_time,
             weather_forecaster,
         )
-    elif operating_mode.steady_state:
+    elif operating_mode.decoupled and operating_mode.steady_state:
         if override_collector_input_temperature is None:
             raise ProgrammerJudgementFault(
                 "{}Override collector input temperature not provided.{}".format(
                     BColours.FAIL, BColours.ENDC
                 )
             )
-        final_run_temperature_vector, system_data_entry = decoupled.decoupled_run(
+        (
+            final_run_temperature_vector,
+            system_data_entry,
+        ) = decoupled.decoupled_steady_state_run(
             override_collector_input_temperature,
             cloud_efficacy_factor,
             DEFAULT_INITIAL_DATE_AND_TIME.replace(month=initial_month),
