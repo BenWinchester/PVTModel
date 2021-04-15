@@ -305,11 +305,14 @@ def main(  # pylint: disable=too-many-branches
     logger.info("Weather forecaster successfully instantiated: %s", weather_forecaster)
 
     # Set up the load module.
-    load_system = _get_load_system(location)
-    logger.info(
-        "Load system successfully instantiated: %s",
-        load_system,
-    )
+    if operating_mode.coupled:
+        load_system: Optional[load.LoadSystem] = _get_load_system(location)
+        logger.info(
+            "Load system successfully instantiated: %s",
+            load_system,
+        )
+    else:
+        load_system = None
 
     # Raise an exception if no initial system temperature vector was supplied.
     if initial_system_temperature_vector is None:
@@ -417,7 +420,7 @@ def main(  # pylint: disable=too-many-branches
         weather_forecaster,
     )
 
-    if operating_mode.coupled:
+    if operating_mode.coupled and operating_mode.dynamic:
         if heat_exchanger is None or hot_water_tank is None:
             raise ProgrammerJudgementFault(
                 "{}{} not defined in dynamic operation.{}".format(
@@ -448,6 +451,7 @@ def main(  # pylint: disable=too-many-branches
             initial_system_temperature_vector,
             load_system,
             logger,
+            minutes,
             months,
             number_of_pipes,
             number_of_temperatures,
@@ -485,20 +489,42 @@ def main(  # pylint: disable=too-many-branches
             save_2d_output,
             weather_forecaster,
         )
-        if override_collector_input_temperature is None:
-            raise ProgrammerJudgementFault(
-                "{}Override collector temperature not specified in decoupled ".format(
-                    BColours.FAIL
-                )
-                + "run.{}".format(BColours.ENDC)
-            )
         system_data = {
             override_collector_input_temperature
             - ZERO_CELCIUS_OFFSET: system_data_entry[1]
         }
+    elif operating_mode.decoupled and operating_mode.dynamic:
+        if override_collector_input_temperature is None:
+            raise ProgrammerJudgementFault(
+                "{}Override collector input temperature not provided.{}".format(
+                    BColours.FAIL, BColours.ENDC
+                )
+            )
+        (final_run_temperature_vector, system_data,) = decoupled.decoupled_dynamic_run(
+            cloud_efficacy_factor,
+            override_collector_input_temperature,
+            days,
+            initial_month,
+            initial_system_temperature_vector,
+            logger,
+            minutes,
+            months,
+            number_of_pipes,
+            number_of_temperatures,
+            number_of_x_segments,
+            number_of_y_segments,
+            operating_mode,
+            pvt_panel,
+            resolution,
+            save_2d_output,
+            start_time,
+            weather_forecaster,
+        )
     else:
         raise ProgrammerJudgementFault(
-            "The system model was called with an operating mode "
+            "The system model was called with an invalid operating mode: {}.".format(
+                operating_mode
+            )
         )
 
     return final_run_temperature_vector, system_data

@@ -59,7 +59,7 @@ CONVERGENT_SOLUTION_PRECISION = 1
 DEFAULT_INITIAL_DATE_AND_TIME = datetime.datetime(2005, 1, 1, 0, 0, tzinfo=pytz.UTC)
 
 # The default system temperature, used for instantiating runs.
-DEFAULT_SYSTEM_TEMPERATURE = ZERO_CELCIUS_OFFSET + 30  # [K]
+DEFAULT_SYSTEM_TEMPERATURE = ZERO_CELCIUS_OFFSET + 18.41  # [K]
 
 # The density of water, measured in kilograms per meter cubed.
 DENSITY_OF_WATER: int = 1000

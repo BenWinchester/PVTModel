@@ -50,6 +50,10 @@ except ModuleNotFoundError:
 
 __all__ = ("analyse",)
 
+# Used to distinguish copled data sets.
+COUPLED_DATA_TYPE = "coupled"
+# Used to distinguished decoupled data sets.
+DECOUPLED_DATA_TYPE = "decoupled"
 # Used to distinguish dynamic data sets.
 DYNAMIC_DATA_TYPE = "dynamic"
 # The directory into which which should be saved
@@ -63,9 +67,10 @@ STEADY_STATE_DATA_TYPE = "steady_state"
 # Name of the steady-state data file.
 STEADY_STATE_DATA_FILE_NAME = "autotherm.yaml"
 # How detailed the graph should be
-GRAPH_DETAIL: GraphDetail = GraphDetail.lowest
+GRAPH_DETAIL: GraphDetail = GraphDetail.highest
 # How many values there should be between each tick on the x-axis
-X_TICK_SEPARATION: int = int(8 * GRAPH_DETAIL.value / 48)
+# X_TICK_SEPARATION: int = int(8 * GRAPH_DETAIL.value / 48)
+X_TICK_SEPARATION: int = 10
 # Which days of data to include
 DAYS_TO_INCLUDE: List[bool] = [False, True]
 
@@ -900,7 +905,7 @@ def plot_two_dimensional_figure(
         plt.close("all")
 
 
-def analyse_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
+def analyse_coupled_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
     """
     Carry out analysis on a set of dynamic data.
 
@@ -912,7 +917,7 @@ def analyse_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
 
     """
 
-    logger.info("Beginning analysis of dynamic data set.")
+    logger.info("Beginning analysis of coupled dynamic data set.")
 
     # * Reduce the resolution of the data.
     data = _reduce_data(data, GRAPH_DETAIL, logger)
@@ -1424,7 +1429,7 @@ def analyse_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
     """  # pylint: disable=pointless-string-statement
 
 
-def analyse_steady_state_data(data: Dict[Any, Any], logger: Logger) -> None:
+def analyse_decoupled_steady_state_data(data: Dict[Any, Any], logger: Logger) -> None:
     """
     Carry out analysis on a set of steady-state data.
 
@@ -1594,6 +1599,47 @@ def analyse_steady_state_data(data: Dict[Any, Any], logger: Logger) -> None:
     )
 
 
+def analyse_decoupled_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
+    """
+    Carry out analysis on a decoupled dyanmic set of data.
+
+    :param data:
+        The data to analyse.
+
+    :param logger:
+        The logger to use for the run.
+
+    """
+
+    logger.info("Beginning analysis of a decoupled dynamic data set.")
+
+    # * Reduce the resolution of the data.
+    data = _reduce_data(data, GRAPH_DETAIL, logger)
+    logger.info(
+        "Data successfully reduced to %s graph detail level.", GRAPH_DETAIL.name
+    )
+
+    # * Create new data values where needed.
+    data = _post_process_data(data)
+    logger.info("Post-processing of data complete.")
+
+    # Plot output temperature and irradiance.
+    plot_figure(
+        "collector_output_response",
+        data,
+        first_axis_things_to_plot=[
+            "collector_output_temperature",
+        ],
+        first_axis_label="Collector Output Temperature / deg C",
+        first_axis_y_limits=[15, 30],
+        second_axis_things_to_plot=[
+            "solar_irradiance",
+        ],
+        second_axis_label="Solar Irradiance / W/m^2",
+        second_axis_y_limits=[0, 1000],
+    )
+
+
 def analyse(data_file_name: str, show_output: Optional[bool] = False) -> None:
     """
     The main method for the analysis module.
@@ -1622,10 +1668,18 @@ def analyse(data_file_name: str, show_output: Optional[bool] = False) -> None:
         data_type = DYNAMIC_DATA_TYPE
 
     # * Carry out analysis appropriate to the data type specified.
-    if data_type == DYNAMIC_DATA_TYPE:
-        analyse_dynamic_data(data, logger)
-    elif data_type == STEADY_STATE_DATA_TYPE:
-        analyse_steady_state_data(data, logger)
+    if (
+        data_type == DYNAMIC_DATA_TYPE
+        or data_type == f"{COUPLED_DATA_TYPE}_{DYNAMIC_DATA_TYPE}"
+    ):
+        analyse_coupled_dynamic_data(data, logger)
+    elif (
+        data_type == STEADY_STATE_DATA_TYPE
+        or data_type == f"{DECOUPLED_DATA_TYPE}_{STEADY_STATE_DATA_TYPE}"
+    ):
+        analyse_decoupled_steady_state_data(data, logger)
+    elif data_type == f"{DECOUPLED_DATA_TYPE}_{DYNAMIC_DATA_TYPE}":
+        analyse_decoupled_dynamic_data(data, logger)
     else:
         logger.error("Data type was neither 'dynamic' nor 'steady_state'. Exiting...")
         sys.exit(1)

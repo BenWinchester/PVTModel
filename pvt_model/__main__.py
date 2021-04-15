@@ -762,10 +762,10 @@ def _save_data(
             system_data_dict.update(dataclasses.asdict(carbon_emissions))  # type: ignore
 
         # Append the data type for the run.
-        if operating_mode.dynamic:
-            system_data_dict["data_type"] = "dynamic"
-        elif operating_mode.steady_state:
-            system_data_dict["data_type"] = "steady_state"
+        system_data_dict["data_type"] = "{coupling}_{timing}".format(
+            coupling="coupled" if operating_mode.coupled else "decoupled",
+            timing="steady_state" if operating_mode.steady_state else "dynamic",
+        )
 
         # Save the data
         # If this is the initial dump, then create the file.
@@ -888,23 +888,24 @@ def main(args) -> None:  # pylint: disable=too-many-branches
     # Determine the operating mode of the system.
     operating_mode = OperatingMode(not parsed_args.decoupled, parsed_args.dynamic)
 
-    if operating_mode.coupled:
-        if operating_mode.dynamic:
-            logger.info("Running a dynamic and coupled system.")
-            print(
-                f"{BColours.OKGREEN}Running a dynamic and coupled system.{BColours.ENDC}"
+    if operating_mode.dynamic and operating_mode.coupled:
+        logger.info(
+            "Running a dynamic and coupled system.",
+        )
+        print(
+            "{}Running a dynamic and coupled system.{}".format(
+                BColours.OKGREEN,
+                BColours.ENDC,
             )
-        if operating_mode.steady_state:
-            logger.info("Running a steady-state and coupled system.")
-            print(
-                f"{BColours.OKGREEN}Running a steady-state and coupled system.{BColours.ENDC}"
-            )
+        )
+
         # Iterate to determine the initial conditions for the run.
         logger.info("Determining consistent initial conditions at coarse resolution.")
         print(
             "Determining consistent initial conditions via successive runs at "
             f"{COARSE_RUN_RESOLUTION}s resolution."
         )
+
         initial_system_temperature_vector, _ = _determine_consistent_conditions(
             pvt_panel.absorber.number_of_pipes,
             layers,
@@ -979,7 +980,61 @@ def main(args) -> None:  # pylint: disable=too-many-branches
             start_time=parsed_args.start_time,
         )
 
-    elif operating_mode.decoupled:
+    elif operating_mode.decoupled and operating_mode.dynamic:
+        logger.info(
+            "Running a dynamic and decoupled system.",
+        )
+        print(
+            "{}Running a dynamic and decoupled system.{}".format(
+                BColours.OKGREEN,
+                BColours.ENDC,
+            )
+        )
+
+        logger.info(
+            "Running the model at the CLI resolution of %ss.", parsed_args.resolution
+        )
+        print(
+            f"Running the model at the high CLI resolution of {parsed_args.resolution}s."
+        )
+        # Run the model at this higher resolution.
+        _, system_data = pvt_system_model_main(
+            parsed_args.average_irradiance,
+            parsed_args.cloud_efficacy_factor,
+            parsed_args.exchanger_data_file,
+            parsed_args.initial_month,
+            [DEFAULT_SYSTEM_TEMPERATURE]
+            * (
+                index_handler.num_temperatures(
+                    pvt_panel.absorber.number_of_pipes,
+                    (parsed_args.x_resolution),
+                    (parsed_args.y_resolution),
+                )
+                - 3
+            ),
+            layers,
+            parsed_args.location,
+            operating_mode,
+            parsed_args.portion_covered,
+            parsed_args.pvt_data_file,
+            parsed_args.resolution,
+            not parsed_args.skip_2d_output,
+            parsed_args.tank_data_file,
+            parsed_args.use_pvgis,
+            parsed_args.verbose,
+            parsed_args.x_resolution,
+            parsed_args.y_resolution,
+            days=parsed_args.days,
+            minutes=parsed_args.minutes,
+            months=parsed_args.months,
+            override_ambient_temperature=parsed_args.ambient_temperature,
+            override_collector_input_temperature=parsed_args.collector_input_temperature,
+            override_irradiance=parsed_args.solar_irradiance,
+            run_number=1,
+            start_time=parsed_args.start_time,
+        )
+
+    elif operating_mode.decoupled and operating_mode.steady_state:
         logger.info("Running a steady-state and decoupled system.")
         print(
             f"{BColours.OKGREEN}"

@@ -104,6 +104,14 @@ class DivergentSolutionError(Exception):
 
         """
 
+        run_one_temperature_vector_string = ""
+        for entry in run_one_temperature_vector:
+            run_one_temperature_vector_string += ", {}".format(str(entry))
+
+        run_two_temperature_vector_string = ""
+        for entry in run_two_temperature_vector:
+            run_two_temperature_vector_string += ", {}".format(str(entry))
+
         super().__init__(
             "A divergent solution was found when attempting to compute the "
             "temperatures at the next time step:\n"
@@ -113,8 +121,8 @@ class DivergentSolutionError(Exception):
             "Divergence is hence "
             f"{round(run_two_temperature_difference - run_one_temperature_difference, 2)}"
             " away from the current solution.\n"
-            f"Previous solution temperatures:\n{run_one_temperature_vector}\n"
-            f"Current solution temperatures:\n{run_two_temperature_vector}\n",
+            f"Previous solution temperatures:\n{run_one_temperature_vector_string}\n"
+            f"Current solution temperatures:\n{run_two_temperature_vector_string}\n",
         )
 
 

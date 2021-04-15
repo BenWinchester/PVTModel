@@ -203,7 +203,7 @@ def solve_temperature_vector_convergence_method(
             resolution=resolution,
             weather_conditions=weather_conditions,
         )
-    elif operating_mode.decoupled:
+    elif operating_mode.steady_state and operating_mode.decoupled:
         coefficient_matrix, resultant_vector = matrix.calculate_matrix_equation(
             best_guess_temperature_vector=run_one_temperature_vector,
             collector_input_temperature=collector_input_temperature,
@@ -213,6 +213,21 @@ def solve_temperature_vector_convergence_method(
             number_of_x_segments=number_of_x_segments,
             number_of_y_segments=number_of_y_segments,
             operating_mode=operating_mode,
+            pvt_panel=pvt_panel,
+            resolution=resolution,
+            weather_conditions=weather_conditions,
+        )
+    elif operating_mode.dynamic and operating_mode.decoupled:
+        coefficient_matrix, resultant_vector = matrix.calculate_matrix_equation(
+            best_guess_temperature_vector=run_one_temperature_vector,
+            collector_input_temperature=collector_input_temperature,
+            logger=logger,
+            number_of_pipes=number_of_pipes,
+            number_of_temperatures=number_of_temperatures,
+            number_of_x_segments=number_of_x_segments,
+            number_of_y_segments=number_of_y_segments,
+            operating_mode=operating_mode,
+            previous_temperature_vector=numpy.asarray(previous_run_temperature_vector),
             pvt_panel=pvt_panel,
             resolution=resolution,
             weather_conditions=weather_conditions,

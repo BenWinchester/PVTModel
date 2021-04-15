@@ -437,4 +437,5 @@ def system_data_from_run(
         layer_temperature_map_pv=temperature_map_pv_layer if save_2d_output else None,
         reduced_collector_temperature=reduced_system_temperature,
         thermal_efficiency=thermal_efficiency,
+        solar_irradiance=weather_conditions.irradiance,
     )

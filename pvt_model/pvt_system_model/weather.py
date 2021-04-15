@@ -777,14 +777,27 @@ class WeatherForecaster:
                     filedata = json.load(f)
 
                 # Process the profile and store it.
-                monthly_irradiance_profiles[
-                    Date(1, cls._month_abbr_to_num[os.path.basename(filename)[:3]])
-                ] = _DailyProfile(
-                    {
-                        datetime.datetime.strptime(key, "%H:%M").time(): value
-                        for key, value in filedata.items()
-                    }
-                )
+                try:
+                    monthly_irradiance_profiles[
+                        Date(1, cls._month_abbr_to_num[os.path.basename(filename)[:3]])
+                    ] = _DailyProfile(
+                        {
+                            datetime.datetime.strptime(key, "%H:%M").time(): value
+                            for key, value in filedata.items()
+                        }
+                    )
+                except ValueError:
+                    logger.info(
+                        "Weather data contains additional information. Attempting to use convert."
+                    )
+                    monthly_irradiance_profiles[
+                        Date(1, cls._month_abbr_to_num[os.path.basename(filename)[:3]])
+                    ] = _DailyProfile(
+                        {
+                            datetime.datetime.strptime(key, "%H:%M:%S").time(): value
+                            for key, value in filedata.items()
+                        }
+                    )
 
         temperature_profiles: Dict[Date, _DailyProfile] = dict()
         for filename in temperature_filenames:
@@ -792,15 +805,29 @@ class WeatherForecaster:
                 filedata = json.load(f)
 
             # Process the profile and store it.
-            temperature_profiles[
-                Date(1, cls._month_abbr_to_num[os.path.basename(filename)[:3]])
-            ] = _DailyProfile(
-                {
-                    datetime.datetime.strptime(key, "%H:%M").time(): value
-                    + ZERO_CELCIUS_OFFSET
-                    for key, value in filedata.items()
-                }
-            )
+            try:
+                temperature_profiles[
+                    Date(1, cls._month_abbr_to_num[os.path.basename(filename)[:3]])
+                ] = _DailyProfile(
+                    {
+                        datetime.datetime.strptime(key, "%H:%M").time(): value
+                        + ZERO_CELCIUS_OFFSET
+                        for key, value in filedata.items()
+                    }
+                )
+            except ValueError:
+                logger.info(
+                    "Weather data contains additional information. Attempting to use convert."
+                )
+                temperature_profiles[
+                    Date(1, cls._month_abbr_to_num[os.path.basename(filename)[:3]])
+                ] = _DailyProfile(
+                    {
+                        datetime.datetime.strptime(key, "%H:%M:%S").time(): value
+                        + ZERO_CELCIUS_OFFSET
+                        for key, value in filedata.items()
+                    }
+                )
 
         # # @@@ For now, the solar irradiance profiles and temperature profiles for the
         # # @@@ missing months are filled in here.

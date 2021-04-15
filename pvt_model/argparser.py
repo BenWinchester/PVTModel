@@ -147,9 +147,7 @@ def check_args(  # pylint: disable=too-many-branches
 
     # Enforce the matching up of dynamic and steady-state arguments.
     # Enforce that either dynamic or steady-state is specified, but not both.
-    if (parsed_args.dynamic and parsed_args.steady_state) or (
-        not parsed_args.dynamic and not parsed_args.steady_state
-    ):
+    if parsed_args.dynamic is parsed_args.steady_state:
         raise ArgumentMismatchError(
             "{}Either `--dynamnic` or `--steady-state` should be used, but ".format(
                 BColours.FAIL
@@ -158,25 +156,27 @@ def check_args(  # pylint: disable=too-many-branches
         )
 
     # Enforce that, if decoupled is specified, steady-state is specified.
-    if parsed_args.decoupled and not parsed_args.steady_state:
+    if not parsed_args.decoupled and (
+        not parsed_args.dynamic or parsed_args.steady_state
+    ):
         raise ArgumentMismatchError(
-            "{}If `--decoupled` is specified, the system must be run in ".format(
+            "{}If `--decoupled` is not specified, the system must be run in ".format(
                 BColours.FAIL
             )
-            + "steady-state mode.{}".format(BColours.ENDC)
+            + "dynamic mode.{}".format(BColours.ENDC)
         )
 
     # Enforce that, if decoupled is specified, solar irradiance is specified.
-    if parsed_args.decoupled and not parsed_args.steady_state_data_file:
+    if parsed_args.steady_state and not parsed_args.steady_state_data_file:
         raise ArgumentMismatchError(
-            "{}If `--decoupled` is specified, the steady-state data file must ".format(
+            "{}If `--steady_state` is specified, the steady-state data file must ".format(
                 BColours.FAIL
             )
             + "be specified with `--steady-state-data-file`.{}".format(BColours.ENDC)
         )
 
     # Enforce that, if decoupled is not specified, either days or months is specified.
-    if not parsed_args.decoupled and not (
+    if not parsed_args.steady_state and not (
         parsed_args.months is not None
         or parsed_args.days is not None
         or parsed_args.minutes is not None
@@ -192,7 +192,7 @@ def check_args(  # pylint: disable=too-many-branches
 
     # Enforce that, if minutes is specified, that it is greater than the resolution.
     if parsed_args.minutes is not None:
-        if resolution * 60 > parsed_args.minutes:
+        if parsed_args.resolution > parsed_args.minutes * 60:
             raise ArgumentMismatchError(
                 "{}The resolution of the simulation must be less than the time ".format(
                     BColours.FAIL

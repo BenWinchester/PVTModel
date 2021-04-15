@@ -44,6 +44,7 @@ def coupled_dynamic_run(
     initial_system_temperature_vector: List[float],
     load_system: load.LoadSystem,
     logger: logging.Logger,
+    minutes: Optional[int],
     months: Optional[int],
     number_of_pipes: int,
     number_of_temperatures: int,
@@ -85,6 +86,10 @@ def coupled_dynamic_run(
 
     :param logger:
         The logger to be used for the run.
+
+    :param minutes:
+        The number of minutes for which to run the simulation, if specified. Otherwise,
+        `None`.
 
     :param months:
         The number of months for which to run the simulation, if specified. Otherwise,
@@ -131,14 +136,15 @@ def coupled_dynamic_run(
     # Set up a holder for information about the system.
     system_data: Dict[float, SystemData] = dict()
 
-    if days is None and months is None:
+    # Set up the time iterator.
+    if minutes is None and days is None and months is None:
         raise ProgrammerJudgementFault(
-            "{}Either days or months must be specified for dynamic runs.{}".format(
-                BColours.FAIL, BColours.ENDC
+            "{}Either minutes, days or months must be specified for dynamic ".format(
+                BColours.FAIL
             )
+            + "runs.{}".format(BColours.ENDC)
         )
 
-    # Set up the time iterator.
     num_months = (
         (initial_month if initial_month is not None else 1)
         - 1

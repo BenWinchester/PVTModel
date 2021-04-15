@@ -393,6 +393,10 @@ class SystemData:
     .. attribute:: sky_temperature
         The temperature of the sky, measured in Celcius.
 
+    .. attribute:: solar_irradiance
+        The solar irradiance incident on the PV-T collector, measured in Watts per meter
+        squared.
+
     .. attribute:: tank_temperature
         The temperature of the hot-water tank, measured in Celcius.
 
@@ -445,6 +449,7 @@ class SystemData:
     pv_temperature: float
     reduced_collector_temperature: Optional[float]
     sky_temperature: float
+    solar_irradiance: float
     tank_temperature: Optional[float]
     thermal_efficiency: Optional[float]
     collector_input_temperature: Optional[float] = None
