@@ -1629,6 +1629,8 @@ def analyse_decoupled_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None
         data,
         first_axis_things_to_plot=[
             "collector_output_temperature",
+            "collector_input_temperature",
+            "ambient_temperature",
         ],
         first_axis_label="Collector Output Temperature / deg C",
         first_axis_y_limits=[15, 30],
