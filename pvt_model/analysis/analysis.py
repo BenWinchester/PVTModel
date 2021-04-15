@@ -67,7 +67,7 @@ STEADY_STATE_DATA_TYPE = "steady_state"
 # Name of the steady-state data file.
 STEADY_STATE_DATA_FILE_NAME = "autotherm.yaml"
 # How detailed the graph should be
-GRAPH_DETAIL: GraphDetail = GraphDetail.highest
+GRAPH_DETAIL: GraphDetail = GraphDetail.lowest
 # How many values there should be between each tick on the x-axis
 # X_TICK_SEPARATION: int = int(8 * GRAPH_DETAIL.value / 48)
 X_TICK_SEPARATION: int = 10
