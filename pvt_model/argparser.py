@@ -445,6 +445,13 @@ def parse_args(args) -> argparse.Namespace:
         default=False,
         help="If specified, verbose logging will be carried out.",
     )
+    parser.add_argument(
+        "--wind-speed",
+        "-w",
+        default=None,
+        help="If specified, overrides the wind-speed profiles used.",
+        type=int,
+    )
     required_named_arguments.add_argument(
         "--x-resolution",
         "-x",

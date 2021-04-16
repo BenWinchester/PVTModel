@@ -29,7 +29,7 @@ pvt_system:
   latitude: 44.867 # [deg]
   longitude: 8.8 # [deg]
   # The length of the absorber is measured in meters.
-  length: 2.1314 # [m]
+  length: 1.217 # [m]
   # length: 0.11857142857 # [m]
   # These parameters set up how the panel is orientated.
   # All angles are measured in degrees
@@ -41,7 +41,7 @@ pvt_system:
   # Full absorber width.
   # width: 0.86 #[m]
   # One fourteenth of the absorber width.
-  width: 0.081975 # [m]
+  width: 0.0936 # [m]
   # Ilaria's absorber width of 0.1m.
   # width: 0.1 #[m]
 glass:

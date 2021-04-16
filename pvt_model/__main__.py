@@ -976,6 +976,7 @@ def main(args) -> None:  # pylint: disable=too-many-branches
             override_ambient_temperature=parsed_args.ambient_temperature,
             override_collector_input_temperature=parsed_args.collector_input_temperature,
             override_irradiance=parsed_args.solar_irradiance,
+            override_wind_speed=parsed_args.wind_speed,
             run_number=1,
             start_time=parsed_args.start_time,
         )
@@ -1030,6 +1031,7 @@ def main(args) -> None:  # pylint: disable=too-many-branches
             override_ambient_temperature=parsed_args.ambient_temperature,
             override_collector_input_temperature=parsed_args.collector_input_temperature,
             override_irradiance=parsed_args.solar_irradiance,
+            override_wind_speed=parsed_args.wind_speed,
             run_number=1,
             start_time=parsed_args.start_time,
         )

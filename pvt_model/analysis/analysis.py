@@ -70,7 +70,7 @@ STEADY_STATE_DATA_FILE_NAME = "autotherm.yaml"
 GRAPH_DETAIL: GraphDetail = GraphDetail.lowest
 # How many values there should be between each tick on the x-axis
 # X_TICK_SEPARATION: int = int(8 * GRAPH_DETAIL.value / 48)
-X_TICK_SEPARATION: int = 10
+X_TICK_SEPARATION: int = 8
 # Which days of data to include
 DAYS_TO_INCLUDE: List[bool] = [False, True]
 
@@ -1623,6 +1623,9 @@ def analyse_decoupled_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None
     data = _post_process_data(data)
     logger.info("Post-processing of data complete.")
 
+    # Clip out the data points up to 10 minutes in.
+    data = {key: value for key, value in data.items() if int(key) >= 40}
+
     # Plot output temperature and irradiance.
     plot_figure(
         "collector_output_response",
@@ -1633,7 +1636,7 @@ def analyse_decoupled_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None
             "ambient_temperature",
         ],
         first_axis_label="Collector Output Temperature / deg C",
-        first_axis_y_limits=[15, 30],
+        first_axis_y_limits=[16, 24],
         second_axis_things_to_plot=[
             "solar_irradiance",
         ],
