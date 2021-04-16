@@ -34,7 +34,7 @@ from ..__utils__ import (
 )
 
 from .__utils__ import MicroLayer
-from .segment import Segment, SegmentCoordinates
+from .element import Element, ElementCoordinates
 
 __all__ = ("PVT",)
 
@@ -94,8 +94,8 @@ class PVT:
          Represents the middle (pv) layer of the panel. Can be set to `None` if not
         present in the panel.
 
-    .. attribute:: segments
-        A mapping between segment coordinates and the segment.
+    .. attribute:: elements
+        A mapping between element coordinates and the element.
 
     .. attribute:: tedlar
         Represents the tedlar back plate to the PV layer, situated above the PV layer.
@@ -136,7 +136,7 @@ class PVT:
         longitude: float,
         portion_covered: float,
         pv_parameters: PVParameters,
-        segments: Dict[SegmentCoordinates, Segment],
+        elements: Dict[ElementCoordinates, Element],
         tedlar: MicroLayer,
         tilt: float,
         timezone: datetime.timezone,
@@ -198,8 +198,8 @@ class PVT:
         :param pv_parameters:
             Parameters used to instantiate the PV layer.
 
-        :param segments:
-            A mapping between segment coordinate and segment for all segments to be
+        :param elements:
+            A mapping between element coordinate and element for all elements to be
             included in the layer.
 
         :param tedlar:
@@ -239,7 +239,7 @@ class PVT:
         self.length = length
         self.longitude = longitude
         self.portion_covered = portion_covered
-        self.segments = segments
+        self.elements = elements
         self.timezone = timezone
         self.width = width
 
@@ -269,7 +269,7 @@ class PVT:
         self.pv: pv.PV = pv.PV(pv_parameters)
         self.tedlar = tedlar
 
-        # * Instantiate and store the segments on the class.
+        # * Instantiate and store the elements on the class.
 
     def __repr__(self) -> str:
         """

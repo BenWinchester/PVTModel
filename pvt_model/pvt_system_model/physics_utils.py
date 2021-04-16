@@ -24,7 +24,7 @@ from .constants import (
     ZERO_CELCIUS_OFFSET,
 )
 from .pvt_panel import pvt
-from .pvt_panel.segment import Segment
+from .pvt_panel.element import Element
 
 from .__utils__ import ProgrammerJudgementFault, WeatherConditions
 
@@ -45,7 +45,7 @@ __all__ = (
 
 def _top_heat_transfer_coefficient(
     pvt_panel: pvt.PVT,
-    segment_top_temperature: float,
+    element_top_temperature: float,
     weather_conditions: WeatherConditions,
 ) -> float:
     """
@@ -56,8 +56,8 @@ def _top_heat_transfer_coefficient(
     :param pvt_panel:
         The pvt panel being modelled.
 
-    :param segment_top_temperature:
-        The temperature, measured in Kelvin, of the top-layer of the segment.
+    :param element_top_temperature:
+        The temperature, measured in Kelvin, of the top-layer of the element.
 
     :param weather_conditions:
         The weather conditions at the time step being modelled.
@@ -71,7 +71,7 @@ def _top_heat_transfer_coefficient(
     heat_transfer_coefficient: float = (
         weather_conditions.wind_heat_transfer_coefficient ** 3
         + free_heat_transfer_coefficient_of_air(
-            pvt_panel, segment_top_temperature, weather_conditions
+            pvt_panel, element_top_temperature, weather_conditions
         )
         ** 3
     ) ** (1 / 3)
@@ -88,7 +88,7 @@ def convective_heat_transfer_coefficient_of_water(
     Computes the convective heat transfer to a fluid in Watts.
 
     :param fluid_temperature:
-        The temperature of the fluid segment, measured in Kelvin.
+        The temperature of the fluid element, measured in Kelvin.
 
     :param pvt_panel:
         The PVT panel being modelled.
@@ -184,7 +184,7 @@ def dynamic_viscosity_of_water(fluid_temperature: float) -> float:
 
 def free_heat_transfer_coefficient_of_air(
     pvt_panel: pvt.PVT,
-    segment_top_temperature: float,
+    element_top_temperature: float,
     weather_conditions: WeatherConditions,
 ) -> float:
     """
@@ -193,8 +193,8 @@ def free_heat_transfer_coefficient_of_air(
     :param pvt_panel:
         The pvt panel being modelled.
 
-    :param segment_top_temperature:
-        The temperature, measured in Kelvin, of the top-layer of the segment.
+    :param element_top_temperature:
+        The temperature, measured in Kelvin, of the top-layer of the element.
 
     :param weather_conditions:
         The weather conditions at the time step being modelled.
@@ -209,7 +209,7 @@ def free_heat_transfer_coefficient_of_air(
 
     current_rayleigh_number = rayleigh_number(
         length_scale,
-        segment_top_temperature,
+        element_top_temperature,
         pvt_panel.tilt_in_radians,
         weather_conditions,
     )
@@ -229,7 +229,7 @@ def free_heat_transfer_coefficient_of_air(
     return (weather_conditions.thermal_conductivity_of_air / length_scale) * (
         nusselt_number(
             length_scale,
-            segment_top_temperature,
+            element_top_temperature,
             pvt_panel.tilt_in_radians,
             weather_conditions,
         )
@@ -493,7 +493,8 @@ def reduced_temperature(
 def upward_loss_terms(
     best_guess_temperature_vector: Union[List[float], ndarray],
     pvt_panel: pvt.PVT,
-    segment: Segment,
+    element: Element,
+    source_emissivity: float,
     source_index: int,
     weather_conditions: WeatherConditions,
 ) -> Tuple[float, float]:
@@ -506,11 +507,14 @@ def upward_loss_terms(
     :param pvt_panel:
         The pvt panel being modelled.
 
-    :param segment:
-        The segment currently being considered.
+    :param element:
+        The element currently being considered.
+
+    :param source_emissivity:
+        The emissivity of the upper layer of the element currently being considered.
 
     :param source_index:
-        The index of the source segment.
+        The index of the source element.
 
     :param weather_conditions:
         The weather conditions at the time step being modelled.
@@ -523,20 +527,20 @@ def upward_loss_terms(
     """
 
     upward_conduction = (
-        segment.width  # [m]
-        * segment.length  # [m]
+        element.width  # [m]
+        * element.length  # [m]
         * _top_heat_transfer_coefficient(
             pvt_panel, best_guess_temperature_vector[source_index], weather_conditions
         )  # [W/m^2*K]
     )
 
     upward_radiation = (
-        segment.width  # [m]
-        * segment.length  # [m]
+        element.width  # [m]
+        * element.length  # [m]
         * radiative_heat_transfer_coefficient(
             destination_temperature=weather_conditions.sky_temperature,
             radiating_to_sky=True,
-            source_emissivity=pvt_panel.glass.emissivity,
+            source_emissivity=source_emissivity,
             source_temperature=best_guess_temperature_vector[source_index],
         )  # [W/m^2*K]
     )

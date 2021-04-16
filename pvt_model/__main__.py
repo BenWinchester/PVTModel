@@ -832,11 +832,11 @@ def main(args) -> None:  # pylint: disable=too-many-branches
         parsed_args.y_resolution,
     )
     logger.debug(
-        "PV-T panel segments:\n  %s",
+        "PV-T panel elements:\n  %s",
         "\n  ".join(
             [
-                f"{segment_coordinates}: {segment}"
-                for segment_coordinates, segment in pvt_panel.segments.items()
+                f"{element_coordinates}: {element}"
+                for element_coordinates, element in pvt_panel.elements.items()
             ]
         ),
     )

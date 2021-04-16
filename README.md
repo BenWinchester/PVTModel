@@ -25,8 +25,8 @@ For running the model, the following CLI arguments are required as a minimum:
 For running the model as a stand-alone (decoupled) panel, the following requirements are required as an addition to the minimum above:
 * `--decoupled --steady-state` - Must be used to specify that the run is decoupled and steady-state.
 * `--steady-state-data-file <steady-state system data file>` - Information about the runs that should be conducted needs to be specified.
-* `--x-resolution <int>` - Specifies the number of segments to use in the x-direction.
-* `--y-resolution <int>` - Specifies the number of segments to use in the y-direction.
+* `--x-resolution <int>` - Specifies the number of elements to use in the x-direction.
+* `--y-resolution <int>` - Specifies the number of elements to use in the y-direction.
 
 For running the model as an integrated (coupled) panel, the following requirements are required as an addition to the minimum above:
 * `--dynamic` - Must be used to specifiy that the run is coupled and dynamic.

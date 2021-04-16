@@ -153,7 +153,7 @@ def insulation_thermal_resistance(
         The :class:`pvt.PVT` instance representing the pvt panel being modelled.
 
     :param source_index:
-        The index of the segment emitting to the environment.
+        The index of the element emitting to the environment.
 
     :param weather_conditions:
         The weather conditions at the current time step.

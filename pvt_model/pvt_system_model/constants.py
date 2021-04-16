@@ -64,7 +64,7 @@ DEFAULT_SYSTEM_TEMPERATURE = ZERO_CELCIUS_OFFSET + 18.41  # [K]
 # The density of water, measured in kilograms per meter cubed.
 DENSITY_OF_WATER: int = 1000
 
-# The maximum size allowed for the width of edge segments, measured in meters.
+# The maximum size allowed for the width of edge elements, measured in meters.
 EDGE_WIDTH = 0.005
 
 # The maximum size allowed for the length of top and bottom-eg

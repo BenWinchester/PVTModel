@@ -332,11 +332,11 @@ def main(  # pylint: disable=too-many-branches
     )
     logger.info("PV-T panel successfully instantiated: %s", pvt_panel)
     logger.debug(
-        "PV-T panel segments:\n  %s",
+        "PV-T panel elements:\n  %s",
         "\n  ".join(
             [
-                f"{segment_coordinates}: {segment}"
-                for segment_coordinates, segment in pvt_panel.segments.items()
+                f"{element_coordinates}: {element}"
+                for element_coordinates, element in pvt_panel.elements.items()
             ]
         ),
     )
@@ -372,33 +372,33 @@ def main(  # pylint: disable=too-many-branches
     # Determine the number of temperatures being modelled.
     number_of_pipes = len(
         {
-            segment.pipe_index
-            for segment in pvt_panel.segments.values()
-            if segment.pipe_index is not None
+            element.pipe_index
+            for element in pvt_panel.elements.values()
+            if element.pipe_index is not None
         }
     )
-    number_of_x_segments = len(
-        {segment.x_index for segment in pvt_panel.segments.values()}
+    number_of_x_elements = len(
+        {element.x_index for element in pvt_panel.elements.values()}
     )
-    number_of_y_segments = len(
-        {segment.y_index for segment in pvt_panel.segments.values()}
+    number_of_y_elements = len(
+        {element.y_index for element in pvt_panel.elements.values()}
     )
     if operating_mode.coupled:
         number_of_temperatures: int = index_handler.num_temperatures(
-            number_of_pipes, number_of_x_segments, number_of_y_segments
+            number_of_pipes, number_of_x_elements, number_of_y_elements
         )
     else:
         number_of_temperatures = (
             index_handler.num_temperatures(
-                number_of_pipes, number_of_x_segments, number_of_y_segments
+                number_of_pipes, number_of_x_elements, number_of_y_elements
             )
             - 3
         )
     logger.info(
-        "System consists of %s pipes, %s by %s segments, and %s temperatures in all.",
+        "System consists of %s pipes, %s by %s elements, and %s temperatures in all.",
         number_of_pipes,
-        number_of_x_segments,
-        number_of_y_segments,
+        number_of_x_elements,
+        number_of_y_elements,
         number_of_temperatures,
     )
 
@@ -452,8 +452,8 @@ def main(  # pylint: disable=too-many-branches
             months,
             number_of_pipes,
             number_of_temperatures,
-            number_of_x_segments,
-            number_of_y_segments,
+            number_of_x_elements,
+            number_of_y_elements,
             operating_mode,
             pvt_panel,
             resolution,
@@ -479,8 +479,8 @@ def main(  # pylint: disable=too-many-branches
             logger,
             number_of_pipes,
             number_of_temperatures,
-            number_of_x_segments,
-            number_of_y_segments,
+            number_of_x_elements,
+            number_of_y_elements,
             operating_mode,
             pvt_panel,
             save_2d_output,
@@ -508,8 +508,8 @@ def main(  # pylint: disable=too-many-branches
             months,
             number_of_pipes,
             number_of_temperatures,
-            number_of_x_segments,
-            number_of_y_segments,
+            number_of_x_elements,
+            number_of_y_elements,
             operating_mode,
             pvt_panel,
             resolution,

@@ -419,17 +419,17 @@ class SystemData:
         pipes.
 
     .. attribute:: layer_temperature_map_absorber
-        A mapping between coordinate and temperature for segments within the absorber
+        A mapping between coordinate and temperature for elements within the absorber
         layer.
 
     .. attribute:: layer_temperature_map_glass
-        A mapping between coordinate and temperature for segments within the glass layer.
+        A mapping between coordinate and temperature for elements within the glass layer.
 
     .. attribute:: layer_temperature_map_pipe
         A mapping between coordinate and temperature for the pipes.
 
     .. attribute:: layer_temperature_map_pv
-        A mapping between coordinate and temperature for segments within the pv layer.
+        A mapping between coordinate and temperature for elements within the pv layer.
 
     .. attribute:: reduced_collector_temperature
         The reduced temperature of the collector.

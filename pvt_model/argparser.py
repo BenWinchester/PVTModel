@@ -455,14 +455,14 @@ def parse_args(args) -> argparse.Namespace:
     required_named_arguments.add_argument(
         "--x-resolution",
         "-x",
-        help="The number of segments to include in the x direction (across the panel) "
+        help="The number of elements to include in the x direction (across the panel) "
         "for the simulation.",
         type=int,
     )
     required_named_arguments.add_argument(
         "--y-resolution",
         "-y",
-        help="The number of segments to include in the y direction (along the length of "
+        help="The number of elements to include in the y direction (along the length of "
         "the panel) for the simulation.",
         type=int,
     )

@@ -747,7 +747,7 @@ def plot_two_dimensional_figure(
     hold: bool = False,
     hour: Optional[int] = None,
     minute: Optional[int] = None,
-    x_axis_label: str = "Y segment index",
+    x_axis_label: str = "Y element index",
 ) -> None:
     """
     Plots a two-dimensional figure.
@@ -869,8 +869,8 @@ def plot_two_dimensional_figure(
         aspect=array_shape[1] / array_shape[0],
     )
     plt.title(plot_title)
-    plt.xlabel("Segment x index")
-    plt.ylabel("Segment y index")
+    plt.xlabel("Element x index")
+    plt.ylabel("Element y index")
 
     # Add axes and colour scale.
     fig3D.colorbar(surface, shrink=0.5, aspect=5, label=axis_label)
@@ -1673,14 +1673,11 @@ def analyse(data_file_name: str, show_output: Optional[bool] = False) -> None:
         data_type = DYNAMIC_DATA_TYPE
 
     # * Carry out analysis appropriate to the data type specified.
-    if (
-        data_type == DYNAMIC_DATA_TYPE
-        or data_type == f"{COUPLED_DATA_TYPE}_{DYNAMIC_DATA_TYPE}"
-    ):
+    if data_type in (DYNAMIC_DATA_TYPE, f"{COUPLED_DATA_TYPE}_{DYNAMIC_DATA_TYPE}"):
         analyse_coupled_dynamic_data(data, logger)
-    elif (
-        data_type == STEADY_STATE_DATA_TYPE
-        or data_type == f"{DECOUPLED_DATA_TYPE}_{STEADY_STATE_DATA_TYPE}"
+    elif data_type in (
+        STEADY_STATE_DATA_TYPE,
+        f"{DECOUPLED_DATA_TYPE}_{STEADY_STATE_DATA_TYPE}",
     ):
         analyse_decoupled_steady_state_data(data, logger)
     elif data_type == f"{DECOUPLED_DATA_TYPE}_{DYNAMIC_DATA_TYPE}":
