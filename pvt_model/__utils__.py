@@ -374,6 +374,9 @@ class SystemData:
     .. attribute:: date
         A `str` giving the current date.
 
+    .. attribute:: electrical_efficiency
+        The electrical efficiency of the PV layer of the collector.
+
     .. attribute:: exchanger_temperature_drop
         The temperature drop through the heat exchanger in the tank, measured in Kelvin
         or Celcius. (As it is a temperature difference, the two scales are equivalent.)
@@ -439,10 +442,11 @@ class SystemData:
 
     """
 
+    absorber_temperature: float
     ambient_temperature: float
     bulk_water_temperature: float
-    absorber_temperature: float
     date: str
+    electrical_efficiency: Optional[float]
     glass_temperature: float
     exchanger_temperature_drop: Optional[float]
     pipe_temperature: float

@@ -16,12 +16,13 @@ vector or `tuple`. The work for doing so is done here, in the index module.
 
 """
 
-from typing import Optional
+from typing import Optional, Tuple
 
 from ..__utils__ import (
     ProgrammerJudgementFault,
     TemperatureName,
 )
+from .pvt_panel import pvt
 
 __all__ = (
     "index_from_pipe_coordinates",
@@ -34,8 +35,52 @@ __all__ = (
 )
 
 
+def _calculate_number_of_temperatures(
+    pvt_panel: pvt.PVT,
+) -> Tuple[int, int, int, int, int]:
+    """
+    Calculates, based off the PVT collector, the number of temperatures in each layer.
+
+    :param pvt_panel:
+        The PVT collector being modelled.
+
+    :return:
+        A `tuple` containing:
+        - the number of glass temperatures in the collector,
+        - the number of pv temperatures in the collector,
+        - the number of absorber temperatures in the collector,
+        - the number of panel (i.e., glass, pv, and absorber) temperatures in the
+          collector,
+        - the number of pipe/htf temperatures in the collector,
+
+    """
+
+    num_glass_temperatures = sum(
+        [element.glass for element in pvt_panel.elements.values()]
+    )
+    num_pv_temperatures = sum([element.pv for element in pvt_panel.elements.values()])
+    num_absorber_temperatures = sum(
+        [element.absorber for element in pvt_panel.elements.values()]
+    )
+    num_panel_temperatures: int = (
+        num_glass_temperatures + num_pv_temperatures + num_absorber_temperatures
+    )
+    num_fluid_temperatures = sum(
+        [element.pipe for element in pvt_panel.elements.values()]
+    )
+
+    return (
+        num_glass_temperatures,
+        num_pv_temperatures,
+        num_absorber_temperatures,
+        num_panel_temperatures,
+        num_fluid_temperatures,
+    )
+
+
 def _get_index(  # pylint: disable=too-many-branches
     temperature_name: TemperatureName,
+    pvt_panel: pvt.PVT,
     *,
     number_of_pipes: Optional[int] = None,
     number_of_x_elements: Optional[int] = None,
@@ -49,6 +94,9 @@ def _get_index(  # pylint: disable=too-many-branches
 
     :param temperature_name:
         The name of the temperature being indexed.
+
+    :param pvt_panel:
+        The :class:`pvt.PVT` instance representing the PVT collector being modelled.
 
     :param number_of_pipes:
         The number of HTF pipes in the absorber.
@@ -79,6 +127,15 @@ def _get_index(  # pylint: disable=too-many-branches
 
     index: Optional[int] = None
 
+    # Fetch the number of temperatures of each type.
+    (
+        num_glass_temperatures,
+        num_pv_temperatures,
+        _,
+        num_panel_temperatures,
+        num_fluid_temperatures,
+    ) = _calculate_number_of_temperatures(pvt_panel)
+
     if temperature_name == TemperatureName.glass:
         if number_of_x_elements is None or x_coord is None or y_coord is None:
             raise ProgrammerJudgementFault(
@@ -87,184 +144,73 @@ def _get_index(  # pylint: disable=too-many-branches
             )
         index = int(number_of_x_elements * y_coord + x_coord)
     if temperature_name == TemperatureName.pv:
-        if (
-            number_of_x_elements is None
-            or number_of_y_elements is None
-            or x_coord is None
-            or y_coord is None
-        ):
+        if number_of_x_elements is None or x_coord is None or y_coord is None:
             raise ProgrammerJudgementFault(
                 "Not all parameters needed were passed in to uniquely determine a "
                 "pv layer index_handler."
             )
-        index = int(number_of_x_elements * (number_of_y_elements + y_coord) + x_coord)
+        index = num_glass_temperatures + int(number_of_x_elements * y_coord + x_coord)
     if temperature_name == TemperatureName.absorber:
-        if (
-            number_of_x_elements is None
-            or number_of_y_elements is None
-            or x_coord is None
-            or y_coord is None
-        ):
+        if number_of_x_elements is None or x_coord is None or y_coord is None:
             raise ProgrammerJudgementFault(
                 "Not all parameters needed were passed in to uniquely determine an "
                 "absorber layer index_handler."
             )
-        index = int(
-            number_of_x_elements * (2 * number_of_y_elements + y_coord) + x_coord
+        index = (
+            num_glass_temperatures
+            + num_pv_temperatures
+            + int(number_of_x_elements * y_coord + x_coord)
         )
     if temperature_name == TemperatureName.pipe:
-        if (
-            number_of_x_elements is None
-            or number_of_y_elements is None
-            or number_of_pipes is None
-            or pipe_number is None
-            or y_coord is None
-        ):
+        if number_of_pipes is None or pipe_number is None or y_coord is None:
             raise ProgrammerJudgementFault(
                 "Not all parameters needed were passed in to uniquely determine a "
                 "pipe index_handler."
             )
-        index = int(
-            (
-                3 * number_of_x_elements * number_of_y_elements
-                + number_of_pipes * y_coord
-                + pipe_number
-            )
-        )
+        index = num_panel_temperatures + int((number_of_pipes * y_coord + pipe_number))
     if temperature_name == TemperatureName.htf:
-        if (
-            number_of_pipes is None
-            or number_of_x_elements is None
-            or number_of_y_elements is None
-            or pipe_number is None
-            or y_coord is None
-        ):
+        if number_of_pipes is None or pipe_number is None or y_coord is None:
             raise ProgrammerJudgementFault(
                 "Not all parameters needed were passed in to uniquely determine an "
                 "htf index_handler."
             )
-        index = int(
-            (
-                (3 * number_of_x_elements + number_of_pipes) * number_of_y_elements
-                + number_of_pipes * y_coord
-                + pipe_number
-            )
+        index = (
+            num_panel_temperatures
+            + num_fluid_temperatures
+            + int((number_of_pipes * y_coord + pipe_number))
         )
     if temperature_name == TemperatureName.htf_in:
-        if (
-            number_of_pipes is None
-            or number_of_x_elements is None
-            or number_of_y_elements is None
-            or pipe_number is None
-            or y_coord is None
-        ):
+        if number_of_pipes is None or pipe_number is None or y_coord is None:
             raise ProgrammerJudgementFault(
                 "Not all parameters needed were passed in to uniquely determine an "
                 "htf-input index_handler."
             )
-        index = int(
-            (
-                (3 * number_of_x_elements + 2 * number_of_pipes) * number_of_y_elements
-                + number_of_pipes * y_coord
-                + pipe_number
-            )
+        index = (
+            num_panel_temperatures
+            + 2 * num_fluid_temperatures
+            + int((number_of_pipes * y_coord + pipe_number))
         )
     if temperature_name == TemperatureName.htf_out:
-        if (
-            number_of_pipes is None
-            or number_of_x_elements is None
-            or number_of_y_elements is None
-            or pipe_number is None
-            or y_coord is None
-        ):
+        if number_of_pipes is None or pipe_number is None or y_coord is None:
             raise ProgrammerJudgementFault(
                 "Not all parameters needed were passed in to uniquely determine an "
                 "htf-output index_handler."
             )
-        index = int(
-            (
-                (3 * number_of_x_elements + 3 * number_of_pipes) * number_of_y_elements
-                + number_of_pipes * y_coord
-                + pipe_number
-            )
+        index = (
+            num_panel_temperatures
+            + 3 * num_fluid_temperatures
+            + int((number_of_pipes * y_coord + pipe_number))
         )
     if temperature_name == TemperatureName.collector_in:
-        if (
-            number_of_pipes is None
-            or number_of_x_elements is None
-            or number_of_y_elements is None
-        ):
-            raise ProgrammerJudgementFault(
-                "Not all parameters needed were passed in to uniquely determine the "
-                "absorber input index_handler."
-            )
-        index = int(
-            (3 * number_of_x_elements + 4 * number_of_pipes) * number_of_y_elements
-        )
+        index = num_panel_temperatures + 4 * num_fluid_temperatures
     if temperature_name == TemperatureName.collector_out:
-        if (
-            number_of_pipes is None
-            or number_of_x_elements is None
-            or number_of_y_elements is None
-        ):
-            raise ProgrammerJudgementFault(
-                "Not all parameters needed were passed in to uniquely determine the "
-                "absorber output index_handler."
-            )
-        index = int(
-            (
-                (3 * number_of_x_elements + 4 * number_of_pipes) * number_of_y_elements
-                + 1
-            )
-        )
+        index = num_panel_temperatures + 4 * num_fluid_temperatures + 1
     if temperature_name == TemperatureName.tank:
-        if (
-            number_of_pipes is None
-            or number_of_x_elements is None
-            or number_of_y_elements is None
-        ):
-            raise ProgrammerJudgementFault(
-                "Not all parameters needed were passed in to uniquely determine the "
-                "tank index_handler."
-            )
-        index = int(
-            (
-                (3 * number_of_x_elements + 4 * number_of_pipes) * number_of_y_elements
-                + 2
-            )
-        )
+        index = num_panel_temperatures + 4 * num_fluid_temperatures + 2
     if temperature_name == TemperatureName.tank_in:
-        if (
-            number_of_pipes is None
-            or number_of_x_elements is None
-            or number_of_y_elements is None
-        ):
-            raise ProgrammerJudgementFault(
-                "Not all parameters needed were passed in to uniquely determine the "
-                "tank input index_handler."
-            )
-        index = int(
-            (
-                (3 * number_of_x_elements + 4 * number_of_pipes) * number_of_y_elements
-                + 3
-            )
-        )
+        index = num_panel_temperatures + 4 * num_fluid_temperatures + 3
     if temperature_name == TemperatureName.tank_out:
-        if (
-            number_of_pipes is None
-            or number_of_x_elements is None
-            or number_of_y_elements is None
-        ):
-            raise ProgrammerJudgementFault(
-                "Not all parameters needed were passed in to uniquely determine the "
-                "tank output index_handler."
-            )
-        index = int(
-            (
-                (3 * number_of_x_elements + 4 * number_of_pipes) * number_of_y_elements
-                + 4
-            )
-        )
+        index = num_panel_temperatures + 4 * num_fluid_temperatures + 4
 
     # Return the index if assigned, else, raise an error.
     if index is not None:
@@ -278,8 +224,9 @@ def index_from_pipe_coordinates(
     number_of_pipes: int,
     number_of_x_elements: int,
     number_of_y_elements: int,
-    temperature_name: TemperatureName,
     pipe_number: int,
+    pvt_panel: pvt.PVT,
+    temperature_name: TemperatureName,
     y_coord: int,
 ) -> int:
     """
@@ -294,11 +241,14 @@ def index_from_pipe_coordinates(
     :param number_of_y_elements:
         The number of elements in the y direction along the panel.
 
-    :param temperature_name:
-        The name of the layer/temperature type being computed.
-
     :param pipe_number:
         The number of the pipe.
+
+    :param pvt_panel:
+        The pvt collector being modelled.
+
+    :param temperature_name:
+        The name of the layer/temperature type being computed.
 
     :param y_coord:
         The y coordinate of the element.
@@ -310,6 +260,7 @@ def index_from_pipe_coordinates(
 
     return _get_index(
         temperature_name,
+        pvt_panel,
         number_of_pipes=number_of_pipes,
         number_of_x_elements=number_of_x_elements,
         number_of_y_elements=number_of_y_elements,
@@ -321,6 +272,7 @@ def index_from_pipe_coordinates(
 def index_from_element_coordinates(
     number_of_x_elements: int,
     number_of_y_elements: int,
+    pvt_panel: pvt.PVT,
     temperature_name: TemperatureName,
     x_coord: int,
     y_coord: int,
@@ -333,6 +285,9 @@ def index_from_element_coordinates(
 
     :param number_of_y_elements:
         The number of elements in the y direction along the panel.
+
+    :param pvt_panel:
+        The pvt collector being modelled.
 
     :param temperature_name:
         The name of the layer/temperature type being computed.
@@ -350,6 +305,7 @@ def index_from_element_coordinates(
 
     return _get_index(
         temperature_name,
+        pvt_panel,
         number_of_x_elements=number_of_x_elements,
         number_of_y_elements=number_of_y_elements,
         x_coord=x_coord,
@@ -358,22 +314,14 @@ def index_from_element_coordinates(
 
 
 def index_from_temperature_name(
-    number_of_pipes: int,
-    number_of_x_elements: int,
-    number_of_y_elements: int,
+    pvt_panel: pvt.PVT,
     temperature_name: TemperatureName,
 ) -> int:
     """
     Computes an index for a body/temperature based solely on the name.
 
-    :param number_of_pipes:
-        The number of pipes in the absorber.
-
-    :param number_of_x_elements:
-        The number of elements in the x direction along the panel.
-
-    :param number_of_y_elements:
-        The number of elements in the y direction along the panel.
+    :param pvt_panel:
+        The PVT collector being modelled.
 
     :param temperature_name:
         The name of the temperature/layer being computed.
@@ -384,43 +332,37 @@ def index_from_temperature_name(
     """
 
     return _get_index(
-        number_of_pipes=number_of_pipes,
-        number_of_x_elements=number_of_x_elements,
-        number_of_y_elements=number_of_y_elements,
-        temperature_name=temperature_name,
+        temperature_name,
+        pvt_panel,
     )
 
 
-def num_temperatures(
-    number_of_pipes: int,
-    number_of_x_elements: int,
-    number_of_y_elements: int,
-) -> int:
+def num_temperatures(pvt_panel: pvt.PVT) -> int:
     """
     Returns the number of temperature variables being modelled.
 
-    :param number_of_pipes:
-        The number of pipes in the absorber.
-
-    :param number_of_x_elements:
-        The number of x elements in the absorber.
-
-    :param number_of_y_elements:
-        The number of y elements in the absorber.
+    :param pvt_panel:
+        The pvt panel being modelled.
 
     :return:
         The total number of temperatures being modelled.
 
     """
 
-    return (3 * number_of_x_elements + 4 * number_of_pipes) * number_of_y_elements + 5
+    return (
+        sum(
+            [
+                element.glass + element.pv + element.absorber + 4 * element.pipe
+                for element in pvt_panel.elements.values()
+            ]
+        )
+        + 5
+    )
 
 
 def temperature_name_from_index(  # pylint: disable=too-many-branches
     index: int,
-    number_of_pipes: int,
-    number_of_x_elements: int,
-    number_of_y_elements: int,
+    pvt_panel: pvt.PVT,
 ) -> TemperatureName:
     """
     Returns the temperature name from the index_handler.
@@ -432,14 +374,8 @@ def temperature_name_from_index(  # pylint: disable=too-many-branches
     :param index:
         The index of the temperature for which to return the temperature name.
 
-    :param number_of_pipes:
-        The number of HTF pipes in the absorber.
-
-    :param number_of_x_elements:
-        The number of elements in the x direction for the absorber model being run.
-
-    :param number_of_y_elements:
-        The number of elements in the y direction for the absorber model being run.
+    :param pvt_panel:
+        The pvt collector being modelled.
 
     :return:
         The temperature name, as a :class:`TemperatureName` instance, based on the index
@@ -452,45 +388,39 @@ def temperature_name_from_index(  # pylint: disable=too-many-branches
     """
 
     temperature_name: Optional[TemperatureName] = None
-    if index < number_of_x_elements * number_of_y_elements:
+
+    # Determine the number of temperatures of each type.
+    (
+        num_glass_temperatures,
+        num_pv_temperatures,
+        _,
+        num_panel_temperatures,
+        num_fluid_temperatures,
+    ) = _calculate_number_of_temperatures(pvt_panel)
+
+    if index < num_glass_temperatures:
         temperature_name = TemperatureName.glass
-    elif index < 2 * number_of_x_elements * number_of_y_elements:
+    elif index < num_glass_temperatures + num_pv_temperatures:
         temperature_name = TemperatureName.pv
-    elif index < 3 * number_of_x_elements * number_of_y_elements:
+    elif index < num_panel_temperatures:
         temperature_name = TemperatureName.absorber
-    elif index < ((3 * number_of_x_elements + number_of_pipes) * number_of_y_elements):
+    elif index < num_panel_temperatures + num_fluid_temperatures:
         temperature_name = TemperatureName.pipe
-    elif index < (
-        (3 * number_of_x_elements + 2 * number_of_pipes) * number_of_y_elements
-    ):
+    elif index < (num_panel_temperatures + 2 * num_fluid_temperatures):
         temperature_name = TemperatureName.htf
-    elif index < (
-        (3 * number_of_x_elements + 3 * number_of_pipes) * number_of_y_elements
-    ):
+    elif index < (num_panel_temperatures + 3 * num_fluid_temperatures):
         temperature_name = TemperatureName.htf_in
-    elif index < (
-        (3 * number_of_x_elements + 4 * number_of_pipes) * number_of_y_elements
-    ):
+    elif index < (num_panel_temperatures + 4 * num_fluid_temperatures):
         temperature_name = TemperatureName.htf_out
-    elif index == (
-        (3 * number_of_x_elements + 4 * number_of_pipes) * number_of_y_elements
-    ):
+    elif index == (num_panel_temperatures + 4 * num_fluid_temperatures):
         temperature_name = TemperatureName.collector_in
-    elif index == (
-        (3 * number_of_x_elements + 4 * number_of_pipes) * number_of_y_elements + 1
-    ):
+    elif index == (num_panel_temperatures + 4 * num_fluid_temperatures + 1):
         temperature_name = TemperatureName.collector_out
-    elif index == (
-        (3 * number_of_x_elements + 4 * number_of_pipes) * number_of_y_elements + 2
-    ):
+    elif index == (num_panel_temperatures + 4 * num_fluid_temperatures + 2):
         temperature_name = TemperatureName.tank
-    elif index == (
-        (3 * number_of_x_elements + 4 * number_of_pipes) * number_of_y_elements + 3
-    ):
+    elif index == (num_panel_temperatures + 4 * num_fluid_temperatures + 3):
         temperature_name = TemperatureName.tank_in
-    elif index == (
-        (3 * number_of_x_elements + 4 * number_of_pipes) * number_of_y_elements + 4
-    ):
+    elif index == (num_panel_temperatures + 4 * num_fluid_temperatures + 4):
         temperature_name = TemperatureName.tank_out
 
     # Return the temperature name if assigned, else, return an error.

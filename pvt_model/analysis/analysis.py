@@ -1450,18 +1450,21 @@ def analyse_decoupled_steady_state_data(data: Dict[Any, Any], logger: Logger) ->
         temperature_string = str(round(float(temperature), 2)).replace(".", "_")
 
         # Glass Temperatures
-        logger.info("Plotting 3D glass profile at %s degC.", temperature_string)
-        plot_two_dimensional_figure(
-            "steady_state_glass_layer_{}degC_input".format(temperature_string),
-            logger,
-            data,
-            axis_label="Temperature / deg C",
-            entry_number=temperature,
-            plot_title="Glass layer temperature with {} K input HTF".format(
-                round(float(temperature), 2)
-            ),
-            thing_to_plot="layer_temperature_map_glass",
-        )
+        try:
+            logger.info("Plotting 3D glass profile at %s degC.", temperature_string)
+            plot_two_dimensional_figure(
+                "steady_state_glass_layer_{}degC_input".format(temperature_string),
+                logger,
+                data,
+                axis_label="Temperature / deg C",
+                entry_number=temperature,
+                plot_title="Glass layer temperature with {} K input HTF".format(
+                    round(float(temperature), 2)
+                ),
+                thing_to_plot="layer_temperature_map_glass",
+            )
+        except TypeError:
+            print("Glass temperature profile could not be plotted due to no data.")
 
         # PV Temperatures
         logger.info("Plotting 3D PV profile at %s degC.", temperature_string)
@@ -1596,6 +1599,18 @@ def analyse_decoupled_steady_state_data(data: Dict[Any, Any], logger: Logger) ->
         plot_title="Collector temperature gain against input temperature",
         disable_lines=True,
         override_axis=ax1,
+    )
+
+    # Plot the electrical efficiency against the reduced temperature.
+    plot_figure(
+        "electrical_efficiency_against_reduced_temperature",
+        data,
+        first_axis_things_to_plot=["electrical_efficiency"],
+        first_axis_label="Electrical efficiency",
+        x_axis_label="Reduced temperature / K m^2 / W",
+        x_axis_thing_to_plot="reduced_collector_temperature",
+        plot_title="Electrical efficiency against reduced temperature",
+        disable_lines=True,
     )
 
 

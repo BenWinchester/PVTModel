@@ -21,7 +21,7 @@ happens within this module.
 import datetime
 
 from logging import Logger
-from typing import Any, Dict, Optional, Set, Tuple
+from typing import Any, Dict, Optional, Set
 
 from .pvt_panel import adhesive, bond, eva, pvt, element, tedlar
 from . import exchanger, tank, pump
@@ -224,9 +224,7 @@ def _absorber_params_from_data(
         ) from None
 
 
-def _glass_params_from_data(
-    glass_data: Dict[str, Any]
-) -> Tuple[float, OpticalLayerParameters]:
+def _glass_params_from_data(glass_data: Dict[str, Any]) -> OpticalLayerParameters:
     """
     Generate a :class:`OpticalLayerParameters` containing glass-layer info from data.
 
@@ -243,20 +241,18 @@ def _glass_params_from_data(
     """
 
     try:
-        return (
-            glass_data["diffuse_reflection_coefficient"],
-            OpticalLayerParameters(
-                absorptivity=glass_data["absorptivity"],  # [unitless]
-                conductivity=glass_data["thermal_conductivity"]
-                if "thermal_conductivity" in glass_data
-                else None,
-                density=glass_data["density"],  # [kg/m^3]
-                emissivity=glass_data["emissivity"],  # [unitless]
-                heat_capacity=glass_data["heat_capacity"],  # [J/kg*K]
-                thickness=glass_data["thickness"],  # [m]
-                transmissivity=glass_data["transmissivity"],  # [unitless]
-            ),
+        return OpticalLayerParameters(
+            absorptivity=glass_data["absorptivity"],  # [unitless]
+            conductivity=glass_data["thermal_conductivity"]
+            if "thermal_conductivity" in glass_data
+            else None,
+            density=glass_data["density"],  # [kg/m^3]
+            emissivity=glass_data["emissivity"],  # [unitless]
+            heat_capacity=glass_data["heat_capacity"],  # [J/kg*K]
+            thickness=glass_data["thickness"],  # [m]
+            transmissivity=glass_data["transmissivity"],  # [unitless]
         )
+
     except KeyError as e:
         raise MissingDataError(
             "Not all needed glass-layer data provided. Potential problem: Glass mass "
@@ -363,11 +359,11 @@ def _elements_from_data(
         )
         return {
             element.ElementCoordinates(0, 0): element.Element(
-                True,
-                True,
+                TemperatureName.absorber in layers,
+                TemperatureName.glass in layers,
                 pvt_data["pvt_collector"]["length"],
                 True,
-                True,
+                TemperatureName.pv in layers,
                 pvt_data["pvt_collector"]["width"],
                 0,
                 0,
@@ -518,9 +514,20 @@ def pvt_panel_from_path(
 
     # Parse the data file into the various data classes.
     pvt_data = read_yaml(pvt_data_file)
-    diffuse_reflection_coefficient, glass_parameters = _glass_params_from_data(
-        pvt_data["glass"]
-    )
+
+    # If there is glass data present, process this accordingly.
+    if "glass" in pvt_data:
+        air_gap_thickness = pvt_data["air_gap"]["thickness"]  # [m]
+        glass_parameters = _glass_params_from_data(pvt_data["glass"])
+    else:
+        if TemperatureName.glass in layers:
+            raise InvalidParametersError(
+                "Glass layer requested on the command line but no glass data in pvt data file.",
+                "glass",
+            )
+        air_gap_thickness = None
+        glass_parameters = None
+
     pv_parameters = _pv_params_from_data(pvt_data["pv"] if "pv" in pvt_data else None)
     absorber_parameters = _absorber_params_from_data(
         pvt_data["pvt_collector"]["length"],  # [m]
@@ -549,13 +556,12 @@ def pvt_panel_from_path(
                 pvt_data["adhesive"]["thermal_conductivity"],
                 pvt_data["adhesive"]["thickness"],
             ),
-            air_gap_thickness=pvt_data["air_gap"]["thickness"],  # [m]
+            air_gap_thickness=air_gap_thickness,
             area=pvt_data["pvt_collector"]["area"]
             if "area" in pvt_data["pvt_collector"]
             else pvt_data["pvt_collector"]["width"]
             * pvt_data["pvt_collector"]["length"],  # [m^2]
             absorber_parameters=absorber_parameters,
-            diffuse_reflection_coefficient=diffuse_reflection_coefficient,
             eva=eva.EVA(
                 pvt_data["eva"]["thermal_conductivity"], pvt_data["eva"]["thickness"]
             ),

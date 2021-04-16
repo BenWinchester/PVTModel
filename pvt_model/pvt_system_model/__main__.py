@@ -384,16 +384,9 @@ def main(  # pylint: disable=too-many-branches
         {element.y_index for element in pvt_panel.elements.values()}
     )
     if operating_mode.coupled:
-        number_of_temperatures: int = index_handler.num_temperatures(
-            number_of_pipes, number_of_x_elements, number_of_y_elements
-        )
+        number_of_temperatures: int = index_handler.num_temperatures(pvt_panel)
     else:
-        number_of_temperatures = (
-            index_handler.num_temperatures(
-                number_of_pipes, number_of_x_elements, number_of_y_elements
-            )
-            - 3
-        )
+        number_of_temperatures = index_handler.num_temperatures(pvt_panel) - 3
     logger.info(
         "System consists of %s pipes, %s by %s elements, and %s temperatures in all.",
         number_of_pipes,

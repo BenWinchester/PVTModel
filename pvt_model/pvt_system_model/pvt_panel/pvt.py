@@ -124,12 +124,11 @@ class PVT:
         self,
         absorber_pipe_bond: bond.Bond,
         adhesive: MicroLayer,
-        air_gap_thickness: float,
+        air_gap_thickness: Optional[float],
         area: float,
         absorber_parameters: CollectorParameters,
-        diffuse_reflection_coefficient: float,
         eva: MicroLayer,
-        glass_parameters: OpticalLayerParameters,
+        glass_parameters: Optional[OpticalLayerParameters],
         insulation: MicroLayer,
         latitude: float,
         length: float,
@@ -154,6 +153,8 @@ class PVT:
 
         :param air_gap_thickness:
             The thickness, in meters, of the air gap between the PV and glass layers.
+            `None` if there is no air gap present, e.g., if the glass layer is not
+            present.
 
         :param area:
             The area of the panel, measured in meters squared.
@@ -163,9 +164,6 @@ class PVT:
 
         :param absorber_parameters:
             Parametsrs used to instantiate the absorber layer.
-
-        :param diffuse_reflection_coefficient:
-            The coefficient of diffuse reflectivity of the upper layer.
 
         :param eva:
             A :class:`MicroLayer` instance representing the eva layer.
@@ -262,9 +260,10 @@ class PVT:
         self.bond = absorber_pipe_bond
         self.absorber = absorber.Collector(absorber_parameters)
         self.eva = eva
-        self.glass: glass.Glass = glass.Glass(
-            diffuse_reflection_coefficient, glass_parameters
-        )
+        if glass_parameters is None:
+            self.glass = None
+        else:
+            self.glass: glass.Glass = glass.Glass(glass_parameters)
         self.insulation = insulation
         self.pv: pv.PV = pv.PV(pv_parameters)
         self.tedlar = tedlar
@@ -472,9 +471,13 @@ class PVT:
 
         """
 
-        ta_product: float = (
-            (1 - self.pv.reflectance - self.pv.transmittance) * self.glass.transmittance
-        ) / (1 - self.pv.reflectance * self.glass.reflectance)
+        if self.glass is not None:
+            ta_product: float = (
+                (1 - self.pv.reflectance - self.pv.transmittance)
+                * self.glass.transmittance
+            ) / (1 - self.pv.reflectance * self.glass.reflectance)
+        else:
+            ta_product = self.pv.absorptivity
 
         return ta_product
 

@@ -1,0 +1,54 @@
+---
+################################################################################
+# autotherm.yaml - Steady-state experimental data used for verification.
+#
+# Copyright 2021, Ben Winchester
+################################################################################
+
+# Data values obtained from
+# http://intergeo.sk/wp-content/uploads/GLAZED-TR-UNIEN12975-2-ENG-ITA-COMPLETO-1.pdf
+#
+
+# Ambient temperature measured in Celcius.
+# Collector input temperatures measured in Celcius.
+# Irradiance measured in Watts per meter squared.
+# Mass flow rate is measured in litres per minute.
+# Wind speed measured in meters per second.
+#
+
+- ambient_temperature: 22.2
+  average_bulk_water_temperature: 17.85
+  collector_input_temperature: 15
+  collector_temperature_gain: 5.7
+  irradiance: 983
+  mass_flow_rate: 1.72
+  thermal_efficiency: 0.5
+  thermal_power: 684
+  wind_speed: 1.63
+- ambient_temperature: 23.9
+  average_bulk_water_temperature: 28.48
+  collector_input_temperature: 26.05
+  collector_temperature_gain: 4.86
+  irradiance: 893
+  mass_flow_rate: 1.72
+  thermal_efficiency: 0.47
+  thermal_power: 582
+  wind_speed: 1.57
+- ambient_temperature: 23.1
+  average_bulk_water_temperature: 41.12
+  collector_input_temperature: 38.81
+  collector_temperature_gain: 4.63
+  mass_flow_rate: 1.72
+  irradiance: 1006
+  thermal_efficiency: 0.39
+  thermal_power: 553
+  wind_speed: 1.51
+- ambient_temperature: 26.8
+  average_bulk_water_temperature: 54.76
+  collector_input_temperature: 56.55
+  collector_temperature_gain: 3.6
+  irradiance: 973
+  mass_flow_rate: 1.73
+  thermal_efficiency: 0.32
+  thermal_power: 434
+  wind_speed: 2.36

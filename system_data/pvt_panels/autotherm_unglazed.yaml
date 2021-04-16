@@ -45,7 +45,7 @@ pvt_collector:
   # Ilaria's absorber width of 0.1m.
   # width: 0.1 #[m]
 pv:
-  absorptivity: 0.92 # [unitless]
+  absorptivity: 0.93 # [unitless]
   # @@@ Value NOT taken from Maria's paper.
   cell_material: "silicon"
   cell_type: "monocrystalline"

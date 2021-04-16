@@ -86,26 +86,28 @@ def _get_system_fourier_numbers(
 
     # Determine the Fourier coefficients of the panel's layers.
     fourier_number_map: Dict[TemperatureName, float] = dict()
-    fourier_number_map[TemperatureName.glass] = round(
-        fourier_number(
-            pvt_panel.glass.thickness,
-            pvt_panel.glass.conductivity,
-            pvt_panel.glass.density,
-            pvt_panel.glass.heat_capacity,
-            resolution,
-        ),
-        2,
-    )
-    fourier_number_map[TemperatureName.pv] = round(
-        fourier_number(
-            pvt_panel.pv.thickness,
-            pvt_panel.pv.conductivity,
-            pvt_panel.pv.density,
-            pvt_panel.pv.heat_capacity,
-            resolution,
-        ),
-        2,
-    )
+    if pvt_panel.glass is not None:
+        fourier_number_map[TemperatureName.glass] = round(
+            fourier_number(
+                pvt_panel.glass.thickness,
+                pvt_panel.glass.conductivity,
+                pvt_panel.glass.density,
+                pvt_panel.glass.heat_capacity,
+                resolution,
+            ),
+            2,
+        )
+    if pvt_panel.pv is not None:
+        fourier_number_map[TemperatureName.pv] = round(
+            fourier_number(
+                pvt_panel.pv.thickness,
+                pvt_panel.pv.conductivity,
+                pvt_panel.pv.density,
+                pvt_panel.pv.heat_capacity,
+                resolution,
+            ),
+            2,
+        )
     fourier_number_map[TemperatureName.absorber] = round(
         fourier_number(
             pvt_panel.absorber.thickness,
@@ -258,6 +260,7 @@ def _determine_consistent_conditions(
     logger: Logger,
     operating_mode: OperatingMode,
     parsed_args: Namespace,
+    pvt_panel: pvt.PVT,
     *,
     override_ambient_temperature: Optional[float] = None,
     override_collector_input_temperature: Optional[float] = None,
@@ -284,6 +287,9 @@ def _determine_consistent_conditions(
 
     :param parsed_args:
         The parsed command-line arguments.
+
+    :param pvt_panel:
+        The :class:`pvt.PVT` instance representing the pvt panel being modelled.
 
     :param override_ambient_tempearture:
         If specified, this can be used as a value to override the weather forecaster's
@@ -312,19 +318,10 @@ def _determine_consistent_conditions(
         if operating_mode.coupled:
             running_system_temperature_vector = [
                 DEFAULT_SYSTEM_TEMPERATURE
-            ] * index_handler.num_temperatures(
-                number_of_pipes,
-                (parsed_args.x_resolution),
-                (parsed_args.y_resolution),
-            )
+            ] * index_handler.num_temperatures(pvt_panel)
         else:
             running_system_temperature_vector = [DEFAULT_SYSTEM_TEMPERATURE] * (
-                index_handler.num_temperatures(
-                    number_of_pipes,
-                    (parsed_args.x_resolution),
-                    (parsed_args.y_resolution),
-                )
-                - 3
+                index_handler.num_temperatures(pvt_panel) - 3
             )
 
     # Call the model to generate the output of the run.
@@ -388,6 +385,7 @@ def _determine_consistent_conditions(
         logger,
         operating_mode,
         parsed_args,
+        pvt_panel,
         override_ambient_temperature=override_ambient_temperature,
         override_collector_input_temperature=override_collector_input_temperature,
         override_irradiance=override_irradiance,
@@ -650,9 +648,6 @@ def _output_temperature_info(
 
     # Determine the average, minimum, and maximum temperatures.
     average_temperature_map = {
-        "glass": round(
-            mean({entry.glass_temperature for entry in system_data.values()}), 3
-        ),
         "pv": round(mean({entry.pv_temperature for entry in system_data.values()}), 3),
         "absorber": round(
             mean({entry.absorber_temperature for entry in system_data.values()}), 3
@@ -663,9 +658,6 @@ def _output_temperature_info(
         ),
     }
     maximum_temperature_map = {
-        "glass": max(
-            {round(entry.glass_temperature, 3) for entry in system_data.values()}
-        ),
         "pv": max({round(entry.pv_temperature, 3) for entry in system_data.values()}),
         "absorber": max(
             {round(entry.absorber_temperature, 3) for entry in system_data.values()}
@@ -675,9 +667,6 @@ def _output_temperature_info(
         ),
     }
     minimum_temperature_map = {
-        "glass": min(
-            {round(entry.glass_temperature, 3) for entry in system_data.values()}
-        ),
         "pv": min({round(entry.pv_temperature, 3) for entry in system_data.values()}),
         "absorber": min(
             {round(entry.absorber_temperature, 3) for entry in system_data.values()}
@@ -686,6 +675,17 @@ def _output_temperature_info(
             {round(entry.bulk_water_temperature, 3) for entry in system_data.values()}
         ),
     }
+
+    if "g" in parsed_args.layers:
+        average_temperature_map["glass"] = round(
+            mean({entry.glass_temperature for entry in system_data.values()}), 3
+        )
+        maximum_temperature_map["glass"] = max(
+            {round(entry.glass_temperature, 3) for entry in system_data.values()}
+        )
+        minimum_temperature_map["glass"] = min(
+            {round(entry.glass_temperature, 3) for entry in system_data.values()}
+        )
 
     if not parsed_args.decoupled:
         average_temperature_map["tank"] = round(
@@ -912,6 +912,7 @@ def main(args) -> None:  # pylint: disable=too-many-branches
             logger,
             operating_mode,
             parsed_args,
+            pvt_panel,
         )
         logger.info("Consistent initial conditions determined at coarse resolution.")
         logger.info(
@@ -927,6 +928,7 @@ def main(args) -> None:  # pylint: disable=too-many-branches
             logger,
             operating_mode,
             parsed_args,
+            pvt_panel,
             resolution=parsed_args.resolution,
             running_system_temperature_vector=initial_system_temperature_vector,
         )
@@ -1005,14 +1007,7 @@ def main(args) -> None:  # pylint: disable=too-many-branches
             parsed_args.exchanger_data_file,
             parsed_args.initial_month,
             [DEFAULT_SYSTEM_TEMPERATURE]
-            * (
-                index_handler.num_temperatures(
-                    pvt_panel.absorber.number_of_pipes,
-                    (parsed_args.x_resolution),
-                    (parsed_args.y_resolution),
-                )
-                - 3
-            ),
+            * (index_handler.num_temperatures(pvt_panel) - 3),
             layers,
             parsed_args.location,
             operating_mode,
@@ -1080,6 +1075,7 @@ def main(args) -> None:  # pylint: disable=too-many-branches
                     logger,
                     operating_mode,
                     parsed_args,
+                    pvt_panel,
                     override_ambient_temperature=steady_state_run[
                         "ambient_temperature"
                     ],
