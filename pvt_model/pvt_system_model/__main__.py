@@ -421,7 +421,7 @@ def main(  # pylint: disable=too-many-branches
     )
 
     if operating_mode.coupled and operating_mode.dynamic:
-        if heat_exchanger is None or hot_water_tank is None:
+        if heat_exchanger is None or hot_water_tank is None or load_system is None:
             raise ProgrammerJudgementFault(
                 "{}{} not defined in dynamic operation.{}".format(
                     BColours.FAIL,
@@ -429,12 +429,9 @@ def main(  # pylint: disable=too-many-branches
                         {
                             entry
                             for entry in {
-                                "heat exchanger"
-                                if heat_exchanger is not None
-                                else None,
-                                "hot-water tank"
-                                if hot_water_tank is not None
-                                else None,
+                                "heat exchanger" if heat_exchanger is None else "",
+                                "hot-water tank" if hot_water_tank is None else "",
+                                "load system" if load_system is None else "",
                             }
                             if entry is not None
                         }
