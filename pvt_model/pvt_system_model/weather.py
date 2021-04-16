@@ -619,7 +619,7 @@ class WeatherForecaster:
         ].solar_irradiance_profiles[date_and_time.day][date_and_time.time()]
 
     @classmethod
-    def from_data(
+    def from_data(  # pylint: disable=too-many-branches
         cls,
         average_irradiance: bool,
         solar_irradiance_filenames: Set[str],
