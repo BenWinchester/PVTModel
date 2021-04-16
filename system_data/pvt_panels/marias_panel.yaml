@@ -23,7 +23,7 @@
 # heating and power System performance;
 # downloaded and stored in Google Drive.
 
-pvt_system:
+pvt_collector:
   latitude: 51.4934 # [deg]
   longitude: 0.0098 # [deg]
   # The timezone offset in Hours from UTC.

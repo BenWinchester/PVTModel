@@ -23,7 +23,7 @@
 # heating and power System performance;
 # downloaded and stored in Google Drive.
 
-pvt_system:
+pvt_collector:
   azimuthal_orientation: 180 # [deg]
   horizontal_tracking: false
   latitude: 51.4934 # [deg]

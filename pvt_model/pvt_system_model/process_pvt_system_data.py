@@ -365,10 +365,10 @@ def _elements_from_data(
             element.ElementCoordinates(0, 0): element.Element(
                 True,
                 True,
-                pvt_data["pvt_system"]["length"],
+                pvt_data["pvt_collector"]["length"],
                 True,
                 True,
-                pvt_data["pvt_system"]["width"],
+                pvt_data["pvt_collector"]["width"],
                 0,
                 0,
                 0,
@@ -383,14 +383,14 @@ def _elements_from_data(
             "Element", "The number of pipes attached to the absorber must be supplied."
         ) from None
     try:
-        panel_length = pvt_data["pvt_system"]["length"]
+        panel_length = pvt_data["pvt_collector"]["length"]
     except KeyError as e:
         raise MissingParametersError(
             "Element", "PVT panel length must be supplied."
         ) from None
 
     try:
-        panel_width = pvt_data["pvt_system"]["width"]
+        panel_width = pvt_data["pvt_collector"]["width"]
     except KeyError as e:
         raise MissingParametersError(
             "Element", "PVT panel width must be supplied."
@@ -523,7 +523,7 @@ def pvt_panel_from_path(
     )
     pv_parameters = _pv_params_from_data(pvt_data["pv"] if "pv" in pvt_data else None)
     absorber_parameters = _absorber_params_from_data(
-        pvt_data["pvt_system"]["length"],  # [m]
+        pvt_data["pvt_collector"]["length"],  # [m]
         pvt_data["absorber"],
     )
 
@@ -550,10 +550,10 @@ def pvt_panel_from_path(
                 pvt_data["adhesive"]["thickness"],
             ),
             air_gap_thickness=pvt_data["air_gap"]["thickness"],  # [m]
-            area=pvt_data["pvt_system"]["area"]
-            if "area" in pvt_data["pvt_system"]
-            else pvt_data["pvt_system"]["width"]
-            * pvt_data["pvt_system"]["length"],  # [m^2]
+            area=pvt_data["pvt_collector"]["area"]
+            if "area" in pvt_data["pvt_collector"]
+            else pvt_data["pvt_collector"]["width"]
+            * pvt_data["pvt_collector"]["length"],  # [m^2]
             absorber_parameters=absorber_parameters,
             diffuse_reflection_coefficient=diffuse_reflection_coefficient,
             eva=eva.EVA(
@@ -564,9 +564,9 @@ def pvt_panel_from_path(
                 pvt_data["insulation"]["thermal_conductivity"],
                 pvt_data["insulation"]["thickness"],
             ),
-            latitude=pvt_data["pvt_system"]["latitude"],  # [deg]
-            length=pvt_data["pvt_system"]["length"],  # [m]
-            longitude=pvt_data["pvt_system"]["longitude"],  # [deg]
+            latitude=pvt_data["pvt_collector"]["latitude"],  # [deg]
+            length=pvt_data["pvt_collector"]["length"],  # [m]
+            longitude=pvt_data["pvt_collector"]["longitude"],  # [deg]
             portion_covered=portion_covered,  # [unitless]
             pv_parameters=pv_parameters,
             elements=elements,
@@ -575,18 +575,18 @@ def pvt_panel_from_path(
                 pvt_data["tedlar"]["thickness"],
             ),
             timezone=datetime.timezone(
-                datetime.timedelta(hours=int(pvt_data["pvt_system"]["timezone"]))
+                datetime.timedelta(hours=int(pvt_data["pvt_collector"]["timezone"]))
             ),
-            width=pvt_data["pvt_system"]["width"],  # [m]
-            azimuthal_orientation=pvt_data["pvt_system"][
+            width=pvt_data["pvt_collector"]["width"],  # [m]
+            azimuthal_orientation=pvt_data["pvt_collector"][
                 "azimuthal_orientation"
             ]  # [deg]
-            if "azimuthal_orientation" in pvt_data["pvt_system"]
+            if "azimuthal_orientation" in pvt_data["pvt_collector"]
             else None,
-            horizontal_tracking=pvt_data["pvt_system"]["horizontal_tracking"],
-            vertical_tracking=pvt_data["pvt_system"]["vertical_tracking"],
-            tilt=pvt_data["pvt_system"]["tilt"]  # [deg]
-            if "tilt" in pvt_data["pvt_system"]
+            horizontal_tracking=pvt_data["pvt_collector"]["horizontal_tracking"],
+            vertical_tracking=pvt_data["pvt_collector"]["vertical_tracking"],
+            tilt=pvt_data["pvt_collector"]["tilt"]  # [deg]
+            if "tilt" in pvt_data["pvt_collector"]
             else None,
         )
     except KeyError as e:
