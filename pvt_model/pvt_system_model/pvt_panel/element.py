@@ -1,15 +1,15 @@
 #!/usr/bin/python3.7
 ########################################################################################
-# pvt_panel/segment.py - Represents a single segment within a PVT panel.
+# pvt_panel/element.py - Represents a single element within a PVT panel.
 #
 # Author: Ben Winchester
 # Copyright: Ben Winchester, 2021
 ########################################################################################
 
 """
-The segment module for the PV-T model.
+The element module for the PV-T model.
 
-This module represents a single segment within a PV-T panel.
+This module represents a single element within a PV-T panel.
 
 """
 
@@ -17,15 +17,15 @@ from dataclasses import dataclass
 from typing import Optional
 
 __all__ = (
-    "Segment",
-    "SegmentCoordinates",
+    "Element",
+    "ElementCoordinates",
 )
 
 
 @dataclass
-class SegmentCoordinates:
+class ElementCoordinates:
     """
-    Represents the coordinates of the segment.
+    Represents the coordinates of the element.
 
     .. attribute:: x_index
         The x index of the coordinate.
@@ -65,33 +65,33 @@ class SegmentCoordinates:
 
 
 @dataclass
-class Segment:
+class Element:
     """
-    Represents a single segment within a PV-T panel.
+    Represents a single element within a PV-T panel.
 
     .. attribute:: absorber
-        Whether the absorber layer is present in this segment.
+        Whether the absorber layer is present in this element.
 
     .. attribute:: glass
-        Whether the glass layer is present in this segment.
+        Whether the glass layer is present in this element.
 
     .. attribute:: length
-        The length of the segment, measured in meters.
+        The length of the element, measured in meters.
 
     .. attribute:: pipe
         Whether there is a pipe attached to this layer.
 
     .. attribute:: pv
-        Whether the pv layer is present in this segment.
+        Whether the pv layer is present in this element.
 
     .. attribute:: width
-        The width of the segment, measured in meters.
+        The width of the element, measured in meters.
 
     .. attribute:: x_index
-        The x index for this segment.
+        The x index for this element.
 
     .. attribute:: y_index
-        The y index for this segment.
+        The y index for this element.
 
     .. attribute:: pipe_index
         The index of the attached pipe.
@@ -110,10 +110,10 @@ class Segment:
 
     def __str__(self) -> str:
         """
-        Return a nice-looking representation of the segment.
+        Return a nice-looking representation of the element.
 
         :return:
-            A `str` giving a nice-looking representation of the segment.
+            A `str` giving a nice-looking representation of the element.
 
         """
 
@@ -131,7 +131,7 @@ class Segment:
         )
 
         return (
-            "Segment("
+            "Element("
             f"width: {self.width:.3f}m, "
             f"length: {self.length:.3f}m, "
             f"layers: {layers}"
@@ -139,13 +139,13 @@ class Segment:
         )
 
     @property
-    def coordinates(self) -> SegmentCoordinates:
+    def coordinates(self) -> ElementCoordinates:
         """
-        Returns the coordinates of the segment as a segment coordinates object.
+        Returns the coordinates of the element as a element coordinates object.
 
         :return:
-            The segment coordinates.
+            The element coordinates.
 
         """
 
-        return SegmentCoordinates(self.x_index, self.y_index)
+        return ElementCoordinates(self.x_index, self.y_index)

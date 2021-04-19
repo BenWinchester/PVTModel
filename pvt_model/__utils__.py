@@ -374,6 +374,9 @@ class SystemData:
     .. attribute:: date
         A `str` giving the current date.
 
+    .. attribute:: electrical_efficiency
+        The electrical efficiency of the PV layer of the collector.
+
     .. attribute:: exchanger_temperature_drop
         The temperature drop through the heat exchanger in the tank, measured in Kelvin
         or Celcius. (As it is a temperature difference, the two scales are equivalent.)
@@ -419,17 +422,17 @@ class SystemData:
         pipes.
 
     .. attribute:: layer_temperature_map_absorber
-        A mapping between coordinate and temperature for segments within the absorber
+        A mapping between coordinate and temperature for elements within the absorber
         layer.
 
     .. attribute:: layer_temperature_map_glass
-        A mapping between coordinate and temperature for segments within the glass layer.
+        A mapping between coordinate and temperature for elements within the glass layer.
 
     .. attribute:: layer_temperature_map_pipe
         A mapping between coordinate and temperature for the pipes.
 
     .. attribute:: layer_temperature_map_pv
-        A mapping between coordinate and temperature for segments within the pv layer.
+        A mapping between coordinate and temperature for elements within the pv layer.
 
     .. attribute:: reduced_collector_temperature
         The reduced temperature of the collector.
@@ -439,11 +442,12 @@ class SystemData:
 
     """
 
+    absorber_temperature: float
     ambient_temperature: float
     bulk_water_temperature: float
-    absorber_temperature: float
     date: str
-    glass_temperature: float
+    electrical_efficiency: Optional[float]
+    glass_temperature: Optional[float]
     exchanger_temperature_drop: Optional[float]
     pipe_temperature: float
     pv_temperature: float

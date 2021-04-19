@@ -48,8 +48,8 @@ def coupled_dynamic_run(
     months: Optional[int],
     number_of_pipes: int,
     number_of_temperatures: int,
-    number_of_x_segments: int,
-    number_of_y_segments: int,
+    number_of_x_elements: int,
+    number_of_y_elements: int,
     operating_mode: OperatingMode,
     pvt_panel: pvt.PVT,
     resolution: int,
@@ -101,11 +101,11 @@ def coupled_dynamic_run(
     :param number_of_temperatures:
         The number of temperatures being modelled.
 
-    :param number_of_x_segments:
-        The number of segments in the x direction.
+    :param number_of_x_elements:
+        The number of elements in the x direction.
 
-    :param number_of_y_segments:
-        The number of segments in the y direction.
+    :param number_of_y_elements:
+        The number of elements in the y direction.
 
     :param operating_mode:
         The operating mode of the system.
@@ -184,8 +184,7 @@ def coupled_dynamic_run(
         initial_date_and_time.date(),
         initial_date_and_time,
         number_of_pipes,
-        number_of_x_segments,
-        number_of_y_segments,
+        number_of_x_elements,
         operating_mode,
         pvt_panel,
         save_2d_output,
@@ -246,8 +245,8 @@ def coupled_dynamic_run(
                     next_date_and_time=next_date_and_time,
                     number_of_pipes=number_of_pipes,
                     number_of_temperatures=number_of_temperatures,
-                    number_of_x_segments=number_of_x_segments,
-                    number_of_y_segments=number_of_y_segments,
+                    number_of_x_elements=number_of_x_elements,
+                    number_of_y_elements=number_of_y_elements,
                     operating_mode=operating_mode,
                     previous_run_temperature_vector=previous_run_temperature_vector,
                     pvt_panel=pvt_panel,
@@ -269,8 +268,7 @@ def coupled_dynamic_run(
             next_date_and_time.date(),
             initial_date_and_time,
             number_of_pipes,
-            number_of_x_segments,
-            number_of_y_segments,
+            number_of_x_elements,
             operating_mode,
             pvt_panel,
             save_2d_output,

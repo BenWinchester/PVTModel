@@ -80,8 +80,8 @@ def solve_temperature_vector_convergence_method(
     logger: logging.Logger,
     number_of_pipes: int,
     number_of_temperatures: int,
-    number_of_x_segments: int,
-    number_of_y_segments: int,
+    number_of_x_elements: int,
+    number_of_y_elements: int,
     operating_mode: OperatingMode,
     pvt_panel: pvt.PVT,
     run_one_temperature_vector: Union[List[float], numpy.ndarray],
@@ -140,12 +140,12 @@ def solve_temperature_vector_convergence_method(
     :param number_of_temperatures:
         The number of unique temperature values to determine for the model.
 
-    :param number_of_x_segments:
-        The number of segments in one "row" of the panel, i.e., which have the same y
+    :param number_of_x_elements:
+        The number of elements in one "row" of the panel, i.e., which have the same y
         coordinate
 
-    :param number_of_y_segments:
-        The number of segments in one "column" of the panel, i.e., which have the same x
+    :param number_of_y_elements:
+        The number of elements in one "column" of the panel, i.e., which have the same x
         coordiante.
 
     :param operating_mode:
@@ -195,8 +195,8 @@ def solve_temperature_vector_convergence_method(
             logger=logger,
             number_of_pipes=number_of_pipes,
             number_of_temperatures=number_of_temperatures,
-            number_of_x_segments=number_of_x_segments,
-            number_of_y_segments=number_of_y_segments,
+            number_of_x_elements=number_of_x_elements,
+            number_of_y_elements=number_of_y_elements,
             operating_mode=operating_mode,
             previous_temperature_vector=numpy.asarray(previous_run_temperature_vector),
             pvt_panel=pvt_panel,
@@ -210,8 +210,8 @@ def solve_temperature_vector_convergence_method(
             logger=logger,
             number_of_pipes=number_of_pipes,
             number_of_temperatures=number_of_temperatures,
-            number_of_x_segments=number_of_x_segments,
-            number_of_y_segments=number_of_y_segments,
+            number_of_x_elements=number_of_x_elements,
+            number_of_y_elements=number_of_y_elements,
             operating_mode=operating_mode,
             pvt_panel=pvt_panel,
             resolution=resolution,
@@ -224,8 +224,8 @@ def solve_temperature_vector_convergence_method(
             logger=logger,
             number_of_pipes=number_of_pipes,
             number_of_temperatures=number_of_temperatures,
-            number_of_x_segments=number_of_x_segments,
-            number_of_y_segments=number_of_y_segments,
+            number_of_x_elements=number_of_x_elements,
+            number_of_y_elements=number_of_y_elements,
             operating_mode=operating_mode,
             previous_temperature_vector=numpy.asarray(previous_run_temperature_vector),
             pvt_panel=pvt_panel,
@@ -347,8 +347,8 @@ def solve_temperature_vector_convergence_method(
         next_date_and_time=next_date_and_time,
         number_of_pipes=number_of_pipes,
         number_of_temperatures=number_of_temperatures,
-        number_of_x_segments=number_of_x_segments,
-        number_of_y_segments=number_of_y_segments,
+        number_of_x_elements=number_of_x_elements,
+        number_of_y_elements=number_of_y_elements,
         operating_mode=operating_mode,
         previous_run_temperature_vector=previous_run_temperature_vector,
         pvt_panel=pvt_panel,

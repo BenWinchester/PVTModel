@@ -747,7 +747,7 @@ def plot_two_dimensional_figure(
     hold: bool = False,
     hour: Optional[int] = None,
     minute: Optional[int] = None,
-    x_axis_label: str = "Y segment index",
+    x_axis_label: str = "Y element index",
 ) -> None:
     """
     Plots a two-dimensional figure.
@@ -869,8 +869,8 @@ def plot_two_dimensional_figure(
         aspect=array_shape[1] / array_shape[0],
     )
     plt.title(plot_title)
-    plt.xlabel("Segment x index")
-    plt.ylabel("Segment y index")
+    plt.xlabel("Element x index")
+    plt.ylabel("Element y index")
 
     # Add axes and colour scale.
     fig3D.colorbar(surface, shrink=0.5, aspect=5, label=axis_label)
@@ -1450,18 +1450,21 @@ def analyse_decoupled_steady_state_data(data: Dict[Any, Any], logger: Logger) ->
         temperature_string = str(round(float(temperature), 2)).replace(".", "_")
 
         # Glass Temperatures
-        logger.info("Plotting 3D glass profile at %s degC.", temperature_string)
-        plot_two_dimensional_figure(
-            "steady_state_glass_layer_{}degC_input".format(temperature_string),
-            logger,
-            data,
-            axis_label="Temperature / deg C",
-            entry_number=temperature,
-            plot_title="Glass layer temperature with {} K input HTF".format(
-                round(float(temperature), 2)
-            ),
-            thing_to_plot="layer_temperature_map_glass",
-        )
+        try:
+            logger.info("Plotting 3D glass profile at %s degC.", temperature_string)
+            plot_two_dimensional_figure(
+                "steady_state_glass_layer_{}degC_input".format(temperature_string),
+                logger,
+                data,
+                axis_label="Temperature / deg C",
+                entry_number=temperature,
+                plot_title="Glass layer temperature with {} K input HTF".format(
+                    round(float(temperature), 2)
+                ),
+                thing_to_plot="layer_temperature_map_glass",
+            )
+        except TypeError:
+            print("Glass temperature profile could not be plotted due to no data.")
 
         # PV Temperatures
         logger.info("Plotting 3D PV profile at %s degC.", temperature_string)
@@ -1598,6 +1601,18 @@ def analyse_decoupled_steady_state_data(data: Dict[Any, Any], logger: Logger) ->
         override_axis=ax1,
     )
 
+    # Plot the electrical efficiency against the reduced temperature.
+    plot_figure(
+        "electrical_efficiency_against_reduced_temperature",
+        data,
+        first_axis_things_to_plot=["electrical_efficiency"],
+        first_axis_label="Electrical efficiency",
+        x_axis_label="Reduced temperature / K m^2 / W",
+        x_axis_thing_to_plot="reduced_collector_temperature",
+        plot_title="Electrical efficiency against reduced temperature",
+        disable_lines=True,
+    )
+
 
 def analyse_decoupled_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
     """
@@ -1673,14 +1688,11 @@ def analyse(data_file_name: str, show_output: Optional[bool] = False) -> None:
         data_type = DYNAMIC_DATA_TYPE
 
     # * Carry out analysis appropriate to the data type specified.
-    if (
-        data_type == DYNAMIC_DATA_TYPE
-        or data_type == f"{COUPLED_DATA_TYPE}_{DYNAMIC_DATA_TYPE}"
-    ):
+    if data_type in (DYNAMIC_DATA_TYPE, f"{COUPLED_DATA_TYPE}_{DYNAMIC_DATA_TYPE}"):
         analyse_coupled_dynamic_data(data, logger)
-    elif (
-        data_type == STEADY_STATE_DATA_TYPE
-        or data_type == f"{DECOUPLED_DATA_TYPE}_{STEADY_STATE_DATA_TYPE}"
+    elif data_type in (
+        STEADY_STATE_DATA_TYPE,
+        f"{DECOUPLED_DATA_TYPE}_{STEADY_STATE_DATA_TYPE}",
     ):
         analyse_decoupled_steady_state_data(data, logger)
     elif data_type == f"{DECOUPLED_DATA_TYPE}_{DYNAMIC_DATA_TYPE}":

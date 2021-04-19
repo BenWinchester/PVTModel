@@ -21,9 +21,9 @@ happens within this module.
 import datetime
 
 from logging import Logger
-from typing import Any, Dict, Optional, Set, Tuple
+from typing import Any, Dict, Optional, Set
 
-from .pvt_panel import adhesive, bond, eva, pvt, segment, tedlar
+from .pvt_panel import adhesive, bond, eva, pvt, element, tedlar
 from . import exchanger, tank, pump
 
 from ..__utils__ import (
@@ -224,9 +224,7 @@ def _absorber_params_from_data(
         ) from None
 
 
-def _glass_params_from_data(
-    glass_data: Dict[str, Any]
-) -> Tuple[float, OpticalLayerParameters]:
+def _glass_params_from_data(glass_data: Dict[str, Any]) -> OpticalLayerParameters:
     """
     Generate a :class:`OpticalLayerParameters` containing glass-layer info from data.
 
@@ -243,20 +241,18 @@ def _glass_params_from_data(
     """
 
     try:
-        return (
-            glass_data["diffuse_reflection_coefficient"],
-            OpticalLayerParameters(
-                absorptivity=glass_data["absorptivity"],  # [unitless]
-                conductivity=glass_data["thermal_conductivity"]
-                if "thermal_conductivity" in glass_data
-                else None,
-                density=glass_data["density"],  # [kg/m^3]
-                emissivity=glass_data["emissivity"],  # [unitless]
-                heat_capacity=glass_data["heat_capacity"],  # [J/kg*K]
-                thickness=glass_data["thickness"],  # [m]
-                transmissivity=glass_data["transmissivity"],  # [unitless]
-            ),
+        return OpticalLayerParameters(
+            absorptivity=glass_data["absorptivity"],  # [unitless]
+            conductivity=glass_data["thermal_conductivity"]
+            if "thermal_conductivity" in glass_data
+            else None,
+            density=glass_data["density"],  # [kg/m^3]
+            emissivity=glass_data["emissivity"],  # [unitless]
+            heat_capacity=glass_data["heat_capacity"],  # [J/kg*K]
+            thickness=glass_data["thickness"],  # [m]
+            transmissivity=glass_data["transmissivity"],  # [unitless]
         )
+
     except KeyError as e:
         raise MissingDataError(
             "Not all needed glass-layer data provided. Potential problem: Glass mass "
@@ -309,7 +305,7 @@ def _pv_params_from_data(pv_data: Optional[Dict[str, Any]]) -> PVParameters:
         ) from None
 
 
-def _segments_from_data(
+def _elements_from_data(
     edge_length: float,
     edge_width: float,
     layers: Set[TemperatureName],
@@ -320,14 +316,14 @@ def _segments_from_data(
     y_resolution: int,
 ) -> Any:
     """
-    Returns mapping from segment coordinate to segment based on the input data.
+    Returns mapping from element coordinate to element based on the input data.
 
     :param edge_length:
-        The maximum length of an edge segment along the top and bottom edges of the
+        The maximum length of an edge element along the top and bottom edges of the
         panel, measured in meters.
 
     :param edge_width:
-        The maximum width of an edge segment along the side edges of the panel, measured
+        The maximum width of an edge element along the side edges of the panel, measured
         in meters.
 
     :param layers:
@@ -350,7 +346,7 @@ def _segments_from_data(
         The y resolution for the run.
 
     :return:
-        A mapping between the segment coordinates and the segment for all segments
+        A mapping between the element coordinates and the element for all elements
         within the panel.
 
     """
@@ -362,13 +358,13 @@ def _segments_from_data(
             "at a higher resolution."
         )
         return {
-            segment.SegmentCoordinates(0, 0): segment.Segment(
+            element.ElementCoordinates(0, 0): element.Element(
+                TemperatureName.absorber in layers,
+                TemperatureName.glass in layers,
+                pvt_data["pvt_collector"]["length"],
                 True,
-                True,
-                pvt_data["pvt_system"]["length"],
-                True,
-                True,
-                pvt_data["pvt_system"]["width"],
+                TemperatureName.pv in layers,
+                pvt_data["pvt_collector"]["width"],
                 0,
                 0,
                 0,
@@ -380,26 +376,26 @@ def _segments_from_data(
         number_of_pipes = pvt_data["absorber"]["number_of_pipes"]
     except KeyError as e:
         raise MissingParametersError(
-            "Segment", "The number of pipes attached to the absorber must be supplied."
+            "Element", "The number of pipes attached to the absorber must be supplied."
         ) from None
     try:
-        panel_length = pvt_data["pvt_system"]["length"]
+        panel_length = pvt_data["pvt_collector"]["length"]
     except KeyError as e:
         raise MissingParametersError(
-            "Segment", "PVT panel length must be supplied."
+            "Element", "PVT panel length must be supplied."
         ) from None
 
     try:
-        panel_width = pvt_data["pvt_system"]["width"]
+        panel_width = pvt_data["pvt_collector"]["width"]
     except KeyError as e:
         raise MissingParametersError(
-            "Segment", "PVT panel width must be supplied."
+            "Element", "PVT panel width must be supplied."
         ) from None
     try:
         bond_width = pvt_data["bond"]["width"]
     except KeyError as e:
         raise MissingParametersError(
-            "Segment", "Collector-to-pipe bond width must be supplied."
+            "Element", "Collector-to-pipe bond width must be supplied."
         ) from None
 
     # * Determine the spacing between the pipes.
@@ -410,76 +406,76 @@ def _segments_from_data(
             "pipe_spcaing",
         )
 
-    # * Determine the indicies of segments that have pipes attached.
+    # * Determine the indicies of elements that have pipes attached.
     pipe_positions = list(
         range(int(pipe_spacing), x_resolution - 2, int(pipe_spacing) + 1)
     )
 
-    # Determine whether the width of the segments is greater than or less than the edge
+    # Determine whether the width of the elements is greater than or less than the edge
     # width and adjust accordingly.
-    nominal_segment_width: float = (
+    nominal_element_width: float = (
         panel_width - number_of_pipes * bond_width - 2 * edge_width
     ) / (x_resolution - number_of_pipes - 2)
-    if nominal_segment_width < edge_width:
-        nominal_segment_width = (panel_width - number_of_pipes * bond_width) / (
+    if nominal_element_width < edge_width:
+        nominal_element_width = (panel_width - number_of_pipes * bond_width) / (
             x_resolution - number_of_pipes
         )
-        edge_width = nominal_segment_width
+        edge_width = nominal_element_width
 
-    # Likewise, determine whether the nominal segment height is greater than the edge
+    # Likewise, determine whether the nominal element height is greater than the edge
     # height and adjust accordingly.
-    nominal_segment_length: float = (panel_length - 2 * edge_length) / (
+    nominal_element_length: float = (panel_length - 2 * edge_length) / (
         y_resolution - 2
     )
-    if nominal_segment_length < edge_length:
-        nominal_segment_length = panel_length / y_resolution
-        edge_length = nominal_segment_length
+    if nominal_element_length < edge_length:
+        nominal_element_length = panel_length / y_resolution
+        edge_length = nominal_element_length
 
-    # * Instantiate the array of segments.
+    # * Instantiate the array of elements.
 
-    # Construct the segmented array based on the arguments.
+    # Construct the elemented array based on the arguments.
     pv_coordinate_cutoff = int(y_resolution * portion_covered)
     try:
-        segments = {
-            segment.SegmentCoordinates(
-                x_coordinate(segment_number, x_resolution),
-                y_coordinate(segment_number, x_resolution),
-            ): segment.Segment(
+        elements = {
+            element.ElementCoordinates(
+                x_coordinate(element_number, x_resolution),
+                y_coordinate(element_number, x_resolution),
+            ): element.Element(
                 absorber=TemperatureName.absorber in layers,
                 glass=TemperatureName.glass in layers,
                 length=edge_length
-                if y_coordinate(segment_number, x_resolution) in {0, y_resolution - 1}
-                else nominal_segment_length,
-                pipe=x_coordinate(segment_number, x_resolution) in pipe_positions
+                if y_coordinate(element_number, x_resolution) in {0, y_resolution - 1}
+                else nominal_element_length,
+                pipe=x_coordinate(element_number, x_resolution) in pipe_positions
                 if TemperatureName.pipe in layers
                 else False,
-                pv=y_coordinate(segment_number, x_resolution) <= pv_coordinate_cutoff
+                pv=y_coordinate(element_number, x_resolution) <= pv_coordinate_cutoff
                 if TemperatureName.pv in layers
                 else False,
-                # Use the edge with if the segment is an edge segment.
+                # Use the edge with if the element is an edge element.
                 width=edge_width
-                if x_coordinate(segment_number, x_resolution) in {0, x_resolution - 1}
-                # Otherwise, use the bond width if the segment is a pipe segment.
+                if x_coordinate(element_number, x_resolution) in {0, x_resolution - 1}
+                # Otherwise, use the bond width if the element is a pipe element.
                 else bond_width
-                if x_coordinate(segment_number, x_resolution) in pipe_positions
-                # Otherwise, use the nominal segment width.
-                else nominal_segment_width,
-                x_index=x_coordinate(segment_number, x_resolution),
-                y_index=y_coordinate(segment_number, x_resolution),
+                if x_coordinate(element_number, x_resolution) in pipe_positions
+                # Otherwise, use the nominal element width.
+                else nominal_element_width,
+                x_index=x_coordinate(element_number, x_resolution),
+                y_index=y_coordinate(element_number, x_resolution),
                 pipe_index=pipe_positions.index(
-                    x_coordinate(segment_number, x_resolution)
+                    x_coordinate(element_number, x_resolution)
                 )
-                if x_coordinate(segment_number, x_resolution) in pipe_positions
+                if x_coordinate(element_number, x_resolution) in pipe_positions
                 else None,
             )
-            for segment_number in range(x_resolution * y_resolution)
+            for element_number in range(x_resolution * y_resolution)
         }
     except KeyError as e:
         raise MissingParametersError(
             "PVT", f"Missing parameters when instantiating the PV-T system: {str(e)}"
         ) from None
 
-    return segments
+    return elements
 
 
 def pvt_panel_from_path(
@@ -518,16 +514,29 @@ def pvt_panel_from_path(
 
     # Parse the data file into the various data classes.
     pvt_data = read_yaml(pvt_data_file)
-    diffuse_reflection_coefficient, glass_parameters = _glass_params_from_data(
-        pvt_data["glass"]
-    )
+
+    # If there is glass data present, process this accordingly.
+    if "glass" in pvt_data:
+        air_gap_thickness = pvt_data["air_gap"]["thickness"]  # [m]
+        glass_parameters: Optional[OpticalLayerParameters] = _glass_params_from_data(
+            pvt_data["glass"]
+        )
+    else:
+        if TemperatureName.glass in layers:
+            raise InvalidParametersError(
+                "Glass layer requested on the command line but no glass data in pvt data file.",
+                "glass",
+            )
+        air_gap_thickness = None
+        glass_parameters = None
+
     pv_parameters = _pv_params_from_data(pvt_data["pv"] if "pv" in pvt_data else None)
     absorber_parameters = _absorber_params_from_data(
-        pvt_data["pvt_system"]["length"],  # [m]
+        pvt_data["pvt_collector"]["length"],  # [m]
         pvt_data["absorber"],
     )
 
-    segments = _segments_from_data(
+    elements = _elements_from_data(
         EDGE_LENGTH,
         EDGE_WIDTH,
         layers,
@@ -549,13 +558,12 @@ def pvt_panel_from_path(
                 pvt_data["adhesive"]["thermal_conductivity"],
                 pvt_data["adhesive"]["thickness"],
             ),
-            air_gap_thickness=pvt_data["air_gap"]["thickness"],  # [m]
-            area=pvt_data["pvt_system"]["area"]
-            if "area" in pvt_data["pvt_system"]
-            else pvt_data["pvt_system"]["width"]
-            * pvt_data["pvt_system"]["length"],  # [m^2]
+            air_gap_thickness=air_gap_thickness,
+            area=pvt_data["pvt_collector"]["area"]
+            if "area" in pvt_data["pvt_collector"]
+            else pvt_data["pvt_collector"]["width"]
+            * pvt_data["pvt_collector"]["length"],  # [m^2]
             absorber_parameters=absorber_parameters,
-            diffuse_reflection_coefficient=diffuse_reflection_coefficient,
             eva=eva.EVA(
                 pvt_data["eva"]["thermal_conductivity"], pvt_data["eva"]["thickness"]
             ),
@@ -564,29 +572,29 @@ def pvt_panel_from_path(
                 pvt_data["insulation"]["thermal_conductivity"],
                 pvt_data["insulation"]["thickness"],
             ),
-            latitude=pvt_data["pvt_system"]["latitude"],  # [deg]
-            length=pvt_data["pvt_system"]["length"],  # [m]
-            longitude=pvt_data["pvt_system"]["longitude"],  # [deg]
+            latitude=pvt_data["pvt_collector"]["latitude"],  # [deg]
+            length=pvt_data["pvt_collector"]["length"],  # [m]
+            longitude=pvt_data["pvt_collector"]["longitude"],  # [deg]
             portion_covered=portion_covered,  # [unitless]
             pv_parameters=pv_parameters,
-            segments=segments,
+            elements=elements,
             tedlar=tedlar.Tedlar(
                 pvt_data["tedlar"]["thermal_conductivity"],
                 pvt_data["tedlar"]["thickness"],
             ),
             timezone=datetime.timezone(
-                datetime.timedelta(hours=int(pvt_data["pvt_system"]["timezone"]))
+                datetime.timedelta(hours=int(pvt_data["pvt_collector"]["timezone"]))
             ),
-            width=pvt_data["pvt_system"]["width"],  # [m]
-            azimuthal_orientation=pvt_data["pvt_system"][
+            width=pvt_data["pvt_collector"]["width"],  # [m]
+            azimuthal_orientation=pvt_data["pvt_collector"][
                 "azimuthal_orientation"
             ]  # [deg]
-            if "azimuthal_orientation" in pvt_data["pvt_system"]
+            if "azimuthal_orientation" in pvt_data["pvt_collector"]
             else None,
-            horizontal_tracking=pvt_data["pvt_system"]["horizontal_tracking"],
-            vertical_tracking=pvt_data["pvt_system"]["vertical_tracking"],
-            tilt=pvt_data["pvt_system"]["tilt"]  # [deg]
-            if "tilt" in pvt_data["pvt_system"]
+            horizontal_tracking=pvt_data["pvt_collector"]["horizontal_tracking"],
+            vertical_tracking=pvt_data["pvt_collector"]["vertical_tracking"],
+            tilt=pvt_data["pvt_collector"]["tilt"]  # [deg]
+            if "tilt" in pvt_data["pvt_collector"]
             else None,
         )
     except KeyError as e:

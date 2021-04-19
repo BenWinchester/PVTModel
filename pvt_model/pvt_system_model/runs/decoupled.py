@@ -51,8 +51,8 @@ def decoupled_dynamic_run(
     months: Optional[int],
     number_of_pipes: int,
     number_of_temperatures: int,
-    number_of_x_segments: int,
-    number_of_y_segments: int,
+    number_of_x_elements: int,
+    number_of_y_elements: int,
     operating_mode: OperatingMode,
     pvt_panel: pvt.PVT,
     resolution: int,
@@ -98,11 +98,11 @@ def decoupled_dynamic_run(
     :param number_of_temperatures:
         The number of temperatures being modelled.
 
-    :param number_of_x_segments:
-        The number of segments in the x direction.
+    :param number_of_x_elements:
+        The number of elements in the x direction.
 
-    :param number_of_y_segments:
-        The number of segments in the y direction.
+    :param number_of_y_elements:
+        The number of elements in the y direction.
 
     :param operating_mode:
         The operating mode of the system.
@@ -185,8 +185,7 @@ def decoupled_dynamic_run(
         initial_date_and_time.date(),
         initial_date_and_time,
         number_of_pipes,
-        number_of_x_segments,
-        number_of_y_segments,
+        number_of_x_elements,
         operating_mode,
         pvt_panel,
         save_2d_output,
@@ -237,8 +236,8 @@ def decoupled_dynamic_run(
                     next_date_and_time=next_date_and_time,
                     number_of_pipes=number_of_pipes,
                     number_of_temperatures=number_of_temperatures,
-                    number_of_x_segments=number_of_x_segments,
-                    number_of_y_segments=number_of_y_segments,
+                    number_of_x_elements=number_of_x_elements,
+                    number_of_y_elements=number_of_y_elements,
                     operating_mode=operating_mode,
                     previous_run_temperature_vector=previous_run_temperature_vector,
                     pvt_panel=pvt_panel,
@@ -260,8 +259,7 @@ def decoupled_dynamic_run(
             next_date_and_time.date(),
             initial_date_and_time,
             number_of_pipes,
-            number_of_x_segments,
-            number_of_y_segments,
+            number_of_x_elements,
             operating_mode,
             pvt_panel,
             save_2d_output,
@@ -282,8 +280,8 @@ def decoupled_steady_state_run(
     logger: logging.Logger,
     number_of_pipes: int,
     number_of_temperatures: int,
-    number_of_x_segments: int,
-    number_of_y_segments: int,
+    number_of_x_elements: int,
+    number_of_y_elements: int,
     operating_mode: OperatingMode,
     pvt_panel: pvt.PVT,
     save_2d_output: bool,
@@ -315,11 +313,11 @@ def decoupled_steady_state_run(
     :param number_of_temperatures:
         The number of temperatures being modelled in the system.
 
-    :param number_of_x_segments:
-        The number of segments in the x direction - i.e., the x-resolution of the run.
+    :param number_of_x_elements:
+        The number of elements in the x direction - i.e., the x-resolution of the run.
 
-    :param number_of_y_segments:
-        The number of segments in the y direction - i.e., the y-resolution of the run.
+    :param number_of_y_elements:
+        The number of elements in the y direction - i.e., the y-resolution of the run.
 
     :param operating_mode:
         The operating mode for the run.
@@ -363,8 +361,7 @@ def decoupled_steady_state_run(
         initial_date_and_time.date(),
         initial_date_and_time,
         number_of_pipes,
-        number_of_x_segments,
-        number_of_y_segments,
+        number_of_x_elements,
         operating_mode,
         pvt_panel,
         save_2d_output,
@@ -380,8 +377,8 @@ def decoupled_steady_state_run(
                 logger=logger,
                 number_of_pipes=number_of_pipes,
                 number_of_temperatures=number_of_temperatures,
-                number_of_x_segments=number_of_x_segments,
-                number_of_y_segments=number_of_y_segments,
+                number_of_x_elements=number_of_x_elements,
+                number_of_y_elements=number_of_y_elements,
                 operating_mode=operating_mode,
                 pvt_panel=pvt_panel,
                 run_one_temperature_vector=initial_system_temperature_vector,
@@ -400,8 +397,7 @@ def decoupled_steady_state_run(
         initial_date_and_time.date(),
         initial_date_and_time,
         number_of_pipes,
-        number_of_x_segments,
-        number_of_y_segments,
+        number_of_x_elements,
         operating_mode,
         pvt_panel,
         save_2d_output,

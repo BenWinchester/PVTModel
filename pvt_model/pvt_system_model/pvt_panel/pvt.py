@@ -24,7 +24,7 @@ import numpy
 
 from . import bond, absorber, glass, pv
 
-from ...__utils__ import MissingParametersError
+from ...__utils__ import BColours, MissingParametersError, ProgrammerJudgementFault
 
 from ..__utils__ import (
     CollectorParameters,
@@ -34,7 +34,7 @@ from ..__utils__ import (
 )
 
 from .__utils__ import MicroLayer
-from .segment import Segment, SegmentCoordinates
+from .element import Element, ElementCoordinates
 
 __all__ = ("PVT",)
 
@@ -94,8 +94,8 @@ class PVT:
          Represents the middle (pv) layer of the panel. Can be set to `None` if not
         present in the panel.
 
-    .. attribute:: segments
-        A mapping between segment coordinates and the segment.
+    .. attribute:: elements
+        A mapping between element coordinates and the element.
 
     .. attribute:: tedlar
         Represents the tedlar back plate to the PV layer, situated above the PV layer.
@@ -124,19 +124,18 @@ class PVT:
         self,
         absorber_pipe_bond: bond.Bond,
         adhesive: MicroLayer,
-        air_gap_thickness: float,
+        air_gap_thickness: Optional[float],
         area: float,
         absorber_parameters: CollectorParameters,
-        diffuse_reflection_coefficient: float,
         eva: MicroLayer,
-        glass_parameters: OpticalLayerParameters,
+        glass_parameters: Optional[OpticalLayerParameters],
         insulation: MicroLayer,
         latitude: float,
         length: float,
         longitude: float,
         portion_covered: float,
         pv_parameters: PVParameters,
-        segments: Dict[SegmentCoordinates, Segment],
+        elements: Dict[ElementCoordinates, Element],
         tedlar: MicroLayer,
         tilt: float,
         timezone: datetime.timezone,
@@ -154,6 +153,8 @@ class PVT:
 
         :param air_gap_thickness:
             The thickness, in meters, of the air gap between the PV and glass layers.
+            `None` if there is no air gap present, e.g., if the glass layer is not
+            present.
 
         :param area:
             The area of the panel, measured in meters squared.
@@ -163,9 +164,6 @@ class PVT:
 
         :param absorber_parameters:
             Parametsrs used to instantiate the absorber layer.
-
-        :param diffuse_reflection_coefficient:
-            The coefficient of diffuse reflectivity of the upper layer.
 
         :param eva:
             A :class:`MicroLayer` instance representing the eva layer.
@@ -198,8 +196,8 @@ class PVT:
         :param pv_parameters:
             Parameters used to instantiate the PV layer.
 
-        :param segments:
-            A mapping between segment coordinate and segment for all segments to be
+        :param elements:
+            A mapping between element coordinate and element for all elements to be
             included in the layer.
 
         :param tedlar:
@@ -239,7 +237,7 @@ class PVT:
         self.length = length
         self.longitude = longitude
         self.portion_covered = portion_covered
-        self.segments = segments
+        self.elements = elements
         self.timezone = timezone
         self.width = width
 
@@ -262,14 +260,15 @@ class PVT:
         self.bond = absorber_pipe_bond
         self.absorber = absorber.Collector(absorber_parameters)
         self.eva = eva
-        self.glass: glass.Glass = glass.Glass(
-            diffuse_reflection_coefficient, glass_parameters
-        )
+        if glass_parameters is None:
+            self.glass: Optional[glass.Glass] = None
+        else:
+            self.glass = glass.Glass(glass_parameters)
         self.insulation = insulation
         self.pv: pv.PV = pv.PV(pv_parameters)
         self.tedlar = tedlar
 
-        # * Instantiate and store the segments on the class.
+        # * Instantiate and store the elements on the class.
 
     def __repr__(self) -> str:
         """
@@ -432,6 +431,13 @@ class PVT:
 
         """
 
+        if self.glass is None:
+            raise ProgrammerJudgementFault(
+                "{}Attempted to fetch ta product of a non-existent glass layer.{}".format(
+                    BColours.FAIL, BColours.ENDC
+                )
+            )
+
         ta_product: float = (
             1
             - self.glass.reflectance
@@ -472,9 +478,13 @@ class PVT:
 
         """
 
-        ta_product: float = (
-            (1 - self.pv.reflectance - self.pv.transmittance) * self.glass.transmittance
-        ) / (1 - self.pv.reflectance * self.glass.reflectance)
+        if self.glass is not None:
+            ta_product: float = (
+                (1 - self.pv.reflectance - self.pv.transmittance)
+                * self.glass.transmittance
+            ) / (1 - self.pv.reflectance * self.glass.reflectance)
+        else:
+            ta_product = self.pv.absorptivity
 
         return ta_product
 

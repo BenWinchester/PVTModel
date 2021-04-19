@@ -20,6 +20,7 @@ such as over an entire year to compute the annual demand covered value.
 """
 
 from .constants import HEAT_CAPACITY_OF_WATER
+from .pvt_panel import pvt
 
 __all__ = (
     "dc_electrical",
@@ -28,6 +29,7 @@ __all__ = (
     "dc_average_from_dc_values",
     "dc_weighted_average",
     "dc_weighted_average_from_dc_values",
+    "electrical_efficiency",
     "thermal_efficiency",
 )
 
@@ -205,6 +207,31 @@ def dc_weighted_average_from_dc_values(
     return (
         electrical_demand * dc_electrical_value + thermal_demand * dc_thermal_value
     ) / (electrical_demand + thermal_demand)
+
+
+def electrical_efficiency(
+    pvt_panel: pvt.PVT,
+    temperature: float,
+) -> float:
+    """
+    Computes the electrical efficiency of a PV cell or element.
+
+    :param pvt_panel:
+        The PVT collector instance being modelled.
+
+    :param temperature:
+        The temperature of the PV layer, segment, or element, measured in Kelvin.
+
+    :return:
+        The electrical efficiency.
+
+    """
+
+    return pvt_panel.pv.reference_efficiency * (
+        1
+        - pvt_panel.pv.thermal_coefficient
+        * (temperature - pvt_panel.pv.reference_temperature)
+    )
 
 
 def thermal_efficiency(

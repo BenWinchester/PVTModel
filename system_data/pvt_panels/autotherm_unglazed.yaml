@@ -26,8 +26,8 @@
 pvt_collector:
   azimuthal_orientation: 180 # [deg]
   horizontal_tracking: false
-  latitude: 51.4934 # [deg]
-  longitude: 0.0098 # [deg]
+  latitude: 44.867 # [deg]
+  longitude: 8.8 # [deg]
   # The length of the absorber is measured in meters.
   length: 1.66 # [m]
   # length: 0.11857142857 # [m]
@@ -41,25 +41,9 @@ pvt_collector:
   # Full absorber width.
   # width: 0.86 #[m]
   # One fourteenth of the absorber width.
-  # width: 0.06142857142 # [m]
+  width: 0.06142857142 # [m]
   # Ilaria's absorber width of 0.1m.
-  width: 0.1 #[m]
-glass:
-  absorptivity: 0.01 # [unitless]
-  # @@@ Value NOT taken from Maria's paper.
-  # density: 2270 # [kg/m^3]
-  # @@@ Value updated from online search.
-  density: 2500
-  diffuse_reflection_coefficient: 0.16
-  emissivity: 0.90 # [unitless]
-  # @@@ Value NOT taken from Maria's paper.
-  heat_capacity: 750 # [840J/kg*K]
-  thermal_conductivity: 1.80 # [W/m*K]
-  thickness: 0.004 # [m]
-  transmissivity: 0.95 # [unitless]
-air_gap:
-  thickness: 0.005 # [m]
-  thermal_conductivity: 0.025 # [W/m*K]
+  # width: 0.1 #[m]
 pv:
   absorptivity: 0.93 # [unitless]
   # @@@ Value NOT taken from Maria's paper.
@@ -97,12 +81,12 @@ tedlar:
 absorber:
   absorptivity: 0.95 # [unitless]
   # @@@ Value NOT taken from Maria's paper.
-  density: 8960 # [kg/m^3]
+  density: 8978 # [kg/m^3]
   # # @@@ Value updated from online search.
   # density: 87500 # [kg/m^3]
   emissivity: 0.05 # [unitless]
   # @@@ Value NOT taken from Maria's paper.
-  heat_capacity: 386 # [J/kg*K]
+  heat_capacity: 385 # [J/kg*K]
   inner_pipe_diameter: 0.007717 #[m]
   length: 1.66 # [m]
   # mass_flow_rate: 103.2 # [L/h]
