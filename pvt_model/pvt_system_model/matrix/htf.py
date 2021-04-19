@@ -18,3 +18,215 @@ of the matrix which are computed based on the temperatures of the various compon
 the previous time step, as well as various Physical and fundamental constants.
 
 """
+
+
+from typing import List, Optional, Tuple, Union
+
+import numpy
+
+from .. import index_handler
+from ..pvt_panel import pvt
+
+from ...__utils__ import (
+    OperatingMode,
+    TemperatureName,
+)
+from ..physics_utils import density_of_water
+from ..pvt_panel.element import Element
+
+__all__ = ("calculate_htf_continuity_equation", "calculate_htf_equation")
+
+
+def calculate_htf_continuity_equation(
+    number_of_pipes: int,
+    number_of_temperatures: int,
+    number_of_x_elements: int,
+    pvt_panel: pvt.PVT,
+    element: Element,
+) -> Tuple[List[float], float]:
+    """
+    Returns a matrix row and resultant vector value representing the htf equation.
+
+    :param number_of_temperatures:
+        The number of temperatures being modelled in the system.
+
+    :return:
+        A `tuple` containing:
+        - the equation represented as a row in the matrix,
+        - and the corresponding value in the resultant method.
+
+    """
+
+    # Compute the row equation
+    row_equation: List[float] = [0] * number_of_temperatures
+
+    # Compute the T_f(#, 0) term.
+    row_equation[
+        index_handler.index_from_pipe_coordinates(
+            number_of_pipes,
+            number_of_x_elements,
+            element.pipe_index,  # type: ignore
+            pvt_panel,
+            TemperatureName.htf,
+            element.y_index,
+        )
+    ] = 1
+
+    # Compute the T_f,in(#, 0) term.
+    row_equation[
+        index_handler.index_from_pipe_coordinates(
+            number_of_pipes,
+            number_of_x_elements,
+            element.pipe_index,  # type: ignore
+            pvt_panel,
+            TemperatureName.htf_in,
+            element.y_index,
+        )
+    ] = -0.5
+
+    # Compute the T_f,out(#, 0) term.
+    row_equation[
+        index_handler.index_from_pipe_coordinates(
+            number_of_pipes,
+            number_of_x_elements,
+            element.pipe_index,  # type: ignore
+            pvt_panel,
+            TemperatureName.htf_out,
+            element.y_index,
+        )
+    ] = -0.5
+
+    return row_equation, 0
+
+
+def calculate_htf_equation(
+    best_guess_temperature_vector: Union[List[float], numpy.ndarray],
+    number_of_pipes: int,
+    number_of_temperatures: int,
+    number_of_x_elements: int,
+    operating_mode: OperatingMode,
+    pipe_to_bulk_water_heat_transfer: float,
+    previous_temperature_vector: Optional[numpy.ndarray],
+    pvt_panel: pvt.PVT,
+    resolution: Optional[int],
+    element: Element,
+) -> Tuple[List[float], float]:
+    """
+    Returns a matrix row and resultant vector value representing the htf equation.
+
+    :param number_of_temperatures:
+        The number of temperatures being modelled in the system.
+
+    :return:
+        A `tuple` containing:
+        - the equation represented as a row in the matrix,
+        - and the corresponding value in the resultant method.
+
+    """
+
+    # Compute the row equation
+    row_equation: List[float] = [0] * number_of_temperatures
+
+    if operating_mode.dynamic:
+        bulk_water_internal_energy: float = (
+            numpy.pi
+            * (pvt_panel.absorber.inner_pipe_diameter / 2) ** 2  # [m^2]
+            * element.length  # [m]
+            * density_of_water(
+                best_guess_temperature_vector[
+                    index_handler.index_from_pipe_coordinates(
+                        number_of_pipes,
+                        number_of_x_elements,
+                        element.pipe_index,  # type: ignore
+                        pvt_panel,
+                        TemperatureName.htf,
+                        element.y_index,
+                    )
+                ]
+            )  # [kg/m^3]
+            * pvt_panel.absorber.htf_heat_capacity  # [J/kg*K]
+            / resolution  # type: ignore  # [s]
+        )  # [W/K]
+    else:
+        bulk_water_internal_energy = 0
+
+    fluid_input_output_transfer_term = (
+        pvt_panel.absorber.mass_flow_rate  # [kg/s]
+        * pvt_panel.absorber.htf_heat_capacity  # [J/kg*K]
+        / pvt_panel.absorber.number_of_pipes
+    )  # [W/K]
+
+    # Compute the T_f(#, j) term.
+    row_equation[
+        index_handler.index_from_pipe_coordinates(
+            number_of_pipes,
+            number_of_x_elements,
+            element.pipe_index,  # type: ignore
+            pvt_panel,
+            TemperatureName.htf,
+            element.y_index,
+        )
+    ] = (
+        bulk_water_internal_energy + pipe_to_bulk_water_heat_transfer
+    )
+
+    # Compute the T_f,in(#, j) term.
+    row_equation[
+        index_handler.index_from_pipe_coordinates(
+            number_of_pipes,
+            number_of_x_elements,
+            element.pipe_index,  # type: ignore
+            pvt_panel,
+            TemperatureName.htf_in,
+            element.y_index,
+        )
+    ] = (
+        -1 * fluid_input_output_transfer_term
+    )
+
+    # Compute the T_f,out(#, j) term.
+    row_equation[
+        index_handler.index_from_pipe_coordinates(
+            number_of_pipes,
+            number_of_x_elements,
+            element.pipe_index,  # type: ignore
+            pvt_panel,
+            TemperatureName.htf_out,
+            element.y_index,
+        )
+    ] = fluid_input_output_transfer_term
+
+    # Compute the T_P(#, j) term.
+    row_equation[
+        index_handler.index_from_pipe_coordinates(
+            number_of_pipes,
+            number_of_x_elements,
+            element.pipe_index,  # type: ignore
+            pvt_panel,
+            TemperatureName.pipe,
+            element.y_index,
+        )
+    ] = (
+        -1 * pipe_to_bulk_water_heat_transfer
+    )
+
+    # Compute the resultant vector value.
+    resultant_vector_value = 0
+
+    if operating_mode.dynamic:
+        resultant_vector_value += (
+            # Internal heat change.
+            bulk_water_internal_energy
+            * previous_temperature_vector[  # type: ignore
+                index_handler.index_from_pipe_coordinates(
+                    number_of_pipes,
+                    number_of_x_elements,
+                    element.pipe_index,  # type: ignore
+                    pvt_panel,
+                    TemperatureName.htf,
+                    element.y_index,
+                )
+            ]
+        )
+
+    return row_equation, resultant_vector_value
