@@ -32,25 +32,25 @@ from typing import List, Optional, Tuple, Union
 import logging
 import numpy
 
-from . import exchanger, index_handler, physics_utils, tank
-from .pvt_panel import pvt
-from .pvt_panel.element import Element, ElementCoordinates
+from .. import exchanger, index_handler, physics_utils, tank
+from ..pvt_panel import pvt
+from ..pvt_panel.element import Element, ElementCoordinates
 
-from ..__utils__ import (
+from ...__utils__ import (
     BColours,
     TemperatureName,
     OperatingMode,
     ProgrammerJudgementFault,
 )
-from .__utils__ import WeatherConditions
-from .constants import HEAT_CAPACITY_OF_WATER
-from .efficiency import electrical_efficiency
-from .physics_utils import (
+from ..__utils__ import WeatherConditions
+from ..constants import HEAT_CAPACITY_OF_WATER
+from ..efficiency import electrical_efficiency
+from ..physics_utils import (
     convective_heat_transfer_coefficient_of_water,
     density_of_water,
     radiative_heat_transfer_coefficient,
 )
-from .pvt_panel.physics_utils import air_gap_resistance, insulation_thermal_resistance
+from ..pvt_panel.physics_utils import air_gap_resistance, insulation_thermal_resistance
 
 __all__ = ("calculate_matrix_equation",)
 
