@@ -415,9 +415,12 @@ def temperature_name_from_index(  # pylint: disable=too-many-branches
 
     if index < num_upper_glass_temperatures:
         temperature_name = TemperatureName.upper_glass
-    elif index < num_glass_temperatures:
+    elif index < num_upper_glass_temperatures + num_glass_temperatures:
         temperature_name = TemperatureName.glass
-    elif index < num_glass_temperatures + num_pv_temperatures:
+    elif (
+        index
+        < num_upper_glass_temperatures + num_glass_temperatures + num_pv_temperatures
+    ):
         temperature_name = TemperatureName.pv
     elif index < num_panel_temperatures:
         temperature_name = TemperatureName.absorber

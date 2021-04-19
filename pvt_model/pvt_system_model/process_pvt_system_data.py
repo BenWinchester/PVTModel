@@ -364,6 +364,7 @@ def _elements_from_data(
                 pvt_data["pvt_collector"]["length"],
                 True,
                 TemperatureName.pv in layers,
+                TemperatureName.upper_glass in layers,
                 pvt_data["pvt_collector"]["width"],
                 0,
                 0,
@@ -452,6 +453,7 @@ def _elements_from_data(
                 pv=y_coordinate(element_number, x_resolution) <= pv_coordinate_cutoff
                 if TemperatureName.pv in layers
                 else False,
+                upper_glass=TemperatureName.upper_glass in layers,
                 # Use the edge with if the element is an edge element.
                 width=edge_width
                 if x_coordinate(element_number, x_resolution) in {0, x_resolution - 1}
@@ -515,18 +517,37 @@ def pvt_panel_from_path(
     # Parse the data file into the various data classes.
     pvt_data = read_yaml(pvt_data_file)
 
+    # If there is upper-glass data present, process this accordingly.
+    if "upper_glass" in pvt_data and TemperatureName.upper_glass in layers:
+        upper_glass_parameters: Optional[
+            OpticalLayerParameters
+        ] = _glass_params_from_data(pvt_data["upper_glass"])
+    elif "glass" in pvt_data and TemperatureName.upper_glass in layers:
+        upper_glass_parameters: Optional[
+            OpticalLayerParameters
+        ] = _glass_params_from_data(pvt_data["glass"])
+    elif TemperatureName.upper_glass in layers:
+        raise InvalidParametersError(
+            "Upper glass layer requested on the command line but no glass data in pvt "
+            "data file.",
+            "glass",
+        )
+    else:
+        upper_glass_parameters = None
+
     # If there is glass data present, process this accordingly.
-    if "glass" in pvt_data:
+    if "glass" in pvt_data and TemperatureName.glass in layers:
         air_gap_thickness = pvt_data["air_gap"]["thickness"]  # [m]
         glass_parameters: Optional[OpticalLayerParameters] = _glass_params_from_data(
             pvt_data["glass"]
         )
+    elif TemperatureName.glass in layers:
+        raise InvalidParametersError(
+            "Glass layer requested on the command line but no glass data in pvt data "
+            "file.",
+            "glass",
+        )
     else:
-        if TemperatureName.glass in layers:
-            raise InvalidParametersError(
-                "Glass layer requested on the command line but no glass data in pvt data file.",
-                "glass",
-            )
         air_gap_thickness = None
         glass_parameters = None
 
@@ -585,6 +606,7 @@ def pvt_panel_from_path(
             timezone=datetime.timezone(
                 datetime.timedelta(hours=int(pvt_data["pvt_collector"]["timezone"]))
             ),
+            upper_glass_parameters=upper_glass_parameters,
             width=pvt_data["pvt_collector"]["width"],  # [m]
             azimuthal_orientation=pvt_data["pvt_collector"][
                 "azimuthal_orientation"

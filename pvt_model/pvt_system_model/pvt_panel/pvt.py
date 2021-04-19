@@ -139,6 +139,7 @@ class PVT:
         tedlar: MicroLayer,
         tilt: float,
         timezone: datetime.timezone,
+        upper_glass_parameters: Optional[OpticalLayerParameters],
         width: float,
         *,
         azimuthal_orientation: Optional[float] = None,
@@ -206,6 +207,9 @@ class PVT:
         :param timezone:
             The timezone in which the PV-T system is installed.
 
+        :param upper_glass_parameters:
+            Parameters used to instantiate the upper-glass layer.
+
         :param width:
             The width of the absorber in meters.
 
@@ -267,6 +271,10 @@ class PVT:
         self.insulation = insulation
         self.pv: pv.PV = pv.PV(pv_parameters)
         self.tedlar = tedlar
+        if upper_glass_parameters is None:
+            self.upper_glass: Optional[glass.Glass] = None
+        else:
+            self.upper_glass = glass.Glass(upper_glass_parameters)
 
         # * Instantiate and store the elements on the class.
 

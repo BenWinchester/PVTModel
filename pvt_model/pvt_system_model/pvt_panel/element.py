@@ -125,7 +125,7 @@ class Element:
             [
                 entry
                 for entry in [
-                    "upper glass" if self.upper_glass else None,
+                    "upper-glass" if self.upper_glass else None,
                     "glass" if self.glass else None,
                     "absorber" if self.absorber else None,
                     "pv" if self.pv else None,

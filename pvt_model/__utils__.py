@@ -382,13 +382,15 @@ class SystemData:
         or Celcius. (As it is a temperature difference, the two scales are equivalent.)
 
     .. attribute:: glass_temperature
-        The temperature of the glass layer, measured in Celcius.
+        The temperature of the glass layer, measured in Celcius.  Can be `None` if no
+        glass present.
 
     .. attribute:: pipe_temperature
         The temperature of the pipe, measured in Celcius.
 
     .. attribute:: pv_temperature
-        The temperature of the PV layer, measured in Celcius.
+        The temperature of the PV layer, measured in Celcius. Can be `None` if no PV
+        present.
 
     .. attribute:: reduced_temperature
         The reduced temperature of the PV-T absorber, measured in Celcius.
@@ -405,6 +407,10 @@ class SystemData:
 
     .. attribute:: thermal_efficiency
         The thermal efficiency of the system.
+
+    .. attribute:: upper_glass_temperature
+        The temperature of the upper-glass (i.e., double-glazing) temperature, measured
+        in Celcius. Can be `None` if no double-glazing present.
 
     .. attribute:: collector_input_temperature
         The temperature of the HTF inputted into the absorber, measured in Celcius.
@@ -434,6 +440,10 @@ class SystemData:
     .. attribute:: layer_temperature_map_pv
         A mapping between coordinate and temperature for elements within the pv layer.
 
+    .. attribute:: layer_temperature_map_upper_glass
+        A mapping between coordinate and temperature for elements within the upper-glass
+        (i.e., double-glazing) layer.
+
     .. attribute:: reduced_collector_temperature
         The reduced temperature of the collector.
 
@@ -456,6 +466,7 @@ class SystemData:
     solar_irradiance: float
     tank_temperature: Optional[float]
     thermal_efficiency: Optional[float]
+    upper_glass_temperature: Optional[float]
     collector_input_temperature: Optional[float] = None
     collector_output_temperature: Optional[float] = None
     collector_temperature_gain: Optional[float] = None
@@ -464,6 +475,7 @@ class SystemData:
     layer_temperature_map_glass: Optional[Dict[str, float]] = None
     layer_temperature_map_pipe: Optional[Dict[str, float]] = None
     layer_temperature_map_pv: Optional[Dict[str, float]] = None
+    layer_temperature_map_upper_glass: Optional[Dict[str, float]] = None
     reduced_temperature: Optional[float] = None
     time: Optional[str] = None
 
