@@ -37,7 +37,7 @@ __all__ = (
 
 def _calculate_number_of_temperatures(
     pvt_panel: pvt.PVT,
-) -> Tuple[int, int, int, int, int]:
+) -> Tuple[int, int, int, int, int, int]:
     """
     Calculates, based off the PVT collector, the number of temperatures in each layer.
 

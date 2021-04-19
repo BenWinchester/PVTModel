@@ -523,9 +523,7 @@ def pvt_panel_from_path(
             OpticalLayerParameters
         ] = _glass_params_from_data(pvt_data["upper_glass"])
     elif "glass" in pvt_data and TemperatureName.upper_glass in layers:
-        upper_glass_parameters: Optional[
-            OpticalLayerParameters
-        ] = _glass_params_from_data(pvt_data["glass"])
+        upper_glass_parameters = _glass_params_from_data(pvt_data["glass"])
     elif TemperatureName.upper_glass in layers:
         raise InvalidParametersError(
             "Upper glass layer requested on the command line but no glass data in pvt "
