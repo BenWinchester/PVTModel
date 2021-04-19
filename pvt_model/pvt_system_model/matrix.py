@@ -1575,7 +1575,9 @@ def _pv_equation(  # pylint: disable=too-many-branches
                 element.x_index,
                 element.y_index,
             )
-        ] = -1 * pv_to_absorber_conduction
+        ] = (
+            -1 * pv_to_absorber_conduction
+        )
 
     solar_thermal_resultant_vector_absorbtion_term = (
         pvt_panel.pv_transmissivity_absorptivity_product
@@ -1609,6 +1611,10 @@ def _pv_equation(  # pylint: disable=too-many-branches
     resultant_vector_value = (
         # Solar thermal absorption term.
         solar_thermal_resultant_vector_absorbtion_term  # [W]
+        # Ambient temperature term.
+        + pv_to_air_conduction * weather_conditions.ambient_temperature  # [W]
+        # Sky temperature term.
+        + pv_to_sky_radiation * weather_conditions.sky_temperature  # [W]
     )
 
     if operating_mode.dynamic:
