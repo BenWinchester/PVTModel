@@ -339,6 +339,31 @@ class PVT:
         )
 
     @property
+    def absorber_transmissivity_absorptivity_product(self) -> float:
+        """
+        Returns the transmissivity-absorptivity product of the Absorber layer.
+
+        Due to internal reflections etc., an estimate is needed for the overall fraction
+        of incident solar light that is absorbed by the Absorber layer. NOTE: This only
+        applies when there is no PV layer present, and light can pass straight through
+        the glass layer onto the solar-thermal absorber layer.
+
+        :return:
+            The TA product of the Absorber layer.
+
+        """
+
+        if self.glass is not None:
+            ta_product: float = (
+                (1 - self.absorber.reflectance - self.absorber.transmittance)
+                * self.glass.transmittance
+            ) / (1 - self.absorber.reflectance * self.glass.reflectance)
+        else:
+            ta_product = self.absorber.absorptivity
+
+        return ta_product
+
+    @property
     def coordinates(self) -> Tuple[float, float]:
         """
         Returns a the coordinates of the panel.
