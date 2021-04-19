@@ -119,7 +119,7 @@ absorber:
   # @@@ Value NOT taken from Maria's paper.
   thermal_conductivity: 310 # [W/m*K]
   thickness: 0.00012 # [m]
-  transmissivity: 0.9 # [unitless]
+  transmissivity: 0 # [unitless]
 bond:
   thermal_conductivity: 0.85 # [W/m*K]
   thickness: 0.00005 # [m]

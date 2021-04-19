@@ -63,6 +63,8 @@ __all__ = ("calculate_matrix_equation",)
 def _absorber_equation(  # pylint: disable=too-many-branches
     absorber_to_pipe_conduction: float,
     best_guess_temperature_vector: Union[List[float], numpy.ndarray],
+    glass_downward_conduction: float,
+    glass_downward_radiation: float,
     logger: logging.Logger,
     number_of_pipes: int,
     number_of_temperatures: int,
@@ -262,6 +264,11 @@ def _absorber_equation(  # pylint: disable=too-many-branches
             if (not element.pv and not element.glass)
             else 0
         )
+        + (
+            glass_downward_conduction + glass_downward_radiation
+            if (element.glass and not element.pv)
+            else 0
+        )
     )
 
     # Compute the T_A(i+1, j) term provided that that element exists.
@@ -333,6 +340,16 @@ def _absorber_equation(  # pylint: disable=too-many-branches
         ] = (
             -1 * pv_to_absorber_conduction
         )
+    elif element.glass:
+        row_equation[
+            index_handler.index_from_element_coordinates(
+                number_of_x_elements,
+                pvt_panel,
+                TemperatureName.glass,
+                element.x_index,
+                element.y_index,
+            )
+        ] = -1 * (glass_downward_conduction + glass_downward_radiation)
 
     # Compute the T_P(pipe_number, j) term provided that there is a pipe present.
     if element.pipe:
@@ -360,11 +377,24 @@ def _absorber_equation(  # pylint: disable=too-many-branches
                 f"Likely that pipe index was not specified: {str(e)}"
             ) from None
 
+    # Compute the solar-thermal absorption if relevant.
+    if element.glass and not element.pv:
+        solar_thermal_resultant_vector_absorbtion_term = (
+            pvt_panel.absorber_transmissivity_absorptivity_product
+            * weather_conditions.irradiance  # [W/m^2]
+            * element.width  # [m]
+            * element.length  # [m]
+        )
+    else:
+        solar_thermal_resultant_vector_absorbtion_term = 0
+
     # Compute the resultant vector value.
     resultant_vector_value = (
         # Ambient temperature term.
         absorber_to_insulation_loss  # [W/K]
         * weather_conditions.ambient_temperature  # [K]
+        # Solar absorption term.
+        + solar_thermal_resultant_vector_absorbtion_term  # [W]
     )
 
     if operating_mode.dynamic:
@@ -658,8 +688,8 @@ def _fluid_continuity_equation(
 
 def _glass_equation(  # pylint: disable=too-many-branches
     best_guess_temperature_vector: Union[List[float], numpy.ndarray],
-    glass_to_pv_conduction: float,
-    glass_to_pv_radiation: float,
+    glass_downward_conduction: float,
+    glass_downward_radiation: float,
     logger: logging.Logger,
     number_of_temperatures: int,
     number_of_x_elements: int,
@@ -820,8 +850,8 @@ def _glass_equation(  # pylint: disable=too-many-branches
         + y_wise_conduction
         + glass_to_air_conduction
         + glass_to_sky_radiation
-        + glass_to_pv_conduction
-        + glass_to_pv_radiation
+        + glass_downward_conduction
+        + glass_downward_radiation
     )
 
     # Compute the T_g(i+1, j) term provided that that element exists.
@@ -890,7 +920,18 @@ def _glass_equation(  # pylint: disable=too-many-branches
                 element.x_index,
                 element.y_index,
             )
-        ] = -1 * (glass_to_pv_conduction + glass_to_pv_radiation)
+        ] = -1 * (glass_downward_conduction + glass_downward_radiation)
+    # Otherwise, compute the T_A(i, j) term.
+    else:
+        row_equation[
+            index_handler.index_from_element_coordinates(
+                number_of_x_elements,
+                pvt_panel,
+                TemperatureName.absorber,
+                element.x_index,
+                element.y_index,
+            )
+        ] = -1 * (glass_downward_conduction + glass_downward_radiation)
 
     # Compute the resultant vector value.
     resultant_vector_value = (
@@ -1940,7 +1981,7 @@ def calculate_matrix_equation(  # pylint: disable=too-many-branches
                     + "in the PV-T data file.{}".format(BColours.ENDC)
                 )
 
-            glass_to_pv_conduction = (
+            glass_downward_conduction = (
                 element.width
                 * element.length
                 / air_gap_resistance(
@@ -1969,9 +2010,9 @@ def calculate_matrix_equation(  # pylint: disable=too-many-branches
                     weather_conditions,
                 )
             )
-            logger.debug("Glass to pv conduction %s W/K", glass_to_pv_conduction)
+            logger.debug("Glass to pv conduction %s W/K", glass_downward_conduction)
 
-            glass_to_pv_radiation = (
+            glass_downward_radiation = (
                 element.width
                 * element.length
                 * radiative_heat_transfer_coefficient(
@@ -1997,11 +2038,79 @@ def calculate_matrix_equation(  # pylint: disable=too-many-branches
                     ],
                 )
             )
-            logger.debug("Glass to pv radiation %s W/K", glass_to_pv_radiation)
+            logger.debug("Glass to pv radiation %s W/K", glass_downward_radiation)
+        elif element.glass and element.absorber:
+            if pvt_panel.glass is None:
+                raise ProgrammerJudgementFault(
+                    "{}Element {} has a glass layer but no glass data supplied ".format(
+                        BColours.FAIL, element
+                    )
+                    + "in the PV-T data file.{}".format(BColours.ENDC)
+                )
 
+            glass_downward_conduction = (
+                element.width
+                * element.length
+                / air_gap_resistance(
+                    pvt_panel,
+                    0.5
+                    * (
+                        best_guess_temperature_vector[
+                            index_handler.index_from_element_coordinates(
+                                number_of_x_elements,
+                                pvt_panel,
+                                TemperatureName.absorber,
+                                element.x_index,
+                                element.y_index,
+                            )
+                        ]
+                        + best_guess_temperature_vector[
+                            index_handler.index_from_element_coordinates(
+                                number_of_x_elements,
+                                pvt_panel,
+                                TemperatureName.glass,
+                                element.x_index,
+                                element.y_index,
+                            )
+                        ]
+                    ),
+                    weather_conditions,
+                )
+            )
+            logger.debug(
+                "Glass to absorber conduction %s W/K", glass_downward_conduction
+            )
+
+            glass_downward_radiation = (
+                element.width
+                * element.length
+                * radiative_heat_transfer_coefficient(
+                    destination_emissivity=pvt_panel.absorber.emissivity,
+                    destination_temperature=best_guess_temperature_vector[
+                        index_handler.index_from_element_coordinates(
+                            number_of_x_elements,
+                            pvt_panel,
+                            TemperatureName.absorber,
+                            element.x_index,
+                            element.y_index,
+                        )
+                    ],
+                    source_emissivity=pvt_panel.glass.emissivity,
+                    source_temperature=best_guess_temperature_vector[
+                        index_handler.index_from_element_coordinates(
+                            number_of_x_elements,
+                            pvt_panel,
+                            TemperatureName.glass,
+                            element.x_index,
+                            element.y_index,
+                        )
+                    ],
+                )
+            )
+            logger.debug("Glass to absorber radiation %s W/K", glass_downward_radiation)
         else:
-            glass_to_pv_conduction = 0
-            glass_to_pv_radiation = 0
+            glass_downward_conduction = 0
+            glass_downward_radiation = 0
             logger.debug(
                 "No glass-to-pv conduction or radiation because {} ".format(
                     " and ".join(
@@ -2038,8 +2147,8 @@ def calculate_matrix_equation(  # pylint: disable=too-many-branches
         if element.glass:
             glass_equation, glass_resultant_value = _glass_equation(
                 best_guess_temperature_vector,
-                glass_to_pv_conduction,
-                glass_to_pv_radiation,
+                glass_downward_conduction,
+                glass_downward_radiation,
                 logger,
                 number_of_temperatures,
                 number_of_x_elements,
@@ -2070,8 +2179,8 @@ def calculate_matrix_equation(  # pylint: disable=too-many-branches
                 operating_mode,
                 previous_temperature_vector,
                 pv_to_absorber_conduction,
-                glass_to_pv_conduction,
-                glass_to_pv_radiation,
+                glass_downward_conduction,
+                glass_downward_radiation,
                 pvt_panel,
                 resolution,
                 element,
@@ -2090,6 +2199,8 @@ def calculate_matrix_equation(  # pylint: disable=too-many-branches
             absorber_equation, absorber_resultant_value = _absorber_equation(
                 absorber_to_pipe_conduction,
                 best_guess_temperature_vector,
+                glass_downward_conduction,
+                glass_downward_radiation,
                 logger,
                 number_of_pipes,
                 number_of_temperatures,
