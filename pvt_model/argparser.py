@@ -28,6 +28,7 @@ __all__ = ("check_args", "parse_args")
 
 # Used to keep track of the temperature layers based on the CLI arguments passsed in.
 layer_map = {
+    "dg": TemperatureName.upper_glass,
     "g": TemperatureName.glass,
     "pv": TemperatureName.pv,
     "a": TemperatureName.absorber,
@@ -219,6 +220,17 @@ def check_args(  # pylint: disable=too-many-branches
                 ", ".join(
                     [entry for entry in parsed_args.layers if entry not in layer_map]
                 ),
+                BColours.ENDC,
+            )
+        )
+
+    # Enforce that, if double glazing is specified, then the glass layer is also present
+    if "dg" in parsed_args.layers and "g" not in parsed_args.layers:
+        raise ArgumentMismatchError(
+            "{}If using the --layers developer argument, the glass layer, ".format(
+                BColours.FAIL
+            )
+            + "'g', must be specified if using double-glazing, 'dg'.{}".format(
                 BColours.ENDC,
             )
         )
