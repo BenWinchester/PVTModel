@@ -24,7 +24,7 @@ import numpy
 
 from . import bond, absorber, glass, pv
 
-from ...__utils__ import MissingParametersError
+from ...__utils__ import BColours, MissingParametersError, ProgrammerJudgementFault
 
 from ..__utils__ import (
     CollectorParameters,
@@ -261,9 +261,9 @@ class PVT:
         self.absorber = absorber.Collector(absorber_parameters)
         self.eva = eva
         if glass_parameters is None:
-            self.glass = None
+            self.glass: Optional[glass.Glass] = None
         else:
-            self.glass: glass.Glass = glass.Glass(glass_parameters)
+            self.glass = glass.Glass(glass_parameters)
         self.insulation = insulation
         self.pv: pv.PV = pv.PV(pv_parameters)
         self.tedlar = tedlar
@@ -430,6 +430,13 @@ class PVT:
             The TA product of the glass layer.
 
         """
+
+        if self.glass is None:
+            raise ProgrammerJudgementFault(
+                "{}Attempted to fetch ta product of a non-existent glass layer.{}".format(
+                    BColours.FAIL, BColours.ENDC
+                )
+            )
 
         ta_product: float = (
             1

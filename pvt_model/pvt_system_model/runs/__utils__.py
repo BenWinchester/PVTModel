@@ -30,7 +30,6 @@ from ..__utils__ import (
 )
 from ..constants import ZERO_CELCIUS_OFFSET
 from ..physics_utils import reduced_temperature
-from ..pvt_panel.element import Element, ElementCoordinates
 
 
 __all__ = ("system_data_from_run",)
@@ -77,7 +76,6 @@ def _average_layer_temperature(
 def _layer_temperature_profile(
     number_of_pipes: int,
     number_of_x_elements: int,
-    number_of_y_elements: int,
     pvt_panel: pvt.PVT,
     temperature_name: TemperatureName,
     temperature_vector: Union[List[float], numpy.ndarray],
@@ -90,9 +88,6 @@ def _layer_temperature_profile(
 
     :param number_of_x_elements:
         The number of elements in a single row of the absorber.
-
-    :param number_of_y_elements:
-        The number of y elements in a single row of the absorber.
 
     :param pvt_panel:
         The PVT panel being modelled.
@@ -120,7 +115,6 @@ def _layer_temperature_profile(
             str(element_coordinates): temperature_vector[
                 index_handler.index_from_element_coordinates(
                     number_of_x_elements,
-                    number_of_y_elements,
                     pvt_panel,
                     temperature_name,
                     element.x_index,
@@ -141,7 +135,6 @@ def _layer_temperature_profile(
                 index_handler.index_from_pipe_coordinates(
                     number_of_pipes,
                     number_of_x_elements,
-                    number_of_y_elements,
                     element.pipe_index,  # type: ignore
                     pvt_panel,
                     temperature_name,
@@ -166,7 +159,6 @@ def system_data_from_run(
     initial_date_and_time: datetime.datetime,
     number_of_pipes: int,
     number_of_x_elements: int,
-    number_of_y_elements: int,
     operating_mode: OperatingMode,
     pvt_panel: pvt.PVT,
     save_2d_output: bool,
@@ -188,9 +180,6 @@ def system_data_from_run(
 
     :param number_of_x_elements:
         The number of x elements included in the absorber.
-
-    :param number_of_y_elements:
-        The number of y elements included in the absorber.
 
     :param operating_mode:
         The operating mode for the run.
@@ -218,15 +207,16 @@ def system_data_from_run(
 
     # Determine the average temperatures of the various PVT layers.
     if any({element.glass for element in pvt_panel.elements.values()}):
-        average_glass_temperature = _average_layer_temperature(
+        average_glass_temperature: Optional[float] = _average_layer_temperature(
             pvt_panel,
             TemperatureName.glass,
             temperature_vector,
         )
-        temperature_map_glass_layer = _layer_temperature_profile(
+        temperature_map_glass_layer: Optional[
+            Dict[str, float]
+        ] = _layer_temperature_profile(
             number_of_pipes,
             number_of_x_elements,
-            number_of_y_elements,
             pvt_panel,
             TemperatureName.glass,
             temperature_vector,
@@ -243,7 +233,6 @@ def system_data_from_run(
     temperature_map_pv_layer = _layer_temperature_profile(
         number_of_pipes,
         number_of_x_elements,
-        number_of_y_elements,
         pvt_panel,
         TemperatureName.pv,
         temperature_vector,
@@ -257,7 +246,6 @@ def system_data_from_run(
     temperature_map_absorber_layer = _layer_temperature_profile(
         number_of_pipes,
         number_of_x_elements,
-        number_of_y_elements,
         pvt_panel,
         TemperatureName.absorber,
         temperature_vector,
@@ -271,7 +259,6 @@ def system_data_from_run(
     temperature_map_pipe_layer = _layer_temperature_profile(
         number_of_pipes,
         number_of_x_elements,
-        number_of_y_elements,
         pvt_panel,
         TemperatureName.pipe,
         temperature_vector,
@@ -285,7 +272,6 @@ def system_data_from_run(
     temperature_map_bulk_water_layer = _layer_temperature_profile(
         number_of_pipes,
         number_of_x_elements,
-        number_of_y_elements,
         pvt_panel,
         TemperatureName.htf,
         temperature_vector,
@@ -358,7 +344,7 @@ def system_data_from_run(
 
     # Determine the reduced temperature of the system.
     if weather_conditions.irradiance > 0:
-        electrical_efficiency = efficiency.electrical_efficiency(
+        electrical_efficiency: Optional[float] = efficiency.electrical_efficiency(
             pvt_panel, average_pv_temperature
         )
         reduced_system_temperature: Optional[float] = reduced_temperature(

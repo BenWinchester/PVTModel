@@ -18,6 +18,15 @@
   justification: "Tank temperature cannot be `None`, already processed."
   usage: "{round(entry.tank_temperature, 3) for entry in system_data.values()}"
 - file: pvt_model/__main__.py
+  justification: "Glass temperature cannot be `None`, already processed."
+  usage: "mean({entry.glass_temperature for entry in system_data.values()}), 3"
+- file: pvt_model/__main__.py
+  justification: "Glass temperature cannot be `None`, already processed."
+  usage: "{round(entry.glass_temperature, 3) for entry in system_data.values()}"
+- file: pvt_model/__main__.py
+  justification: "Glass temperature cannot be `None`, already processed."
+  usage: "{round(entry.glass_temperature, 3) for entry in system_data.values()}"
+- file: pvt_model/__main__.py
   justification: "Further investigation required - FIXME"
   usage: "system_data_dict.update(dataclasses.asdict(total_power_data))"
 - file: pvt_model/__main__.py
@@ -138,3 +147,6 @@
 - file: pvt_model/pvt_system_model/load.py
   justification: "Type annotation of `Any` is needed here due to forgive-and-forget."
   usage: "def from_data(cls, data_file_paths: Set[str]) -> Any:"
+- file: pvt_model/pvt_system_model/matrix.py
+  justification: "Mypy still can't cope with the pipe numbers."
+  usage: "pipe_number,"

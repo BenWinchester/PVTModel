@@ -20,6 +20,7 @@ from numpy import ndarray
 from .. import physics_utils
 from . import pvt
 
+from ...__utils__ import BColours, ProgrammerJudgementFault
 from ..__utils__ import WeatherConditions
 
 __all__ = (
@@ -62,6 +63,12 @@ def _conductive_heat_transfer_coefficient_with_gap(
 
     """
 
+    if pvt_panel.air_gap_thickness is None:
+        raise ProgrammerJudgementFault(
+            "{}Conductive heat transfer requested with no air gap.{}".format(
+                BColours.FAIL, BColours.ENDC
+            )
+        )
     air_gap_rayleigh_number = physics_utils.rayleigh_number(
         pvt_panel.air_gap_thickness,
         average_surface_temperature,
@@ -116,6 +123,14 @@ def air_gap_resistance(
         The thermal resistance, measured in Kelvin meter squared per Watt.
 
     """
+
+    if pvt_panel.glass is None or pvt_panel.air_gap_thickness is None:
+        raise ProgrammerJudgementFault(
+            "{}Resistance across an air gap could not be computed due to no ".format(
+                BColours.FAIL
+            )
+            + "glass layer being present.{}".format(BColours.ENDC)
+        )
 
     return (
         pvt_panel.eva.thickness / pvt_panel.eva.conductivity

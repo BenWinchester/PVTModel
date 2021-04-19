@@ -678,13 +678,13 @@ def _output_temperature_info(
 
     if "g" in parsed_args.layers:
         average_temperature_map["glass"] = round(
-            mean({entry.glass_temperature for entry in system_data.values()}), 3
+            mean({entry.glass_temperature for entry in system_data.values()}), 3  # type: ignore
         )
         maximum_temperature_map["glass"] = max(
-            {round(entry.glass_temperature, 3) for entry in system_data.values()}
+            {round(entry.glass_temperature, 3) for entry in system_data.values()}  # type: ignore
         )
         minimum_temperature_map["glass"] = min(
-            {round(entry.glass_temperature, 3) for entry in system_data.values()}
+            {round(entry.glass_temperature, 3) for entry in system_data.values()}  # type: ignore
         )
 
     if not parsed_args.decoupled:

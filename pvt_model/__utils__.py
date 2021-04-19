@@ -447,7 +447,7 @@ class SystemData:
     bulk_water_temperature: float
     date: str
     electrical_efficiency: Optional[float]
-    glass_temperature: float
+    glass_temperature: Optional[float]
     exchanger_temperature_drop: Optional[float]
     pipe_temperature: float
     pv_temperature: float

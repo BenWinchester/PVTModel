@@ -518,7 +518,9 @@ def pvt_panel_from_path(
     # If there is glass data present, process this accordingly.
     if "glass" in pvt_data:
         air_gap_thickness = pvt_data["air_gap"]["thickness"]  # [m]
-        glass_parameters = _glass_params_from_data(pvt_data["glass"])
+        glass_parameters: Optional[OpticalLayerParameters] = _glass_params_from_data(
+            pvt_data["glass"]
+        )
     else:
         if TemperatureName.glass in layers:
             raise InvalidParametersError(

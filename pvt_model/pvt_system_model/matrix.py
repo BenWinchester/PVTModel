@@ -201,7 +201,6 @@ def _absorber_equation(  # pylint: disable=too-many-branches
                 pvt_panel,
                 index_handler.index_from_element_coordinates(
                     number_of_x_elements,
-                    number_of_y_elements,
                     pvt_panel,
                     TemperatureName.absorber,
                     element.x_index,
@@ -229,7 +228,6 @@ def _absorber_equation(  # pylint: disable=too-many-branches
             pvt_panel.absorber.emissivity,
             index_handler.index_from_element_coordinates(
                 number_of_x_elements,
-                number_of_y_elements,
                 pvt_panel,
                 TemperatureName.absorber,
                 element.x_index,
@@ -247,7 +245,6 @@ def _absorber_equation(  # pylint: disable=too-many-branches
     row_equation[
         index_handler.index_from_element_coordinates(
             number_of_x_elements,
-            number_of_y_elements,
             pvt_panel,
             TemperatureName.absorber,
             element.x_index,
@@ -272,7 +269,6 @@ def _absorber_equation(  # pylint: disable=too-many-branches
         row_equation[
             index_handler.index_from_element_coordinates(
                 number_of_x_elements,
-                number_of_y_elements,
                 pvt_panel,
                 TemperatureName.absorber,
                 element.x_index + 1,
@@ -287,7 +283,6 @@ def _absorber_equation(  # pylint: disable=too-many-branches
         row_equation[
             index_handler.index_from_element_coordinates(
                 number_of_x_elements,
-                number_of_y_elements,
                 pvt_panel,
                 TemperatureName.absorber,
                 element.x_index - 1,
@@ -302,7 +297,6 @@ def _absorber_equation(  # pylint: disable=too-many-branches
         row_equation[
             index_handler.index_from_element_coordinates(
                 number_of_x_elements,
-                number_of_y_elements,
                 pvt_panel,
                 TemperatureName.absorber,
                 element.x_index,
@@ -317,7 +311,6 @@ def _absorber_equation(  # pylint: disable=too-many-branches
         row_equation[
             index_handler.index_from_element_coordinates(
                 number_of_x_elements,
-                number_of_y_elements,
                 pvt_panel,
                 TemperatureName.absorber,
                 element.x_index,
@@ -332,7 +325,6 @@ def _absorber_equation(  # pylint: disable=too-many-branches
         row_equation[
             index_handler.index_from_element_coordinates(
                 number_of_x_elements,
-                number_of_y_elements,
                 pvt_panel,
                 TemperatureName.pv,
                 element.x_index,
@@ -354,7 +346,6 @@ def _absorber_equation(  # pylint: disable=too-many-branches
                 index_handler.index_from_pipe_coordinates(
                     number_of_pipes,
                     number_of_x_elements,
-                    number_of_y_elements,
                     element.pipe_index,
                     pvt_panel,
                     TemperatureName.pipe,
@@ -383,7 +374,6 @@ def _absorber_equation(  # pylint: disable=too-many-branches
             * previous_temperature_vector[  # type: ignore
                 index_handler.index_from_element_coordinates(
                     number_of_x_elements,
-                    number_of_y_elements,
                     pvt_panel,
                     TemperatureName.absorber,
                     element.x_index,
@@ -452,7 +442,6 @@ def _boundary_condition_equations(
             row_equation[
                 index_handler.index_from_element_coordinates(
                     number_of_x_elements,
-                    number_of_y_elements,
                     pvt_panel,
                     temperature_name,
                     0,
@@ -462,7 +451,6 @@ def _boundary_condition_equations(
             row_equation[
                 index_handler.index_from_element_coordinates(
                     number_of_x_elements,
-                    number_of_y_elements,
                     pvt_panel,
                     temperature_name,
                     1,
@@ -475,7 +463,6 @@ def _boundary_condition_equations(
             row_equation[
                 index_handler.index_from_element_coordinates(
                     number_of_x_elements,
-                    number_of_y_elements,
                     pvt_panel,
                     temperature_name,
                     number_of_x_elements - 1,
@@ -485,7 +472,6 @@ def _boundary_condition_equations(
             row_equation[
                 index_handler.index_from_element_coordinates(
                     number_of_x_elements,
-                    number_of_y_elements,
                     pvt_panel,
                     temperature_name,
                     number_of_x_elements - 2,
@@ -501,7 +487,6 @@ def _boundary_condition_equations(
             row_equation[
                 index_handler.index_from_element_coordinates(
                     number_of_x_elements,
-                    number_of_y_elements,
                     pvt_panel,
                     temperature_name,
                     x_coord,
@@ -511,7 +496,6 @@ def _boundary_condition_equations(
             row_equation[
                 index_handler.index_from_element_coordinates(
                     number_of_x_elements,
-                    number_of_y_elements,
                     pvt_panel,
                     temperature_name,
                     x_coord,
@@ -524,7 +508,6 @@ def _boundary_condition_equations(
             row_equation[
                 index_handler.index_from_element_coordinates(
                     number_of_x_elements,
-                    number_of_y_elements,
                     pvt_panel,
                     temperature_name,
                     x_coord,
@@ -534,7 +517,6 @@ def _boundary_condition_equations(
             row_equation[
                 index_handler.index_from_element_coordinates(
                     number_of_x_elements,
-                    number_of_y_elements,
                     pvt_panel,
                     temperature_name,
                     x_coord,
@@ -584,7 +566,6 @@ def _decoupled_system_continuity_equation(
             index_handler.index_from_pipe_coordinates(
                 number_of_pipes,
                 number_of_x_elements,
-                number_of_y_elements,
                 pipe_number,  # type: ignore
                 pvt_panel,
                 TemperatureName.htf_in,
@@ -607,7 +588,6 @@ def _decoupled_system_continuity_equation(
             index_handler.index_from_pipe_coordinates(
                 number_of_pipes,
                 number_of_x_elements,
-                number_of_y_elements,
                 pipe_number,
                 pvt_panel,
                 TemperatureName.htf_out,
@@ -631,7 +611,6 @@ def _fluid_continuity_equation(
     number_of_pipes: int,
     number_of_temperatures: int,
     number_of_x_elements: int,
-    number_of_y_elements: int,
     pvt_panel: pvt.PVT,
     element: Element,
 ) -> Tuple[List[float], float]:
@@ -656,7 +635,6 @@ def _fluid_continuity_equation(
         index_handler.index_from_pipe_coordinates(
             number_of_pipes,
             number_of_x_elements,
-            number_of_y_elements,
             element.pipe_index,  # type: ignore
             pvt_panel,
             TemperatureName.htf_out,
@@ -668,7 +646,6 @@ def _fluid_continuity_equation(
         index_handler.index_from_pipe_coordinates(
             number_of_pipes,
             number_of_x_elements,
-            number_of_y_elements,
             element.pipe_index,  # type: ignore
             pvt_panel,
             TemperatureName.htf_in,
@@ -713,6 +690,14 @@ def _glass_equation(  # pylint: disable=too-many-branches
     logger.debug(
         "Beginning calculation of glass equation for element %s.", element.coordinates
     )
+
+    if pvt_panel.glass is None:
+        raise ProgrammerJudgementFault(
+            "{}Element {} has a glass layer but no glass data supplied ".format(
+                BColours.FAIL, element
+            )
+            + "in the PV-T data file.{}".format(BColours.ENDC)
+        )
 
     if operating_mode.dynamic:
         glass_internal_energy: float = (
@@ -810,7 +795,6 @@ def _glass_equation(  # pylint: disable=too-many-branches
         pvt_panel.glass.emissivity,
         index_handler.index_from_element_coordinates(
             number_of_x_elements,
-            number_of_y_elements,
             pvt_panel,
             TemperatureName.glass,
             element.x_index,
@@ -825,7 +809,6 @@ def _glass_equation(  # pylint: disable=too-many-branches
     row_equation[
         index_handler.index_from_element_coordinates(
             number_of_x_elements,
-            number_of_y_elements,
             pvt_panel,
             TemperatureName.glass,
             element.x_index,
@@ -846,7 +829,6 @@ def _glass_equation(  # pylint: disable=too-many-branches
         row_equation[
             index_handler.index_from_element_coordinates(
                 number_of_x_elements,
-                number_of_y_elements,
                 pvt_panel,
                 TemperatureName.glass,
                 element.x_index + 1,
@@ -861,7 +843,6 @@ def _glass_equation(  # pylint: disable=too-many-branches
         row_equation[
             index_handler.index_from_element_coordinates(
                 number_of_x_elements,
-                number_of_y_elements,
                 pvt_panel,
                 TemperatureName.glass,
                 element.x_index - 1,
@@ -876,7 +857,6 @@ def _glass_equation(  # pylint: disable=too-many-branches
         row_equation[
             index_handler.index_from_element_coordinates(
                 number_of_x_elements,
-                number_of_y_elements,
                 pvt_panel,
                 TemperatureName.glass,
                 element.x_index,
@@ -891,7 +871,6 @@ def _glass_equation(  # pylint: disable=too-many-branches
         row_equation[
             index_handler.index_from_element_coordinates(
                 number_of_x_elements,
-                number_of_y_elements,
                 pvt_panel,
                 TemperatureName.glass,
                 element.x_index,
@@ -906,7 +885,6 @@ def _glass_equation(  # pylint: disable=too-many-branches
         row_equation[
             index_handler.index_from_element_coordinates(
                 number_of_x_elements,
-                number_of_y_elements,
                 pvt_panel,
                 TemperatureName.pv,
                 element.x_index,
@@ -939,7 +917,6 @@ def _glass_equation(  # pylint: disable=too-many-branches
             * previous_temperature_vector[  # type: ignore
                 index_handler.index_from_element_coordinates(
                     number_of_x_elements,
-                    number_of_y_elements,
                     pvt_panel,
                     TemperatureName.glass,
                     element.x_index,
@@ -967,7 +944,6 @@ def _htf_continuity_equation(
     number_of_pipes: int,
     number_of_temperatures: int,
     number_of_x_elements: int,
-    number_of_y_elements: int,
     pvt_panel: pvt.PVT,
     element: Element,
 ) -> Tuple[List[float], float]:
@@ -992,7 +968,6 @@ def _htf_continuity_equation(
         index_handler.index_from_pipe_coordinates(
             number_of_pipes,
             number_of_x_elements,
-            number_of_y_elements,
             element.pipe_index,  # type: ignore
             pvt_panel,
             TemperatureName.htf,
@@ -1005,7 +980,6 @@ def _htf_continuity_equation(
         index_handler.index_from_pipe_coordinates(
             number_of_pipes,
             number_of_x_elements,
-            number_of_y_elements,
             element.pipe_index,  # type: ignore
             pvt_panel,
             TemperatureName.htf_in,
@@ -1018,7 +992,6 @@ def _htf_continuity_equation(
         index_handler.index_from_pipe_coordinates(
             number_of_pipes,
             number_of_x_elements,
-            number_of_y_elements,
             element.pipe_index,  # type: ignore
             pvt_panel,
             TemperatureName.htf_out,
@@ -1034,7 +1007,6 @@ def _htf_equation(
     number_of_pipes: int,
     number_of_temperatures: int,
     number_of_x_elements: int,
-    number_of_y_elements: int,
     operating_mode: OperatingMode,
     pipe_to_bulk_water_heat_transfer: float,
     previous_temperature_vector: Optional[numpy.ndarray],
@@ -1068,7 +1040,6 @@ def _htf_equation(
                     index_handler.index_from_pipe_coordinates(
                         number_of_pipes,
                         number_of_x_elements,
-                        number_of_y_elements,
                         element.pipe_index,  # type: ignore
                         pvt_panel,
                         TemperatureName.htf,
@@ -1093,7 +1064,6 @@ def _htf_equation(
         index_handler.index_from_pipe_coordinates(
             number_of_pipes,
             number_of_x_elements,
-            number_of_y_elements,
             element.pipe_index,  # type: ignore
             pvt_panel,
             TemperatureName.htf,
@@ -1108,7 +1078,6 @@ def _htf_equation(
         index_handler.index_from_pipe_coordinates(
             number_of_pipes,
             number_of_x_elements,
-            number_of_y_elements,
             element.pipe_index,  # type: ignore
             pvt_panel,
             TemperatureName.htf_in,
@@ -1123,7 +1092,6 @@ def _htf_equation(
         index_handler.index_from_pipe_coordinates(
             number_of_pipes,
             number_of_x_elements,
-            number_of_y_elements,
             element.pipe_index,  # type: ignore
             pvt_panel,
             TemperatureName.htf_out,
@@ -1136,7 +1104,6 @@ def _htf_equation(
         index_handler.index_from_pipe_coordinates(
             number_of_pipes,
             number_of_x_elements,
-            number_of_y_elements,
             element.pipe_index,  # type: ignore
             pvt_panel,
             TemperatureName.pipe,
@@ -1157,7 +1124,6 @@ def _htf_equation(
                 index_handler.index_from_pipe_coordinates(
                     number_of_pipes,
                     number_of_x_elements,
-                    number_of_y_elements,
                     element.pipe_index,  # type: ignore
                     pvt_panel,
                     TemperatureName.htf,
@@ -1176,7 +1142,6 @@ def _pipe_equation(
     number_of_pipes: int,
     number_of_temperatures: int,
     number_of_x_elements: int,
-    number_of_y_elements: int,
     operating_mode: OperatingMode,
     pipe_to_htf_heat_transfer: float,
     previous_temperature_vector: Optional[numpy.ndarray],
@@ -1226,7 +1191,6 @@ def _pipe_equation(
             index_handler.index_from_pipe_coordinates(
                 number_of_pipes,
                 number_of_x_elements,
-                number_of_y_elements,
                 element.pipe_index,  # type: ignore
                 pvt_panel,
                 TemperatureName.pipe,
@@ -1241,7 +1205,6 @@ def _pipe_equation(
         index_handler.index_from_pipe_coordinates(
             number_of_pipes,
             number_of_x_elements,
-            number_of_y_elements,
             element.pipe_index,  # type: ignore
             pvt_panel,
             TemperatureName.pipe,
@@ -1258,7 +1221,6 @@ def _pipe_equation(
     row_equation[
         index_handler.index_from_element_coordinates(
             number_of_x_elements,
-            number_of_y_elements,
             pvt_panel,
             TemperatureName.absorber,
             element.x_index,
@@ -1271,7 +1233,6 @@ def _pipe_equation(
         index_handler.index_from_pipe_coordinates(
             number_of_pipes,
             number_of_x_elements,
-            number_of_y_elements,
             element.pipe_index,  # type: ignore
             pvt_panel,
             TemperatureName.htf,
@@ -1294,7 +1255,6 @@ def _pipe_equation(
                 index_handler.index_from_pipe_coordinates(
                     number_of_pipes,
                     number_of_x_elements,
-                    number_of_y_elements,
                     element.pipe_index,  # type: ignore
                     pvt_panel,
                     TemperatureName.pipe,
@@ -1380,7 +1340,6 @@ def _pv_equation(  # pylint: disable=too-many-branches
             pvt_panel.pv.emissivity,
             index_handler.index_from_element_coordinates(
                 number_of_x_elements,
-                number_of_y_elements,
                 pvt_panel,
                 TemperatureName.pv,
                 element.x_index,
@@ -1474,7 +1433,6 @@ def _pv_equation(  # pylint: disable=too-many-branches
     row_equation[
         index_handler.index_from_element_coordinates(
             number_of_x_elements,
-            number_of_y_elements,
             pvt_panel,
             TemperatureName.pv,
             element.x_index,
@@ -1496,7 +1454,6 @@ def _pv_equation(  # pylint: disable=too-many-branches
         row_equation[
             index_handler.index_from_element_coordinates(
                 number_of_x_elements,
-                number_of_y_elements,
                 pvt_panel,
                 TemperatureName.pv,
                 element.x_index + 1,
@@ -1511,7 +1468,6 @@ def _pv_equation(  # pylint: disable=too-many-branches
         row_equation[
             index_handler.index_from_element_coordinates(
                 number_of_x_elements,
-                number_of_y_elements,
                 pvt_panel,
                 TemperatureName.pv,
                 element.x_index - 1,
@@ -1526,7 +1482,6 @@ def _pv_equation(  # pylint: disable=too-many-branches
         row_equation[
             index_handler.index_from_element_coordinates(
                 number_of_x_elements,
-                number_of_y_elements,
                 pvt_panel,
                 TemperatureName.pv,
                 element.x_index,
@@ -1541,7 +1496,6 @@ def _pv_equation(  # pylint: disable=too-many-branches
         row_equation[
             index_handler.index_from_element_coordinates(
                 number_of_x_elements,
-                number_of_y_elements,
                 pvt_panel,
                 TemperatureName.pv,
                 element.x_index,
@@ -1556,7 +1510,6 @@ def _pv_equation(  # pylint: disable=too-many-branches
         row_equation[
             index_handler.index_from_element_coordinates(
                 number_of_x_elements,
-                number_of_y_elements,
                 pvt_panel,
                 TemperatureName.glass,
                 element.x_index,
@@ -1569,7 +1522,6 @@ def _pv_equation(  # pylint: disable=too-many-branches
         row_equation[
             index_handler.index_from_element_coordinates(
                 number_of_x_elements,
-                number_of_y_elements,
                 pvt_panel,
                 TemperatureName.absorber,
                 element.x_index,
@@ -1593,7 +1545,6 @@ def _pv_equation(  # pylint: disable=too-many-branches
             best_guess_temperature_vector[
                 index_handler.index_from_element_coordinates(
                     number_of_x_elements,
-                    number_of_y_elements,
                     pvt_panel,
                     TemperatureName.pv,
                     element.x_index,
@@ -1624,7 +1575,6 @@ def _pv_equation(  # pylint: disable=too-many-branches
             * previous_temperature_vector[  # type: ignore
                 index_handler.index_from_element_coordinates(
                     number_of_x_elements,
-                    number_of_y_elements,
                     pvt_panel,
                     TemperatureName.pv,
                     element.x_index,
@@ -1676,7 +1626,6 @@ def _system_continuity_equations(
             index_handler.index_from_pipe_coordinates(
                 number_of_pipes,
                 number_of_x_elements,
-                number_of_y_elements,
                 pipe_number,
                 pvt_panel,
                 TemperatureName.htf_in,
@@ -1699,7 +1648,6 @@ def _system_continuity_equations(
             index_handler.index_from_pipe_coordinates(
                 number_of_pipes,
                 number_of_x_elements,
-                number_of_y_elements,
                 pipe_number,
                 pvt_panel,
                 TemperatureName.htf_out,
@@ -1942,7 +1890,7 @@ def _tank_equation(
 ##################
 
 
-def calculate_matrix_equation(
+def calculate_matrix_equation(  # pylint: disable=too-many-branches
     *,
     best_guess_temperature_vector: Union[List[float], numpy.ndarray],
     logger: logging.Logger,
@@ -1984,6 +1932,14 @@ def calculate_matrix_equation(
         logger.debug("Calculating equations for element %s", element_coordinates)
         # Compute the various shared values.
         if element.glass and element.pv:
+            if pvt_panel.glass is None:
+                raise ProgrammerJudgementFault(
+                    "{}Element {} has a glass layer but no glass data supplied ".format(
+                        BColours.FAIL, element
+                    )
+                    + "in the PV-T data file.{}".format(BColours.ENDC)
+                )
+
             glass_to_pv_conduction = (
                 element.width
                 * element.length
@@ -1994,7 +1950,6 @@ def calculate_matrix_equation(
                         best_guess_temperature_vector[
                             index_handler.index_from_element_coordinates(
                                 number_of_x_elements,
-                                number_of_y_elements,
                                 pvt_panel,
                                 TemperatureName.pv,
                                 element.x_index,
@@ -2004,7 +1959,6 @@ def calculate_matrix_equation(
                         + best_guess_temperature_vector[
                             index_handler.index_from_element_coordinates(
                                 number_of_x_elements,
-                                number_of_y_elements,
                                 pvt_panel,
                                 TemperatureName.glass,
                                 element.x_index,
@@ -2025,7 +1979,6 @@ def calculate_matrix_equation(
                     destination_temperature=best_guess_temperature_vector[
                         index_handler.index_from_element_coordinates(
                             number_of_x_elements,
-                            number_of_y_elements,
                             pvt_panel,
                             TemperatureName.pv,
                             element.x_index,
@@ -2036,7 +1989,6 @@ def calculate_matrix_equation(
                     source_temperature=best_guess_temperature_vector[
                         index_handler.index_from_element_coordinates(
                             number_of_x_elements,
-                            number_of_y_elements,
                             pvt_panel,
                             TemperatureName.glass,
                             element.x_index,
@@ -2176,7 +2128,6 @@ def calculate_matrix_equation(
                     index_handler.index_from_pipe_coordinates(
                         number_of_pipes,
                         number_of_x_elements,
-                        number_of_y_elements,
                         element.pipe_index,  # type: ignore
                         pvt_panel,
                         TemperatureName.htf,
@@ -2196,7 +2147,6 @@ def calculate_matrix_equation(
             number_of_pipes,
             number_of_temperatures,
             number_of_x_elements,
-            number_of_y_elements,
             operating_mode,
             pipe_to_htf_heat_transfer,
             previous_temperature_vector,
@@ -2219,7 +2169,6 @@ def calculate_matrix_equation(
             number_of_pipes,
             number_of_temperatures,
             number_of_x_elements,
-            number_of_y_elements,
             operating_mode,
             pipe_to_htf_heat_transfer,
             previous_temperature_vector,
@@ -2240,7 +2189,6 @@ def calculate_matrix_equation(
             number_of_pipes,
             number_of_temperatures,
             number_of_x_elements,
-            number_of_y_elements,
             pvt_panel,
             element,
         )
@@ -2266,7 +2214,6 @@ def calculate_matrix_equation(
             number_of_pipes,
             number_of_temperatures,
             number_of_x_elements,
-            number_of_y_elements,
             pvt_panel,
             element,
         )

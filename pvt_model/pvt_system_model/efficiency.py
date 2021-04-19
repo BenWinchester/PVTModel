@@ -19,8 +19,6 @@ such as over an entire year to compute the annual demand covered value.
 
 """
 
-import numpy
-
 from .constants import HEAT_CAPACITY_OF_WATER
 from .pvt_panel import pvt
 

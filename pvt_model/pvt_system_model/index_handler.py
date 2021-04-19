@@ -84,7 +84,6 @@ def _get_index(  # pylint: disable=too-many-branches
     *,
     number_of_pipes: Optional[int] = None,
     number_of_x_elements: Optional[int] = None,
-    number_of_y_elements: Optional[int] = None,
     pipe_number: Optional[int] = None,
     x_coord: Optional[int] = None,
     y_coord: Optional[int] = None
@@ -103,9 +102,6 @@ def _get_index(  # pylint: disable=too-many-branches
 
     :param number_of_x_elements:
         The number of elements in the x direction for the absorber model being run.
-
-    :param number_of_y_elements:
-        The number of elements in the y direction for the absorber model being run.
 
     :param pipe_number:
         The pipe number for which a coordinate should be returned.
@@ -223,7 +219,6 @@ def _get_index(  # pylint: disable=too-many-branches
 def index_from_pipe_coordinates(
     number_of_pipes: int,
     number_of_x_elements: int,
-    number_of_y_elements: int,
     pipe_number: int,
     pvt_panel: pvt.PVT,
     temperature_name: TemperatureName,
@@ -237,9 +232,6 @@ def index_from_pipe_coordinates(
 
     :param number_of_x_elements:
         The number of elements in the x direction along the panel.
-
-    :param number_of_y_elements:
-        The number of elements in the y direction along the panel.
 
     :param pipe_number:
         The number of the pipe.
@@ -263,7 +255,6 @@ def index_from_pipe_coordinates(
         pvt_panel,
         number_of_pipes=number_of_pipes,
         number_of_x_elements=number_of_x_elements,
-        number_of_y_elements=number_of_y_elements,
         pipe_number=pipe_number,
         y_coord=y_coord,
     )
@@ -271,7 +262,6 @@ def index_from_pipe_coordinates(
 
 def index_from_element_coordinates(
     number_of_x_elements: int,
-    number_of_y_elements: int,
     pvt_panel: pvt.PVT,
     temperature_name: TemperatureName,
     x_coord: int,
@@ -282,9 +272,6 @@ def index_from_element_coordinates(
 
     :param number_of_x_elements:
         The number of elements in the x direction along the panel.
-
-    :param number_of_y_elements:
-        The number of elements in the y direction along the panel.
 
     :param pvt_panel:
         The pvt collector being modelled.
@@ -307,7 +294,6 @@ def index_from_element_coordinates(
         temperature_name,
         pvt_panel,
         number_of_x_elements=number_of_x_elements,
-        number_of_y_elements=number_of_y_elements,
         x_coord=x_coord,
         y_coord=y_coord,
     )
