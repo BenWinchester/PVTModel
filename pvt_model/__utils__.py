@@ -474,18 +474,19 @@ class TemperatureName(enum.Enum):
 
     """
 
-    glass = 0
-    pv = 1
-    absorber = 2
-    pipe = 3
-    htf = 4
-    htf_in = 5
-    htf_out = 6
-    collector_in = 7
-    collector_out = 8
-    tank_in = 9
-    tank_out = 10
-    tank = 11
+    upper_glass = 0
+    glass = 1
+    pv = 2
+    absorber = 3
+    pipe = 4
+    htf = 5
+    htf_in = 6
+    htf_out = 7
+    collector_in = 8
+    collector_out = 9
+    tank_in = 10
+    tank_out = 11
+    tank = 12
 
 
 @dataclass
