@@ -1451,6 +1451,29 @@ def analyse_decoupled_steady_state_data(data: Dict[Any, Any], logger: Logger) ->
 
         # Glass Temperatures
         try:
+            logger.info(
+                "Plotting 3D upper glass profile at %s degC.", temperature_string
+            )
+            plot_two_dimensional_figure(
+                "steady_state_upper_glass_layer_{}degC_input".format(
+                    temperature_string
+                ),
+                logger,
+                data,
+                axis_label="Temperature / deg C",
+                entry_number=temperature,
+                plot_title="Upper glass layer temperature with {} K input HTF".format(
+                    round(float(temperature), 2)
+                ),
+                thing_to_plot="layer_temperature_map_upper_glass",
+            )
+        except TypeError:
+            logger.info(
+                "Upper-glass temperature profile could not be plotted due to no data."
+            )
+
+        # Glass Temperatures
+        try:
             logger.info("Plotting 3D glass profile at %s degC.", temperature_string)
             plot_two_dimensional_figure(
                 "steady_state_glass_layer_{}degC_input".format(temperature_string),

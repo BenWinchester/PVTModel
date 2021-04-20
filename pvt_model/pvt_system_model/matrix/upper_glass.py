@@ -74,7 +74,8 @@ def calculate_upper_glass_equation(  # pylint: disable=too-many-branches
     row_equation: List[float] = [0] * number_of_temperatures
 
     logger.debug(
-        "Beginning calculation of upper_glass equation for element %s.", element.coordinates
+        "Beginning calculation of upper_glass equation for element %s.",
+        element.coordinates,
     )
 
     if pvt_panel.upper_glass is None:
@@ -96,7 +97,9 @@ def calculate_upper_glass_equation(  # pylint: disable=too-many-branches
         )
     else:
         upper_glass_internal_energy = 0
-    logger.debug("Glass internal energy term: %s W/K", upper_glass_internal_energy)
+    logger.debug(
+        "Upper glass internal energy term: %s W/K", upper_glass_internal_energy
+    )
 
     # Compute the positive conductive term based on the next element along.
     positive_x_element = pvt_panel.elements.get(
@@ -112,7 +115,8 @@ def calculate_upper_glass_equation(  # pylint: disable=too-many-branches
     else:
         positive_x_wise_conduction = 0
     logger.debug(
-        "Positive upper_glass x-wise conduction term: %s W/K", positive_x_wise_conduction
+        "Positive upper_glass x-wise conduction term: %s W/K",
+        positive_x_wise_conduction,
     )
 
     # Compute the positive conductive term based on the next element along.
@@ -129,7 +133,8 @@ def calculate_upper_glass_equation(  # pylint: disable=too-many-branches
     else:
         negative_x_wise_conduction = 0
     logger.debug(
-        "Negative upper_glass x-wise conduction term: %s W/K", negative_x_wise_conduction
+        "Negative upper_glass x-wise conduction term: %s W/K",
+        negative_x_wise_conduction,
     )
 
     # Compute the overall x-wise conduction term.
@@ -150,7 +155,8 @@ def calculate_upper_glass_equation(  # pylint: disable=too-many-branches
     else:
         positive_y_wise_conduction = 0
     logger.debug(
-        "Positive upper_glass y-wise conduction term: %s W/K", positive_y_wise_conduction
+        "Positive upper_glass y-wise conduction term: %s W/K",
+        positive_y_wise_conduction,
     )
 
     # Compute the positive conductive term based on the next element along.
@@ -167,14 +173,18 @@ def calculate_upper_glass_equation(  # pylint: disable=too-many-branches
     else:
         negative_y_wise_conduction = 0
     logger.debug(
-        "Negative upper_glass y-wise conduction term: %s W/K", negative_y_wise_conduction
+        "Negative upper_glass y-wise conduction term: %s W/K",
+        negative_y_wise_conduction,
     )
 
     # Compute the overall y-wise conduction term.
     y_wise_conduction = positive_y_wise_conduction + negative_y_wise_conduction
     logger.debug("Glass y-wise conduction term: %s W/K", y_wise_conduction)
 
-    upper_glass_to_air_conduction, upper_glass_to_sky_radiation = physics_utils.upward_loss_terms(
+    (
+        upper_glass_to_air_conduction,
+        upper_glass_to_sky_radiation,
+    ) = physics_utils.upward_loss_terms(
         best_guess_temperature_vector,
         pvt_panel,
         element,
@@ -188,8 +198,8 @@ def calculate_upper_glass_equation(  # pylint: disable=too-many-branches
         ),
         weather_conditions,
     )
-    logger.debug("Glass to air conduction %s W/K", upper_glass_to_air_conduction)
-    logger.debug("Glass to sky radiation %s W/K", upper_glass_to_sky_radiation)
+    logger.debug("Upper glass to air conduction %s W/K", upper_glass_to_air_conduction)
+    logger.debug("Upper glass to sky radiation %s W/K", upper_glass_to_sky_radiation)
 
     # Compute the T_ug(i, j) term
     row_equation[

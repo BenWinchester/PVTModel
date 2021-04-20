@@ -24,7 +24,8 @@ from ...__utils__ import BColours, ProgrammerJudgementFault
 from ..__utils__ import WeatherConditions
 
 __all__ = (
-    "air_gap_resistance",
+    "glass_glass_air_gap_resistance",
+    "glass_pv_air_gap_resistance",
     "insulation_thermal_resistance",
 )
 
@@ -102,7 +103,101 @@ def _conductive_heat_transfer_coefficient_with_gap(
     )
 
 
-def air_gap_resistance(
+def glass_absorber_air_gap_resistance(
+    pvt_panel: pvt.PVT,
+    surface_temperature: float,
+    weather_conditions: WeatherConditions,
+) -> float:
+    """
+    Returns the thermal resistance of the air gap between the absorber and glass layers.
+
+    :param pvt_panel:
+        The :class:`pvt.PVT` instance representing the pvt panel being modelled.
+
+    :param surface_temperature:
+        The average temperature of the two surfaces either side of the air gap.
+
+    :param weather_conditions:
+        The weather conditions at the time step being investigated.
+
+    :return:
+        The thermal resistance, measured in Kelvin meter squared per Watt.
+
+    """
+
+    if pvt_panel.glass is None or pvt_panel.air_gap_thickness is None:
+        raise ProgrammerJudgementFault(
+            "{}Resistance across an air gap could not be computed due to no ".format(
+                BColours.FAIL
+            )
+            + "glass layer being present.{}".format(BColours.ENDC)
+        )
+
+    return (
+        pvt_panel.eva.thickness / pvt_panel.eva.conductivity
+        + pvt_panel.glass.thickness / pvt_panel.glass.conductivity
+        + pvt_panel.absorber.thickness / (2 * pvt_panel.absorber.conductivity)
+        + pvt_panel.glass.thickness / (2 * pvt_panel.glass.conductivity)
+        + 1
+        / _conductive_heat_transfer_coefficient_with_gap(
+            pvt_panel.air_gap_thickness,
+            surface_temperature,
+            pvt_panel,
+            weather_conditions,
+        )
+    )
+
+
+def glass_glass_air_gap_resistance(
+    pvt_panel: pvt.PVT,
+    surface_temperature: float,
+    weather_conditions: WeatherConditions,
+) -> float:
+    """
+    Returns the thermal resistance of the air gap between two glass layers.
+
+    :param pvt_panel:
+        The :class:`pvt.PVT` instance representing the pvt panel being modelled.
+
+    :param surface_temperature:
+        The average temperature of the two surfaces either side of the air gap.
+
+    :param weather_conditions:
+        The weather conditions at the time step being investigated.
+
+    :return:
+        The thermal resistance, measured in Kelvin meter squared per Watt.
+
+    """
+
+    if (
+        pvt_panel.glass is None
+        or pvt_panel.air_gap_thickness is None
+        or pvt_panel.upper_glass is None
+    ):
+        raise ProgrammerJudgementFault(
+            "{}Resistance across an air gap could not be computed due to no ".format(
+                BColours.FAIL
+            )
+            + "glass layer being present.{}".format(BColours.ENDC)
+        )
+
+    return (
+        pvt_panel.eva.thickness / pvt_panel.eva.conductivity
+        + pvt_panel.upper_glass.thickness / pvt_panel.upper_glass.conductivity
+        + pvt_panel.glass.thickness / (2 * pvt_panel.glass.conductivity)
+        + pvt_panel.upper_glass.thickness / (2 * pvt_panel.upper_glass.conductivity)
+        + 1
+        / _conductive_heat_transfer_coefficient_with_gap(
+            pvt_panel.air_gap_thickness,
+            surface_temperature,
+            pvt_panel,
+            weather_conditions,
+        )
+    )
+
+
+def glass_pv_air_gap_resistance(
     pvt_panel: pvt.PVT,
     surface_temperature: float,
     weather_conditions: WeatherConditions,

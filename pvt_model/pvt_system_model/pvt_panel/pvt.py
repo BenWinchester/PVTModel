@@ -245,6 +245,12 @@ class PVT:
         self.timezone = timezone
         self.width = width
 
+        # Set up empty placeholders to be computed later.
+        self._absorber_transmissivity_absorptivity_product: Optional[float] = None
+        self._glass_transmissivity_absorptivity_product: Optional[float] = None
+        self._pv_transmissivity_absorptivity_product: Optional[float] = None
+        self._upper_glass_transmissivity_absorptivity_product: Optional[float] = None
+
         # If the orientation parameters have not been specified correctly, then raise an
         # error.
         if not vertical_tracking and tilt is None:
@@ -289,6 +295,7 @@ class PVT:
 
         return (
             "PVT(\n"
+            f"  upper_glass: {self.upper_glass},\n"
             f"  glass: {self.glass},\n"
             f"  pv: {self.pv},\n"
             f"  eva: {self.eva},\n"
@@ -297,6 +304,10 @@ class PVT:
             f"  absorber: {self.absorber},\n"
             f"  bond: {self.bond},\n"
             f"  outer_pipe_diameter: {self.absorber.outer_pipe_diameter}m\n"
+            f"  (ta)_ug = {self.upper_glass_transmissivity_absorptivity_product:.3f}\n"
+            f"  (ta)_g = {self.glass_transmissivity_absorptivity_product:.3f}\n"
+            f"  (ta)_pv = {self.pv_transmissivity_absorptivity_product:.3f}\n"
+            f"  (ta)_ab = {self.absorber_transmissivity_absorptivity_product:.3f}\n"
             "  additional_params: "
             f"azimuthal_orientation: {self._azimuthal_orientation}, "
             f"coordinates: {self.latitude}N {self.longitude}E, "
@@ -323,7 +334,7 @@ class PVT:
             )
 
         return self.upper_glass.reflectance + (
-            self.glass.reflectance * self.glass.transmittance ** 2
+            self.glass.reflectance * self.upper_glass.transmittance ** 2
         ) / (1 - self.upper_glass.reflectance * self.glass.reflectance)
 
     @property
@@ -407,19 +418,26 @@ class PVT:
 
         """
 
+        if self._absorber_transmissivity_absorptivity_product is not None:
+            return self._absorber_transmissivity_absorptivity_product
+
         if self.upper_glass is not None:
-            return (
+            self._absorber_transmissivity_absorptivity_product = (
                 (1 - self.absorber.reflectance - self.absorber.transmittance)
                 * self._double_glass_transmittance
                 / (1 - self._double_glass_reflectance * self.absorber.reflectance)
             )
-        if self.glass is not None:
-            return (
+        elif self.glass is not None:
+            self._absorber_transmissivity_absorptivity_product = (
                 (1 - self.absorber.reflectance - self.absorber.transmittance)
                 * self.glass.transmittance
             ) / (1 - self.absorber.reflectance * self.glass.reflectance)
+        else:
+            self._absorber_transmissivity_absorptivity_product = (
+                self.absorber.absorptivity
+            )
 
-        return self.absorber.absorptivity
+        return self._absorber_transmissivity_absorptivity_product
 
     @property
     def coordinates(self) -> Tuple[float, float]:
@@ -514,6 +532,9 @@ class PVT:
 
         """
 
+        if self._glass_transmissivity_absorptivity_product is not None:
+            return self._glass_transmissivity_absorptivity_product
+
         if self.glass is None:
             raise ProgrammerJudgementFault(
                 "{}Attempted to fetch ta product of a non-existent glass layer.{}".format(
@@ -527,25 +548,27 @@ class PVT:
             lower_reflectance = self.absorber.reflectance
 
         if self.upper_glass is None:
-            return (
+            self._glass_transmissivity_absorptivity_product = (
                 1
                 - self.glass.reflectance
                 - self.glass.transmittance
                 * (1 - lower_reflectance + lower_reflectance * self.glass.transmittance)
                 / (1 - lower_reflectance * self.glass.reflectance)
             )
-
-        return (
-            1
-            - self._double_glass_reflectance
-            - (
+        else:
+            self._glass_transmissivity_absorptivity_product = (
                 1
-                - lower_reflectance
-                + lower_reflectance * self._double_glass_transmittance
+                - self._double_glass_reflectance
+                - (
+                    1
+                    - lower_reflectance
+                    + lower_reflectance * self._double_glass_transmittance
+                )
+                * self._double_glass_transmittance
+                / (1 - self._double_glass_reflectance * lower_reflectance)
             )
-            * self._double_glass_transmittance
-            / (1 - self._double_glass_reflectance * lower_reflectance)
-        )
+
+        return self._glass_transmissivity_absorptivity_product
 
     @property
     def pv_to_absorber_thermal_resistance(self) -> float:
@@ -577,19 +600,25 @@ class PVT:
 
         """
 
+        if self._pv_transmissivity_absorptivity_product is not None:
+            return self._pv_transmissivity_absorptivity_product
+
         if self.upper_glass is not None:
-            return (
+            self._pv_transmissivity_absorptivity_product = (
                 (1 - self.pv.reflectance - self.pv.transmittance)
                 * self._double_glass_transmittance
                 / (1 - self._double_glass_reflectance * self.pv.reflectance)
             )
-        if self.glass is not None:
-            return (
+        elif self.glass is not None:
+            # if self.glass is not None:
+            self._pv_transmissivity_absorptivity_product = (
                 (1 - self.pv.reflectance - self.pv.transmittance)
                 * self.glass.transmittance
             ) / (1 - self.pv.reflectance * self.glass.reflectance)
+        else:
+            self._pv_transmissivity_absorptivity_product = self.pv.absorptivity
 
-        return self.pv.absorptivity
+        return self._pv_transmissivity_absorptivity_product
 
     @property
     def tilt_in_radians(self) -> float:
@@ -617,13 +646,11 @@ class PVT:
 
         """
 
+        if self._upper_glass_transmissivity_absorptivity_product is not None:
+            return self._upper_glass_transmissivity_absorptivity_product
+
         if self.upper_glass is None:
-            raise ProgrammerJudgementFault(
-                "{}Attempted to fetch ta product of a non-existent upper glass ".format(
-                    BColours.FAIL
-                )
-                + "layer.{}".format(BColours.ENDC)
-            )
+            return 0
 
         if self.glass is None:
             raise ProgrammerJudgementFault(
@@ -633,12 +660,9 @@ class PVT:
                 + "lower glass layer.{}".format(BColours.ENDC)
             )
 
-        if self.pv is not None:
-            lower_reflectance = self.pv.reflectance
-        else:
-            lower_reflectance = self.absorber.reflectance
+        lower_reflectance = self.glass.reflectance
 
-        return (
+        self._upper_glass_transmissivity_absorptivity_product = (
             1
             - self.upper_glass.reflectance
             - (
@@ -649,3 +673,5 @@ class PVT:
             * self.upper_glass.transmittance
             / (1 - self.upper_glass.reflectance * lower_reflectance)
         )
+
+        return self._upper_glass_transmissivity_absorptivity_product

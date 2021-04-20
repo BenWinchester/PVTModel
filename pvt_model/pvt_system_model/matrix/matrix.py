@@ -47,7 +47,11 @@ from ..physics_utils import (
     radiative_heat_transfer_coefficient,
 )
 from ..pvt_panel.element import Element
-from ..pvt_panel.physics_utils import air_gap_resistance
+from ..pvt_panel.physics_utils import (
+    glass_absorber_air_gap_resistance,
+    glass_glass_air_gap_resistance,
+    glass_pv_air_gap_resistance,
+)
 
 from .absorber import calculate_absorber_equation
 from .continuity import (
@@ -232,7 +236,7 @@ def _calculate_downward_glass_terms(
         glass_downward_conduction = (
             element.width
             * element.length
-            / air_gap_resistance(
+            / glass_pv_air_gap_resistance(
                 pvt_panel,
                 0.5
                 * (
@@ -303,7 +307,7 @@ def _calculate_downward_glass_terms(
         glass_downward_conduction = (
             element.width
             * element.length
-            / air_gap_resistance(
+            / glass_absorber_air_gap_resistance(
                 pvt_panel,
                 0.5
                 * (
@@ -402,19 +406,26 @@ def _calculate_downward_upper_glass_terms(
     if not element.upper_glass:
         return 0, 0
 
-    if not pvt_panel.glass:
+    if not pvt_panel.upper_glass:
         raise ProgrammerJudgementFault(
-            "{}Cannot compute double-glazing without `glass` layer ".format(
+            "{}Cannot compute double-glazing without `upper_glass` layer ".format(
                 BColours.FAIL
             )
             + "present.{}".format(BColours.ENDC)
+        )
+
+    if not pvt_panel.glass:
+        raise ProgrammerJudgementFault(
+            "{}Cannot compute double-glazing without `glass` layer present.".format(
+                BColours.FAIL, BColours.ENDC
+            )
         )
 
     # Otherwise, calculate the terms.
     upper_glass_downward_conduction = (
         element.width
         * element.length
-        / air_gap_resistance(
+        / glass_glass_air_gap_resistance(
             pvt_panel,
             0.5
             * (

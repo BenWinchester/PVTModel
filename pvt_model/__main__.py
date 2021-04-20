@@ -676,6 +676,17 @@ def _output_temperature_info(
         ),
     }
 
+    if "dg" in parsed_args.layers:
+        average_temperature_map["upper_glass"] = round(
+            mean({entry.upper_glass_temperature for entry in system_data.values()}), 3  # type: ignore
+        )
+        maximum_temperature_map["upper_glass"] = max(
+            {round(entry.upper_glass_temperature, 3) for entry in system_data.values()}  # type: ignore
+        )
+        minimum_temperature_map["upper_glass"] = min(
+            {round(entry.upper_glass_temperature, 3) for entry in system_data.values()}  # type: ignore
+        )
+
     if "g" in parsed_args.layers:
         average_temperature_map["glass"] = round(
             mean({entry.glass_temperature for entry in system_data.values()}), 3  # type: ignore
