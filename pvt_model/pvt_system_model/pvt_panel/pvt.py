@@ -536,11 +536,7 @@ class PVT:
             return self._glass_transmissivity_absorptivity_product
 
         if self.glass is None:
-            raise ProgrammerJudgementFault(
-                "{}Attempted to fetch ta product of a non-existent glass layer.{}".format(
-                    BColours.FAIL, BColours.ENDC
-                )
-            )
+            return 0
 
         if self.pv is not None:
             lower_reflectance = self.pv.reflectance

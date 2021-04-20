@@ -218,7 +218,7 @@ def calculate_absorber_equation(  # pylint: disable=too-many-branches
         logger.debug("Absorber to sky radiation %s W/K", absorber_to_sky_radiation)
     else:
         absorber_to_air_conduction = 0
-        absorber_to_air_radiation = 0
+        absorber_to_sky_radiation = 0
 
     # Compute the T_A(i, j) term
     row_equation[
@@ -237,7 +237,7 @@ def calculate_absorber_equation(  # pylint: disable=too-many-branches
         + absorber_to_pipe_conduction
         + absorber_to_insulation_loss
         + (
-            absorber_to_air_conduction + absorber_to_air_radiation
+            absorber_to_air_conduction + absorber_to_sky_radiation
             if (not element.pv and not element.glass)
             else 0
         )

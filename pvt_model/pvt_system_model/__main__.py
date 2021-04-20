@@ -167,6 +167,7 @@ def main(  # pylint: disable=too-many-branches
     override_ambient_temperature: Optional[float] = None,
     override_collector_input_temperature: Optional[float] = None,
     override_irradiance: Optional[float] = None,
+    override_mass_flow_rate: Optional[float] = None,
     override_wind_speed: Optional[float] = None,
     days: Optional[int] = None,
     minutes: Optional[int] = None,
@@ -252,6 +253,9 @@ def main(  # pylint: disable=too-many-branches
         In decoupled instances, the solar irradiance can be specified as a constant
         value which will override the solar-irradiance profiles.
 
+    :param override_mass_flow_rate:
+        If provided, this will override the mass-flow rate used in the collector.
+
     :param override_wind_speed:
         In decoupled instances, the wind speed can be specified as a cosntant value
         which will override the wind-speed profiles.
@@ -325,6 +329,7 @@ def main(  # pylint: disable=too-many-branches
     pvt_panel = process_pvt_system_data.pvt_panel_from_path(
         layers,
         logger,
+        override_mass_flow_rate,
         portion_covered,
         pvt_data_file,
         x_resolution,

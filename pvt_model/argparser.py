@@ -333,6 +333,12 @@ def parse_args(args) -> argparse.Namespace:
     required_named_arguments.add_argument(
         "--location", "-l", help="The location for which to run the simulation."
     )
+    parser.add_argument(
+        "--mass-flow-rate",
+        type=float,
+        default=None,
+        help="Can be used to override the mass-flow rate used in the collector.",
+    )
     dynamic_arguments.add_argument(
         "--minutes",
         "-min",
