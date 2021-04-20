@@ -372,6 +372,10 @@ def calculate_absorber_equation(  # pylint: disable=too-many-branches
         * weather_conditions.ambient_temperature  # [K]
         # Solar absorption term.
         + solar_thermal_resultant_vector_absorbtion_term  # [W]
+        # Heat loss to the air.
+        + absorber_to_air_conduction * weather_conditions.ambient_temperautre
+        # Absorber to sky radiation
+        + absorber_to_sky_radiation * weather_conditions.sky_temperature
     )
 
     if operating_mode.dynamic:

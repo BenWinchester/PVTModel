@@ -246,10 +246,96 @@ def analyse_decoupled_steady_state_data(
 
     logger.info("Beginning steady-state analysis.")
 
-    # Plot the portion-covered affect on single-glazed Ilaria.
+    # Plot the portion-covered affect on an unglazed Ilaria.
     reduced_data: Dict[str, Any] = collections.defaultdict(dict)
     thermal_efficiency_labels: Set[str] = set()
     electrical_efficiency_labels: Set[str] = set()
+    for key, sub_dict in data.items():
+        if "ilaria_unglazed_pc_" not in key:
+            continue
+        portion_covered_match = re.match(PORTION_COVERED_REGEX, key)
+        if portion_covered_match is None:
+            sys.exit(1)
+        portion_covered = float(
+            f"{portion_covered_match.group('first_digit')}.{portion_covered_match.group('second_digit')}"
+        )
+        # Only plot significant portions covered.
+        if portion_covered not in {1.0, 0.6, 0.3}:
+            continue
+        for sub_key, value in sub_dict.items():
+            # Fetch the portion covered.
+            # Store the specific thermal efficiency.
+            reduced_data[sub_key][f"thermal efficiency p.c.={portion_covered}"] = value[
+                "thermal_efficiency"
+            ]
+            thermal_efficiency_labels.add(f"thermal efficiency p.c.={portion_covered}")
+            # Store the specific electrical efficiency.
+            reduced_data[sub_key][
+                f"electrical efficiency p.c.={portion_covered}"
+            ] = value["electrical_efficiency"]
+            electrical_efficiency_labels.add(
+                f"electrical efficiency p.c.={portion_covered}"
+            )
+            # Store a copy of the reduced temperature
+            reduced_data[sub_key]["reduced_collector_temperature"] = value[
+                "reduced_collector_temperature"
+            ]
+
+    _efficiency_plots(
+        data=reduced_data,
+        electrical_efficiency_labels=sorted(electrical_efficiency_labels),
+        logger=logger,
+        prefix="ilaria_unglazed_pc",
+        thermal_efficiency_labels=sorted(thermal_efficiency_labels),
+    )
+
+    # Plot the portion-covered affect on single-glazed autotherm.
+    reduced_data = collections.defaultdict(dict)
+    thermal_efficiency_labels = set()
+    electrical_efficiency_labels = set()
+    for key, sub_dict in data.items():
+        if "autotherm_unglazed_pc_" not in key:
+            continue
+        portion_covered_match = re.match(PORTION_COVERED_REGEX, key)
+        if portion_covered_match is None:
+            sys.exit(1)
+        portion_covered = float(
+            f"{portion_covered_match.group('first_digit')}.{portion_covered_match.group('second_digit')}"
+        )
+        # Only plot significant portions covered.
+        if portion_covered not in {1.0, 0.6, 0.3}:
+            continue
+        for sub_key, value in sub_dict.items():
+            # Fetch the portion covered.
+            # Store the specific thermal efficiency.
+            reduced_data[sub_key][f"thermal efficiency p.c.={portion_covered}"] = value[
+                "thermal_efficiency"
+            ]
+            thermal_efficiency_labels.add(f"thermal efficiency p.c.={portion_covered}")
+            # Store the specific electrical efficiency.
+            reduced_data[sub_key][
+                f"electrical efficiency p.c.={portion_covered}"
+            ] = value["electrical_efficiency"]
+            electrical_efficiency_labels.add(
+                f"electrical efficiency p.c.={portion_covered}"
+            )
+            # Store a copy of the reduced temperature
+            reduced_data[sub_key]["reduced_collector_temperature"] = value[
+                "reduced_collector_temperature"
+            ]
+
+    _efficiency_plots(
+        data=reduced_data,
+        electrical_efficiency_labels=sorted(electrical_efficiency_labels),
+        logger=logger,
+        prefix="autotherm_unglazed_pc",
+        thermal_efficiency_labels=sorted(thermal_efficiency_labels),
+    )
+
+    # Plot the portion-covered affect on single-glazed Ilaria.
+    reduced_data = collections.defaultdict(dict)
+    thermal_efficiency_labels = set()
+    electrical_efficiency_labels = set()
     for key, sub_dict in data.items():
         if "ilaria_single_glazed_pc_" not in key:
             continue
@@ -257,8 +343,11 @@ def analyse_decoupled_steady_state_data(
         if portion_covered_match is None:
             sys.exit(1)
         portion_covered = float(
-            f"{portion_covered_match.group('first_digit')}{portion_covered_match.group('second_digit')}"
+            f"{portion_covered_match.group('first_digit')}.{portion_covered_match.group('second_digit')}"
         )
+        # Only plot significant portions covered.
+        if portion_covered not in {1.0, 0.6, 0.3}:
+            continue
         for sub_key, value in sub_dict.items():
             # Fetch the portion covered.
             # Store the specific thermal efficiency.
@@ -297,8 +386,11 @@ def analyse_decoupled_steady_state_data(
         if portion_covered_match is None:
             sys.exit(1)
         portion_covered = float(
-            f"{portion_covered_match.group('first_digit')}{portion_covered_match.group('second_digit')}"
+            f"{portion_covered_match.group('first_digit')}.{portion_covered_match.group('second_digit')}"
         )
+        # Only plot significant portions covered.
+        if portion_covered not in {1.0, 0.6, 0.3}:
+            continue
         for sub_key, value in sub_dict.items():
             # Fetch the portion covered.
             # Store the specific thermal efficiency.
@@ -323,6 +415,92 @@ def analyse_decoupled_steady_state_data(
         electrical_efficiency_labels=sorted(electrical_efficiency_labels),
         logger=logger,
         prefix="autotherm_single_glazed_pc",
+        thermal_efficiency_labels=sorted(thermal_efficiency_labels),
+    )
+
+    # Plot the portion-covered affect on single-glazed Ilaria.
+    reduced_data = collections.defaultdict(dict)
+    thermal_efficiency_labels = set()
+    electrical_efficiency_labels = set()
+    for key, sub_dict in data.items():
+        if "ilaria_double_glazed_pc_" not in key:
+            continue
+        portion_covered_match = re.match(PORTION_COVERED_REGEX, key)
+        if portion_covered_match is None:
+            sys.exit(1)
+        portion_covered = float(
+            f"{portion_covered_match.group('first_digit')}.{portion_covered_match.group('second_digit')}"
+        )
+        # Only plot significant portions covered.
+        if portion_covered not in {1.0, 0.6, 0.3}:
+            continue
+        for sub_key, value in sub_dict.items():
+            # Fetch the portion covered.
+            # Store the specific thermal efficiency.
+            reduced_data[sub_key][f"thermal efficiency p.c.={portion_covered}"] = value[
+                "thermal_efficiency"
+            ]
+            thermal_efficiency_labels.add(f"thermal efficiency p.c.={portion_covered}")
+            # Store the specific electrical efficiency.
+            reduced_data[sub_key][
+                f"electrical efficiency p.c.={portion_covered}"
+            ] = value["electrical_efficiency"]
+            electrical_efficiency_labels.add(
+                f"electrical efficiency p.c.={portion_covered}"
+            )
+            # Store a copy of the reduced temperature
+            reduced_data[sub_key]["reduced_collector_temperature"] = value[
+                "reduced_collector_temperature"
+            ]
+
+    _efficiency_plots(
+        data=reduced_data,
+        electrical_efficiency_labels=sorted(electrical_efficiency_labels),
+        logger=logger,
+        prefix="ilaria_double_glazed_pc",
+        thermal_efficiency_labels=sorted(thermal_efficiency_labels),
+    )
+
+    # Plot the portion-covered affect on single-glazed autotherm.
+    reduced_data = collections.defaultdict(dict)
+    thermal_efficiency_labels = set()
+    electrical_efficiency_labels = set()
+    for key, sub_dict in data.items():
+        if "autotherm_double_glazed_pc_" not in key:
+            continue
+        portion_covered_match = re.match(PORTION_COVERED_REGEX, key)
+        if portion_covered_match is None:
+            sys.exit(1)
+        portion_covered = float(
+            f"{portion_covered_match.group('first_digit')}.{portion_covered_match.group('second_digit')}"
+        )
+        # Only plot significant portions covered.
+        if portion_covered not in {1.0, 0.6, 0.3}:
+            continue
+        for sub_key, value in sub_dict.items():
+            # Fetch the portion covered.
+            # Store the specific thermal efficiency.
+            reduced_data[sub_key][f"thermal efficiency p.c.={portion_covered}"] = value[
+                "thermal_efficiency"
+            ]
+            thermal_efficiency_labels.add(f"thermal efficiency p.c.={portion_covered}")
+            # Store the specific electrical efficiency.
+            reduced_data[sub_key][
+                f"electrical efficiency p.c.={portion_covered}"
+            ] = value["electrical_efficiency"]
+            electrical_efficiency_labels.add(
+                f"electrical efficiency p.c.={portion_covered}"
+            )
+            # Store a copy of the reduced temperature
+            reduced_data[sub_key]["reduced_collector_temperature"] = value[
+                "reduced_collector_temperature"
+            ]
+
+    _efficiency_plots(
+        data=reduced_data,
+        electrical_efficiency_labels=sorted(electrical_efficiency_labels),
+        logger=logger,
+        prefix="autotherm_double_glazed_pc",
         thermal_efficiency_labels=sorted(thermal_efficiency_labels),
     )
 
@@ -389,6 +567,43 @@ def analyse_decoupled_steady_state_data(
         electrical_efficiency_labels=sorted(electrical_efficiency_labels),
         logger=logger,
         prefix="autotherm_pc_1_glazing_comparison",
+        thermal_efficiency_labels=sorted(thermal_efficiency_labels),
+    )
+
+    # Plot the mass-flow-rate effect on a fully covered autotherm.
+    reduced_data = collections.defaultdict(dict)
+    thermal_efficiency_labels = set()
+    electrical_efficiency_labels = set()
+    autotherm_mass_flow_rate_regex = re.compile(
+        r"autotherm_single_glazed_(?P<mass_flow_rate>.*)_litres_per_hour_.*"
+    )
+    for key, sub_dict in data.items():
+        autotherm_mass_flow_rate_match = re.match(autotherm_mass_flow_rate_regex, key)
+        if autotherm_mass_flow_rate_match is None:
+            continue
+        mass_flow_rate = autotherm_mass_flow_rate_match.group("mass_flow_rate")
+        for sub_key, value in sub_dict.items():
+            reduced_data[sub_key][f"thermal efficiency {mass_flow_rate}L/h"] = value[
+                "thermal_efficiency"
+            ]
+            thermal_efficiency_labels.add(f"thermal efficiency {mass_flow_rate}L/h")
+            # Store the specific electrical efficiency.
+            reduced_data[sub_key][f"electrical efficiency {mass_flow_rate}L/h"] = value[
+                "electrical_efficiency"
+            ]
+            electrical_efficiency_labels.add(
+                f"electrical efficiency {mass_flow_rate}L/h"
+            )
+            # Store a copy of the reduced temperature
+            reduced_data[sub_key]["reduced_collector_temperature"] = value[
+                "reduced_collector_temperature"
+            ]
+
+    _efficiency_plots(
+        data=reduced_data,
+        electrical_efficiency_labels=sorted(electrical_efficiency_labels),
+        logger=logger,
+        prefix="autotherm_single_glazed_mass_flow_rate_comparison",
         thermal_efficiency_labels=sorted(thermal_efficiency_labels),
     )
 
