@@ -22,7 +22,6 @@ import sys
 from logging import Logger
 from typing import Any, List, Dict, Optional, Union
 
-import json
 import yaml
 
 from matplotlib import pyplot as plt
