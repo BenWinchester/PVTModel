@@ -393,17 +393,17 @@ def calculate_absorber_equation(  # pylint: disable=too-many-branches
             ]  # [K]
         )
 
-    try:
-        logger.debug(
-            "Rough Absorber Temperature estimate: %s K.",
-            int(
-                resultant_vector_value
-                / (absorber_to_insulation_loss + collector_internal_energy_change)
-            ),
-        )
-    except ZeroDivisionError:
-        logger.debug(
-            "Absorber temperature estimate could not be computed due to zero-division."
-        )
+        try:
+            logger.debug(
+                "Rough Absorber Temperature estimate: %s K.",
+                int(
+                    resultant_vector_value
+                    / (absorber_to_insulation_loss + collector_internal_energy_change)
+                ),
+            )
+        except ZeroDivisionError:
+            logger.debug(
+                "Absorber temperature estimate could not be computed due to zero-division."
+            )
 
     return row_equation, resultant_vector_value
