@@ -55,8 +55,17 @@
   justification: "This is just laziness with type annotations."
   usage: "run_two_temperature_vector: Union[List[float], numpy.ndarray] = numpy.asarray("
 - file: pvt_model/pvt_system_model/matrix/matrix.py
-  justification: "The resolution cannot be zero here due to internal checks."
-  usage: "/ resolution    # [s]"
+  justification: "Pipe index cannot be `None` here due to internal checks."
+  usage: "element.pipe_index,"
+- file: pvt_model/pvt_system_model/matrix/matrix.py
+  justification: "Pipe index cannot be `None` here due to internal checks."
+  usage: "element.pipe_index,"
+- file: pvt_model/pvt_system_model/matrix/matrix.py
+  justification: "Pipe index cannot be `None` here due to internal checks."
+  usage: "element.pipe_index,"
+- file: pvt_model/pvt_system_model/matrix/matrix.py
+  justification: "Pipe index cannot be `None` here due to internal checks."
+  usage: "element.pipe_index,"
 - file: pvt_model/pvt_system_model/matrix/matrix.py
   justification: "Pipe index cannot be `None` here due to internal checks."
   usage: "element.pipe_index,"
@@ -70,56 +79,11 @@
   justification: "Pipe index cannot be `None` here due to internal checks."
   usage: "element.pipe_index,"
 - file: pvt_model/pvt_system_model/matrix/matrix.py
-  justification: "Previous temperature vector cannot be `None` here."
-  usage: "* previous_temperature_vector["
-- file: pvt_model/pvt_system_model/matrix/matrix.py
-  justification: "Pipe index cannot be `None` here due to internal checks."
-  usage: "element.pipe_index,"
-- file: pvt_model/pvt_system_model/matrix/matrix.py
-  justification: "The resolution cannot be zero here due to internal checks."
-  usage: "/ resolution    # [s]"
-- file: pvt_model/pvt_system_model/matrix/matrix.py
-  justification: "The resolution cannot be zero here due to internal checks."
-  usage: "/ resolution    # [s]"
-- file: pvt_model/pvt_system_model/matrix/matrix.py
   justification: "Pipe index cannot be `None` here due to internal checks."
   usage: "element.pipe_index,"
 - file: pvt_model/pvt_system_model/matrix/matrix.py
   justification: "Pipe index cannot be `None` here due to internal checks."
   usage: "element.pipe_index,"
-- file: pvt_model/pvt_system_model/matrix/matrix.py
-  justification: "Previous temperature vector cannot be `None` here."
-  usage: "* previous_temperature_vector["
-- file: pvt_model/pvt_system_model/matrix/matrix.py
-  justification: "Pipe index cannot be `None` here due to internal checks."
-  usage: "element.pipe_index,"
-- file: pvt_model/pvt_system_model/matrix/matrix.py
-  justification: "The resolution cannot be zero here due to internal checks."
-  usage: "/ resolution    # [s]"
-- file: pvt_model/pvt_system_model/matrix/matrix.py
-  justification: "Previous temperature vector cannot be `None` here."
-  usage: "* previous_temperature_vector["
-- file: pvt_model/pvt_system_model/matrix/matrix.py
-  justification: "The resolution cannot be zero here due to internal checks."
-  usage: "/ resolution    # [s]"
-- file: pvt_model/pvt_system_model/matrix/matrix.py
-  justification: "Previous temperature vector cannot be `None` here."
-  usage: "* previous_temperature_vector["
-- file: pvt_model/pvt_system_model/matrix/matrix.py
-  justification: "Previous temperature vector cannot be `None` here."
-  usage: "* previous_temperature_vector["
-- file: pvt_model/pvt_system_model/matrix/matrix.py
-  justification: "Pipe index cannot be `None` here due to internal checks."
-  usage: "element.pipe_index,"
-- file: pvt_model/pvt_system_model/matrix/matrix.py
-  justification: "Pipe index cannot be `None` here due to internal checks."
-  usage: "element.pipe_index,"
-- file: pvt_model/pvt_system_model/matrix/matrix.py
-  justification: "The resolution cannot be zero here due to internal checks."
-  usage: "/ resolution    # [s]"
-- file: pvt_model/pvt_system_model/matrix/matrix.py
-  justification: "Previous temperature vector cannot be `None` here."
-  usage: "* previous_temperature_vector["
 - file: pvt_model/pvt_system_model/matrix/matrix.py
   justification: "Pipe index cannot be `None` here due to internal checks."
   usage: "element.pipe_index,"
@@ -147,6 +111,63 @@
 - file: pvt_model/pvt_system_model/load.py
   justification: "Type annotation of `Any` is needed here due to forgive-and-forget."
   usage: "def from_data(cls, data_file_paths: Set[str]) -> Any:"
-- file: pvt_model/pvt_system_model/matrix/matrix.py
-  justification: "Mypy still can't cope with the pipe numbers."
+- file: pvt_model/pvt_system_model/matrix/htf.py
+  justification: "Further investigation required - FIXME"
+  usage: "* previous_temperature_vector["
+- file: pvt_model/pvt_system_model/matrix/tank.py
+  justification: "Further investigation required - FIXME"
+  usage: "/ resolution    # [s]"
+- file: pvt_model/pvt_system_model/matrix/htf.py
+  justification: "Further investigation required - FIXME"
+  usage: "/ resolution    # [s]"
+- file: pvt_model/pvt_system_model/matrix/glass.py
+  justification: "Further investigation required - FIXME"
+  usage: "* previous_temperature_vector["
+- file: pvt_model/pvt_system_model/matrix/upper_glass.py
+  justification: "Further investigation required - FIXME"
+  usage: "/ resolution    # [s]"
+- file: pvt_model/pvt_system_model/matrix/htf.py
+  justification: "Further investigation required - FIXME"
+  usage: "element.pipe_index,"
+- file: pvt_model/pvt_system_model/matrix/pipe.py
+  justification: "Further investigation required - FIXME"
+  usage: "/ resolution    # [s]"
+- file: pvt_model/pvt_system_model/matrix/glass.py
+  justification: "Further investigation required - FIXME"
+  usage: "/ resolution    # [s]"
+- file: pvt_model/pvt_system_model/matrix/continuity.py
+  justification: "Further investigation required - FIXME"
   usage: "pipe_number,"
+- file: pvt_model/pvt_system_model/matrix/pv.py
+  justification: "Further investigation required - FIXME"
+  usage: "* previous_temperature_vector["
+- file: pvt_model/pvt_system_model/matrix/pipe.py
+  justification: "Further investigation required - FIXME"
+  usage: "element.pipe_index,"
+- file: pvt_model/pvt_system_model/matrix/pipe.py
+  justification: "Further investigation required - FIXME"
+  usage: "* previous_temperature_vector["
+- file: pvt_model/pvt_system_model/matrix/absorber.py
+  justification: "Further investigation required - FIXME"
+  usage: "* previous_temperature_vector["
+- file: pvt_model/pvt_system_model/matrix/tank.py
+  justification: "Further investigation required - FIXME"
+  usage: "* previous_temperature_vector["
+- file: pvt_model/__main__.py
+  justification: "Further investigation required - FIXME"
+  usage: "{round(entry.upper_glass_temperature, 3) for entry in system_data.values()}"
+- file: pvt_model/__main__.py
+  justification: "Further investigation required - FIXME"
+  usage: "mean({entry.upper_glass_temperature for entry in system_data.values()}), 3"
+- file: pvt_model/pvt_system_model/matrix/pv.py
+  justification: "Further investigation required - FIXME"
+  usage: "/ resolution    # [s]"
+- file: pvt_model/pvt_system_model/matrix/continuity.py
+  justification: "Further investigation required - FIXME"
+  usage: "element.pipe_index,"
+- file: pvt_model/pvt_system_model/matrix/absorber.py
+  justification: "Further investigation required - FIXME"
+  usage: "/ resolution    # [s]"
+- file: pvt_model/pvt_system_model/matrix/upper_glass.py
+  justification: "Further investigation required - FIXME"
+  usage: "* previous_temperature_vector["
