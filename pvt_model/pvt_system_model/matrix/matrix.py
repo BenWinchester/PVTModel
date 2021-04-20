@@ -46,6 +46,7 @@ from ..physics_utils import (
     convective_heat_transfer_coefficient_of_water,
     radiative_heat_transfer_coefficient,
 )
+from ..pvt_panel.element import Element
 from ..pvt_panel.physics_utils import air_gap_resistance
 
 from .absorber import calculate_absorber_equation
@@ -54,11 +55,13 @@ from .continuity import (
     calculate_fluid_continuity_equation,
     calculate_system_continuity_equations,
 )
+
 from .glass import calculate_glass_equation
 from .htf import calculate_htf_continuity_equation, calculate_htf_equation
 from .pipe import calculate_pipe_equation
 from .pv import calculate_pv_equation
 from .tank import calculate_tank_continuity_equation, calculate_tank_equation
+from .upper_glass import calculate_upper_glass_equation
 
 __all__ = ("calculate_matrix_equation",)
 
@@ -198,6 +201,282 @@ def _boundary_condition_equations(
     return equations
 
 
+def _calculate_downward_glass_terms(
+    best_guess_temperature_vector: Union[List[float], numpy.ndarray],
+    element: Element,
+    logger: logging.Logger,
+    number_of_x_elements: int,
+    pvt_panel: pvt.PVT,
+    weather_conditions: WeatherConditions,
+) -> Tuple[float, float]:
+    """
+    Calculates the downward glass terms.
+
+    :return:
+        A `tuple` containing:
+        - the downward conduction from the glass layer to the layer below,
+        - the downward radiation from the glass layer to the layer below.
+
+    """
+
+    # If the PV layer is below the glass layer.
+    if element.glass and element.pv:
+        if pvt_panel.glass is None:
+            raise ProgrammerJudgementFault(
+                "{}Element {} has a glass layer but no glass data supplied ".format(
+                    BColours.FAIL, element
+                )
+                + "in the PV-T data file.{}".format(BColours.ENDC)
+            )
+
+        glass_downward_conduction = (
+            element.width
+            * element.length
+            / air_gap_resistance(
+                pvt_panel,
+                0.5
+                * (
+                    best_guess_temperature_vector[
+                        index_handler.index_from_element_coordinates(
+                            number_of_x_elements,
+                            pvt_panel,
+                            TemperatureName.pv,
+                            element.x_index,
+                            element.y_index,
+                        )
+                    ]
+                    + best_guess_temperature_vector[
+                        index_handler.index_from_element_coordinates(
+                            number_of_x_elements,
+                            pvt_panel,
+                            TemperatureName.glass,
+                            element.x_index,
+                            element.y_index,
+                        )
+                    ]
+                ),
+                weather_conditions,
+            )
+        )
+        logger.debug("Glass to pv conduction %s W/K", glass_downward_conduction)
+
+        glass_downward_radiation = (
+            element.width
+            * element.length
+            * radiative_heat_transfer_coefficient(
+                destination_emissivity=pvt_panel.pv.emissivity,
+                destination_temperature=best_guess_temperature_vector[
+                    index_handler.index_from_element_coordinates(
+                        number_of_x_elements,
+                        pvt_panel,
+                        TemperatureName.pv,
+                        element.x_index,
+                        element.y_index,
+                    )
+                ],
+                source_emissivity=pvt_panel.glass.emissivity,
+                source_temperature=best_guess_temperature_vector[
+                    index_handler.index_from_element_coordinates(
+                        number_of_x_elements,
+                        pvt_panel,
+                        TemperatureName.glass,
+                        element.x_index,
+                        element.y_index,
+                    )
+                ],
+            )
+        )
+        logger.debug("Glass to pv radiation %s W/K", glass_downward_radiation)
+
+        return glass_downward_conduction, glass_downward_radiation
+
+    # If the absorber layer is below the glass layer.
+    if element.glass and element.absorber:
+        if pvt_panel.glass is None:
+            raise ProgrammerJudgementFault(
+                "{}Element {} has a glass layer but no glass data supplied ".format(
+                    BColours.FAIL, element
+                )
+                + "in the PV-T data file.{}".format(BColours.ENDC)
+            )
+
+        glass_downward_conduction = (
+            element.width
+            * element.length
+            / air_gap_resistance(
+                pvt_panel,
+                0.5
+                * (
+                    best_guess_temperature_vector[
+                        index_handler.index_from_element_coordinates(
+                            number_of_x_elements,
+                            pvt_panel,
+                            TemperatureName.absorber,
+                            element.x_index,
+                            element.y_index,
+                        )
+                    ]
+                    + best_guess_temperature_vector[
+                        index_handler.index_from_element_coordinates(
+                            number_of_x_elements,
+                            pvt_panel,
+                            TemperatureName.glass,
+                            element.x_index,
+                            element.y_index,
+                        )
+                    ]
+                ),
+                weather_conditions,
+            )
+        )
+        logger.debug("Glass to absorber conduction %s W/K", glass_downward_conduction)
+
+        glass_downward_radiation = (
+            element.width
+            * element.length
+            * radiative_heat_transfer_coefficient(
+                destination_emissivity=pvt_panel.absorber.emissivity,
+                destination_temperature=best_guess_temperature_vector[
+                    index_handler.index_from_element_coordinates(
+                        number_of_x_elements,
+                        pvt_panel,
+                        TemperatureName.absorber,
+                        element.x_index,
+                        element.y_index,
+                    )
+                ],
+                source_emissivity=pvt_panel.glass.emissivity,
+                source_temperature=best_guess_temperature_vector[
+                    index_handler.index_from_element_coordinates(
+                        number_of_x_elements,
+                        pvt_panel,
+                        TemperatureName.glass,
+                        element.x_index,
+                        element.y_index,
+                    )
+                ],
+            )
+        )
+        logger.debug("Glass to absorber radiation %s W/K", glass_downward_radiation)
+
+        return glass_downward_conduction, glass_downward_radiation
+
+    # Otherwise, there is no glass layer, so these terms are zero.
+    logger.debug(
+        "No glass-to-pv conduction or radiation because {} ".format(
+            " and ".join(
+                {
+                    entry
+                    for entry in {
+                        "glass" if not element.glass else None,
+                        "pv" if not element.pv else None,
+                    }
+                    if entry is not None
+                }
+            )
+        )
+        + "layer(s) not present."
+    )
+    return 0, 0
+
+
+def _calculate_downward_upper_glass_terms(
+    best_guess_temperature_vector: Union[List[float], numpy.ndarray],
+    element: Element,
+    logger: logging.Logger,
+    number_of_x_elements: int,
+    pvt_panel: pvt.PVT,
+    weather_conditions: WeatherConditions,
+) -> Tuple[float, float]:
+    """
+    Calculates the downward conductive and radiative terms between the glass layers.
+
+    :return:
+        A `tuple` containing:
+        - the conductive term between the two glass layers,
+        - the radiative term between the two glass layers.
+
+    """
+
+    # If there is no double glazing, then these terms are zero.
+    if not element.upper_glass:
+        return 0, 0
+
+    if not pvt_panel.glass:
+        raise ProgrammerJudgementFault(
+            "{}Cannot compute double-glazing without `glass` layer ".format(
+                BColours.FAIL
+            )
+            + "present.{}".format(BColours.ENDC)
+        )
+
+    # Otherwise, calculate the terms.
+    upper_glass_downward_conduction = (
+        element.width
+        * element.length
+        / air_gap_resistance(
+            pvt_panel,
+            0.5
+            * (
+                best_guess_temperature_vector[
+                    index_handler.index_from_element_coordinates(
+                        number_of_x_elements,
+                        pvt_panel,
+                        TemperatureName.upper_glass,
+                        element.x_index,
+                        element.y_index,
+                    )
+                ]
+                + best_guess_temperature_vector[
+                    index_handler.index_from_element_coordinates(
+                        number_of_x_elements,
+                        pvt_panel,
+                        TemperatureName.glass,
+                        element.x_index,
+                        element.y_index,
+                    )
+                ]
+            ),
+            weather_conditions,
+        )
+    )
+    logger.debug(
+        "Upper glass to glass conduction %s W/K", upper_glass_downward_conduction
+    )
+
+    upper_glass_downward_radiation = (
+        element.width
+        * element.length
+        * radiative_heat_transfer_coefficient(
+            destination_emissivity=pvt_panel.glass.emissivity,
+            destination_temperature=best_guess_temperature_vector[
+                index_handler.index_from_element_coordinates(
+                    number_of_x_elements,
+                    pvt_panel,
+                    TemperatureName.glass,
+                    element.x_index,
+                    element.y_index,
+                )
+            ],
+            source_emissivity=pvt_panel.upper_glass.emissivity,
+            source_temperature=best_guess_temperature_vector[
+                index_handler.index_from_element_coordinates(
+                    number_of_x_elements,
+                    pvt_panel,
+                    TemperatureName.upper_glass,
+                    element.x_index,
+                    element.y_index,
+                )
+            ],
+        )
+    )
+    logger.debug(
+        "Upper glass to glass radiation %s W/K", upper_glass_downward_radiation
+    )
+
+    return upper_glass_downward_conduction, upper_glass_downward_radiation
+
+
 ##################
 # Public methods #
 ##################
@@ -244,160 +523,29 @@ def calculate_matrix_equation(  # pylint: disable=too-many-branches
     for element_coordinates, element in pvt_panel.elements.items():
         logger.debug("Calculating equations for element %s", element_coordinates)
         # Compute the various shared values.
-        if element.glass and element.pv:
-            if pvt_panel.glass is None:
-                raise ProgrammerJudgementFault(
-                    "{}Element {} has a glass layer but no glass data supplied ".format(
-                        BColours.FAIL, element
-                    )
-                    + "in the PV-T data file.{}".format(BColours.ENDC)
-                )
+        (
+            upper_glass_downward_conduction,
+            upper_glass_downward_radiation,
+        ) = _calculate_downward_upper_glass_terms(
+            best_guess_temperature_vector,
+            element,
+            logger,
+            number_of_x_elements,
+            pvt_panel,
+            weather_conditions,
+        )
 
-            glass_downward_conduction = (
-                element.width
-                * element.length
-                / air_gap_resistance(
-                    pvt_panel,
-                    0.5
-                    * (
-                        best_guess_temperature_vector[
-                            index_handler.index_from_element_coordinates(
-                                number_of_x_elements,
-                                pvt_panel,
-                                TemperatureName.pv,
-                                element.x_index,
-                                element.y_index,
-                            )
-                        ]
-                        + best_guess_temperature_vector[
-                            index_handler.index_from_element_coordinates(
-                                number_of_x_elements,
-                                pvt_panel,
-                                TemperatureName.glass,
-                                element.x_index,
-                                element.y_index,
-                            )
-                        ]
-                    ),
-                    weather_conditions,
-                )
-            )
-            logger.debug("Glass to pv conduction %s W/K", glass_downward_conduction)
-
-            glass_downward_radiation = (
-                element.width
-                * element.length
-                * radiative_heat_transfer_coefficient(
-                    destination_emissivity=pvt_panel.pv.emissivity,
-                    destination_temperature=best_guess_temperature_vector[
-                        index_handler.index_from_element_coordinates(
-                            number_of_x_elements,
-                            pvt_panel,
-                            TemperatureName.pv,
-                            element.x_index,
-                            element.y_index,
-                        )
-                    ],
-                    source_emissivity=pvt_panel.glass.emissivity,
-                    source_temperature=best_guess_temperature_vector[
-                        index_handler.index_from_element_coordinates(
-                            number_of_x_elements,
-                            pvt_panel,
-                            TemperatureName.glass,
-                            element.x_index,
-                            element.y_index,
-                        )
-                    ],
-                )
-            )
-            logger.debug("Glass to pv radiation %s W/K", glass_downward_radiation)
-        elif element.glass and element.absorber:
-            if pvt_panel.glass is None:
-                raise ProgrammerJudgementFault(
-                    "{}Element {} has a glass layer but no glass data supplied ".format(
-                        BColours.FAIL, element
-                    )
-                    + "in the PV-T data file.{}".format(BColours.ENDC)
-                )
-
-            glass_downward_conduction = (
-                element.width
-                * element.length
-                / air_gap_resistance(
-                    pvt_panel,
-                    0.5
-                    * (
-                        best_guess_temperature_vector[
-                            index_handler.index_from_element_coordinates(
-                                number_of_x_elements,
-                                pvt_panel,
-                                TemperatureName.absorber,
-                                element.x_index,
-                                element.y_index,
-                            )
-                        ]
-                        + best_guess_temperature_vector[
-                            index_handler.index_from_element_coordinates(
-                                number_of_x_elements,
-                                pvt_panel,
-                                TemperatureName.glass,
-                                element.x_index,
-                                element.y_index,
-                            )
-                        ]
-                    ),
-                    weather_conditions,
-                )
-            )
-            logger.debug(
-                "Glass to absorber conduction %s W/K", glass_downward_conduction
-            )
-
-            glass_downward_radiation = (
-                element.width
-                * element.length
-                * radiative_heat_transfer_coefficient(
-                    destination_emissivity=pvt_panel.absorber.emissivity,
-                    destination_temperature=best_guess_temperature_vector[
-                        index_handler.index_from_element_coordinates(
-                            number_of_x_elements,
-                            pvt_panel,
-                            TemperatureName.absorber,
-                            element.x_index,
-                            element.y_index,
-                        )
-                    ],
-                    source_emissivity=pvt_panel.glass.emissivity,
-                    source_temperature=best_guess_temperature_vector[
-                        index_handler.index_from_element_coordinates(
-                            number_of_x_elements,
-                            pvt_panel,
-                            TemperatureName.glass,
-                            element.x_index,
-                            element.y_index,
-                        )
-                    ],
-                )
-            )
-            logger.debug("Glass to absorber radiation %s W/K", glass_downward_radiation)
-        else:
-            glass_downward_conduction = 0
-            glass_downward_radiation = 0
-            logger.debug(
-                "No glass-to-pv conduction or radiation because {} ".format(
-                    " and ".join(
-                        {
-                            entry
-                            for entry in {
-                                "glass" if not element.glass else None,
-                                "pv" if not element.pv else None,
-                            }
-                            if entry is not None
-                        }
-                    )
-                )
-                + "layer(s) not present."
-            )
+        (
+            glass_downward_conduction,
+            glass_downward_radiation,
+        ) = _calculate_downward_glass_terms(
+            best_guess_temperature_vector,
+            element,
+            logger,
+            number_of_x_elements,
+            pvt_panel,
+            weather_conditions,
+        )
 
         pv_to_absorber_conduction = (
             element.width * element.length / pvt_panel.pv_to_absorber_thermal_resistance
@@ -416,6 +564,37 @@ def calculate_matrix_equation(  # pylint: disable=too-many-branches
         )
         logger.debug("Absorber to pipe conduction: %s W/K", absorber_to_pipe_conduction)
 
+        if element.upper_glass:
+            (
+                upper_glass_equation,
+                upper_glass_resultant_value,
+            ) = calculate_upper_glass_equation(
+                best_guess_temperature_vector,
+                logger,
+                number_of_temperatures,
+                number_of_x_elements,
+                number_of_y_elements,
+                operating_mode,
+                previous_temperature_vector,
+                pvt_panel,
+                resolution,
+                element,
+                upper_glass_downward_conduction,
+                upper_glass_downward_radiation,
+                weather_conditions,
+            )
+            logger.debug(
+                "Upper glass equation for element %s computed:\nEquation: %s\n"
+                "Resultant value: %s W",
+                element.coordinates,
+                ", ".join([f"{value:.3f} W/K" for value in upper_glass_equation]),
+                upper_glass_resultant_value,
+            )
+            matrix = numpy.vstack((matrix, upper_glass_equation))
+            resultant_vector = numpy.vstack(
+                (resultant_vector, upper_glass_resultant_value)
+            )
+
         if element.glass:
             glass_equation, glass_resultant_value = calculate_glass_equation(
                 best_guess_temperature_vector,
@@ -430,6 +609,8 @@ def calculate_matrix_equation(  # pylint: disable=too-many-branches
                 pvt_panel,
                 resolution,
                 element,
+                upper_glass_downward_conduction,
+                upper_glass_downward_radiation,
                 weather_conditions,
             )
             logger.debug(

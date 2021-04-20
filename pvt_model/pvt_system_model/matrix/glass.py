@@ -55,6 +55,8 @@ def calculate_glass_equation(  # pylint: disable=too-many-branches
     pvt_panel: pvt.PVT,
     resolution: Optional[int],
     element: Element,
+    upper_glass_downward_conduction: float,
+    upper_glass_downward_radiation: float,
     weather_conditions: WeatherConditions,
 ) -> Tuple[List[float], float]:
     """
@@ -174,22 +176,31 @@ def calculate_glass_equation(  # pylint: disable=too-many-branches
     y_wise_conduction = positive_y_wise_conduction + negative_y_wise_conduction
     logger.debug("Glass y-wise conduction term: %s W/K", y_wise_conduction)
 
-    glass_to_air_conduction, glass_to_sky_radiation = physics_utils.upward_loss_terms(
-        best_guess_temperature_vector,
-        pvt_panel,
-        element,
-        pvt_panel.glass.emissivity,
-        index_handler.index_from_element_coordinates(
-            number_of_x_elements,
+    if not element.upper_glass:
+        (
+            glass_to_air_conduction,
+            glass_to_sky_radiation,
+        ) = physics_utils.upward_loss_terms(
+            best_guess_temperature_vector,
             pvt_panel,
-            TemperatureName.glass,
-            element.x_index,
-            element.y_index,
-        ),
-        weather_conditions,
-    )
-    logger.debug("Glass to air conduction %s W/K", glass_to_air_conduction)
-    logger.debug("Glass to sky radiation %s W/K", glass_to_sky_radiation)
+            element,
+            pvt_panel.glass.emissivity,
+            index_handler.index_from_element_coordinates(
+                number_of_x_elements,
+                pvt_panel,
+                TemperatureName.glass,
+                element.x_index,
+                element.y_index,
+            ),
+            weather_conditions,
+        )
+        logger.debug("Glass to air conduction %s W/K", glass_to_air_conduction)
+        logger.debug("Glass to sky radiation %s W/K", glass_to_sky_radiation)
+    else:
+        glass_to_air_conduction = 0
+        logger.debug("Glass layer does not conduct to the air due to double glazing.")
+        glass_to_sky_radiation = 0
+        logger.debug("Glass layer does not radiate to the sky due to double glazing.")
 
     # Compute the T_g(i, j) term
     row_equation[
@@ -208,6 +219,8 @@ def calculate_glass_equation(  # pylint: disable=too-many-branches
         + glass_to_sky_radiation
         + glass_downward_conduction
         + glass_downward_radiation
+        + upper_glass_downward_conduction
+        + upper_glass_downward_radiation
     )
 
     # Compute the T_g(i+1, j) term provided that that element exists.
@@ -265,6 +278,18 @@ def calculate_glass_equation(  # pylint: disable=too-many-branches
         ] = (
             -1 * negative_y_wise_conduction
         )
+
+    # Compute the T_ug(i, j) term provided that there is an upper-glass layer present.
+    if element.upper_glass:
+        row_equation[
+            index_handler.index_from_element_coordinates(
+                number_of_x_elements,
+                pvt_panel,
+                TemperatureName.upper_glass,
+                element.x_index,
+                element.y_index,
+            )
+        ] = -1 * (upper_glass_downward_conduction + upper_glass_downward_radiation)
 
     # Compute the T_pv(i, j) term provided that there is a PV layer present.
     if element.pv:
