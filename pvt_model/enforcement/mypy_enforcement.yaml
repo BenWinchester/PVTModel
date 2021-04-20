@@ -32,6 +32,10 @@
 - file: pvt_model/__main__.py
   justification: "Further investigation required - FIXME"
   usage: "system_data_dict.update(dataclasses.asdict(carbon_emissions))"
+- file: pvt_model/analysis/__utils__.py
+  justification: "Anslysis module should be ignored where possible."
+  usage: ""
+  whole_file: true
 - file: pvt_model/analysis/analysis.py
   justification: "Anslysis module should be ignored where possible."
   usage: ""
