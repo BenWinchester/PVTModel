@@ -84,6 +84,9 @@ class Element:
     .. attribute:: pv
         Whether the pv layer is present in this element.
 
+    .. attribute:: upper_glass
+        Whether an upper-glass layer (i.e., double-glazing) is present.
+
     .. attribute:: width
         The width of the element, measured in meters.
 
@@ -103,6 +106,7 @@ class Element:
     length: float
     pipe: bool
     pv: bool
+    upper_glass: bool
     width: float
     x_index: int
     y_index: int
@@ -121,6 +125,7 @@ class Element:
             [
                 entry
                 for entry in [
+                    "upper-glass" if self.upper_glass else None,
                     "glass" if self.glass else None,
                     "absorber" if self.absorber else None,
                     "pv" if self.pv else None,

@@ -107,6 +107,7 @@ def _layer_temperature_profile(
     """
 
     if temperature_name in [
+        TemperatureName.upper_glass,
         TemperatureName.glass,
         TemperatureName.pv,
         TemperatureName.absorber,
@@ -206,6 +207,25 @@ def system_data_from_run(
     """
 
     # Determine the average temperatures of the various PVT layers.
+    if any({element.upper_glass for element in pvt_panel.elements.values()}):
+        average_upper_glass_temperature: Optional[float] = _average_layer_temperature(
+            pvt_panel,
+            TemperatureName.upper_glass,
+            temperature_vector,
+        )
+        temperature_map_upper_glass_layer: Optional[
+            Dict[str, float]
+        ] = _layer_temperature_profile(
+            number_of_pipes,
+            number_of_x_elements,
+            pvt_panel,
+            TemperatureName.upper_glass,
+            temperature_vector,
+        )
+    else:
+        average_upper_glass_temperature = None
+        temperature_map_upper_glass_layer = None
+
     if any({element.glass for element in pvt_panel.elements.values()}):
         average_glass_temperature: Optional[float] = _average_layer_temperature(
             pvt_panel,
@@ -367,6 +387,9 @@ def system_data_from_run(
     return SystemData(
         date=date.strftime("%d/%m/%Y"),
         time=formatted_time,
+        upper_glass_temperature=average_upper_glass_temperature - ZERO_CELCIUS_OFFSET
+        if average_upper_glass_temperature is not None
+        else None,
         glass_temperature=average_glass_temperature - ZERO_CELCIUS_OFFSET
         if average_glass_temperature is not None
         else None,
@@ -396,6 +419,9 @@ def system_data_from_run(
         if save_2d_output
         else None,
         layer_temperature_map_pv=temperature_map_pv_layer if save_2d_output else None,
+        layer_temperature_map_upper_glass=temperature_map_upper_glass_layer
+        if save_2d_output
+        else None,
         electrical_efficiency=electrical_efficiency,
         reduced_collector_temperature=reduced_system_temperature,
         thermal_efficiency=thermal_efficiency,

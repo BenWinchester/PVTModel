@@ -170,6 +170,7 @@ def pump_from_path(pump_data_file: str) -> pump.Pump:
 def _absorber_params_from_data(
     length: float,
     absorber_data: Dict[str, Any],
+    override_mass_flow_rate: Optional[float],
 ) -> CollectorParameters:
     """
     Generate a :class:`CollectorParameters` containing absorber-layer info from data.
@@ -177,17 +178,15 @@ def _absorber_params_from_data(
     The HTF is assumed to be water unless the HTF heat capacity is supplied in the
     absorber data.
 
-    :param area:
-        The area of the PV-T system, measured in meters squared.
-
     :param length:
         The length of the PV-T system, measured in meters.
 
-    :param initial_absorber_htf_tempertaure:
-        The initial temperature of heat-transfer fluid in the absorber.
-
     :param absorber_data:
         The raw absorber data extracted from the YAML data file.
+
+    :param override_mass_flow_rate:
+        If specified, this overrides the mass flow-rate in the absorber. The units are
+        litres per hour.
 
     :return:
         The absorber data, as a :class:`__utils__.CollectorParameters`, ready to
@@ -209,7 +208,9 @@ def _absorber_params_from_data(
             else HEAT_CAPACITY_OF_WATER,  # [J/kg*K]
             inner_pipe_diameter=absorber_data["inner_pipe_diameter"],  # [m]
             length=length,  # [m]
-            mass_flow_rate=absorber_data["mass_flow_rate"],  # [Litres/hour]
+            mass_flow_rate=override_mass_flow_rate
+            if override_mass_flow_rate is not None
+            else absorber_data["mass_flow_rate"],  # [Litres/hour]
             number_of_pipes=absorber_data["number_of_pipes"],  # [pipes]
             outer_pipe_diameter=absorber_data["outer_pipe_diameter"],  # [m]
             pipe_density=absorber_data["pipe_density"],  # [kg/m^3]
@@ -364,6 +365,7 @@ def _elements_from_data(
                 pvt_data["pvt_collector"]["length"],
                 True,
                 TemperatureName.pv in layers,
+                TemperatureName.upper_glass in layers,
                 pvt_data["pvt_collector"]["width"],
                 0,
                 0,
@@ -452,6 +454,7 @@ def _elements_from_data(
                 pv=y_coordinate(element_number, x_resolution) <= pv_coordinate_cutoff
                 if TemperatureName.pv in layers
                 else False,
+                upper_glass=TemperatureName.upper_glass in layers,
                 # Use the edge with if the element is an edge element.
                 width=edge_width
                 if x_coordinate(element_number, x_resolution) in {0, x_resolution - 1}
@@ -481,6 +484,7 @@ def _elements_from_data(
 def pvt_panel_from_path(
     layers: Set[TemperatureName],
     logger: Logger,
+    override_mass_flow_rate: Optional[float],
     portion_covered: float,
     pvt_data_file: str,
     x_resolution: int,
@@ -494,6 +498,10 @@ def pvt_panel_from_path(
 
     :param logger:
         The :class:`logging.Logger` used for the run.
+
+    :param override_mass_flow_rate:
+        If specified, the mass-flow rate in the collector uses this value rather than
+        the value in the data file. The units are litres per hour.
 
     :param portion_covered:
         The portion of the PV-T panel which is covered in PV.
@@ -515,18 +523,35 @@ def pvt_panel_from_path(
     # Parse the data file into the various data classes.
     pvt_data = read_yaml(pvt_data_file)
 
+    # If there is upper-glass data present, process this accordingly.
+    if "upper_glass" in pvt_data and TemperatureName.upper_glass in layers:
+        upper_glass_parameters: Optional[
+            OpticalLayerParameters
+        ] = _glass_params_from_data(pvt_data["upper_glass"])
+    elif "glass" in pvt_data and TemperatureName.upper_glass in layers:
+        upper_glass_parameters = _glass_params_from_data(pvt_data["glass"])
+    elif TemperatureName.upper_glass in layers:
+        raise InvalidParametersError(
+            "Upper glass layer requested on the command line but no glass data in pvt "
+            "data file.",
+            "glass",
+        )
+    else:
+        upper_glass_parameters = None
+
     # If there is glass data present, process this accordingly.
-    if "glass" in pvt_data:
+    if "glass" in pvt_data and TemperatureName.glass in layers:
         air_gap_thickness = pvt_data["air_gap"]["thickness"]  # [m]
         glass_parameters: Optional[OpticalLayerParameters] = _glass_params_from_data(
             pvt_data["glass"]
         )
+    elif TemperatureName.glass in layers:
+        raise InvalidParametersError(
+            "Glass layer requested on the command line but no glass data in pvt data "
+            "file.",
+            "glass",
+        )
     else:
-        if TemperatureName.glass in layers:
-            raise InvalidParametersError(
-                "Glass layer requested on the command line but no glass data in pvt data file.",
-                "glass",
-            )
         air_gap_thickness = None
         glass_parameters = None
 
@@ -534,6 +559,7 @@ def pvt_panel_from_path(
     absorber_parameters = _absorber_params_from_data(
         pvt_data["pvt_collector"]["length"],  # [m]
         pvt_data["absorber"],
+        override_mass_flow_rate,
     )
 
     elements = _elements_from_data(
@@ -585,6 +611,7 @@ def pvt_panel_from_path(
             timezone=datetime.timezone(
                 datetime.timedelta(hours=int(pvt_data["pvt_collector"]["timezone"]))
             ),
+            upper_glass_parameters=upper_glass_parameters,
             width=pvt_data["pvt_collector"]["width"],  # [m]
             azimuthal_orientation=pvt_data["pvt_collector"][
                 "azimuthal_orientation"

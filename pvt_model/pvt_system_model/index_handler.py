@@ -37,7 +37,7 @@ __all__ = (
 
 def _calculate_number_of_temperatures(
     pvt_panel: pvt.PVT,
-) -> Tuple[int, int, int, int, int]:
+) -> Tuple[int, int, int, int, int, int]:
     """
     Calculates, based off the PVT collector, the number of temperatures in each layer.
 
@@ -46,6 +46,8 @@ def _calculate_number_of_temperatures(
 
     :return:
         A `tuple` containing:
+        - the number of upper-glass (i.e., double-glazing) temperatures in the
+          collector,
         - the number of glass temperatures in the collector,
         - the number of pv temperatures in the collector,
         - the number of absorber temperatures in the collector,
@@ -55,6 +57,9 @@ def _calculate_number_of_temperatures(
 
     """
 
+    num_upper_glass_temperatures = sum(
+        [element.upper_glass for element in pvt_panel.elements.values()]
+    )
     num_glass_temperatures = sum(
         [element.glass for element in pvt_panel.elements.values()]
     )
@@ -63,13 +68,17 @@ def _calculate_number_of_temperatures(
         [element.absorber for element in pvt_panel.elements.values()]
     )
     num_panel_temperatures: int = (
-        num_glass_temperatures + num_pv_temperatures + num_absorber_temperatures
+        num_upper_glass_temperatures
+        + num_glass_temperatures
+        + num_pv_temperatures
+        + num_absorber_temperatures
     )
     num_fluid_temperatures = sum(
         [element.pipe for element in pvt_panel.elements.values()]
     )
 
     return (
+        num_upper_glass_temperatures,
         num_glass_temperatures,
         num_pv_temperatures,
         num_absorber_temperatures,
@@ -125,6 +134,7 @@ def _get_index(  # pylint: disable=too-many-branches
 
     # Fetch the number of temperatures of each type.
     (
+        num_upper_glass_temperatures,
         num_glass_temperatures,
         num_pv_temperatures,
         _,
@@ -132,20 +142,33 @@ def _get_index(  # pylint: disable=too-many-branches
         num_fluid_temperatures,
     ) = _calculate_number_of_temperatures(pvt_panel)
 
+    if temperature_name == TemperatureName.upper_glass:
+        if number_of_x_elements is None or x_coord is None or y_coord is None:
+            raise ProgrammerJudgementFault(
+                "Not all parameters needed were passed in to uniquely determine an "
+                "upper-glass (i.e., double-glazing) layer index_handler."
+            )
+        index = int(number_of_x_elements * y_coord + x_coord)
     if temperature_name == TemperatureName.glass:
         if number_of_x_elements is None or x_coord is None or y_coord is None:
             raise ProgrammerJudgementFault(
                 "Not all parameters needed were passed in to uniquely determine a "
                 "glass layer index_handler."
             )
-        index = int(number_of_x_elements * y_coord + x_coord)
+        index = num_upper_glass_temperatures + int(
+            number_of_x_elements * y_coord + x_coord
+        )
     if temperature_name == TemperatureName.pv:
         if number_of_x_elements is None or x_coord is None or y_coord is None:
             raise ProgrammerJudgementFault(
                 "Not all parameters needed were passed in to uniquely determine a "
                 "pv layer index_handler."
             )
-        index = num_glass_temperatures + int(number_of_x_elements * y_coord + x_coord)
+        index = (
+            num_upper_glass_temperatures
+            + num_glass_temperatures
+            + int(number_of_x_elements * y_coord + x_coord)
+        )
     if temperature_name == TemperatureName.absorber:
         if number_of_x_elements is None or x_coord is None or y_coord is None:
             raise ProgrammerJudgementFault(
@@ -153,7 +176,8 @@ def _get_index(  # pylint: disable=too-many-branches
                 "absorber layer index_handler."
             )
         index = (
-            num_glass_temperatures
+            num_upper_glass_temperatures
+            + num_glass_temperatures
             + num_pv_temperatures
             + int(number_of_x_elements * y_coord + x_coord)
         )
@@ -338,7 +362,11 @@ def num_temperatures(pvt_panel: pvt.PVT) -> int:
     return (
         sum(
             [
-                element.glass + element.pv + element.absorber + 4 * element.pipe
+                element.upper_glass
+                + element.glass
+                + element.pv
+                + element.absorber
+                + 4 * element.pipe
                 for element in pvt_panel.elements.values()
             ]
         )
@@ -377,6 +405,7 @@ def temperature_name_from_index(  # pylint: disable=too-many-branches
 
     # Determine the number of temperatures of each type.
     (
+        num_upper_glass_temperatures,
         num_glass_temperatures,
         num_pv_temperatures,
         _,
@@ -384,9 +413,14 @@ def temperature_name_from_index(  # pylint: disable=too-many-branches
         num_fluid_temperatures,
     ) = _calculate_number_of_temperatures(pvt_panel)
 
-    if index < num_glass_temperatures:
+    if index < num_upper_glass_temperatures:
+        temperature_name = TemperatureName.upper_glass
+    elif index < num_upper_glass_temperatures + num_glass_temperatures:
         temperature_name = TemperatureName.glass
-    elif index < num_glass_temperatures + num_pv_temperatures:
+    elif (
+        index
+        < num_upper_glass_temperatures + num_glass_temperatures + num_pv_temperatures
+    ):
         temperature_name = TemperatureName.pv
     elif index < num_panel_temperatures:
         temperature_name = TemperatureName.absorber

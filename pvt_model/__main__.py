@@ -350,6 +350,7 @@ def _determine_consistent_conditions(
         override_ambient_temperature=override_ambient_temperature,
         override_collector_input_temperature=override_collector_input_temperature,
         override_irradiance=override_irradiance,
+        override_mass_flow_rate=parsed_args.mass_flow_rate,
         override_wind_speed=override_wind_speed,
         run_number=run_depth,
         start_time=parsed_args.start_time,
@@ -676,6 +677,17 @@ def _output_temperature_info(
         ),
     }
 
+    if "dg" in parsed_args.layers:
+        average_temperature_map["upper_glass"] = round(
+            mean({entry.upper_glass_temperature for entry in system_data.values()}), 3  # type: ignore
+        )
+        maximum_temperature_map["upper_glass"] = max(
+            {round(entry.upper_glass_temperature, 3) for entry in system_data.values()}  # type: ignore
+        )
+        minimum_temperature_map["upper_glass"] = min(
+            {round(entry.upper_glass_temperature, 3) for entry in system_data.values()}  # type: ignore
+        )
+
     if "g" in parsed_args.layers:
         average_temperature_map["glass"] = round(
             mean({entry.glass_temperature for entry in system_data.values()}), 3  # type: ignore
@@ -826,6 +838,7 @@ def main(args) -> None:  # pylint: disable=too-many-branches
     pvt_panel = pvt_panel_from_path(
         layers,
         logger,
+        parsed_args.mass_flow_rate,
         parsed_args.portion_covered,
         parsed_args.pvt_data_file,
         parsed_args.x_resolution,
@@ -978,6 +991,7 @@ def main(args) -> None:  # pylint: disable=too-many-branches
             override_ambient_temperature=parsed_args.ambient_temperature,
             override_collector_input_temperature=parsed_args.collector_input_temperature,
             override_irradiance=parsed_args.solar_irradiance,
+            override_mass_flow_rate=parsed_args.mass_flow_rate,
             override_wind_speed=parsed_args.wind_speed,
             run_number=1,
             start_time=parsed_args.start_time,
@@ -1026,6 +1040,7 @@ def main(args) -> None:  # pylint: disable=too-many-branches
             override_ambient_temperature=parsed_args.ambient_temperature,
             override_collector_input_temperature=parsed_args.collector_input_temperature,
             override_irradiance=parsed_args.solar_irradiance,
+            override_mass_flow_rate=parsed_args.mass_flow_rate,
             override_wind_speed=parsed_args.wind_speed,
             run_number=1,
             start_time=parsed_args.start_time,

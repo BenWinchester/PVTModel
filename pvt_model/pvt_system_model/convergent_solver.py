@@ -22,7 +22,8 @@ import numpy
 
 from scipy import linalg  # type: ignore
 
-from . import exchanger, matrix, tank
+from . import exchanger, tank
+from .matrix import matrix
 from .pvt_panel import pvt
 
 from ..__utils__ import BColours, OperatingMode, ProgrammerJudgementFault

@@ -42,8 +42,8 @@ pvt_collector:
   # width: 0.86 #[m]
   # One fourteenth of the absorber width.
   # width: 0.06142857142 # [m]
-  # Ilaria's absorber width of 0.1m.
-  width: 0.1 #[m]
+  # Ilaria's absorber width of 0.1m but with 6 pipes.
+  width: 0.23 #[m]
 glass:
   absorptivity: 0.01 # [unitless]
   # @@@ Value NOT taken from Maria's paper.

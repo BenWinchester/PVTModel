@@ -28,6 +28,7 @@ __all__ = ("check_args", "parse_args")
 
 # Used to keep track of the temperature layers based on the CLI arguments passsed in.
 layer_map = {
+    "dg": TemperatureName.upper_glass,
     "g": TemperatureName.glass,
     "pv": TemperatureName.pv,
     "a": TemperatureName.absorber,
@@ -223,6 +224,17 @@ def check_args(  # pylint: disable=too-many-branches
             )
         )
 
+    # Enforce that, if double glazing is specified, then the glass layer is also present
+    if "dg" in parsed_args.layers and "g" not in parsed_args.layers:
+        raise ArgumentMismatchError(
+            "{}If using the --layers developer argument, the glass layer, ".format(
+                BColours.FAIL
+            )
+            + "'g', must be specified if using double-glazing, 'dg'.{}".format(
+                BColours.ENDC,
+            )
+        )
+
     return {layer_map[entry] for entry in parsed_args.layers}
 
 
@@ -320,6 +332,12 @@ def parse_args(args) -> argparse.Namespace:
     )
     required_named_arguments.add_argument(
         "--location", "-l", help="The location for which to run the simulation."
+    )
+    parser.add_argument(
+        "--mass-flow-rate",
+        type=float,
+        default=None,
+        help="Can be used to override the mass-flow rate used in the collector.",
     )
     dynamic_arguments.add_argument(
         "--minutes",

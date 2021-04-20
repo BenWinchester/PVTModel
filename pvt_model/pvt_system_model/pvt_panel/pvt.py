@@ -139,6 +139,7 @@ class PVT:
         tedlar: MicroLayer,
         tilt: float,
         timezone: datetime.timezone,
+        upper_glass_parameters: Optional[OpticalLayerParameters],
         width: float,
         *,
         azimuthal_orientation: Optional[float] = None,
@@ -206,6 +207,9 @@ class PVT:
         :param timezone:
             The timezone in which the PV-T system is installed.
 
+        :param upper_glass_parameters:
+            Parameters used to instantiate the upper-glass layer.
+
         :param width:
             The width of the absorber in meters.
 
@@ -241,6 +245,12 @@ class PVT:
         self.timezone = timezone
         self.width = width
 
+        # Set up empty placeholders to be computed later.
+        self._absorber_transmissivity_absorptivity_product: Optional[float] = None
+        self._glass_transmissivity_absorptivity_product: Optional[float] = None
+        self._pv_transmissivity_absorptivity_product: Optional[float] = None
+        self._upper_glass_transmissivity_absorptivity_product: Optional[float] = None
+
         # If the orientation parameters have not been specified correctly, then raise an
         # error.
         if not vertical_tracking and tilt is None:
@@ -267,6 +277,10 @@ class PVT:
         self.insulation = insulation
         self.pv: pv.PV = pv.PV(pv_parameters)
         self.tedlar = tedlar
+        if upper_glass_parameters is None:
+            self.upper_glass: Optional[glass.Glass] = None
+        else:
+            self.upper_glass = glass.Glass(upper_glass_parameters)
 
         # * Instantiate and store the elements on the class.
 
@@ -281,6 +295,7 @@ class PVT:
 
         return (
             "PVT(\n"
+            f"  upper_glass: {self.upper_glass},\n"
             f"  glass: {self.glass},\n"
             f"  pv: {self.pv},\n"
             f"  eva: {self.eva},\n"
@@ -289,11 +304,61 @@ class PVT:
             f"  absorber: {self.absorber},\n"
             f"  bond: {self.bond},\n"
             f"  outer_pipe_diameter: {self.absorber.outer_pipe_diameter}m\n"
+            f"  (ta)_ug = {self.upper_glass_transmissivity_absorptivity_product:.3f}\n"
+            f"  (ta)_g = {self.glass_transmissivity_absorptivity_product:.3f}\n"
+            f"  (ta)_pv = {self.pv_transmissivity_absorptivity_product:.3f}\n"
+            f"  (ta)_ab = {self.absorber_transmissivity_absorptivity_product:.3f}\n"
             "  additional_params: "
             f"azimuthal_orientation: {self._azimuthal_orientation}, "
             f"coordinates: {self.latitude}N {self.longitude}E, "
             f"tilt: {self._tilt}deg"
             "\n)"
+        )
+
+    @property
+    def _double_glass_reflectance(self) -> float:
+        """
+        Computes the combined reflectance of two glass layers.
+
+        :return:
+            The dimensionless reflectance of the combined upper-glass and glass layers.
+
+        """
+
+        if self.upper_glass is None or self.glass is None:
+            raise ProgrammerJudgementFault(
+                "{}Cannot compute combined reflectances without both ".format(
+                    BColours.FAIL
+                )
+                + "upper-glass and glass layers present.{}".format(BColours.ENDC)
+            )
+
+        return self.upper_glass.reflectance + (
+            self.glass.reflectance * self.upper_glass.transmittance ** 2
+        ) / (1 - self.upper_glass.reflectance * self.glass.reflectance)
+
+    @property
+    def _double_glass_transmittance(self) -> float:
+        """
+        Computes the combined transmittance of two glass layers.
+
+        :return:
+            The dimensionless transmittance of the combined upper-glass and glass layers.
+
+        """
+
+        if self.upper_glass is None or self.glass is None:
+            raise ProgrammerJudgementFault(
+                "{}Cannot compute combined transmittances without both ".format(
+                    BColours.FAIL
+                )
+                + "upper-glass and glass layers present.{}".format(BColours.ENDC)
+            )
+
+        return (
+            self.upper_glass.transmittance
+            * self.glass.transmittance
+            / (1 - self.upper_glass.reflectance * self.glass.reflectance)
         )
 
     def _get_solar_orientation_diff(
@@ -353,15 +418,26 @@ class PVT:
 
         """
 
-        if self.glass is not None:
-            ta_product: float = (
+        if self._absorber_transmissivity_absorptivity_product is not None:
+            return self._absorber_transmissivity_absorptivity_product
+
+        if self.upper_glass is not None:
+            self._absorber_transmissivity_absorptivity_product = (
+                (1 - self.absorber.reflectance - self.absorber.transmittance)
+                * self._double_glass_transmittance
+                / (1 - self._double_glass_reflectance * self.absorber.reflectance)
+            )
+        elif self.glass is not None:
+            self._absorber_transmissivity_absorptivity_product = (
                 (1 - self.absorber.reflectance - self.absorber.transmittance)
                 * self.glass.transmittance
             ) / (1 - self.absorber.reflectance * self.glass.reflectance)
         else:
-            ta_product = self.absorber.absorptivity
+            self._absorber_transmissivity_absorptivity_product = (
+                self.absorber.absorptivity
+            )
 
-        return ta_product
+        return self._absorber_transmissivity_absorptivity_product
 
     @property
     def coordinates(self) -> Tuple[float, float]:
@@ -456,22 +532,39 @@ class PVT:
 
         """
 
+        if self._glass_transmissivity_absorptivity_product is not None:
+            return self._glass_transmissivity_absorptivity_product
+
         if self.glass is None:
-            raise ProgrammerJudgementFault(
-                "{}Attempted to fetch ta product of a non-existent glass layer.{}".format(
-                    BColours.FAIL, BColours.ENDC
+            return 0
+
+        if self.pv is not None:
+            lower_reflectance = self.pv.reflectance
+        else:
+            lower_reflectance = self.absorber.reflectance
+
+        if self.upper_glass is None:
+            self._glass_transmissivity_absorptivity_product = (
+                1
+                - self.glass.reflectance
+                - self.glass.transmittance
+                * (1 - lower_reflectance + lower_reflectance * self.glass.transmittance)
+                / (1 - lower_reflectance * self.glass.reflectance)
+            )
+        else:
+            self._glass_transmissivity_absorptivity_product = (
+                1
+                - self._double_glass_reflectance
+                - (
+                    1
+                    - lower_reflectance
+                    + lower_reflectance * self._double_glass_transmittance
                 )
+                * self._double_glass_transmittance
+                / (1 - self._double_glass_reflectance * lower_reflectance)
             )
 
-        ta_product: float = (
-            1
-            - self.glass.reflectance
-            - self.glass.transmittance
-            * (1 - self.pv.reflectance + self.pv.reflectance * self.glass.transmittance)
-            / (1 - self.pv.reflectance * self.glass.reflectance)
-        )
-
-        return ta_product
+        return self._glass_transmissivity_absorptivity_product
 
     @property
     def pv_to_absorber_thermal_resistance(self) -> float:
@@ -503,15 +596,25 @@ class PVT:
 
         """
 
-        if self.glass is not None:
-            ta_product: float = (
+        if self._pv_transmissivity_absorptivity_product is not None:
+            return self._pv_transmissivity_absorptivity_product
+
+        if self.upper_glass is not None:
+            self._pv_transmissivity_absorptivity_product = (
+                (1 - self.pv.reflectance - self.pv.transmittance)
+                * self._double_glass_transmittance
+                / (1 - self._double_glass_reflectance * self.pv.reflectance)
+            )
+        elif self.glass is not None:
+            # if self.glass is not None:
+            self._pv_transmissivity_absorptivity_product = (
                 (1 - self.pv.reflectance - self.pv.transmittance)
                 * self.glass.transmittance
             ) / (1 - self.pv.reflectance * self.glass.reflectance)
         else:
-            ta_product = self.pv.absorptivity
+            self._pv_transmissivity_absorptivity_product = self.pv.absorptivity
 
-        return ta_product
+        return self._pv_transmissivity_absorptivity_product
 
     @property
     def tilt_in_radians(self) -> float:
@@ -525,3 +628,46 @@ class PVT:
         """
 
         return numpy.pi * self._tilt / 180
+
+    @property
+    def upper_glass_transmissivity_absorptivity_product(self) -> float:
+        """
+        Returns the transmissivity-absorptivity product of the upper-glass layer.
+
+        Due to internal reflections etc., an estimate is needed for the overall fraction
+        of incident solar light that is absorbed by the upper-glass layer.
+
+        :return:
+            The TA product of the upper-glass layer.
+
+        """
+
+        if self._upper_glass_transmissivity_absorptivity_product is not None:
+            return self._upper_glass_transmissivity_absorptivity_product
+
+        if self.upper_glass is None:
+            return 0
+
+        if self.glass is None:
+            raise ProgrammerJudgementFault(
+                "{}Attempted to fetch ta product of a double glazing without a ".format(
+                    BColours.FAIL
+                )
+                + "lower glass layer.{}".format(BColours.ENDC)
+            )
+
+        lower_reflectance = self.glass.reflectance
+
+        self._upper_glass_transmissivity_absorptivity_product = (
+            1
+            - self.upper_glass.reflectance
+            - (
+                1
+                - lower_reflectance
+                + lower_reflectance * self.upper_glass.transmittance
+            )
+            * self.upper_glass.transmittance
+            / (1 - self.upper_glass.reflectance * lower_reflectance)
+        )
+
+        return self._upper_glass_transmissivity_absorptivity_product
