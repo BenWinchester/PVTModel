@@ -416,7 +416,7 @@ def _calculate_downward_upper_glass_terms(
 
     if not pvt_panel.glass:
         raise ProgrammerJudgementFault(
-            "{}Cannot compute double-glazing without `glass` layer present.".format(
+            "{}Cannot compute double-glazing without `glass` layer present.{}".format(
                 BColours.FAIL, BColours.ENDC
             )
         )
