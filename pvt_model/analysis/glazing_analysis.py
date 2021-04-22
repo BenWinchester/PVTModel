@@ -231,16 +231,7 @@ def _efficiency_plots(
     )
 
 
-def _glazing_analysis_plot() -> None:
-    """
-    Carry out necessary processing to generate desired plots.
-
-    """
-
-    pass
-
-
-def analyse_decoupled_steady_state_data(
+def analyse_decoupled_steady_state_data(  # pylint: disable=too-many-branches
     data: Dict[Any, Dict[str, Any]], logger: Logger
 ) -> None:
     """
