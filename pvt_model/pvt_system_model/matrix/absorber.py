@@ -372,6 +372,10 @@ def calculate_absorber_equation(  # pylint: disable=too-many-branches
         * weather_conditions.ambient_temperature  # [K]
         # Solar absorption term.
         + solar_thermal_resultant_vector_absorbtion_term  # [W]
+        # Heat loss to the air.
+        + absorber_to_air_conduction * weather_conditions.ambient_temperature
+        # Absorber to sky radiation
+        + absorber_to_sky_radiation * weather_conditions.sky_temperature
     )
 
     if operating_mode.dynamic:
@@ -389,17 +393,17 @@ def calculate_absorber_equation(  # pylint: disable=too-many-branches
             ]  # [K]
         )
 
-    try:
-        logger.debug(
-            "Rough Absorber Temperature estimate: %s K.",
-            int(
-                resultant_vector_value
-                / (absorber_to_insulation_loss + collector_internal_energy_change)
-            ),
-        )
-    except ZeroDivisionError:
-        logger.debug(
-            "Absorber temperature estimate could not be computed due to zero-division."
-        )
+        try:
+            logger.debug(
+                "Rough Absorber Temperature estimate: %s K.",
+                int(
+                    resultant_vector_value
+                    / (absorber_to_insulation_loss + collector_internal_energy_change)
+                ),
+            )
+        except ZeroDivisionError:
+            logger.debug(
+                "Absorber temperature estimate could not be computed due to zero-division."
+            )
 
     return row_equation, resultant_vector_value
