@@ -277,5 +277,9 @@ def coupled_dynamic_run(
             weather_conditions,
         )
         previous_run_temperature_vector = current_run_temperature_vector
+        logger.info(
+            "Time: %s: Internal run complete with consistent conditions. Moving to the next time step.",
+            date_and_time.strftime("%d/%m/%Y %H:%M:%S"),
+        )
 
     return numpy.asarray(current_run_temperature_vector), system_data
