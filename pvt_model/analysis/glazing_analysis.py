@@ -196,6 +196,7 @@ def _efficiency_plots(
         x_axis_thing_to_plot="reduced_collector_temperature",
         plot_title="Thermal efficiency against reduced temperature",
         disable_lines=True,
+        plot_trendline=True,
     )
 
     # Collector temperature gain plot.
@@ -226,7 +227,17 @@ def _efficiency_plots(
         x_axis_thing_to_plot="reduced_collector_temperature",
         plot_title="Electrical efficiency against reduced temperature",
         disable_lines=True,
+        plot_trendline=True,
     )
+
+
+def _glazing_analysis_plot() -> None:
+    """
+    Carry out necessary processing to generate desired plots.
+
+    """
+
+    pass
 
 
 def analyse_decoupled_steady_state_data(
@@ -288,8 +299,9 @@ def analyse_decoupled_steady_state_data(
         prefix="ilaria_unglazed_pc",
         thermal_efficiency_labels=sorted(thermal_efficiency_labels),
     )
+    plt.close("all")
 
-    # Plot the portion-covered affect on single-glazed autotherm.
+    # Plot the portion-covered affect on unglazed autotherm.
     reduced_data = collections.defaultdict(dict)
     thermal_efficiency_labels = set()
     electrical_efficiency_labels = set()
@@ -331,6 +343,7 @@ def analyse_decoupled_steady_state_data(
         prefix="autotherm_unglazed_pc",
         thermal_efficiency_labels=sorted(thermal_efficiency_labels),
     )
+    plt.close("all")
 
     # Plot the portion-covered affect on single-glazed Ilaria.
     reduced_data = collections.defaultdict(dict)
@@ -374,6 +387,7 @@ def analyse_decoupled_steady_state_data(
         prefix="ilaria_single_glazed_pc",
         thermal_efficiency_labels=sorted(thermal_efficiency_labels),
     )
+    plt.close("all")
 
     # Plot the portion-covered affect on single-glazed autotherm.
     reduced_data = collections.defaultdict(dict)
@@ -417,8 +431,9 @@ def analyse_decoupled_steady_state_data(
         prefix="autotherm_single_glazed_pc",
         thermal_efficiency_labels=sorted(thermal_efficiency_labels),
     )
+    plt.close("all")
 
-    # Plot the portion-covered affect on single-glazed Ilaria.
+    # Plot the portion-covered affect on double-glazed Ilaria.
     reduced_data = collections.defaultdict(dict)
     thermal_efficiency_labels = set()
     electrical_efficiency_labels = set()
@@ -460,8 +475,9 @@ def analyse_decoupled_steady_state_data(
         prefix="ilaria_double_glazed_pc",
         thermal_efficiency_labels=sorted(thermal_efficiency_labels),
     )
+    plt.close("all")
 
-    # Plot the portion-covered affect on single-glazed autotherm.
+    # Plot the portion-covered affect on double-glazed autotherm.
     reduced_data = collections.defaultdict(dict)
     thermal_efficiency_labels = set()
     electrical_efficiency_labels = set()
@@ -503,12 +519,13 @@ def analyse_decoupled_steady_state_data(
         prefix="autotherm_double_glazed_pc",
         thermal_efficiency_labels=sorted(thermal_efficiency_labels),
     )
+    plt.close("all")
 
     # Plot the glazing effect on a fully covered Ilaria panel.
     reduced_data = collections.defaultdict(dict)
     thermal_efficiency_labels = set()
     electrical_efficiency_labels = set()
-    ilaria_fully_covered_regex = re.compile(r"ilaria_(?P<glazing>.*)_pc_1_0_.*")
+    ilaria_fully_covered_regex = re.compile(r"ilaria_(?P<glazing>[^0-9]*)_pc_1_0_.*")
     for key, sub_dict in data.items():
         ilaria_glazing_match = re.match(ilaria_fully_covered_regex, key)
         if ilaria_glazing_match is None:
@@ -536,12 +553,15 @@ def analyse_decoupled_steady_state_data(
         prefix="ilaria_pc_1_glazing_comparison",
         thermal_efficiency_labels=sorted(thermal_efficiency_labels),
     )
+    plt.close("all")
 
     # Plot the glazing effect on a fully covered autotherm.
     reduced_data = collections.defaultdict(dict)
     thermal_efficiency_labels = set()
     electrical_efficiency_labels = set()
-    autotherm_fully_covered_regex = re.compile(r"autotherm_(?P<glazing>.*)_pc_1_0_.*")
+    autotherm_fully_covered_regex = re.compile(
+        r"autotherm_(?P<glazing>[^0-9]*)_pc_1_0_.*"
+    )
     for key, sub_dict in data.items():
         autotherm_glazing_match = re.match(autotherm_fully_covered_regex, key)
         if autotherm_glazing_match is None:
@@ -569,19 +589,64 @@ def analyse_decoupled_steady_state_data(
         prefix="autotherm_pc_1_glazing_comparison",
         thermal_efficiency_labels=sorted(thermal_efficiency_labels),
     )
+    plt.close("all")
 
-    # Plot the mass-flow-rate effect on a fully covered autotherm.
+    # Plot the mass-flow-rate effect on a single-glazed Ilaria.
+    reduced_data = collections.defaultdict(dict)
+    thermal_efficiency_labels = set()
+    electrical_efficiency_labels = set()
+    ilaria_mass_flow_rate_regex = re.compile(
+        r"ilaria_single_glazed_(?P<mass_flow_rate>[0-9]*)_litres_per_hour_.*"
+    )
+    for key, sub_dict in data.items():
+        ilaria_mass_flow_rate_match = re.match(ilaria_mass_flow_rate_regex, key)
+        if ilaria_mass_flow_rate_match is None:
+            continue
+        mass_flow_rate = int(ilaria_mass_flow_rate_match.group("mass_flow_rate"))
+        # Only include important mass-flow rates.
+        if mass_flow_rate not in {10, 6, 3, 1}:
+            continue
+        for sub_key, value in sub_dict.items():
+            reduced_data[sub_key][f"thermal efficiency {mass_flow_rate}L/h"] = value[
+                "thermal_efficiency"
+            ]
+            thermal_efficiency_labels.add(f"thermal efficiency {mass_flow_rate}L/h")
+            # Store the specific electrical efficiency.
+            reduced_data[sub_key][f"electrical efficiency {mass_flow_rate}L/h"] = value[
+                "electrical_efficiency"
+            ]
+            electrical_efficiency_labels.add(
+                f"electrical efficiency {mass_flow_rate}L/h"
+            )
+            # Store a copy of the reduced temperature
+            reduced_data[sub_key]["reduced_collector_temperature"] = value[
+                "reduced_collector_temperature"
+            ]
+
+    _efficiency_plots(
+        data=reduced_data,
+        electrical_efficiency_labels=sorted(electrical_efficiency_labels),
+        logger=logger,
+        prefix="ilaria_single_glazed_mass_flow_rate_comparison",
+        thermal_efficiency_labels=sorted(thermal_efficiency_labels),
+    )
+    plt.close("all")
+
+    # Plot the mass-flow-rate effect on a single-glazed autotherm.
     reduced_data = collections.defaultdict(dict)
     thermal_efficiency_labels = set()
     electrical_efficiency_labels = set()
     autotherm_mass_flow_rate_regex = re.compile(
-        r"autotherm_single_glazed_(?P<mass_flow_rate>.*)_litres_per_hour_.*"
+        r"autotherm_single_glazed_(?P<mass_flow_rate>[0-9]*)_litres_per_hour_.*"
     )
     for key, sub_dict in data.items():
         autotherm_mass_flow_rate_match = re.match(autotherm_mass_flow_rate_regex, key)
         if autotherm_mass_flow_rate_match is None:
             continue
-        mass_flow_rate = autotherm_mass_flow_rate_match.group("mass_flow_rate")
+        mass_flow_rate = int(autotherm_mass_flow_rate_match.group("mass_flow_rate"))
+        # Only include important mass-flow rates.
+        if mass_flow_rate not in {10, 6, 3, 1}:
+            continue
         for sub_key, value in sub_dict.items():
             reduced_data[sub_key][f"thermal efficiency {mass_flow_rate}L/h"] = value[
                 "thermal_efficiency"
@@ -606,6 +671,90 @@ def analyse_decoupled_steady_state_data(
         prefix="autotherm_single_glazed_mass_flow_rate_comparison",
         thermal_efficiency_labels=sorted(thermal_efficiency_labels),
     )
+    plt.close("all")
+
+    # Plot the mass-flow-rate effect on a double-glazed Ilaria.
+    reduced_data = collections.defaultdict(dict)
+    thermal_efficiency_labels = set()
+    electrical_efficiency_labels = set()
+    ilaria_mass_flow_rate_regex = re.compile(
+        r"ilaria_double_glazed_(?P<mass_flow_rate>.*)_litres_per_hour_.*"
+    )
+    for key, sub_dict in data.items():
+        ilaria_mass_flow_rate_match = re.match(ilaria_mass_flow_rate_regex, key)
+        if ilaria_mass_flow_rate_match is None:
+            continue
+        mass_flow_rate = int(ilaria_mass_flow_rate_match.group("mass_flow_rate"))
+        # Only include important mass-flow rates.
+        if mass_flow_rate not in {10, 6, 3, 1}:
+            continue
+        for sub_key, value in sub_dict.items():
+            reduced_data[sub_key][f"thermal efficiency {mass_flow_rate}L/h"] = value[
+                "thermal_efficiency"
+            ]
+            thermal_efficiency_labels.add(f"thermal efficiency {mass_flow_rate}L/h")
+            # Store the specific electrical efficiency.
+            reduced_data[sub_key][f"electrical efficiency {mass_flow_rate}L/h"] = value[
+                "electrical_efficiency"
+            ]
+            electrical_efficiency_labels.add(
+                f"electrical efficiency {mass_flow_rate}L/h"
+            )
+            # Store a copy of the reduced temperature
+            reduced_data[sub_key]["reduced_collector_temperature"] = value[
+                "reduced_collector_temperature"
+            ]
+
+    _efficiency_plots(
+        data=reduced_data,
+        electrical_efficiency_labels=sorted(electrical_efficiency_labels),
+        logger=logger,
+        prefix="ilaria_double_glazed_mass_flow_rate_comparison",
+        thermal_efficiency_labels=sorted(thermal_efficiency_labels),
+    )
+    plt.close("all")
+
+    # Plot the mass-flow-rate effect on a single-glazed autotherm.
+    reduced_data = collections.defaultdict(dict)
+    thermal_efficiency_labels = set()
+    electrical_efficiency_labels = set()
+    autotherm_mass_flow_rate_regex = re.compile(
+        r"autotherm_single_glazed_(?P<mass_flow_rate>.*)_litres_per_hour_.*"
+    )
+    for key, sub_dict in data.items():
+        autotherm_mass_flow_rate_match = re.match(autotherm_mass_flow_rate_regex, key)
+        if autotherm_mass_flow_rate_match is None:
+            continue
+        mass_flow_rate = int(autotherm_mass_flow_rate_match.group("mass_flow_rate"))
+        # Only include important mass-flow rates.
+        if mass_flow_rate not in {10, 6, 3, 1}:
+            continue
+        for sub_key, value in sub_dict.items():
+            reduced_data[sub_key][f"thermal efficiency {mass_flow_rate}L/h"] = value[
+                "thermal_efficiency"
+            ]
+            thermal_efficiency_labels.add(f"thermal efficiency {mass_flow_rate}L/h")
+            # Store the specific electrical efficiency.
+            reduced_data[sub_key][f"electrical efficiency {mass_flow_rate}L/h"] = value[
+                "electrical_efficiency"
+            ]
+            electrical_efficiency_labels.add(
+                f"electrical efficiency {mass_flow_rate}L/h"
+            )
+            # Store a copy of the reduced temperature
+            reduced_data[sub_key]["reduced_collector_temperature"] = value[
+                "reduced_collector_temperature"
+            ]
+
+    _efficiency_plots(
+        data=reduced_data,
+        electrical_efficiency_labels=sorted(electrical_efficiency_labels),
+        logger=logger,
+        prefix="autotherm_double_glazed_mass_flow_rate_comparison",
+        thermal_efficiency_labels=sorted(thermal_efficiency_labels),
+    )
+
+    plt.close("all")
 
 
 def analyse(data_file_directory: str, show_output: Optional[bool] = False) -> None:

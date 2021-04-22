@@ -70,6 +70,8 @@ STEADY_STATE_DATA_FILE_NAME = "autotherm.yaml"
 X_TICK_SEPARATION: int = 8
 # Which days of data to include
 DAYS_TO_INCLUDE: List[bool] = [False, True]
+# The resolution to use for the trendline.
+TRENDLINE_RESOLUTION = 200
 
 
 class GraphDetail(enum.Enum):
@@ -179,6 +181,7 @@ def plot(  # pylint: disable=too-many-branches
     colour: str = None,
     hold: bool = False,
     shape: str = "x",
+    trendline: bool = False,
 ) -> Optional[Any]:
     """
     Plots some model_data based on input parameters.
@@ -213,6 +216,12 @@ def plot(  # pylint: disable=too-many-branches
     :param axes:
         If provided, a separate axis is used for plotting the model_data.
 
+    :param bar_plot:
+        Whether to plot a line graph (False) or a bar_plot plot (True).
+
+    :param colour:
+        The colour to use for the plot.
+
     :param hold:
         Whether to hold the screen between plots (True) or reset it (False).
 
@@ -220,11 +229,8 @@ def plot(  # pylint: disable=too-many-branches
         This sets the shape of the marker for `matplotlib.pyplot` to use when plotting
         the model_data.
 
-    :param colour:
-        The colour to use for the plot.
-
-    :param bar_plot:
-        Whether to plot a line graph (False) or a bar_plot plot (True).
+    :param trendline:
+        Whether to plot a trendline (True) or not (False).
 
     """
 
@@ -249,6 +255,14 @@ def plot(  # pylint: disable=too-many-branches
     # Reduce the values on the x axis to be times.
     # x_model_data = [float(item) / (resolution / 60) for item in x_model_data]
 
+    # If needed, compute a trendline.
+    if trendline:
+        trend = numpy.polyfit(x_model_data, y_model_data, 1)
+        trendline_x_data = numpy.linspace(
+            min(x_model_data), max(x_model_data), TRENDLINE_RESOLUTION
+        )
+        trendline_y_data = [trend[0] * entry + trend[1] for entry in trendline_x_data]
+
     if bar_plot:
         if axes is None:
             if colour is None:
@@ -267,7 +281,12 @@ def plot(  # pylint: disable=too-many-branches
         # If we are not using axes, then the model_data can be straight plotted...
         if axes is None:
             plt.scatter(x_model_data, y_model_data, label=label, marker=shape)
-            (line,) = plt.plot(x_model_data, y_model_data, label=label, marker=shape)
+            if not disable_lines:
+                (line,) = plt.plot(
+                    x_model_data, y_model_data, label=label, marker=shape
+                )
+            if trendline:
+                (line,) = plt.plot(trendline_x_data, trendline_y_data, label=label)
 
         #  otherwise, the model_data needs to be plotted on just on axis.
         else:
@@ -284,6 +303,13 @@ def plot(  # pylint: disable=too-many-branches
                         label=label,
                         marker=shape,
                         color=colour,
+                    )
+            if trendline:
+                if colour is None:
+                    (line,) = plt.plot(trendline_x_data, trendline_y_data, label=label)
+                else:
+                    (line,) = plt.plot(
+                        trendline_x_data, trendline_y_data, label=label, color=colour
                     )
 
     # Set the labels for the axes.
@@ -369,6 +395,7 @@ def plot_figure(  # pylint: disable=too-many-branches
     disable_lines: bool = False,
     override_axis: Optional[Axes] = None,
     plot_title: Optional[str] = None,
+    plot_trendline: bool = False,
 ) -> None:
     """
     Does all the work needed to plot a figure with up to two axes and save it.
@@ -427,6 +454,9 @@ def plot_figure(  # pylint: disable=too-many-branches
     :param plot_title:
         If specified, a title is addded to the plot.
 
+    :param plot_trendline:
+        If `True`, then a best-fit trendline will be added.
+
     """
 
     if override_axis is None:
@@ -447,6 +477,7 @@ def plot_figure(  # pylint: disable=too-many-branches
             shape=first_axis_shape,
             bar_plot=bar_plot,
             disable_lines=disable_lines,
+            trendline=plot_trendline,
         )
         for entry in first_axis_things_to_plot
     ]
@@ -495,6 +526,7 @@ def plot_figure(  # pylint: disable=too-many-branches
                 shape=".",
                 bar_plot=bar_plot,
                 disable_lines=disable_lines,
+                trendline=plot_trendline,
             )
             for entry in second_axis_things_to_plot
         ]
