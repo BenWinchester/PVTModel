@@ -956,7 +956,7 @@ def analyse_decoupled_steady_state_data(data: Dict[Any, Any], logger: Logger) ->
         os.path.join("system_data", "steady_state_data", STEADY_STATE_DATA_FILE_NAME),
         "r",
     ) as f:  #
-        experimental_steady_state_data = yaml.load(f)
+        experimental_steady_state_data = yaml.safe_load(f)
 
     # Post-process this data.
     for entry in experimental_steady_state_data:
