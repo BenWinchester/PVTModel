@@ -355,7 +355,7 @@ def calculate_absorber_equation(  # pylint: disable=too-many-branches
             ) from None
 
     # Compute the solar-thermal absorption if relevant.
-    if element.glass and not element.pv:
+    if not element.pv:
         solar_thermal_resultant_vector_absorbtion_term = (
             pvt_panel.absorber_transmissivity_absorptivity_product
             * weather_conditions.irradiance  # [W/m^2]

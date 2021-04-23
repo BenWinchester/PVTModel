@@ -57,7 +57,7 @@
   collector_input_temperature: 26
   collector_temperature_gain: 5.22
   irradiance: 918
-  mass_flow_rate: 1.71
+  mass_flow_rate: 1.71 # [L/h]
   thermal_efficiency: 0.48
   thermal_power: 622
   wind_speed: 2.09

@@ -197,6 +197,7 @@ def _efficiency_plots(
         plot_title="Thermal efficiency against reduced temperature",
         disable_lines=True,
         plot_trendline=True,
+        first_axis_y_limits=[0, 0.55],
     )
 
     # Collector temperature gain plot.
@@ -228,6 +229,7 @@ def _efficiency_plots(
         plot_title="Electrical efficiency against reduced temperature",
         disable_lines=True,
         plot_trendline=True,
+        first_axis_y_limits=[0.09, 0.14],
     )
 
 
@@ -710,7 +712,7 @@ def analyse_decoupled_steady_state_data(  # pylint: disable=too-many-branches
     thermal_efficiency_labels = set()
     electrical_efficiency_labels = set()
     autotherm_mass_flow_rate_regex = re.compile(
-        r"autotherm_single_glazed_(?P<mass_flow_rate>.*)_litres_per_hour_.*"
+        r"autotherm_double_glazed_(?P<mass_flow_rate>.*)_litres_per_hour_.*"
     )
     for key, sub_dict in data.items():
         autotherm_mass_flow_rate_match = re.match(autotherm_mass_flow_rate_regex, key)
@@ -745,6 +747,90 @@ def analyse_decoupled_steady_state_data(  # pylint: disable=too-many-branches
         thermal_efficiency_labels=sorted(thermal_efficiency_labels),
     )
 
+    plt.close("all")
+
+    # Plot the number-of-pipes effect on a single-glazed Ilaria.
+    reduced_data = collections.defaultdict(dict)
+    thermal_efficiency_labels = set()
+    electrical_efficiency_labels = set()
+    ilaria_pipes_regex = re.compile(
+        r"ilaria_(?P<pipes>[0-9]*)_pipes_(?P<glazing>.*)_pc.*"
+    )
+    for key, sub_dict in data.items():
+        ilaria_pipes_match = re.match(ilaria_pipes_regex, key)
+        if ilaria_pipes_match is None:
+            continue
+        pipes = int(ilaria_pipes_match.group("pipes"))
+        glazing = ilaria_pipes_match.group("glazing")
+        if glazing == "unglazed":
+            continue
+        # Only include important mass-flow rates.
+        for sub_key, value in sub_dict.items():
+            reduced_data[sub_key][
+                f"{glazing} thermal efficiency {pipes} pipes"
+            ] = value["thermal_efficiency"]
+            thermal_efficiency_labels.add(f"{glazing} thermal efficiency {pipes} pipes")
+            # Store the specific electrical efficiency.
+            reduced_data[sub_key][
+                f"{glazing} electrical efficiency {pipes} pipes"
+            ] = value["electrical_efficiency"]
+            electrical_efficiency_labels.add(
+                f"{glazing} electrical efficiency {pipes} pipes"
+            )
+            # Store a copy of the reduced temperature
+            reduced_data[sub_key]["reduced_collector_temperature"] = value[
+                "reduced_collector_temperature"
+            ]
+
+    _efficiency_plots(
+        data=reduced_data,
+        electrical_efficiency_labels=sorted(electrical_efficiency_labels),
+        logger=logger,
+        prefix="ilaria_pc_1_pipes_glazing_comparison",
+        thermal_efficiency_labels=sorted(thermal_efficiency_labels),
+    )
+    plt.close("all")
+
+    # Plot the number-of-pipes effect on a single-glazed Autotherm.
+    reduced_data = collections.defaultdict(dict)
+    thermal_efficiency_labels = set()
+    electrical_efficiency_labels = set()
+    autotherm_pipes_regex = re.compile(
+        r"autotherm_(?P<pipes>[0-9]*)_pipes_(?P<glazing>.*)_pc.*"
+    )
+    for key, sub_dict in data.items():
+        autotherm_pipes_match = re.match(autotherm_pipes_regex, key)
+        if autotherm_pipes_match is None:
+            continue
+        pipes = int(autotherm_pipes_match.group("pipes"))
+        glazing = autotherm_pipes_match.group("glazing")
+        if glazing == "unglazed":
+            continue
+        # Only include important mass-flow rates.
+        for sub_key, value in sub_dict.items():
+            reduced_data[sub_key][
+                f"{glazing} thermal efficiency {pipes} pipes"
+            ] = value["thermal_efficiency"]
+            thermal_efficiency_labels.add(f"{glazing} thermal efficiency {pipes} pipes")
+            # Store the specific electrical efficiency.
+            reduced_data[sub_key][
+                f"{glazing} electrical efficiency {pipes} pipes"
+            ] = value["electrical_efficiency"]
+            electrical_efficiency_labels.add(
+                f"{glazing} electrical efficiency {pipes} pipes"
+            )
+            # Store a copy of the reduced temperature
+            reduced_data[sub_key]["reduced_collector_temperature"] = value[
+                "reduced_collector_temperature"
+            ]
+
+    _efficiency_plots(
+        data=reduced_data,
+        electrical_efficiency_labels=sorted(electrical_efficiency_labels),
+        logger=logger,
+        prefix="autotherm_pc_1_pipes_glazing_comparison",
+        thermal_efficiency_labels=sorted(thermal_efficiency_labels),
+    )
     plt.close("all")
 
 
