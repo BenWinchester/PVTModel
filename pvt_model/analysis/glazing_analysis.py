@@ -72,7 +72,7 @@ X_TICK_SEPARATION: int = 8
 DAYS_TO_INCLUDE: List[bool] = [False, True]
 # Portion-covered regex.
 PORTION_COVERED_REGEX = re.compile(
-    r".*pc_(?P<first_digit>[0-9])_(?P<second_digit>[0-9])_.*"
+    r".*pc_(?P<first_digit>[0-9]*)_(?P<second_digit>[0-9])_.*"
 )
 
 
@@ -197,7 +197,7 @@ def _efficiency_plots(
         plot_title="Thermal efficiency against reduced temperature",
         disable_lines=True,
         plot_trendline=True,
-        first_axis_y_limits=[0, 0.55],
+        first_axis_y_limits=[0, 0.8],
     )
 
     # Collector temperature gain plot.
@@ -589,15 +589,27 @@ def analyse_decoupled_steady_state_data(  # pylint: disable=too-many-branches
     thermal_efficiency_labels = set()
     electrical_efficiency_labels = set()
     ilaria_mass_flow_rate_regex = re.compile(
-        r"ilaria_single_glazed_(?P<mass_flow_rate>[0-9]*)_litres_per_hour_.*"
+        r"ilaria_single_glazed_(?P<first_digit>[0-9]*)_(?P<second_digit>[0-9])_litres_per_hour_.*"
     )
     for key, sub_dict in data.items():
         ilaria_mass_flow_rate_match = re.match(ilaria_mass_flow_rate_regex, key)
         if ilaria_mass_flow_rate_match is None:
             continue
-        mass_flow_rate = int(ilaria_mass_flow_rate_match.group("mass_flow_rate"))
+        mass_flow_rate = round(
+            int(ilaria_mass_flow_rate_match.group("first_digit"))
+            + 0.1 * (int(ilaria_mass_flow_rate_match.group("second_digit"))),
+            3,
+        )
         # Only include important mass-flow rates.
-        if mass_flow_rate not in {10, 6, 3, 1}:
+        if mass_flow_rate not in [
+            round(10, 3),
+            round(6, 3),
+            round(3, 3),
+            round(1, 3),
+            round(0.6, 3),
+            round(0.3, 3),
+            round(0.1, 3),
+        ]:
             continue
         for sub_key, value in sub_dict.items():
             reduced_data[sub_key][f"thermal efficiency {mass_flow_rate}L/h"] = value[
@@ -630,15 +642,27 @@ def analyse_decoupled_steady_state_data(  # pylint: disable=too-many-branches
     thermal_efficiency_labels = set()
     electrical_efficiency_labels = set()
     autotherm_mass_flow_rate_regex = re.compile(
-        r"autotherm_single_glazed_(?P<mass_flow_rate>[0-9]*)_litres_per_hour_.*"
+        r"autotherm_single_glazed_(?P<first_digit>[0-9]*)_(?P<second_digit>[0-9])_litres_per_hour_.*"
     )
     for key, sub_dict in data.items():
         autotherm_mass_flow_rate_match = re.match(autotherm_mass_flow_rate_regex, key)
         if autotherm_mass_flow_rate_match is None:
             continue
-        mass_flow_rate = int(autotherm_mass_flow_rate_match.group("mass_flow_rate"))
+        mass_flow_rate = round(
+            int(autotherm_mass_flow_rate_match.group("first_digit"))
+            + 0.1 * (int(autotherm_mass_flow_rate_match.group("second_digit"))),
+            3,
+        )
         # Only include important mass-flow rates.
-        if mass_flow_rate not in {10, 6, 3, 1}:
+        if mass_flow_rate not in [
+            round(10, 3),
+            round(6, 3),
+            round(3, 3),
+            round(1, 3),
+            round(0.6, 3),
+            round(0.3, 3),
+            round(0.1, 3),
+        ]:
             continue
         for sub_key, value in sub_dict.items():
             reduced_data[sub_key][f"thermal efficiency {mass_flow_rate}L/h"] = value[
@@ -671,15 +695,27 @@ def analyse_decoupled_steady_state_data(  # pylint: disable=too-many-branches
     thermal_efficiency_labels = set()
     electrical_efficiency_labels = set()
     ilaria_mass_flow_rate_regex = re.compile(
-        r"ilaria_double_glazed_(?P<mass_flow_rate>.*)_litres_per_hour_.*"
+        r"ilaria_double_glazed_(?P<first_digit>[0-9]*)_(?P<second_digit>[0-9])_litres_per_hour_.*"
     )
     for key, sub_dict in data.items():
         ilaria_mass_flow_rate_match = re.match(ilaria_mass_flow_rate_regex, key)
         if ilaria_mass_flow_rate_match is None:
             continue
-        mass_flow_rate = int(ilaria_mass_flow_rate_match.group("mass_flow_rate"))
+        mass_flow_rate = round(
+            int(ilaria_mass_flow_rate_match.group("first_digit"))
+            + 0.1 * (int(ilaria_mass_flow_rate_match.group("second_digit"))),
+            3,
+        )
         # Only include important mass-flow rates.
-        if mass_flow_rate not in {10, 6, 3, 1}:
+        if mass_flow_rate not in [
+            round(10, 3),
+            round(6, 3),
+            round(3, 3),
+            round(1, 3),
+            round(0.6, 3),
+            round(0.3, 3),
+            round(0.1, 3),
+        ]:
             continue
         for sub_key, value in sub_dict.items():
             reduced_data[sub_key][f"thermal efficiency {mass_flow_rate}L/h"] = value[
@@ -712,15 +748,27 @@ def analyse_decoupled_steady_state_data(  # pylint: disable=too-many-branches
     thermal_efficiency_labels = set()
     electrical_efficiency_labels = set()
     autotherm_mass_flow_rate_regex = re.compile(
-        r"autotherm_double_glazed_(?P<mass_flow_rate>.*)_litres_per_hour_.*"
+        r"autotherm_double_glazed_(?P<first_digit>[0-9]*)_(?P<second_digit>[0-9])_litres_per_hour_.*"
     )
     for key, sub_dict in data.items():
         autotherm_mass_flow_rate_match = re.match(autotherm_mass_flow_rate_regex, key)
         if autotherm_mass_flow_rate_match is None:
             continue
-        mass_flow_rate = int(autotherm_mass_flow_rate_match.group("mass_flow_rate"))
+        mass_flow_rate = round(
+            int(autotherm_mass_flow_rate_match.group("first_digit"))
+            + 0.1 * (int(autotherm_mass_flow_rate_match.group("second_digit"))),
+            3,
+        )
         # Only include important mass-flow rates.
-        if mass_flow_rate not in {10, 6, 3, 1}:
+        if mass_flow_rate not in [
+            round(10, 3),
+            round(6, 3),
+            round(3, 3),
+            round(1, 3),
+            round(0.6, 3),
+            round(0.3, 3),
+            round(0.1, 3),
+        ]:
             continue
         for sub_key, value in sub_dict.items():
             reduced_data[sub_key][f"thermal efficiency {mass_flow_rate}L/h"] = value[
