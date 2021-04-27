@@ -723,6 +723,7 @@ def _output_temperature_info(
 
 def _save_data(
     file_type: FileType,
+    logger: Logger,
     operating_mode: OperatingMode,
     output_file_name: str,
     system_data: Dict[float, SystemData],
@@ -734,6 +735,9 @@ def _save_data(
 
     :param file_type:
         The file type that's being saved.
+
+    :param logger:
+        The logger used for the run.
 
     :param operating_mode:
         The operating mode for the run.
@@ -756,9 +760,11 @@ def _save_data(
     system_data_dict: Dict[Union[float, str], Union[str, Dict[str, Any]]] = {
         key: dataclasses.asdict(value) for key, value in system_data.items()
     }
+    logger.info("Saving data: System data successfully converted to json-readable format.")
 
     # If we're saving YAML data part-way through, then append to the file.
     if file_type == FileType.YAML:
+        logger.info("Saving as YAML format.")
         with open(f"{output_file_name}.yaml", "a") as output_yaml_file:
             yaml.dump(
                 system_data_dict,
@@ -767,21 +773,27 @@ def _save_data(
 
     # If we're dumping JSON, open the file, and append to it.
     if file_type == FileType.JSON:
+        logger.info("Saving as JSON format.")
         # Append the total power and emissions data for the run.
         if total_power_data is not None:
             system_data_dict.update(dataclasses.asdict(total_power_data))  # type: ignore
+            logger.info("Total power data updated.")
         if carbon_emissions is not None:
             system_data_dict.update(dataclasses.asdict(carbon_emissions))  # type: ignore
+            logger.info("Carbon emissions updated.")
 
         # Append the data type for the run.
         system_data_dict["data_type"] = "{coupling}_{timing}".format(
             coupling="coupled" if operating_mode.coupled else "decoupled",
             timing="steady_state" if operating_mode.steady_state else "dynamic",
         )
+        logger.info("Data type added successfully.")
 
         # Save the data
         # If this is the initial dump, then create the file.
         if not os.path.isfile(f"{output_file_name}.json"):
+            logger.info("Attempting first dump to a non-existent file.")
+            logger.info("Output file name: %s", output_file_name)
             with open(f"{output_file_name}.json", "w") as output_json_file:
                 json.dump(
                     system_data_dict,
@@ -1119,7 +1131,7 @@ def main(args) -> None:  # pylint: disable=too-many-branches
 
     # Save the data ouputted by the model.
     logger.info("Saving output data to: %s.json.", parsed_args.output)
-    _save_data(FileType.JSON, operating_mode, parsed_args.output, system_data)
+    _save_data(FileType.JSON, logger, operating_mode, parsed_args.output, system_data)
     print(f"Model output successfully saved to {parsed_args.output}.json.")
 
     # If in verbose mode, output average, min, and max temperatures.
