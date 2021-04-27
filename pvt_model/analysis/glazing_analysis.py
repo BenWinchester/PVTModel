@@ -958,7 +958,7 @@ def analyse(data_file_directory: str, show_output: Optional[bool] = False) -> No
             STEADY_STATE_DATA_TYPE,
             f"{DECOUPLED_DATA_TYPE}_{STEADY_STATE_DATA_TYPE}",
         ):
-            logger.warn(
+            logger.info(
                 "Data type was neither 'dynamic' nor 'steady_state'. Omitting..."
             )
             data.pop(data_file_name)

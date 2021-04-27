@@ -62,7 +62,7 @@ def _calculate_vector_difference(
 
     # Compute the gross difference between the vectors.
     try:
-        diff_vector = [
+        diff_vector: List[float] = [
             first_vector[index] - second_vector[index]
             for index in range(len(first_vector))
         ]
