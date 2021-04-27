@@ -22,3 +22,6 @@ foo.txt
 *data_processor.py
 # Document files.
 *.ods
+# HPC files
+*e[0-9]*
+*o[0-9]*
