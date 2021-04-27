@@ -21,8 +21,8 @@ fi
 
 # Sending more runs to the HPC
 echo -e "Sending 'more runs' command."
-python3.7 -m pvt_model --initial-month 9 --location system_data/london_ilaria/ --pvt-data-file system_data/pvt_panels/autotherm.yaml --output output_files/hpc_run_outputs/autotherm_double_glazed_0_4_litres_per_hour_31_x_50 --x-resolution 31 --y-resolution 50 --decoupled --steady-state --steady-state-data-file system_data/steady_state_data/autotherm.yaml --layers dg g pv a p f --portion-covered 0 --skip-analysis --mass-flow-rate 0.4
+
+py -m pvt_model --initial-month 7 --location system_data/london_ilaria --portion-covered 1 --pvt-data-file system_data/pvt_panels/ilarias_panel.yaml --output output_files/april_week_4/july_test_run_coupled_dynamic_ilaria_1_31_x_11 --x-resolution 31 --y-resolution 11 --dynamic --layers g pv a p f --days 1 --resolution 1800 --average-irradiance --start-time 0 --tank-data-file system_data/tanks/ilarias_hot_water_tank.yaml --exchanger-data-file system_data/heat_exchangers/ilarias_exchanger.yaml
 
 cd $CURRENT_DIR
-
 exit 0
