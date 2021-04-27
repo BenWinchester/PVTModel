@@ -1,0 +1,12 @@
+Creating output directory
+Sending 'more runs' command.
+
+============================================
+
+        Job resource usage summary 
+
+                 Memory (GB)    NCPUs
+ Requested  :        11             8
+ Used       :         0 (peak)   0.00 (ave)
+
+============================================
