@@ -72,8 +72,8 @@ def _calculate_vector_difference(
             f"different sizes: {str(e)}"
         ) from None
 
-    # Square the values in this vector to avoid sign issues and return the sum.
-    return sum([value ** 2 for value in diff_vector])
+    # Take the sum of the values in this vector to avoid sign issues and return the sum.
+    return max({abs(value) for value in diff_vector})
 
 
 def solve_temperature_vector_convergence_method(
@@ -293,7 +293,7 @@ def solve_temperature_vector_convergence_method(
         run_two_temperature_difference,
     )
 
-    if convergence_run_number == WARN_RECURSION_DEPTH:
+    if convergence_run_number >= WARN_RECURSION_DEPTH:
         logger.warn(
             "%sRun depth greater than, or equal, to 10 reached when attempting a "
             "convergent solution.%s",

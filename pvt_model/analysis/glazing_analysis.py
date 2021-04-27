@@ -602,12 +602,24 @@ def analyse_decoupled_steady_state_data(  # pylint: disable=too-many-branches
         )
         # Only include important mass-flow rates.
         if mass_flow_rate not in [
+            round(100, 3),
+            round(90, 3),
+            round(80, 3),
+            round(70, 3),
+            round(60, 3),
+            round(50, 3),
+            round(40, 3),
+            round(30, 3),
+            round(20, 3),
             round(10, 3),
+            round(8, 3),
             round(6, 3),
-            round(3, 3),
+            round(2, 3),
             round(1, 3),
+            round(0.8, 3),
             round(0.6, 3),
-            round(0.3, 3),
+            round(0.4, 3),
+            round(0.2, 3),
             round(0.1, 3),
         ]:
             continue
@@ -655,12 +667,24 @@ def analyse_decoupled_steady_state_data(  # pylint: disable=too-many-branches
         )
         # Only include important mass-flow rates.
         if mass_flow_rate not in [
+            round(100, 3),
+            round(90, 3),
+            round(80, 3),
+            round(70, 3),
+            round(60, 3),
+            round(50, 3),
+            round(40, 3),
+            round(30, 3),
+            round(20, 3),
             round(10, 3),
+            round(8, 3),
             round(6, 3),
-            round(3, 3),
+            round(2, 3),
             round(1, 3),
+            round(0.8, 3),
             round(0.6, 3),
-            round(0.3, 3),
+            round(0.4, 3),
+            round(0.2, 3),
             round(0.1, 3),
         ]:
             continue
@@ -708,12 +732,24 @@ def analyse_decoupled_steady_state_data(  # pylint: disable=too-many-branches
         )
         # Only include important mass-flow rates.
         if mass_flow_rate not in [
+            round(100, 3),
+            round(90, 3),
+            round(80, 3),
+            round(70, 3),
+            round(60, 3),
+            round(50, 3),
+            round(40, 3),
+            round(30, 3),
+            round(20, 3),
             round(10, 3),
+            round(8, 3),
             round(6, 3),
-            round(3, 3),
+            round(2, 3),
             round(1, 3),
+            round(0.8, 3),
             round(0.6, 3),
-            round(0.3, 3),
+            round(0.4, 3),
+            round(0.2, 3),
             round(0.1, 3),
         ]:
             continue
@@ -761,12 +797,24 @@ def analyse_decoupled_steady_state_data(  # pylint: disable=too-many-branches
         )
         # Only include important mass-flow rates.
         if mass_flow_rate not in [
+            round(100, 3),
+            round(90, 3),
+            round(80, 3),
+            round(70, 3),
+            round(60, 3),
+            round(50, 3),
+            round(40, 3),
+            round(30, 3),
+            round(20, 3),
             round(10, 3),
+            round(8, 3),
             round(6, 3),
-            round(3, 3),
+            round(2, 3),
             round(1, 3),
+            round(0.8, 3),
             round(0.6, 3),
-            round(0.3, 3),
+            round(0.4, 3),
+            round(0.2, 3),
             round(0.1, 3),
         ]:
             continue
@@ -910,10 +958,11 @@ def analyse(data_file_directory: str, show_output: Optional[bool] = False) -> No
             STEADY_STATE_DATA_TYPE,
             f"{DECOUPLED_DATA_TYPE}_{STEADY_STATE_DATA_TYPE}",
         ):
-            logger.error(
-                "Data type was neither 'dynamic' nor 'steady_state'. Exiting..."
+            logger.warn(
+                "Data type was neither 'dynamic' nor 'steady_state'. Omitting..."
             )
-            sys.exit(1)
+            data.pop(data_file_name)
+            continue
 
     analyse_decoupled_steady_state_data(data, logger)
 
