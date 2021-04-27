@@ -23,5 +23,5 @@ foo.txt
 # Document files.
 *.ods
 # HPC files
-*.sh.e*
-*.sh.o*
+*e[0-9]*
+*o[0-9]*
