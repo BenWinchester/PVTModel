@@ -32,7 +32,12 @@ try:
         HEAT_CAPACITY_OF_WATER,
     )
     from ..pvt_system_model.physics_utils import reduced_temperature
-    from .__utils__ import GraphDetail, load_model_data, plot_figure, plot_two_dimensional_figure
+    from .__utils__ import (
+        GraphDetail,
+        load_model_data,
+        plot_figure,
+        plot_two_dimensional_figure,
+    )
 except ModuleNotFoundError:
     import logging
 
@@ -400,7 +405,7 @@ def analyse_coupled_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
 
     # Plot Figure 5b: Ambient Temperature
     plot_figure(
-        "maria_5b_ambient_temperature",
+        "ambient_temperature",
         data,
         first_axis_things_to_plot=["ambient_temperature", "sky_temperature"],
         first_axis_label="Temperature / deg C",
@@ -409,7 +414,7 @@ def analyse_coupled_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
 
     # Plot Figure 6a: Panel-related Temperatures
     plot_figure(
-        "maria_6a_panel_temperature",
+        "panel_temperature",
         data,
         first_axis_things_to_plot=[
             "ambient_temperature",
@@ -426,7 +431,7 @@ def analyse_coupled_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
 
     # Plot Figure 6b: Tank-related Temperatures
     plot_figure(
-        "maria_6b_tank_temperature",
+        "tank_temperature",
         data,
         first_axis_things_to_plot=[
             "collector_output_temperature",
@@ -439,7 +444,7 @@ def analyse_coupled_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
 
     # Plot Figure 7: Stream-related Temperatures
     plot_figure(
-        "maria_7_stream_temperature",
+        "stream_temperature",
         data,
         first_axis_things_to_plot=[
             "absorber_temperature_gain",
