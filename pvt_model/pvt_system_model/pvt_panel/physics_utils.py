@@ -78,20 +78,17 @@ def _conductive_heat_transfer_coefficient_with_gap(
     )
 
     first_corrective_term: float = 1 - 1708 / air_gap_rayleigh_number
-    if first_corrective_term < 0:
-        first_corrective_term = 0
+    first_corrective_term = max(first_corrective_term, 0)
 
     second_corrective_term: float = 1 - (
         1708 * (math.sin(1.8 * pvt_panel.tilt_in_radians)) ** 1.6
     ) / (air_gap_rayleigh_number * math.cos(pvt_panel.tilt_in_radians))
-    if second_corrective_term < 0:
-        second_corrective_term = 0
+    second_corrective_term = max(second_corrective_term, 0)
 
     third_corrective_term: float = (
         (air_gap_rayleigh_number * math.cos(pvt_panel.tilt_in_radians)) / 5830
     ) ** 0.33 - 1
-    if third_corrective_term < 0:
-        third_corrective_term = 0
+    third_corrective_term = max(third_corrective_term, 0)
 
     return (
         weather_conditions.thermal_conductivity_of_air  # [W/m*K]
