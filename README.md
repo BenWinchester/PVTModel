@@ -51,5 +51,8 @@ All pull requests need to be approved by a repository administrator and need to 
 
 To confirm that your code will pass, run the scritp `test-pvt-model.sh` from the root of the repository to ensure that your code confirms to the standards required of the repository (regarding formatting and type annotations etc.), that all automated tests are passing, and that all `type: ignore` and `pylint: disable` flags are dedclared.
 
+## HPC Support
+__NOTE__: Support is included to run the model on Imperial's high-performance computing (HPC) system. Scripts for deploying runs are located in the `scripts` directory. This directory can be safely ignored when deploying the model on a home-PC setup.
+
 ### Copyright
 Copyright Benedict Winchester, 2021
