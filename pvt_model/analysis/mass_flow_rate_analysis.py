@@ -282,6 +282,36 @@ def analyse_decoupled_steady_state_data(  # pylint: disable=too-many-branches
         disable_lines=True,
     )
 
+    plot_figure(
+        "autotherm_double_glazed_thermal_efficiency_against_mass_flow_rate",
+        autotherm_double_glazed_data,
+        ["thermal_efficiency"],
+        "Thermal efficiency",
+        x_axis_label="Mass-flow rate / Litres per hour",
+        use_data_keys_as_x_axis=True,
+        disable_lines=True,
+    )
+
+    plot_figure(
+        "ilaria_single_glazed_thermal_efficiency_against_mass_flow_rate",
+        ilaria_single_glazed_data,
+        ["thermal_efficiency"],
+        "Thermal efficiency",
+        x_axis_label="Mass-flow rate / Litres per hour",
+        use_data_keys_as_x_axis=True,
+        disable_lines=True,
+    )
+
+    plot_figure(
+        "ilaria_double_glazed_thermal_efficiency_against_mass_flow_rate",
+        ilaria_double_glazed_data,
+        ["thermal_efficiency"],
+        "Thermal efficiency",
+        x_axis_label="Mass-flow rate / Litres per hour",
+        use_data_keys_as_x_axis=True,
+        disable_lines=True,
+    )
+
 
 def analyse(data_file_directory: str, show_output: Optional[bool] = False) -> None:
     """
