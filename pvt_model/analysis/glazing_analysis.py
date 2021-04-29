@@ -229,7 +229,7 @@ def _efficiency_plots(
         plot_title="Electrical efficiency against reduced temperature",
         disable_lines=True,
         plot_trendline=True,
-        first_axis_y_limits=[0.09, 0.14],
+        first_axis_y_limits=[0.08, 0.14],
     )
 
 
@@ -589,7 +589,7 @@ def analyse_decoupled_steady_state_data(  # pylint: disable=too-many-branches
     thermal_efficiency_labels = set()
     electrical_efficiency_labels = set()
     ilaria_mass_flow_rate_regex = re.compile(
-        r"ilaria_single_glazed_(?P<first_digit>[0-9]*)_(?P<second_digit>[0-9]*)_litres_per_hour_.*"
+        r"ilaria[^0-9]*single_glazed_[^0-9](?P<first_digit>[0-9]*)_(?P<second_digit>[0-9]*)_litres_per_hour_.*"
     )
     for key, sub_dict in data.items():
         ilaria_mass_flow_rate_match = re.match(ilaria_mass_flow_rate_regex, key)

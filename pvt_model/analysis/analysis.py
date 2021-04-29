@@ -91,6 +91,13 @@ def _parse_args(args) -> argparse.Namespace:
         default=False,
         help="Show the output figures generated.",
     )
+    parser.add_argument(
+        "--skip-2d-plots",
+        "-skip",
+        action="store_true",
+        default=False,
+        help="Skip plotting of 2D figures.",
+    )
 
     return parser.parse_args(args)
 
@@ -308,7 +315,9 @@ def _post_process_data(
     return data_to_post_process
 
 
-def analyse_coupled_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
+def analyse_coupled_dynamic_data(
+    data: Dict[Any, Any], logger: Logger, skip_2d_plots: bool
+) -> None:
     """
     Carry out analysis on a set of dynamic data.
 
@@ -317,6 +326,9 @@ def analyse_coupled_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
 
     :param logger:
         The logger to use for the analysis run.
+
+    :param skip_2d_plots:
+        Whether to skip the 2D plots (True) or include them (False).
 
     """
 
@@ -480,229 +492,230 @@ def analyse_coupled_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
     # )
 
     # Plot glass layer temperatures at midnight, 6 am, noon, and 6 pm.
-    plot_two_dimensional_figure(
-        "glass_temperature_0000",
-        logger,
-        data,
-        "layer_temperature_map_glass",
-        axis_label="Temperature / degC",
-        hour=0,
-        minute=0,
-        plot_title="Glass layer temperature profile at 00:00",
-    )
+    if not skip_2d_plots:
+        plot_two_dimensional_figure(
+            "glass_temperature_0000",
+            logger,
+            data,
+            "layer_temperature_map_glass",
+            axis_label="Temperature / degC",
+            hour=0,
+            minute=0,
+            plot_title="Glass layer temperature profile at 00:00",
+        )
 
-    plot_two_dimensional_figure(
-        "glass_temperature_0600",
-        logger,
-        data,
-        "layer_temperature_map_glass",
-        axis_label="Temperature / degC",
-        hour=6,
-        minute=0,
-        plot_title="Glass layer temperature profile at 06:00",
-    )
+        plot_two_dimensional_figure(
+            "glass_temperature_0600",
+            logger,
+            data,
+            "layer_temperature_map_glass",
+            axis_label="Temperature / degC",
+            hour=6,
+            minute=0,
+            plot_title="Glass layer temperature profile at 06:00",
+        )
 
-    plot_two_dimensional_figure(
-        "glass_temperature_1200",
-        logger,
-        data,
-        "layer_temperature_map_glass",
-        axis_label="Temperature / degC",
-        hour=12,
-        minute=0,
-        plot_title="Glass layer temperature profile at 12:00",
-    )
+        plot_two_dimensional_figure(
+            "glass_temperature_1200",
+            logger,
+            data,
+            "layer_temperature_map_glass",
+            axis_label="Temperature / degC",
+            hour=12,
+            minute=0,
+            plot_title="Glass layer temperature profile at 12:00",
+        )
 
-    plot_two_dimensional_figure(
-        "glass_temperature_1800",
-        logger,
-        data,
-        "layer_temperature_map_glass",
-        axis_label="Temperature / degC",
-        hour=18,
-        minute=0,
-        plot_title="Glass layer temperature profile at 18:00",
-    )
+        plot_two_dimensional_figure(
+            "glass_temperature_1800",
+            logger,
+            data,
+            "layer_temperature_map_glass",
+            axis_label="Temperature / degC",
+            hour=18,
+            minute=0,
+            plot_title="Glass layer temperature profile at 18:00",
+        )
 
-    # Plot PV layer temperatures at midnight, 6 am, noon, and 6 pm.
-    plot_two_dimensional_figure(
-        "pv_temperature_0000",
-        logger,
-        data,
-        "layer_temperature_map_pv",
-        axis_label="Temperature / degC",
-        hour=0,
-        minute=0,
-        plot_title="PV layer temperature profile at 00:00",
-    )
+        # Plot PV layer temperatures at midnight, 6 am, noon, and 6 pm.
+        plot_two_dimensional_figure(
+            "pv_temperature_0000",
+            logger,
+            data,
+            "layer_temperature_map_pv",
+            axis_label="Temperature / degC",
+            hour=0,
+            minute=0,
+            plot_title="PV layer temperature profile at 00:00",
+        )
 
-    plot_two_dimensional_figure(
-        "pv_temperature_0600",
-        logger,
-        data,
-        "layer_temperature_map_pv",
-        axis_label="Temperature / degC",
-        hour=6,
-        minute=0,
-        plot_title="PV layer temperature profile at 06:00",
-    )
+        plot_two_dimensional_figure(
+            "pv_temperature_0600",
+            logger,
+            data,
+            "layer_temperature_map_pv",
+            axis_label="Temperature / degC",
+            hour=6,
+            minute=0,
+            plot_title="PV layer temperature profile at 06:00",
+        )
 
-    plot_two_dimensional_figure(
-        "pv_temperature_1200",
-        logger,
-        data,
-        "layer_temperature_map_pv",
-        axis_label="Temperature / degC",
-        hour=12,
-        minute=0,
-        plot_title="PV layer temperature profile at 12:00",
-    )
+        plot_two_dimensional_figure(
+            "pv_temperature_1200",
+            logger,
+            data,
+            "layer_temperature_map_pv",
+            axis_label="Temperature / degC",
+            hour=12,
+            minute=0,
+            plot_title="PV layer temperature profile at 12:00",
+        )
 
-    plot_two_dimensional_figure(
-        "pv_temperature_1800",
-        logger,
-        data,
-        "layer_temperature_map_pv",
-        axis_label="Temperature / degC",
-        hour=18,
-        minute=0,
-        plot_title="PV layer temperature profile at 18:00",
-    )
+        plot_two_dimensional_figure(
+            "pv_temperature_1800",
+            logger,
+            data,
+            "layer_temperature_map_pv",
+            axis_label="Temperature / degC",
+            hour=18,
+            minute=0,
+            plot_title="PV layer temperature profile at 18:00",
+        )
 
-    # Plot absorber layer temperatures at midnight, 6 am, noon, and 6 pm.
-    plot_two_dimensional_figure(
-        "absorber_temperature_0000",
-        logger,
-        data,
-        "layer_temperature_map_absorber",
-        axis_label="Temperature / degC",
-        hour=0,
-        minute=0,
-        plot_title="Absorber layer temperature profile at 00:00",
-    )
+        # Plot absorber layer temperatures at midnight, 6 am, noon, and 6 pm.
+        plot_two_dimensional_figure(
+            "absorber_temperature_0000",
+            logger,
+            data,
+            "layer_temperature_map_absorber",
+            axis_label="Temperature / degC",
+            hour=0,
+            minute=0,
+            plot_title="Absorber layer temperature profile at 00:00",
+        )
 
-    plot_two_dimensional_figure(
-        "absorber_temperature_0600",
-        logger,
-        data,
-        "layer_temperature_map_absorber",
-        axis_label="Temperature / degC",
-        hour=6,
-        minute=0,
-        plot_title="Absorber layer temperature profile at 06:00",
-    )
+        plot_two_dimensional_figure(
+            "absorber_temperature_0600",
+            logger,
+            data,
+            "layer_temperature_map_absorber",
+            axis_label="Temperature / degC",
+            hour=6,
+            minute=0,
+            plot_title="Absorber layer temperature profile at 06:00",
+        )
 
-    plot_two_dimensional_figure(
-        "absorber_temperature_1200",
-        logger,
-        data,
-        "layer_temperature_map_absorber",
-        axis_label="Temperature / degC",
-        hour=12,
-        minute=0,
-        plot_title="Absorber layer temperature profile at 12:00",
-    )
+        plot_two_dimensional_figure(
+            "absorber_temperature_1200",
+            logger,
+            data,
+            "layer_temperature_map_absorber",
+            axis_label="Temperature / degC",
+            hour=12,
+            minute=0,
+            plot_title="Absorber layer temperature profile at 12:00",
+        )
 
-    plot_two_dimensional_figure(
-        "absorber_temperature_1800",
-        logger,
-        data,
-        "layer_temperature_map_absorber",
-        axis_label="Temperature / degC",
-        hour=18,
-        minute=0,
-        plot_title="Absorber layer temperature profile at 18:00",
-    )
+        plot_two_dimensional_figure(
+            "absorber_temperature_1800",
+            logger,
+            data,
+            "layer_temperature_map_absorber",
+            axis_label="Temperature / degC",
+            hour=18,
+            minute=0,
+            plot_title="Absorber layer temperature profile at 18:00",
+        )
 
-    # Plot bulk water temperatures at midnight, 6 am, noon, and 6 pm.
-    plot_two_dimensional_figure(
-        "pipe_temperature_0000",
-        logger,
-        data,
-        "layer_temperature_map_pipe",
-        axis_label="Temperature / degC",
-        hour=0,
-        minute=0,
-        plot_title="Pipe temperature profile at 00:00",
-    )
+        # Plot bulk water temperatures at midnight, 6 am, noon, and 6 pm.
+        plot_two_dimensional_figure(
+            "pipe_temperature_0000",
+            logger,
+            data,
+            "layer_temperature_map_pipe",
+            axis_label="Temperature / degC",
+            hour=0,
+            minute=0,
+            plot_title="Pipe temperature profile at 00:00",
+        )
 
-    plot_two_dimensional_figure(
-        "pipe_temperature_0600",
-        logger,
-        data,
-        "layer_temperature_map_pipe",
-        axis_label="Temperature / degC",
-        hour=6,
-        minute=0,
-        plot_title="Pipe temperature profile at 06:00",
-    )
+        plot_two_dimensional_figure(
+            "pipe_temperature_0600",
+            logger,
+            data,
+            "layer_temperature_map_pipe",
+            axis_label="Temperature / degC",
+            hour=6,
+            minute=0,
+            plot_title="Pipe temperature profile at 06:00",
+        )
 
-    plot_two_dimensional_figure(
-        "pipe_temperature_1200",
-        logger,
-        data,
-        "layer_temperature_map_pipe",
-        axis_label="Temperature / degC",
-        hour=12,
-        minute=0,
-        plot_title="Pipe temperature profile at 12:00",
-    )
+        plot_two_dimensional_figure(
+            "pipe_temperature_1200",
+            logger,
+            data,
+            "layer_temperature_map_pipe",
+            axis_label="Temperature / degC",
+            hour=12,
+            minute=0,
+            plot_title="Pipe temperature profile at 12:00",
+        )
 
-    plot_two_dimensional_figure(
-        "pipe_temperature_1800",
-        logger,
-        data,
-        "layer_temperature_map_pipe",
-        axis_label="Temperature / degC",
-        hour=18,
-        minute=0,
-        plot_title="Pipe temperature profile at 18:00",
-    )
+        plot_two_dimensional_figure(
+            "pipe_temperature_1800",
+            logger,
+            data,
+            "layer_temperature_map_pipe",
+            axis_label="Temperature / degC",
+            hour=18,
+            minute=0,
+            plot_title="Pipe temperature profile at 18:00",
+        )
 
-    # Plot bulk water temperatures at midnight, 6 am, noon, and 6 pm.
-    plot_two_dimensional_figure(
-        "bulk_water_temperature_0000",
-        logger,
-        data,
-        "layer_temperature_map_bulk_water",
-        axis_label="Temperature / degC",
-        hour=0,
-        minute=0,
-        plot_title="Bulk-water temperature profile at 00:00",
-    )
+        # Plot bulk water temperatures at midnight, 6 am, noon, and 6 pm.
+        plot_two_dimensional_figure(
+            "bulk_water_temperature_0000",
+            logger,
+            data,
+            "layer_temperature_map_bulk_water",
+            axis_label="Temperature / degC",
+            hour=0,
+            minute=0,
+            plot_title="Bulk-water temperature profile at 00:00",
+        )
 
-    plot_two_dimensional_figure(
-        "bulk_water_temperature_0600",
-        logger,
-        data,
-        "layer_temperature_map_bulk_water",
-        axis_label="Temperature / degC",
-        hour=6,
-        minute=0,
-        plot_title="Bulk-water temperature profile at 06:00",
-    )
+        plot_two_dimensional_figure(
+            "bulk_water_temperature_0600",
+            logger,
+            data,
+            "layer_temperature_map_bulk_water",
+            axis_label="Temperature / degC",
+            hour=6,
+            minute=0,
+            plot_title="Bulk-water temperature profile at 06:00",
+        )
 
-    plot_two_dimensional_figure(
-        "bulk_water_temperature_1200",
-        logger,
-        data,
-        "layer_temperature_map_bulk_water",
-        axis_label="Temperature / degC",
-        hour=12,
-        minute=0,
-        plot_title="Bulk-water temperature profile at 12:00",
-    )
+        plot_two_dimensional_figure(
+            "bulk_water_temperature_1200",
+            logger,
+            data,
+            "layer_temperature_map_bulk_water",
+            axis_label="Temperature / degC",
+            hour=12,
+            minute=0,
+            plot_title="Bulk-water temperature profile at 12:00",
+        )
 
-    plot_two_dimensional_figure(
-        "bulk_water_temperature_1800",
-        logger,
-        data,
-        "layer_temperature_map_bulk_water",
-        axis_label="Temperature / degC",
-        hour=18,
-        minute=0,
-        plot_title="Bulk-water temperature profile at 18:00",
-    )
+        plot_two_dimensional_figure(
+            "bulk_water_temperature_1800",
+            logger,
+            data,
+            "layer_temperature_map_bulk_water",
+            axis_label="Temperature / degC",
+            hour=18,
+            minute=0,
+            plot_title="Bulk-water temperature profile at 18:00",
+        )
 
     """  # pylint: disable=pointless-string-statement
     # * Plotting all tank-related temperatures
@@ -832,7 +845,9 @@ def analyse_coupled_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
     """  # pylint: disable=pointless-string-statement
 
 
-def analyse_decoupled_steady_state_data(data: Dict[Any, Any], logger: Logger) -> None:
+def analyse_decoupled_steady_state_data(
+    data: Dict[Any, Any], logger: Logger, skip_2d_plots: bool
+) -> None:
     """
     Carry out analysis on a set of steady-state data.
 
@@ -842,83 +857,91 @@ def analyse_decoupled_steady_state_data(data: Dict[Any, Any], logger: Logger) ->
     :param logger:
         The logger to use for the analysis run.
 
+    :param skip_2d_plots:
+        Whether to skip the 2D plots (True) or plot them (False).
+
     """
 
     logger.info("Beginning steady-state analysis.")
 
-    print(f"{int(len(data.keys()) * 5 + 2)} figures will be plotted.")
-    logger.info("%s figures will be plotted.", int(len(data.keys()) * 5 + 2))
+    if skip_2d_plots:
+        print(f"{int(len(data.keys()) * 2 + 2)} figures will be plotted.")
+        logger.info("%s figures will be plotted.", int(len(data.keys()) * 2 + 2))
+    else:
+        print(f"{int(len(data.keys()) * 5 + 2)} figures will be plotted.")
+        logger.info("%s figures will be plotted.", int(len(data.keys()) * 5 + 2))
 
     for temperature in data.keys():
         temperature_string = str(round(float(temperature), 2)).replace(".", "_")
 
-        # Glass Temperatures
-        try:
-            logger.info(
-                "Plotting 3D upper glass profile at %s degC.", temperature_string
-            )
+        if not skip_2d_plots:
+            # Glass Temperatures
+            try:
+                logger.info(
+                    "Plotting 3D upper glass profile at %s degC.", temperature_string
+                )
+                plot_two_dimensional_figure(
+                    "steady_state_upper_glass_layer_{}degC_input".format(
+                        temperature_string
+                    ),
+                    logger,
+                    data,
+                    axis_label="Temperature / deg C",
+                    entry_number=temperature,
+                    plot_title="Upper glass layer temperature with {} K input HTF".format(
+                        round(float(temperature), 2)
+                    ),
+                    thing_to_plot="layer_temperature_map_upper_glass",
+                )
+            except TypeError:
+                logger.info(
+                    "Upper-glass temperature profile could not be plotted due to no data."
+                )
+
+            # Glass Temperatures
+            try:
+                logger.info("Plotting 3D glass profile at %s degC.", temperature_string)
+                plot_two_dimensional_figure(
+                    "steady_state_glass_layer_{}degC_input".format(temperature_string),
+                    logger,
+                    data,
+                    axis_label="Temperature / deg C",
+                    entry_number=temperature,
+                    plot_title="Glass layer temperature with {} K input HTF".format(
+                        round(float(temperature), 2)
+                    ),
+                    thing_to_plot="layer_temperature_map_glass",
+                )
+            except TypeError:
+                print("Glass temperature profile could not be plotted due to no data.")
+
+            # PV Temperatures
+            logger.info("Plotting 3D PV profile at %s degC.", temperature_string)
             plot_two_dimensional_figure(
-                "steady_state_upper_glass_layer_{}degC_input".format(
-                    temperature_string
-                ),
+                "steady_state_pv_layer_{}degC_input".format(temperature_string),
                 logger,
                 data,
                 axis_label="Temperature / deg C",
                 entry_number=temperature,
-                plot_title="Upper glass layer temperature with {} K input HTF".format(
+                plot_title="PV layer temperature with {} K input HTF".format(
                     round(float(temperature), 2)
                 ),
-                thing_to_plot="layer_temperature_map_upper_glass",
-            )
-        except TypeError:
-            logger.info(
-                "Upper-glass temperature profile could not be plotted due to no data."
+                thing_to_plot="layer_temperature_map_pv",
             )
 
-        # Glass Temperatures
-        try:
-            logger.info("Plotting 3D glass profile at %s degC.", temperature_string)
+            # Collector Temperatures
+            logger.info("Plotting 3D absorber profile at %s degC.", temperature_string)
             plot_two_dimensional_figure(
-                "steady_state_glass_layer_{}degC_input".format(temperature_string),
+                "steady_state_absorber_layer_{}degC_input".format(temperature_string),
                 logger,
                 data,
                 axis_label="Temperature / deg C",
                 entry_number=temperature,
-                plot_title="Glass layer temperature with {} K input HTF".format(
+                plot_title="Collector layer temperature with {} K input HTF".format(
                     round(float(temperature), 2)
                 ),
-                thing_to_plot="layer_temperature_map_glass",
+                thing_to_plot="layer_temperature_map_absorber",
             )
-        except TypeError:
-            print("Glass temperature profile could not be plotted due to no data.")
-
-        # PV Temperatures
-        logger.info("Plotting 3D PV profile at %s degC.", temperature_string)
-        plot_two_dimensional_figure(
-            "steady_state_pv_layer_{}degC_input".format(temperature_string),
-            logger,
-            data,
-            axis_label="Temperature / deg C",
-            entry_number=temperature,
-            plot_title="PV layer temperature with {} K input HTF".format(
-                round(float(temperature), 2)
-            ),
-            thing_to_plot="layer_temperature_map_pv",
-        )
-
-        # Collector Temperatures
-        logger.info("Plotting 3D absorber profile at %s degC.", temperature_string)
-        plot_two_dimensional_figure(
-            "steady_state_absorber_layer_{}degC_input".format(temperature_string),
-            logger,
-            data,
-            axis_label="Temperature / deg C",
-            entry_number=temperature,
-            plot_title="Collector layer temperature with {} K input HTF".format(
-                round(float(temperature), 2)
-            ),
-            thing_to_plot="layer_temperature_map_absorber",
-        )
 
         # Pipe Temperatures
         logger.info(
@@ -1086,7 +1109,11 @@ def analyse_decoupled_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None
     )
 
 
-def analyse(data_file_name: str, show_output: Optional[bool] = False) -> None:
+def analyse(
+    data_file_name: str,
+    show_output: Optional[bool] = False,
+    skip_2d_plots: Optional[bool] = False,
+) -> None:
     """
     The main method for the analysis module.
 
@@ -1095,6 +1122,9 @@ def analyse(data_file_name: str, show_output: Optional[bool] = False) -> None:
 
     :param show_output:
         Whether to show the output files generated.
+
+    :param skip_2d_plots:
+        Whether to skip the 2D plots (True) of include them (False).
 
     """
 
@@ -1115,12 +1145,12 @@ def analyse(data_file_name: str, show_output: Optional[bool] = False) -> None:
 
     # * Carry out analysis appropriate to the data type specified.
     if data_type in (DYNAMIC_DATA_TYPE, f"{COUPLED_DATA_TYPE}_{DYNAMIC_DATA_TYPE}"):
-        analyse_coupled_dynamic_data(data, logger)
+        analyse_coupled_dynamic_data(data, logger, skip_2d_plots)
     elif data_type in (
         STEADY_STATE_DATA_TYPE,
         f"{DECOUPLED_DATA_TYPE}_{STEADY_STATE_DATA_TYPE}",
     ):
-        analyse_decoupled_steady_state_data(data, logger)
+        analyse_decoupled_steady_state_data(data, logger, skip_2d_plots)
     elif data_type == f"{DECOUPLED_DATA_TYPE}_{DYNAMIC_DATA_TYPE}":
         analyse_decoupled_dynamic_data(data, logger)
     else:
@@ -1135,4 +1165,6 @@ def analyse(data_file_name: str, show_output: Optional[bool] = False) -> None:
 
 if __name__ == "__main__":
     parsed_args = _parse_args(sys.argv[1:])
-    analyse(parsed_args.data_file_name, parsed_args.show_output)
+    analyse(
+        parsed_args.data_file_name, parsed_args.show_output, parsed_args.skip_2d_plots
+    )
