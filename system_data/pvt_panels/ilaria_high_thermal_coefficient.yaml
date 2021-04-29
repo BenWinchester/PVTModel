@@ -76,7 +76,7 @@ pv:
   nominal_power: 180 # [W]
   open_circuit_voltage: 36.9 # [V]
   short_cirvuit_current: 8.34 # [A]
-  thermal_coefficient: 0.0053 # [K^-1]
+  thermal_coefficient: 0.0253 # [K^-1]
   # thermal_coefficient: 0.53 # [K^-1]
   # @@@ Value NOT taken from Maria's paper.
   thermal_conductivity: 140 # [W/m*K]

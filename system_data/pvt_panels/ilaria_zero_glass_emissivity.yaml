@@ -51,7 +51,7 @@ glass:
   # @@@ Value updated from online search.
   density: 2500
   diffuse_reflection_coefficient: 0.16
-  emissivity: 0.90 # [unitless]
+  emissivity: 0 # [unitless]
   # @@@ Value NOT taken from Maria's paper.
   heat_capacity: 750 # [840J/kg*K]
   thermal_conductivity: 1.80 # [W/m*K]

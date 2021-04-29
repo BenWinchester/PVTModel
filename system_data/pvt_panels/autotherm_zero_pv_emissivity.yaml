@@ -70,7 +70,7 @@ pv:
   density: 2328 # [kg/m^3]
   # # @@@ Value adjusted from online mass values.
   # density: 32142 # [kg/m^3]
-  emissivity: 0.9 # [unitless]
+  emissivity: 0 # [unitless]
   # @@@ Value NOT taken from Maria's paper.
   heat_capacity: 677 # [J/kg*K]
   maximum_power_point_current: 8.34 # [A]

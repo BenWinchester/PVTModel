@@ -82,7 +82,7 @@ pv:
   thermal_conductivity: 140 # [W/m*K]
   thickness: 0.00035 # [m]
   transmissivity: 0.01 # [unitless]
-  reference_efficiency: 0.126 # [unitless]
+  reference_efficiency: 0.25 # [unitless]
   reference_temperature: 298.15 # [K]
   # reference_temperature: 318.15 # [K]
 eva:
