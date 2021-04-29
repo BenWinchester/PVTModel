@@ -194,6 +194,10 @@ def _absorber_params_from_data(
 
     """
 
+    # import pdb
+
+    # pdb.set_trace()
+
     try:
         return CollectorParameters(
             absorptivity=absorber_data["absorptivity"],  # [unitless]
