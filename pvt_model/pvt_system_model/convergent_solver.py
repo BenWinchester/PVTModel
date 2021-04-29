@@ -73,7 +73,7 @@ def _calculate_vector_difference(
         ) from None
 
     # Take the sum of the values in this vector to avoid sign issues and return the sum.
-    return max({abs(value) for value in diff_vector})
+    return sum({abs(value) for value in diff_vector})
 
 
 def solve_temperature_vector_convergence_method(
