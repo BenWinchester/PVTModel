@@ -1,4 +1,5 @@
 #!/usr/bin/python3.7
+# type: ignore
 ########################################################################################
 # analysis.py - The analysis component for the model.
 #
@@ -80,7 +81,7 @@ MASS_FLOW_RATE_REGEX = re.compile(
     r"(?P<y_resolution>\d*).*"
 )
 # A regex is needed to exclude results with no pv layer.
-NO_PV_REGEX = re.compile(f".*no_pv.*")
+NO_PV_REGEX = re.compile(r".*no_pv.*")
 
 
 def _calculate_value_at_zero_reduced_temperature(

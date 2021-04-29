@@ -640,11 +640,6 @@ def analyse_decoupled_steady_state_data(  # pylint: disable=too-many-branches
                 "reduced_collector_temperature"
             ]
 
-    if electrical_efficiency_labels != set():
-        import pdb
-
-        pdb.set_trace()
-
     _efficiency_plots(
         data=reduced_data,
         electrical_efficiency_labels=sorted(electrical_efficiency_labels),
