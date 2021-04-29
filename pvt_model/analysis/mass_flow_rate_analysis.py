@@ -23,8 +23,11 @@ from logging import Logger
 from typing import Any, List, Dict, Optional, Tuple
 
 import json
-import numpy
 import re
+
+import numpy
+
+from matplotlib import pyplot as plt
 
 try:
     from ..__utils__ import get_logger
@@ -71,10 +74,13 @@ X_TICK_SEPARATION: int = 8
 DAYS_TO_INCLUDE: List[bool] = [False, True]
 # Portion-covered regex.
 MASS_FLOW_RATE_REGEX = re.compile(
-    r"(?P<panel_type>[^_]*)_(?P<glazing>single_|double_|un)glazed_"
-    r"(?P<mass_flow_rate>\d*_\d)_litres_per_hour_"
-    r"(?P<x_resolution>\d*)_x_(?P<y_resolution>\d*).*"
+    r"(?P<panel_type>[^_]*)_(?P<no_pv>no_pv_|)"
+    r"(?P<glazing>single_|double_|un)glazed_(?P<pv>[^\d]*|)"
+    r"(?P<mass_flow_rate>\d*_\d)_litres_per_hour_(?P<x_resolution>\d*)_x_"
+    r"(?P<y_resolution>\d*).*"
 )
+# A regex is needed to exclude results with no pv layer.
+NO_PV_REGEX = re.compile(f".*no_pv.*")
 
 
 def _calculate_value_at_zero_reduced_temperature(
@@ -224,9 +230,13 @@ def analyse_decoupled_steady_state_data(  # pylint: disable=too-many-branches
 
     # Construct a reduced mapping
     autotherm_single_glazed_data: Dict[str, Any] = collections.defaultdict(dict)
+    autotherm_no_pv_single_glazed_data: Dict[str, Any] = collections.defaultdict(dict)
     autotherm_double_glazed_data: Dict[str, Any] = collections.defaultdict(dict)
+    autotherm_no_pv_double_glazed_data: Dict[str, Any] = collections.defaultdict(dict)
     ilaria_single_glazed_data: Dict[str, Any] = collections.defaultdict(dict)
+    ilaria_no_pv_single_glazed_data: Dict[str, Any] = collections.defaultdict(dict)
     ilaria_double_glazed_data: Dict[str, Any] = collections.defaultdict(dict)
+    ilaria_no_pv_double_glazed_data: Dict[str, Any] = collections.defaultdict(dict)
     for key, sub_dict in data.items():
         mass_flow_rate_match = re.match(MASS_FLOW_RATE_REGEX, key)
         if mass_flow_rate_match is None:
@@ -240,38 +250,81 @@ def analyse_decoupled_steady_state_data(  # pylint: disable=too-many-branches
             sub_dict
         )
 
-        if mass_flow_rate_match.group("panel_type") == "autotherm":
-            if f"{mass_flow_rate_match.group('glazing')}glazed" == "single_glazed":
-                autotherm_single_glazed_data[mass_flow_rate][
-                    "electrical_efficiency"
-                ] = electrical_efficiency
-                autotherm_single_glazed_data[mass_flow_rate][
-                    "thermal_efficiency"
-                ] = electrical_efficiency
-            elif f"{mass_flow_rate_match.group('glazing')}glazed" == "double_glazed":
-                autotherm_double_glazed_data[mass_flow_rate][
-                    "electrical_efficiency"
-                ] = electrical_efficiency
-                autotherm_double_glazed_data[mass_flow_rate][
-                    "thermal_efficiency"
-                ] = electrical_efficiency
+        # If there was no pv layer present in the simulation.
+        if mass_flow_rate_match.group("no_pv") == "":
+            if mass_flow_rate_match.group("panel_type") == "autotherm":
+                if f"{mass_flow_rate_match.group('glazing')}glazed" == "single_glazed":
+                    autotherm_single_glazed_data[mass_flow_rate][
+                        "electrical_efficiency"
+                    ] = electrical_efficiency
+                    autotherm_single_glazed_data[mass_flow_rate][
+                        "thermal_efficiency"
+                    ] = thermal_efficiency
+                elif (
+                    f"{mass_flow_rate_match.group('glazing')}glazed" == "double_glazed"
+                ):
+                    autotherm_double_glazed_data[mass_flow_rate][
+                        "electrical_efficiency"
+                    ] = electrical_efficiency
+                    autotherm_double_glazed_data[mass_flow_rate][
+                        "thermal_efficiency"
+                    ] = thermal_efficiency
 
-        if mass_flow_rate_match.group("panel_type") == "ilaria":
-            if f"{mass_flow_rate_match.group('glazing')}glazed" == "single_glazed":
-                ilaria_single_glazed_data[mass_flow_rate][
-                    "electrical_efficiency"
-                ] = electrical_efficiency
-                ilaria_single_glazed_data[mass_flow_rate][
-                    "thermal_efficiency"
-                ] = electrical_efficiency
-            elif f"{mass_flow_rate_match.group('glazing')}glazed" == "double_glazed":
-                ilaria_double_glazed_data[mass_flow_rate][
-                    "electrical_efficiency"
-                ] = electrical_efficiency
-                ilaria_double_glazed_data[mass_flow_rate][
-                    "thermal_efficiency"
-                ] = electrical_efficiency
+            if mass_flow_rate_match.group("panel_type") == "ilaria":
+                if f"{mass_flow_rate_match.group('glazing')}glazed" == "single_glazed":
+                    ilaria_single_glazed_data[mass_flow_rate][
+                        "electrical_efficiency"
+                    ] = electrical_efficiency
+                    ilaria_single_glazed_data[mass_flow_rate][
+                        "thermal_efficiency"
+                    ] = thermal_efficiency
+                elif (
+                    f"{mass_flow_rate_match.group('glazing')}glazed" == "double_glazed"
+                ):
+                    ilaria_double_glazed_data[mass_flow_rate][
+                        "electrical_efficiency"
+                    ] = electrical_efficiency
+                    ilaria_double_glazed_data[mass_flow_rate][
+                        "thermal_efficiency"
+                    ] = thermal_efficiency
+        else:
+            if mass_flow_rate_match.group("panel_type") == "autotherm":
+                if f"{mass_flow_rate_match.group('glazing')}glazed" == "single_glazed":
+                    autotherm_no_pv_single_glazed_data[mass_flow_rate][
+                        "electrical_efficiency"
+                    ] = electrical_efficiency
+                    autotherm_no_pv_single_glazed_data[mass_flow_rate][
+                        "thermal_efficiency"
+                    ] = thermal_efficiency
+                elif (
+                    f"{mass_flow_rate_match.group('glazing')}glazed" == "double_glazed"
+                ):
+                    autotherm_no_pv_double_glazed_data[mass_flow_rate][
+                        "electrical_efficiency"
+                    ] = electrical_efficiency
+                    autotherm_no_pv_double_glazed_data[mass_flow_rate][
+                        "thermal_efficiency"
+                    ] = thermal_efficiency
 
+            if mass_flow_rate_match.group("panel_type") == "ilaria":
+                if f"{mass_flow_rate_match.group('glazing')}glazed" == "single_glazed":
+                    ilaria_no_pv_single_glazed_data[mass_flow_rate][
+                        "electrical_efficiency"
+                    ] = electrical_efficiency
+                    ilaria_no_pv_single_glazed_data[mass_flow_rate][
+                        "thermal_efficiency"
+                    ] = thermal_efficiency
+                elif (
+                    f"{mass_flow_rate_match.group('glazing')}glazed" == "double_glazed"
+                ):
+                    ilaria_no_pv_double_glazed_data[mass_flow_rate][
+                        "electrical_efficiency"
+                    ] = electrical_efficiency
+                    ilaria_no_pv_double_glazed_data[mass_flow_rate][
+                        "thermal_efficiency"
+                    ] = thermal_efficiency
+
+    # Plot the PV thermal efficiencies.
     plot_figure(
         "autotherm_single_glazed_thermal_efficiency_against_mass_flow_rate",
         autotherm_single_glazed_data,
@@ -307,6 +360,129 @@ def analyse_decoupled_steady_state_data(  # pylint: disable=too-many-branches
         ilaria_double_glazed_data,
         ["thermal_efficiency"],
         "Thermal efficiency",
+        x_axis_label="Mass-flow rate / Litres per hour",
+        use_data_keys_as_x_axis=True,
+        disable_lines=True,
+    )
+
+    # Plot the no-PV thermal efficiencies.
+    plot_figure(
+        "autotherm_no_pv_single_glazed_thermal_efficiency_against_mass_flow_rate",
+        autotherm_no_pv_single_glazed_data,
+        ["thermal_efficiency"],
+        "Thermal efficiency",
+        x_axis_label="Mass-flow rate / Litres per hour",
+        use_data_keys_as_x_axis=True,
+        disable_lines=True,
+    )
+
+    plot_figure(
+        "autotherm_no_pv_double_glazed_thermal_efficiency_against_mass_flow_rate",
+        autotherm_no_pv_double_glazed_data,
+        ["thermal_efficiency"],
+        "Thermal efficiency",
+        x_axis_label="Mass-flow rate / Litres per hour",
+        use_data_keys_as_x_axis=True,
+        disable_lines=True,
+    )
+
+    plot_figure(
+        "ilaria_no_pv_single_glazed_thermal_efficiency_against_mass_flow_rate",
+        ilaria_no_pv_single_glazed_data,
+        ["thermal_efficiency"],
+        "Thermal efficiency",
+        x_axis_label="Mass-flow rate / Litres per hour",
+        use_data_keys_as_x_axis=True,
+        disable_lines=True,
+    )
+
+    plot_figure(
+        "ilaria_no_pv_double_glazed_thermal_efficiency_against_mass_flow_rate",
+        ilaria_no_pv_double_glazed_data,
+        ["thermal_efficiency"],
+        "Thermal efficiency",
+        x_axis_label="Mass-flow rate / Litres per hour",
+        use_data_keys_as_x_axis=True,
+        disable_lines=True,
+    )
+
+    # Plot the pv electrical efficiencies.
+    plot_figure(
+        "autotherm_single_glazed_electrical_efficiency_against_mass_flow_rate",
+        autotherm_single_glazed_data,
+        ["electrical_efficiency"],
+        "Electrical efficiency",
+        x_axis_label="Mass-flow rate / Litres per hour",
+        use_data_keys_as_x_axis=True,
+        disable_lines=True,
+    )
+
+    plot_figure(
+        "autotherm_double_glazed_electrical_efficiency_against_mass_flow_rate",
+        autotherm_double_glazed_data,
+        ["electrical_efficiency"],
+        "Electrical efficiency",
+        x_axis_label="Mass-flow rate / Litres per hour",
+        use_data_keys_as_x_axis=True,
+        disable_lines=True,
+    )
+
+    plot_figure(
+        "ilaria_single_glazed_electrical_efficiency_against_mass_flow_rate",
+        ilaria_single_glazed_data,
+        ["electrical_efficiency"],
+        "Electrical efficiency",
+        x_axis_label="Mass-flow rate / Litres per hour",
+        use_data_keys_as_x_axis=True,
+        disable_lines=True,
+    )
+
+    plot_figure(
+        "ilaria_double_glazed_electrical_efficiency_against_mass_flow_rate",
+        ilaria_double_glazed_data,
+        ["electrical_efficiency"],
+        "Electrical efficiency",
+        x_axis_label="Mass-flow rate / Litres per hour",
+        use_data_keys_as_x_axis=True,
+        disable_lines=True,
+    )
+
+    # Plot the no-PV electrical efficiencies.
+    plot_figure(
+        "autotherm_no_pv_single_glazed_electrical_efficiency_against_mass_flow_rate",
+        autotherm_no_pv_single_glazed_data,
+        ["electrical_efficiency"],
+        "Electrical efficiency",
+        x_axis_label="Mass-flow rate / Litres per hour",
+        use_data_keys_as_x_axis=True,
+        disable_lines=True,
+    )
+
+    plot_figure(
+        "autotherm_no_pv_double_glazed_electrical_efficiency_against_mass_flow_rate",
+        autotherm_no_pv_double_glazed_data,
+        ["electrical_efficiency"],
+        "Electrical efficiency",
+        x_axis_label="Mass-flow rate / Litres per hour",
+        use_data_keys_as_x_axis=True,
+        disable_lines=True,
+    )
+
+    plot_figure(
+        "ilaria_no_pv_single_glazed_electrical_efficiency_against_mass_flow_rate",
+        ilaria_no_pv_single_glazed_data,
+        ["electrical_efficiency"],
+        "Electrical efficiency",
+        x_axis_label="Mass-flow rate / Litres per hour",
+        use_data_keys_as_x_axis=True,
+        disable_lines=True,
+    )
+
+    plot_figure(
+        "ilaria_no_pv_double_glazed_electrical_efficiency_against_mass_flow_rate",
+        ilaria_no_pv_double_glazed_data,
+        ["electrical_efficiency"],
+        "Electrical efficiency",
         x_axis_label="Mass-flow rate / Litres per hour",
         use_data_keys_as_x_axis=True,
         disable_lines=True,
