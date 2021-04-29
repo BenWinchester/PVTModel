@@ -106,7 +106,7 @@ absorber:
   inner_pipe_diameter: 0.007717 #[m]
   length: 1.66 # [m]
   # mass_flow_rate: 103.2 # [L/h]
-  mass_flow_rate: 7.37 # [L/h]
+  mass_flow_rate: 17.198 # [L/h]
   maximum_operating_pressure: 3.5 # [bar]
   number_of_pipes: 1 # [pipes]
   outer_pipe_diameter: 0.008 # [m]

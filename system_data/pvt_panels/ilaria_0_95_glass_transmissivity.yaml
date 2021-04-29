@@ -42,8 +42,8 @@ pvt_collector:
   # width: 0.86 #[m]
   # One fourteenth of the absorber width.
   # width: 0.06142857142 # [m]
-  # Ilaria's absorber width of 0.1m but with 10 pipes.
-  width: 0.14 #[m]
+  # Ilaria's absorber width of 0.1m.
+  width: 0.1 #[m]
 glass:
   absorptivity: 0.01 # [unitless]
   # @@@ Value NOT taken from Maria's paper.
@@ -106,7 +106,7 @@ absorber:
   inner_pipe_diameter: 0.007717 #[m]
   length: 1.66 # [m]
   # mass_flow_rate: 103.2 # [L/h]
-  mass_flow_rate: 10.318 # [L/h]
+  mass_flow_rate: 7.37 # [L/h]
   maximum_operating_pressure: 3.5 # [bar]
   number_of_pipes: 1 # [pipes]
   outer_pipe_diameter: 0.008 # [m]
