@@ -387,7 +387,6 @@ def plot_figure(  # pylint: disable=too-many-branches
     use_data_keys_as_x_axis: bool = False,
     x_axis_thing_to_plot: str = TIME_KEY,
     x_axis_label: str = "Time of day",
-    x_axis_limits: Optional[Tuple[int, int]] = None,
     second_axis_things_to_plot: Optional[List[str]] = None,
     second_axis_label: Optional[str] = None,
     second_axis_y_limits: Optional[Tuple[int, int]] = None,
