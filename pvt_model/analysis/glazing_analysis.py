@@ -72,7 +72,7 @@ X_TICK_SEPARATION: int = 8
 DAYS_TO_INCLUDE: List[bool] = [False, True]
 # Portion-covered regex.
 PORTION_COVERED_REGEX = re.compile(
-    r".*pc_(?P<first_digit>[0-9]*)_(?P<second_digit>[0-9]*)_.*"
+    r".*pc_(?P<first_digit>[0-9]*)_(?P<second_digit>[0-9])_.*"
 )
 
 
@@ -197,7 +197,6 @@ def _efficiency_plots(
         plot_title="Thermal efficiency against reduced temperature",
         disable_lines=True,
         plot_trendline=True,
-        first_axis_y_limits=[0, 0.8],
     )
 
     # Collector temperature gain plot.
@@ -589,7 +588,7 @@ def analyse_decoupled_steady_state_data(  # pylint: disable=too-many-branches
     thermal_efficiency_labels = set()
     electrical_efficiency_labels = set()
     ilaria_mass_flow_rate_regex = re.compile(
-        r"ilaria[^0-9]*single_glazed_[^0-9](?P<first_digit>[0-9]*)_(?P<second_digit>[0-9]*)_litres_per_hour_.*"
+        r"ilaria.*single_glazed.*_(?P<first_digit>[0-9]*)_(?P<second_digit>[0-9])_litres_per_hour_.*"
     )
     for key, sub_dict in data.items():
         ilaria_mass_flow_rate_match = re.match(ilaria_mass_flow_rate_regex, key)
@@ -600,6 +599,8 @@ def analyse_decoupled_steady_state_data(  # pylint: disable=too-many-branches
             + 0.1 * (int(ilaria_mass_flow_rate_match.group("second_digit"))),
             3,
         )
+        if int(mass_flow_rate) == mass_flow_rate:
+            mass_flow_rate = int(mass_flow_rate)
         # Only include important mass-flow rates.
         if mass_flow_rate not in [
             round(100, 3),
@@ -640,6 +641,8 @@ def analyse_decoupled_steady_state_data(  # pylint: disable=too-many-branches
                 "reduced_collector_temperature"
             ]
 
+    reduced_data.pop("20.0")
+
     _efficiency_plots(
         data=reduced_data,
         electrical_efficiency_labels=sorted(electrical_efficiency_labels),
@@ -654,7 +657,7 @@ def analyse_decoupled_steady_state_data(  # pylint: disable=too-many-branches
     thermal_efficiency_labels = set()
     electrical_efficiency_labels = set()
     autotherm_mass_flow_rate_regex = re.compile(
-        r"autotherm_single_glazed_(?P<first_digit>[0-9]*)_(?P<second_digit>[0-9]*)_litres_per_hour_.*"
+        r"autotherm.*single_glazed.*_(?P<first_digit>[0-9]*)_(?P<second_digit>[0-9])_litres_per_hour_.*"
     )
     for key, sub_dict in data.items():
         autotherm_mass_flow_rate_match = re.match(autotherm_mass_flow_rate_regex, key)
@@ -665,6 +668,8 @@ def analyse_decoupled_steady_state_data(  # pylint: disable=too-many-branches
             + 0.1 * (int(autotherm_mass_flow_rate_match.group("second_digit"))),
             3,
         )
+        if int(mass_flow_rate) == mass_flow_rate:
+            mass_flow_rate = int(mass_flow_rate)
         # Only include important mass-flow rates.
         if mass_flow_rate not in [
             round(100, 3),
@@ -719,7 +724,7 @@ def analyse_decoupled_steady_state_data(  # pylint: disable=too-many-branches
     thermal_efficiency_labels = set()
     electrical_efficiency_labels = set()
     ilaria_mass_flow_rate_regex = re.compile(
-        r"ilaria_double_glazed_(?P<first_digit>[0-9]*)_(?P<second_digit>[0-9]*)_litres_per_hour_.*"
+        r"ilaria.*double_glazed.*_(?P<first_digit>[0-9]*)_(?P<second_digit>[0-9])_litres_per_hour_.*"
     )
     for key, sub_dict in data.items():
         ilaria_mass_flow_rate_match = re.match(ilaria_mass_flow_rate_regex, key)
@@ -730,6 +735,8 @@ def analyse_decoupled_steady_state_data(  # pylint: disable=too-many-branches
             + 0.1 * (int(ilaria_mass_flow_rate_match.group("second_digit"))),
             3,
         )
+        if int(mass_flow_rate) == mass_flow_rate:
+            mass_flow_rate = int(mass_flow_rate)
         # Only include important mass-flow rates.
         if mass_flow_rate not in [
             round(100, 3),
@@ -784,7 +791,7 @@ def analyse_decoupled_steady_state_data(  # pylint: disable=too-many-branches
     thermal_efficiency_labels = set()
     electrical_efficiency_labels = set()
     autotherm_mass_flow_rate_regex = re.compile(
-        r"autotherm_double_glazed_(?P<first_digit>[0-9]*)_(?P<second_digit>[0-9]*)_litres_per_hour_.*"
+        r"autotherm.*double_glazed.*_(?P<first_digit>[0-9]*)_(?P<second_digit>[0-9])_litres_per_hour_.*"
     )
     for key, sub_dict in data.items():
         autotherm_mass_flow_rate_match = re.match(autotherm_mass_flow_rate_regex, key)
@@ -795,6 +802,8 @@ def analyse_decoupled_steady_state_data(  # pylint: disable=too-many-branches
             + 0.1 * (int(autotherm_mass_flow_rate_match.group("second_digit"))),
             3,
         )
+        if int(mass_flow_rate) == mass_flow_rate:
+            mass_flow_rate = int(mass_flow_rate)
         # Only include important mass-flow rates.
         if mass_flow_rate not in [
             round(100, 3),
@@ -858,8 +867,8 @@ def analyse_decoupled_steady_state_data(  # pylint: disable=too-many-branches
             continue
         pipes = int(ilaria_pipes_match.group("pipes"))
         glazing = ilaria_pipes_match.group("glazing")
-        if glazing == "unglazed":
-            continue
+        # if glazing == "unglazed":
+        #     continue
         # Only include important mass-flow rates.
         for sub_key, value in sub_dict.items():
             reduced_data[sub_key][
@@ -961,6 +970,10 @@ def analyse(data_file_directory: str, show_output: Optional[bool] = False) -> No
             logger.info(
                 "Data type was neither 'dynamic' nor 'steady_state'. Omitting..."
             )
+            data.pop(data_file_name)
+            continue
+        if "no_pv" in data_file_name:
+            logger.info("Invalid data was removed.")
             data.pop(data_file_name)
             continue
 
