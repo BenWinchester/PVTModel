@@ -387,6 +387,7 @@ def plot_figure(  # pylint: disable=too-many-branches
     use_data_keys_as_x_axis: bool = False,
     x_axis_thing_to_plot: str = TIME_KEY,
     x_axis_label: str = "Time of day",
+    x_axis_limits: Optional[Tuple[int, int]] = None,
     second_axis_things_to_plot: Optional[List[str]] = None,
     second_axis_label: Optional[str] = None,
     second_axis_y_limits: Optional[Tuple[int, int]] = None,
@@ -428,6 +429,9 @@ def plot_figure(  # pylint: disable=too-many-branches
 
     :param x_axis_label:
         The label to assign to the x-axis.
+
+    :param x_axis_limits:
+        A `tuple` giving the lower and upper limits to set for the x axis.
 
     :param second_axis_things_to_plot:
         The list of variable names (keys in the JSON model_data) to plot on the second axis.
@@ -487,7 +491,6 @@ def plot_figure(  # pylint: disable=too-many-branches
     if len(locs) > 2 * X_TICK_SEPARATION:
         ax1.set_xticks(ax1.get_xticks()[::X_TICK_SEPARATION])
 
-    # Set the y limits if appropriate
     if first_axis_y_limits is not None:
         plt.ylim(*first_axis_y_limits)
 
