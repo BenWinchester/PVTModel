@@ -18,7 +18,9 @@ import os
 import sys
 
 from argparse import Namespace
+from functools import partial
 from logging import Logger
+from multiprocessing import Pool
 from statistics import mean
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
@@ -397,6 +399,68 @@ def _determine_consistent_conditions(
     )
 
 
+def _multiprocessing_determine_consistent_conditions(
+    steady_state_run: Dict[Any, Any],
+    *,
+    number_of_pipes: int,
+    layers: Set[TemperatureName],
+    logger: Logger,
+    operating_mode: OperatingMode,
+    parsed_args: Namespace,
+    pvt_panel: pvt.PVT,
+) -> Dict[float, SystemData]:
+    """
+    Wrapper function around `determine_consistent_conditions` to enable multi-processing
+
+    In order for multi-processing to occur, arguments need to be processed in such a way
+    that the _determine_consistent_conditions function can be called using a single
+    entry from a steady-state data file.
+
+    :param steady_state_entry:
+        A data entry from the steady-state data file.
+
+    :param number_of_pipes:
+        The number of pipes on the base of the hot-water absorber.
+
+    :param layers:
+        The layer being used for the run.
+
+    :param logger:
+        The logger for the run.
+
+    :param operating_mode:
+        The operating mode for the run.
+
+    :param parsed_args:
+        The parsed command-line arguments.
+
+    :param pvt_panel:
+        The :class:`pvt.PVT` instance representing the pvt panel being modelled.
+
+    :return:
+        The result of the function call to `_determine_consistent_conditions`.
+
+    """
+
+    _, system_data_entry = _determine_consistent_conditions(
+        number_of_pipes,
+        layers,
+        logger,
+        operating_mode,
+        parsed_args,
+        pvt_panel,
+        override_ambient_temperature=steady_state_run["ambient_temperature"],
+        override_collector_input_temperature=steady_state_run[
+            "collector_input_temperature"
+        ]
+        + ZERO_CELCIUS_OFFSET,
+        override_irradiance=steady_state_run["irradiance"],
+        override_wind_speed=steady_state_run["wind_speed"],
+    )
+
+    return system_data_entry
+
+
 def _print_temperature_info(
     average_temperature_map: Dict[str, float],
     logger: Logger,
@@ -760,7 +824,9 @@ def _save_data(
     system_data_dict: Dict[Union[float, str], Union[str, Dict[str, Any]]] = {
         key: dataclasses.asdict(value) for key, value in system_data.items()
     }
-    logger.info("Saving data: System data successfully converted to json-readable format.")
+    logger.info(
+        "Saving data: System data successfully converted to json-readable format."
+    )
 
     # If we're saving YAML data part-way through, then append to the file.
     if file_type == FileType.YAML:
@@ -1083,41 +1149,27 @@ def main(args) -> None:  # pylint: disable=too-many-branches
                 f"{BColours.ENDC}"
             )
 
-            for run_number, steady_state_run in enumerate(steady_state_runs):
+            with Pool(8) as worker_pool:
                 logger.info(
-                    "Carrying out steady-state run number %s at %s W/m^2, %s degC "
-                    "input and %s degC ambient. Wind speed is %s m/s.",
-                    run_number + 1,
-                    steady_state_run["irradiance"],
-                    steady_state_run["collector_input_temperature"],
-                    steady_state_run["ambient_temperature"],
-                    steady_state_run["wind_speed"],
+                    "A multi-process worker pool will be used to parallelise the task."
                 )
+                multi_processing_output = worker_pool.map(
+                    partial(
+                        _multiprocessing_determine_consistent_conditions,
+                        number_of_pipes=pvt_panel.absorber.number_of_pipes,
+                        layers=layers,
+                        logger=logger,
+                        operating_mode=operating_mode,
+                        parsed_args=parsed_args,
+                        pvt_panel=pvt_panel,
+                    ),
+                    steady_state_runs,
+                )
+                logger.info("Multi-process worker pool successfully completed.")
 
-                # Call `_determine_consistent_conditions` to determine the solution for the
-                # model in a steady-state and decoupled configuration.
-                _, system_data_entry = _determine_consistent_conditions(
-                    pvt_panel.absorber.number_of_pipes,
-                    layers,
-                    logger,
-                    operating_mode,
-                    parsed_args,
-                    pvt_panel,
-                    override_ambient_temperature=steady_state_run[
-                        "ambient_temperature"
-                    ],
-                    override_collector_input_temperature=steady_state_run[
-                        "collector_input_temperature"
-                    ]
-                    + ZERO_CELCIUS_OFFSET,
-                    override_irradiance=steady_state_run["irradiance"],
-                    override_wind_speed=steady_state_run["wind_speed"],
-                )
-
-                logger.info(
-                    "Run %s of %s complete.", run_number + 1, len(steady_state_runs)
-                )
-                system_data.update(system_data_entry)
+            for multi_processing_output_entry in multi_processing_output:
+                for key, value in multi_processing_output_entry.items():
+                    system_data[key] = value
 
         else:
             raise ProgrammerJudgementFault(
