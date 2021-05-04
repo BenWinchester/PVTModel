@@ -192,9 +192,13 @@ def get_logger(logger_name: str, verbose: bool) -> logging.Logger:
     # Rename old log files.
     append_index = 1
     if os.path.exists(os.path.join(LOGGER_DIRECTORY, f"{logger_name}.log")):
-        while os.path.exists(os.path.join(LOGGER_DIRECTORY, f"{logger_name}.log.{append_index}")):
+        while os.path.exists(
+            os.path.join(LOGGER_DIRECTORY, f"{logger_name}.log.{append_index}")
+        ):
             append_index += 1
-    fh = logging.FileHandler(os.path.join(LOGGER_DIRECTORY, f"{logger_name}.log.{append_index}"))
+    fh = logging.FileHandler(
+        os.path.join(LOGGER_DIRECTORY, f"{logger_name}.log.{append_index}")
+    )
     ch = logging.StreamHandler()
     if verbose:
         logger.setLevel(logging.DEBUG)
