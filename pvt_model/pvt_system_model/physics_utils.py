@@ -392,6 +392,16 @@ def radiative_heat_transfer_coefficient(
             "must be specified."
         )
 
+    # Some cases need to be dealt with where the emissivity of one or more layers is
+    # zero. In these cases, the emissivity of the non-zero layer, if there is one, can
+    # be used.
+    if destination_emissivity == 0 and source_emissivity == 0:
+        return 0
+    if destination_emissivity == 0:
+        return source_emissivity
+    if source_emissivity == 0:
+        return destination_emissivity
+
     return (
         STEFAN_BOLTZMAN_CONSTANT  # [W/m^2*K^4]
         * (source_temperature ** 2 + destination_temperature ** 2)  # [K^2]
