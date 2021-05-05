@@ -23,8 +23,9 @@ import sys
 from logging import Logger
 from typing import Any, List, Dict, Optional, Set
 
-import numpy
 import re
+
+import numpy
 import yaml
 
 from matplotlib import pyplot as plt
@@ -34,7 +35,6 @@ try:
     from ..pvt_system_model.constants import (  # pylint: disable=unused-import
         HEAT_CAPACITY_OF_WATER,
     )
-    from ..pvt_system_model.physics_utils import reduced_temperature
     from .__utils__ import (
         GraphDetail,
         load_model_data,
