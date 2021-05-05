@@ -1,13 +1,13 @@
 #!/usr/bin/python3.7
 # type: ignore
 ########################################################################################
-# analysis.py - The analysis component for the model.
+# glazing_analysis.py - The glazing analysis component for the model.
 #
 # Author: Ben Winchester
 # Copyright: Ben Winchester, 2021
 ########################################################################################
 """
-Used for analysis of the output of the model runs.
+Used for analysis of various differences between outputs from model runs.
 
 NOTE: The mypy type checker is instructed to ignore this component. This is done due to
 the lower standards applied to the analysis code, and the failure of mypy to correctly

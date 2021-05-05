@@ -1,0 +1,25 @@
+---
+################################################################################
+# galzing_comparison.yaml - Contains glazing-comparison validation data
+#
+# Copyright 2021, Ben Winchester
+################################################################################
+
+# Data is obtained using web-plot digitiser from Ilaria's paper.
+#
+
+- label: "double_glazed"
+  thermal_efficiency:
+    x_squared: -0.07308194
+    linear_x: -0.26179057
+    y_intercept: 0.52328259
+- label: "single_glazed"
+  thermal_efficiency:
+    x_squared: -0.0738351
+    linear_x: -0.46551508
+    y_intercept: 0.48505457
+- label: "unglazed"
+  thermal_efficiency:
+    x_squared: -0.01299669
+    linear_x: -1.17472222
+    y_intercept: 0.3005704

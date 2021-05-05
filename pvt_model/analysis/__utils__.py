@@ -257,11 +257,18 @@ def plot(  # pylint: disable=too-many-branches
 
     # If needed, compute a trendline.
     if trendline:
-        trend = numpy.polyfit(x_model_data, y_model_data, 1)
+        trend = numpy.polyfit(
+            x_model_data,
+            y_model_data,
+            2,
+        )
         trendline_x_data = numpy.linspace(
             min(x_model_data), max(x_model_data), TRENDLINE_RESOLUTION
         )
-        trendline_y_data = [trend[0] * entry + trend[1] for entry in trendline_x_data]
+        trendline_y_data = [
+            trend[0] * entry ** 2 + trend[1] * entry + trend[2]
+            for entry in trendline_x_data
+        ]
 
     if bar_plot:
         if axes is None:
