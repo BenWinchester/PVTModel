@@ -23,7 +23,9 @@ import sys
 from logging import Logger
 from typing import Any, List, Dict, Optional, Set
 
+import numpy
 import re
+import yaml
 
 from matplotlib import pyplot as plt
 
@@ -152,6 +154,139 @@ def _post_process_data(
     return data_to_post_process
 
 
+def _validation_figure(
+    data: Dict[Any, Dict[str, Any]],
+    logger: Logger,
+    prefix: str,
+    regex: re.Pattern,
+    variable_name: str,
+    *,
+    validation_filename: Optional[str] = None,
+) -> None:
+    """
+    Carries out analysis on a validation figure.
+
+    Based on the parameters passed in, a sub-set of files is selected for, Ilaria's
+    data is parsed and plotted if relevant, and a figure is saved.
+
+    :param data:
+        A `dict` mapping filenames to raw JSON data extracted from the files.
+
+    :param logger:
+        The logger to use for the run.
+
+    :param prefrix:
+        A `str` to prepend to all filenames so that the output figures can be uniquely
+        identified.
+
+    :param regex:
+        A compiled :class:`re.Pattern` to use for matching and variable parsing from
+        filenames.
+        NOTE: The regex should contain:
+        - either: the groups "first_digit" and "second_digit" which, together, give the
+          value of the variable that identifies the data set,
+        - or: the group "variable_value" which gives the value of the variable that
+          identifies the data set.
+
+    :param variable_name:
+        The name of the variable being experimented with. This is used for labelling
+        data sets and trendlines.
+
+    :param validation_filename:
+        If specified, this gives the name of the validation data file from which
+        validation data should be plotted. If `None`, then no validation data is parsed
+        and plotted.
+
+    """
+
+    # Plot the glass-emissivity effect on a single-glazed Ilaria.
+    reduced_data: Dict[str, Any] = collections.defaultdict(dict)
+    thermal_efficiency_labels: Set[str] = set()
+    electrical_efficiency_labels: Set[str] = set()
+    for key, sub_dict in data.items():
+        match = re.match(regex, key)
+        if match is None:
+            continue
+        try:
+            variable_value = float(
+                f"{match.group('first_digit')}.{match.group('second_digit')}"
+            )
+        except TypeError:
+            variable_value = match.group("variable_value")
+        # Only plot significant portions covered.
+        for sub_key, value in sub_dict.items():
+            # Generate a unique indentifier string.
+            file_identifier = f"{variable_name}={variable_value}"
+            # Store the specific thermal efficiency.
+            reduced_data[sub_key][file_identifier] = value["thermal_efficiency"]
+            thermal_efficiency_labels.add(file_identifier)
+            # Store the specific electrical efficiency.
+            reduced_data[sub_key][file_identifier] = value["electrical_efficiency"]
+            electrical_efficiency_labels.add(file_identifier)
+            # Store a copy of the reduced temperature
+            reduced_data[sub_key]["reduced_collector_temperature"] = value[
+                "reduced_collector_temperature"
+            ]
+
+    # Thermal efficiency plot.
+    logger.info("Plotting thermal efficiency against the reduced temperature.")
+    _, ax1 = plt.subplots()
+
+    # Plot Ilaria's data to validate against if relevant.
+    if validation_filename is not None:
+        # Parse the thermal-efficiency data.
+        with open(
+            os.path.join(VALIDATION_DATA_DIRECTORY, validation_filename),
+            "r",
+        ) as f:  #
+            validation_data = yaml.safe_load(f)
+
+        x_data_series = numpy.linspae(-0.05, 0.35, 100)
+        for data_entry in validation_data:
+            y_data_series = (
+                data_entry["thermal_efficiency"]["x_squared"] * x_data_series ** 2
+                + data_entry["thermal_efficiency"]["linear_x"] * x_data_series
+                + data_entry["thermal_efficiency"]["y_intercept"]
+            )
+
+            # Plot the experimental data.
+            ax1.plot(
+                x_data_series,
+                y_data_series,
+                marker="s",
+            )
+
+    # Thermal efficiency plot.
+    logger.info("Plotting thermal efficiency against the reduced temperature.")
+    plot_figure(
+        f"{prefix}_thermal_efficiency_against_reduced_temperature",
+        reduced_data,
+        first_axis_things_to_plot=thermal_efficiency_labels,
+        first_axis_label="Thermal efficiency",
+        x_axis_label="Reduced temperature / K m^2 / W",
+        x_axis_thing_to_plot="reduced_collector_temperature",
+        plot_title="Thermal efficiency against reduced temperature",
+        disable_lines=True,
+        plot_trendline=True,
+    )
+
+    # Plot the electrical efficiency against the reduced temperature.
+    logger.info("Plotting electrical efficiency against the reduced temperature.")
+
+    plot_figure(
+        f"{prefix}_electrical_efficiency_against_reduced_temperature",
+        reduced_data,
+        first_axis_things_to_plot=electrical_efficiency_labels,
+        first_axis_label="Electrical efficiency",
+        x_axis_label="Reduced temperature / K m^2 / W",
+        x_axis_thing_to_plot="reduced_collector_temperature",
+        plot_title="Electrical efficiency against reduced temperature",
+        disable_lines=True,
+        plot_trendline=True,
+        first_axis_y_limits=[0.08, 0.14],
+    )
+
+
 def analyse_decoupled_steady_state_data(  # pylint: disable=too-many-branches
     data: Dict[Any, Dict[str, Any]], logger: Logger
 ) -> None:
@@ -169,88 +304,50 @@ def analyse_decoupled_steady_state_data(  # pylint: disable=too-many-branches
 
     logger.info("Beginning steady-state analysis.")
 
-    # Plot the glass-emissivity effect on a single-glazed Ilaria.
-    reduced_data: Dict[str, Any] = collections.defaultdict(dict)
-    thermal_efficiency_labels: Set[str] = set()
-    electrical_efficiency_labels: Set[str] = set()
-    for key, sub_dict in data.items():
-        match = re.match(regex, key)
-        if match is None:
-            continue
-        variable_value = float(
-            f"{match.group('first_digit')}.{match.group('second_digit')}"
-        )
-        # Only plot significant portions covered.
-        if variable_value not in {1.0, 0.6, 0.3}:
-            continue
-        for sub_key, value in sub_dict.items():
-            # Generate a unique indentifier string.
-            file_identifier = f"{variable_name}={variable_value}"
-            # Store the specific thermal efficiency.
-            reduced_data[sub_key][file_identifier] = value["thermal_efficiency"]
-            thermal_efficiency_labels.add(file_identifier)
-            # Store the specific electrical efficiency.
-            reduced_data[sub_key][file_identifier] = value["electrical_efficiency"]
-            electrical_efficiency_labels.add(file_identifier)
-            # Store a copy of the reduced temperature
-            reduced_data[sub_key]["reduced_collector_temperature"] = value[
-                "reduced_collector_temperature"
-            ]
-
-    # Parse the thermal-efficiency data.
-    with open(
-        os.path.join(VALIDATION_DATA_DIRECTORY, validation_filename),
-        "r",
-    ) as f:  #
-        validation_data = yaml.safe_load(f)
-
-    # Post-process this data.
-    for entry in validation_data:
-        entry["reduced_temperature"] = reduced_temperature(
-            entry["ambient_temperature"],
-            entry["average_bulk_water_temperature"],
-            entry["irradiance"],
-        )
-
-    # Thermal efficiency plot.
-    logger.info("Plotting thermal efficiency against the reduced temperature.")
-
-    # Plot the experimental data.
-    _, ax1 = plt.subplots()
-    ax1.scatter(
-        [entry["reduced_temperature"] for entry in experimental_steady_state_data],
-        [entry["thermal_efficiency"] for entry in experimental_steady_state_data],
-        marker="s",
+    logger.info("Beginning autotherm glass-transmissivity analysis.")
+    autotherm_glass_transmissivity_regex = re.compile(
+        r"autotherm[^\d]*(?P<first_digit>[\d]*)_(?P<second_digit>[\d]*)_glass_transmissivity.*"
+    )
+    _validation_figure(
+        data,
+        logger,
+        "autotherm_glass_transmissivity",
+        autotherm_glass_transmissivity_regex,
+        "glass_transmissivity",
+    )
+    logger.info("Beginning Ilaria glass-transmissivity analysis.")
+    ilaria_glass_transmissivity_regex = re.compile(
+        r"ilaria[^\d]*(?P<first_digit>[\d]*)_(?P<second_digit>[\d]*)_glass_transmissivity.*"
+    )
+    _validation_figure(
+        data,
+        logger,
+        "ilaria_glass_transmissivity",
+        ilaria_glass_transmissivity_regex,
+        "glass_transmissivity",
     )
 
-    # Thermal efficiency plot.
-    logger.info("Plotting thermal efficiency against the reduced temperature.")
-    plot_figure(
-        f"{prefix}_thermal_efficiency_against_reduced_temperature",
-        data,
-        first_axis_things_to_plot=thermal_efficiency_labels,
-        first_axis_label="Thermal efficiency",
-        x_axis_label="Reduced temperature / K m^2 / W",
-        x_axis_thing_to_plot="reduced_collector_temperature",
-        plot_title="Thermal efficiency against reduced temperature",
-        disable_lines=True,
-        plot_trendline=True,
+    logger.info("Beginning autotherm glass-emissivity analysis.")
+    autotherm_glass_emissivity_regex = re.compile(
+        r"autotherm[^\d]*(?P<first_digit>[\d]*)_(?P<second_digit>[\d]*)_glass_emissivity.*"
     )
-
-    # Plot the electrical efficiency against the reduced temperature.
-    logger.info("Plotting electrical efficiency against the reduced temperature.")
-
-    plot_figure(
-        f"{prefix}_electrical_efficiency_against_reduced_temperature",
+    _validation_figure(
         data,
-        first_axis_things_to_plot=electrical_efficiency_labels,
-        first_axis_label="Electrical efficiency",
-        x_axis_label="Reduced temperature / K m^2 / W",
-        x_axis_thing_to_plot="reduced_collector_temperature",
-        plot_title="Electrical efficiency against reduced temperature",
-        disable_lines=True,
-        plot_trendline=True,
-        first_axis_y_limits=[0.08, 0.14],
+        logger,
+        "autotherm_glass_emissivity",
+        autotherm_glass_emissivity_regex,
+        "glass_emissivity",
+    )
+    logger.info("Beginning Ilaria glass-emissivity analysis.")
+    ilaria_glass_emissivity_regex = re.compile(
+        r"ilaria[^\d]*(?P<first_digit>[\d]*)_(?P<second_digit>[\d]*)_glass_emissivity.*"
+    )
+    _validation_figure(
+        data,
+        logger,
+        "ilaria_glass_emissivity",
+        ilaria_glass_emissivity_regex,
+        "glass_emissivity",
     )
 
 

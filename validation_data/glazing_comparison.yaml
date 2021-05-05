@@ -8,17 +8,17 @@
 # Data is obtained using web-plot digitiser from Ilaria's paper.
 #
 
-double_glazed:
+- label: "double_glazed"
   thermal_efficiency:
     x_squared: -0.07308194
     linear_x: -0.26179057
     y_intercept: 0.52328259
-single_glazed:
+- label: "single_glazed"
   thermal_efficiency:
     x_squared: -0.0738351
     linear_x: -0.46551508
     y_intercept: 0.48505457
-unglazed:
+- label: "unglazed"
   thermal_efficiency:
     x_squared: -0.01299669
     linear_x: -1.17472222
