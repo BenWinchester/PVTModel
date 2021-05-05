@@ -62,6 +62,9 @@ NEW_FIGURES_DIRECTORY: str = "figures"
 TIME_KEY = "time"
 # The directory in which old figures are saved and stored for long-term access
 OLD_FIGURES_DIRECTORY: str = "old_figures"
+# Used to specify the reduced temperature for comparing the thermal performance of the
+# collectors.
+REDUCED_TEMPERATURE_COMPARISON_POINT = 0.10
 # Used to distinguish steady-state data sets.
 STEADY_STATE_DATA_TYPE = "steady_state"
 # Name of the steady-state data file.
@@ -109,7 +112,11 @@ def _calculate_value_at_zero_reduced_temperature(
         y_series.append(float(value[parameter]))
 
     trend = numpy.polyfit(x_series, y_series, 2)
-    return trend[-1]
+    return (
+        trend[2] * REDUCED_TEMPERATURE_COMPARISON_POINT ** 2
+        + trend[1] * REDUCED_TEMPERATURE_COMPARISON_POINT
+        + trend[2]
+    )
 
 
 def _calculate_zero_point_efficiencies(filedata: Dict[Any, Any]) -> Tuple[float, float]:

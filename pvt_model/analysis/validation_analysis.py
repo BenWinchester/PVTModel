@@ -211,18 +211,24 @@ def _validation_figure(
             variable_value = float(
                 f"{match.group('first_digit')}.{match.group('second_digit')}"
             )
-        except TypeError:
+        except IndexError:
             variable_value = match.group("variable_value")
         # Only plot significant portions covered.
         for sub_key, value in sub_dict.items():
             # Generate a unique indentifier string.
             file_identifier = f"{variable_name}={variable_value}"
+            thermal_efficiency_identifier = f"{file_identifier} (therm.)"
+            electrical_efficiency_identifier = f"{file_identifier} (elec.)"
             # Store the specific thermal efficiency.
-            reduced_data[sub_key][file_identifier] = value["thermal_efficiency"]
-            thermal_efficiency_labels.add(file_identifier)
+            reduced_data[sub_key][thermal_efficiency_identifier] = value[
+                "thermal_efficiency"
+            ]
+            thermal_efficiency_labels.add(thermal_efficiency_identifier)
             # Store the specific electrical efficiency.
-            reduced_data[sub_key][file_identifier] = value["electrical_efficiency"]
-            electrical_efficiency_labels.add(file_identifier)
+            reduced_data[sub_key][electrical_efficiency_identifier] = value[
+                "electrical_efficiency"
+            ]
+            electrical_efficiency_labels.add(electrical_efficiency_identifier)
             # Store a copy of the reduced temperature
             reduced_data[sub_key]["reduced_collector_temperature"] = value[
                 "reduced_collector_temperature"
@@ -241,20 +247,26 @@ def _validation_figure(
         ) as f:  #
             validation_data = yaml.safe_load(f)
 
-        x_data_series = numpy.linspae(-0.05, 0.35, 100)
-        for data_entry in validation_data:
+        validation_data_dict = {
+            entry["label"]: entry["thermal_efficiency"] for entry in validation_data
+        }
+
+        x_data_series = numpy.linspace(-0.005, 0.035, 100)
+        for data_entry_name in ["single_glazed", "unglazed", "double_glazed"]:
+            data_entry = validation_data_dict[data_entry_name]
             y_data_series = (
-                data_entry["thermal_efficiency"]["x_squared"] * x_data_series ** 2
-                + data_entry["thermal_efficiency"]["linear_x"] * x_data_series
-                + data_entry["thermal_efficiency"]["y_intercept"]
+                data_entry["x_squared"] * x_data_series ** 2
+                + data_entry["linear_x"] * x_data_series
+                + data_entry["y_intercept"]
             )
 
             # Plot the experimental data.
             ax1.plot(
                 x_data_series,
                 y_data_series,
-                marker="s",
             )
+
+    ax1.set_prop_cycle(None)
 
     # Thermal efficiency plot.
     logger.info("Plotting thermal efficiency against the reduced temperature.")
@@ -268,6 +280,7 @@ def _validation_figure(
         plot_title="Thermal efficiency against reduced temperature",
         disable_lines=True,
         plot_trendline=True,
+        override_axis=ax1,
     )
 
     # Plot the electrical efficiency against the reduced temperature.
@@ -283,7 +296,6 @@ def _validation_figure(
         plot_title="Electrical efficiency against reduced temperature",
         disable_lines=True,
         plot_trendline=True,
-        first_axis_y_limits=[0.08, 0.14],
     )
 
 
@@ -315,6 +327,9 @@ def analyse_decoupled_steady_state_data(  # pylint: disable=too-many-branches
         autotherm_glass_transmissivity_regex,
         "glass_transmissivity",
     )
+    logger.info("Done.")
+    plt.close()
+
     logger.info("Beginning Ilaria glass-transmissivity analysis.")
     ilaria_glass_transmissivity_regex = re.compile(
         r"ilaria[^\d]*(?P<first_digit>[\d]*)_(?P<second_digit>[\d]*)_glass_transmissivity.*"
@@ -326,6 +341,8 @@ def analyse_decoupled_steady_state_data(  # pylint: disable=too-many-branches
         ilaria_glass_transmissivity_regex,
         "glass_transmissivity",
     )
+    logger.info("Done.")
+    plt.close()
 
     logger.info("Beginning autotherm glass-emissivity analysis.")
     autotherm_glass_emissivity_regex = re.compile(
@@ -338,6 +355,9 @@ def analyse_decoupled_steady_state_data(  # pylint: disable=too-many-branches
         autotherm_glass_emissivity_regex,
         "glass_emissivity",
     )
+    logger.info("Done.")
+    plt.close()
+
     logger.info("Beginning Ilaria glass-emissivity analysis.")
     ilaria_glass_emissivity_regex = re.compile(
         r"ilaria[^\d]*(?P<first_digit>[\d]*)_(?P<second_digit>[\d]*)_glass_emissivity.*"
@@ -349,6 +369,119 @@ def analyse_decoupled_steady_state_data(  # pylint: disable=too-many-branches
         ilaria_glass_emissivity_regex,
         "glass_emissivity",
     )
+    logger.info("Done.")
+    plt.close()
+
+    logger.info("Beginning autotherm pv-efficiency analysis.")
+    autotherm_pv_efficiency_regex = re.compile(
+        r"autotherm[^\d]*(?P<first_digit>[\d]*)_(?P<second_digit>[\d]*)_pv_efficiency.*"
+    )
+    _validation_figure(
+        data,
+        logger,
+        "autotherm_pv_efficiency",
+        autotherm_pv_efficiency_regex,
+        "pv_efficiency",
+    )
+    logger.info("Done.")
+    plt.close()
+
+    logger.info("Beginning Ilaria pv-efficiency analysis.")
+    ilaria_pv_efficiency_regex = re.compile(
+        r"ilaria[^\d]*(?P<first_digit>[\d]*)_(?P<second_digit>[\d]*)_pv_efficiency.*"
+    )
+    _validation_figure(
+        data,
+        logger,
+        "ilaria_pv_efficiency",
+        ilaria_pv_efficiency_regex,
+        "pv_efficiency",
+    )
+    logger.info("Done.")
+    plt.close()
+
+    logger.info("Beginning autotherm pv-emissivity analysis.")
+    autotherm_pv_emissivity_regex = re.compile(
+        r"autotherm[^\d]*(?P<first_digit>[\d]*)_(?P<second_digit>[\d]*)_pv_emissivity.*"
+    )
+    _validation_figure(
+        data,
+        logger,
+        "autotherm_pv_emissivity",
+        autotherm_pv_emissivity_regex,
+        "pv_emissivity",
+    )
+    logger.info("Done.")
+    plt.close()
+
+    logger.info("Beginning Ilaria pv-emissivity analysis.")
+    ilaria_pv_emissivity_regex = re.compile(
+        r"ilaria[^\d]*(?P<first_digit>[\d]*)_(?P<second_digit>[\d]*)_pv_emissivity.*"
+    )
+    _validation_figure(
+        data,
+        logger,
+        "ilaria_pv_emissivity",
+        ilaria_pv_emissivity_regex,
+        "pv_emissivity",
+    )
+    logger.info("Done.")
+    plt.close()
+
+    logger.info("Beginning autotherm thermal coefficient analysis.")
+    autotherm_thermal_coefficient_regex = re.compile(
+        r"autotherm_(?P<variable_value>[^_]*)_thermal_coefficient.*"
+    )
+    _validation_figure(
+        data,
+        logger,
+        "autotherm_thermal_coefficient",
+        autotherm_thermal_coefficient_regex,
+        "thermal_coefficient",
+    )
+    logger.info("Done.")
+    plt.close()
+
+    logger.info("Beginning Ilaria thermal coefficient analysis.")
+    ilaria_thermal_coefficient_regex = re.compile(
+        r"ilaria_(?P<variable_value>[^_]*)_thermal_coefficient.*"
+    )
+    _validation_figure(
+        data,
+        logger,
+        "ilaria_thermal_coefficient",
+        ilaria_thermal_coefficient_regex,
+        "thermal_coefficient",
+    )
+    logger.info("Done.")
+    plt.close()
+
+    logger.info("Beginning autotherm glazing analysis.")
+    autotherm_glazing_regex = re.compile(r"autotherm_(?P<variable_value>.*)_pc_1_0_.*")
+    _validation_figure(
+        data,
+        logger,
+        "autotherm_glazing",
+        autotherm_glazing_regex,
+        "glazing",
+    )
+    logger.info("Done.")
+    plt.close()
+
+    logger.info("Beginning Ilaria glazing analysis.")
+    ilaria_glazing_regex = re.compile(r"ilaria_(?P<variable_value>.*)_pc_1_0_.*")
+    _validation_figure(
+        data,
+        logger,
+        "ilaria_glazing",
+        ilaria_glazing_regex,
+        "glazing",
+        validation_filename="glazing_comparison.yaml",
+    )
+    logger.info("Done.")
+    plt.close()
+
+    logger.info("All validation analysis complete.")
 
 
 def analyse(data_file_directory: str, show_output: Optional[bool] = False) -> None:
