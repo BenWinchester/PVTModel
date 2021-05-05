@@ -48,6 +48,10 @@
   justification: "Anslysis module should be ignored where possible."
   usage: ""
   whole_file: true
+- file: pvt_model/analysis/validation_analysis.py
+  justification: "Analysis module should be ignored where possible."
+  usage: ""
+  whole_file: true
 - file: pvt_model/enforcement/mypy_enforcement.py
   justification: "Not a usage of enforcement - direct string."
   usage: 'f"grep ''type: ignore'' {directory_prefix}pvt_model -rn --exclude \\*.yaml",'
