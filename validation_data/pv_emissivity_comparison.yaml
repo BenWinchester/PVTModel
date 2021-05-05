@@ -1,0 +1,28 @@
+---
+################################################################################
+# pv_emissivity_comparison.yaml - Contains pv-emissivity-comparison data
+#
+# Copyright 2021, Ben Winchester
+################################################################################
+
+# Data is obtained using web-plot digitiser from Ilaria's paper.
+#
+
+single_glazed:
+  - pv_emissivity: 0.9
+    thermal_efficiency:
+      x_squared: -0.07308194
+      linear_x: -0.26179057
+      y_intercept: 0.52328259
+# Unglazed data has yet to be digitised due to no runs being carried out yet.
+unglazed:
+  - pv_emissivity: 0.9
+    thermal_efficiency:
+      x_squared: 0
+      linear_x: 0
+      y_intercept: 0
+  - pv_emissivity: 0
+    thermal_efficiency:
+      x_squared: 0
+      linear_x: 0
+      y_intercept: 0
