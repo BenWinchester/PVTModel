@@ -430,7 +430,7 @@ def analyse_decoupled_steady_state_data(  # pylint: disable=too-many-branches
 
     logger.info("Beginning autotherm thermal coefficient analysis.")
     autotherm_thermal_coefficient_regex = re.compile(
-        r"autotherm_(?P<variable_value>[^_]*)_thermal_coefficient.*"
+        r"autotherm[^\d]*(?P<first_digit>[\d]*)_(?P<second_digit>[\d]*)_thermal_coefficient.*"
     )
     _validation_figure(
         data,
@@ -444,7 +444,7 @@ def analyse_decoupled_steady_state_data(  # pylint: disable=too-many-branches
 
     logger.info("Beginning Ilaria thermal coefficient analysis.")
     ilaria_thermal_coefficient_regex = re.compile(
-        r"ilaria_(?P<variable_value>[^_]*)_thermal_coefficient.*"
+        r"ilaria[^\d]*(?P<first_digit>[\d]*)_(?P<second_digit>[\d]*)_thermal_coefficient.*"
     )
     _validation_figure(
         data,
