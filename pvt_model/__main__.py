@@ -331,6 +331,7 @@ def _determine_consistent_conditions(
     final_temperature_vector, system_data = pvt_system_model_main(
         parsed_args.average_irradiance,
         parsed_args.cloud_efficacy_factor,
+        parsed_args.disable_logging,
         parsed_args.exchanger_data_file,
         parsed_args.initial_month,
         running_system_temperature_vector,
@@ -893,7 +894,7 @@ def main(args) -> None:  # pylint: disable=too-many-branches
     parsed_args = argparser.parse_args(args)
 
     # Initialise logging.
-    logger = get_logger(LOGGER_NAME, parsed_args.verbose)
+    logger = get_logger(parsed_args.disable_logging, LOGGER_NAME, parsed_args.verbose)
     logger.info(
         "%s PVT model instantiated. %s\nCommand: %s", "=" * 20, "=" * 20, " ".join(args)
     )
@@ -1048,6 +1049,7 @@ def main(args) -> None:  # pylint: disable=too-many-branches
         _, system_data = pvt_system_model_main(
             parsed_args.average_irradiance,
             parsed_args.cloud_efficacy_factor,
+            parsed_args.disable_logging,
             parsed_args.exchanger_data_file,
             parsed_args.initial_month,
             initial_system_temperature_vector,
@@ -1096,6 +1098,7 @@ def main(args) -> None:  # pylint: disable=too-many-branches
         _, system_data = pvt_system_model_main(
             parsed_args.average_irradiance,
             parsed_args.cloud_efficacy_factor,
+            parsed_args.disable_logging,
             parsed_args.exchanger_data_file,
             parsed_args.initial_month,
             [DEFAULT_SYSTEM_TEMPERATURE]

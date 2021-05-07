@@ -146,6 +146,7 @@ def _get_weather_forecaster(
 def main(  # pylint: disable=too-many-branches
     average_irradiance: bool,
     cloud_efficacy_factor: float,
+    disable_logging: bool,
     exchanger_data_file: str,
     initial_month: int,
     initial_system_temperature_vector: List[float],
@@ -181,6 +182,10 @@ def main(  # pylint: disable=too-many-branches
 
     :param cloud_efficiacy_factor:
         The extent to which cloud cover influences the solar irradiance.
+
+    :param disable_logging:
+        Whether to disable the file handler for the logging (True) or keep it enabled
+        (False).
 
     :param exchanger_data_file:
         The path to the data file containing information about the heat exchanger being
@@ -281,6 +286,7 @@ def main(  # pylint: disable=too-many-branches
     # Get the logger for the component.
     if operating_mode.dynamic:
         logger = get_logger(
+            disable_logging,
             PVT_SYSTEM_MODEL_LOGGER_NAME.format(
                 tag=f"{resolution}s", run_number=run_number
             ),
@@ -288,6 +294,7 @@ def main(  # pylint: disable=too-many-branches
         )
     else:
         logger = get_logger(
+            disable_logging,
             PVT_SYSTEM_MODEL_LOGGER_NAME.format(
                 tag="steady_state", run_number=run_number
             ),

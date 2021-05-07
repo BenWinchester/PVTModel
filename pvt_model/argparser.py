@@ -298,6 +298,12 @@ def parse_args(args) -> argparse.Namespace:
         help="If specified, the model will be run with a decoupled PVT absorber.",
     )
     parser.add_argument(
+        "--disable-logging",
+        action="store_true",
+        default=False,
+        help="If specified, logging will be disabled.",
+    )
+    parser.add_argument(
         "--dynamic",
         default=False,
         action="store_true",
