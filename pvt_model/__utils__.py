@@ -169,9 +169,14 @@ def fourier_number(
     return f_num
 
 
-def get_logger(logger_name: str, verbose: bool) -> logging.Logger:
+def get_logger(
+    disable_logging: bool, logger_name: str, verbose: bool
+) -> logging.Logger:
     """
     Set-up and return a logger.
+
+    :param disable_logging:
+        If specified, file logging will be disabled.
 
     :param logger_name:
         The name of the logger to instantiate.
@@ -196,28 +201,38 @@ def get_logger(logger_name: str, verbose: bool) -> logging.Logger:
             os.path.join(LOGGER_DIRECTORY, f"{logger_name}.log.{append_index}")
         ):
             append_index += 1
-    fh = logging.FileHandler(
-        os.path.join(LOGGER_DIRECTORY, f"{logger_name}.log.{append_index}")
-    )
     ch = logging.StreamHandler()
     if verbose:
         logger.setLevel(logging.DEBUG)
-        fh.setLevel(logging.DEBUG)
         ch.setLevel(logging.WARN)
     else:
         logger.setLevel(logging.INFO)
-        fh.setLevel(logging.INFO)
         ch.setLevel(logging.ERROR)
     # Create a formatter and add it to the handlers.
     formatter = logging.Formatter(
         "%(asctime)s: %(name)s: %(levelname)s: %(message)s",
         datefmt="%d/%m/%Y %I:%M:%S %p",
     )
-    fh.setFormatter(formatter)
     ch.setFormatter(formatter)
     # add the handlers to the logger
-    logger.addHandler(fh)
     logger.addHandler(ch)
+
+    # If logging is not disabled, add a file handler.
+    if not disable_logging:
+        # Create the file handler.
+        fh = logging.FileHandler(
+            os.path.join(LOGGER_DIRECTORY, f"{logger_name}.log.{append_index}")
+        )
+
+        # Set the file-handler logging level correctly,
+        if verbose:
+            fh.setLevel(logging.DEBUG)
+        else:
+            fh.setLevel(logging.INFO)
+
+        # Add the file handler to the logger.
+        fh.setFormatter(formatter)
+        logger.addHandler(fh)
 
     return logger
 

@@ -497,7 +497,7 @@ def analyse(data_file_directory: str, show_output: Optional[bool] = False) -> No
     """
 
     # * Set up the logger
-    logger = get_logger("pvt_analysis", True)
+    logger = get_logger(True, "pvt_analysis", True)
 
     # * Extract the data.
     data: Dict[str, Dict[str, Any]] = dict()

@@ -1129,7 +1129,7 @@ def analyse(
     """
 
     # * Set up the logger
-    logger = get_logger("pvt_analysis", True)
+    logger = get_logger(True, "pvt_analysis", True)
 
     # * Extract the data.
     data = load_model_data(data_file_name)
