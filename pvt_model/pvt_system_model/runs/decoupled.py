@@ -143,11 +143,7 @@ def decoupled_dynamic_run(
         )
 
     # Determine the number of minutes, days, and months for which to run the simulation.
-    num_months = (
-        (initial_month if initial_month is not None else 1)
-        - 1
-        + (months if months is not None else 0)
-    )  # [months]
+    num_months = months if months is not None else 0  # [months]
     start_month = (
         initial_month
         if 1 <= initial_month <= 12

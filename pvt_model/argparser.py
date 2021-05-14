@@ -355,7 +355,7 @@ def parse_args(args) -> argparse.Namespace:
         "--months",
         "-m",
         help="The number of months for which to run the simulation. Default is 12.",
-        default=12,
+        default=None,
         type=int,
     )
     parser.add_argument(
