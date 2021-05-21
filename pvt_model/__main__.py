@@ -52,6 +52,7 @@ from .analysis import analysis
 from .pvt_system_model import index_handler, tank
 from .pvt_system_model.pvt_panel import pvt
 from .pvt_system_model.__main__ import main as pvt_system_model_main
+from .pvt_system_model.__utils__ import DivergentSolutionError
 
 from .pvt_system_model.constants import (
     DEFAULT_SYSTEM_TEMPERATURE,
@@ -1210,6 +1211,12 @@ def main(args) -> None:  # pylint: disable=too-many-branches
 if __name__ == "__main__":
     try:
         main(sys.argv[1:])
-    except Exception as e:
-        print(f"An exception occured. See /logs for details: {str(e)}")
+    except DivergentSolutionError:
+        print(
+            "A divergent solution occurred - have you considered the difference "
+            "between Celcius and Kelvin in all your units, especially override CLI "
+            "units. Consider checking this before investigating further."
+        )
+    except Exception:
+        print("An exception occured. See /logs for details.")
         raise
