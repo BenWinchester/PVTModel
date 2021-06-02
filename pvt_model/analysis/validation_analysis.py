@@ -252,18 +252,20 @@ def _validation_figure(
         }
 
         x_data_series = numpy.linspace(-0.005, 0.035, 100)
+        y_data_sets = dict()
         for data_entry_name in ["single_glazed", "unglazed", "double_glazed"]:
             data_entry = validation_data_dict[data_entry_name]
-            y_data_series = (
+            y_data_sets[data_entry_name] = (
                 data_entry["x_squared"] * x_data_series ** 2
                 + data_entry["linear_x"] * x_data_series
                 + data_entry["y_intercept"]
             )
 
+        for data_entry_name in sorted(["double_glazed", "single_glazed", "unglazed"]):
             # Plot the experimental data.
             ax1.plot(
                 x_data_series,
-                y_data_series,
+                y_data_sets[data_entry_name],
             )
 
     ax1.set_prop_cycle(None)

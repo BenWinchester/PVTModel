@@ -1,0 +1,131 @@
+---
+################################################################################
+# ilarias_run.yaml - Steady-state data used for Ilaria's run.
+#
+# Copyright 2021, Ben Winchester
+################################################################################
+
+# Data values obtained from
+# Hybrid photovoltaic and solar thermal (PVT) systems for solar combined heat and power
+# Ilaria Guarracino
+# Supervised by Dr. Christos Markides and Dr. Nicholas J. Ekins-Daukes
+
+# Ambient temperature measured in Celcius.
+# Collector input temperatures measured in Celcius.
+# Irradiance measured in Watts per meter squared.
+# Mass flow rate is measured in litres per minute.
+# Wind speed measured in meters per second.
+#
+
+- ambient_temperature: 34.5
+  collector_input_temperature: 27.74
+  collector_output_temperature: 30.72
+  irradiance: 803
+  mass_flow_rate: 8.1857
+  run_number: 1
+  thermal_efficiency: 0.37
+  wind_speed: 5
+- ambient_temperature: 33.24
+  collector_input_temperature: 28.76
+  collector_output_temperature: 31.71
+  irradiance: 819
+  mass_flow_rate: 8.1857
+  run_number: 2
+  thermal_efficiency: 0.36
+  wind_speed: 5
+- ambient_temperature: 30.67
+  collector_input_temperature: 35.88
+  collector_output_temperature: 38.03
+  irradiance: 858
+  mass_flow_rate: 8.1857
+  run_number: 3
+  thermal_efficiency: 0.25
+  wind_speed: 5
+- ambient_temperature: 31.09
+  collector_input_temperature: 36.68
+  collector_output_temperature: 38.75
+  irradiance: 843
+  mass_flow_rate: 8.1857
+  run_number: 4
+  thermal_efficiency: 0.24
+  wind_speed: 5
+- ambient_temperature: 30.63
+  collector_input_temperature: 39.52
+  collector_output_temperature: 41.65
+  irradiance: 908
+  mass_flow_rate: 8.1857
+  run_number: 5
+  thermal_efficiency: 0.23
+  wind_speed: 5
+- ambient_temperature: 31.03
+  collector_input_temperature: 39.57
+  collector_output_temperature: 41.64
+  irradiance: 908
+  mass_flow_rate: 8.1857
+  run_number: 6
+  thermal_efficiency: 0.23
+  wind_speed: 5
+- ambient_temperature: 31.96
+  collector_input_temperature: 45.18
+  collector_output_temperature: 47.73
+  irradiance: 903
+  mass_flow_rate: 8.1857
+  run_number: 7
+  thermal_efficiency: 0.23
+  wind_speed: 5
+- ambient_temperature: 31.23
+  collector_input_temperature: 45.35
+  collector_output_temperature: 47.73
+  irradiance: 909
+  mass_flow_rate: 8.1857
+  run_number: 8
+  thermal_efficiency: 0.21
+  wind_speed: 5
+- ambient_temperature: 32.03
+  collector_input_temperature: 51.12
+  collector_output_temperature: 53.34
+  irradiance: 904
+  mass_flow_rate: 8.1857
+  run_number: 9
+  thermal_efficiency: 0.11
+  wind_speed: 5
+- ambient_temperature: 32.64
+  collector_input_temperature: 52.38
+  collector_output_temperature: 54.02
+  irradiance: 898
+  mass_flow_rate: 8.1857
+  run_number: 10
+  thermal_efficiency: 0.15
+  wind_speed: 5
+- ambient_temperature: 33.26
+  collector_input_temperature: 57.07
+  collector_output_temperature: 58.12
+  irradiance: 894
+  mass_flow_rate: 8.1857
+  run_number: 11
+  thermal_efficiency: 0.10
+  wind_speed: 5
+- ambient_temperature: 32.84
+  collector_input_temperature: 57.58
+  collector_output_temperature: 58.56
+  irradiance: 888
+  mass_flow_rate: 8.1857
+  run_number: 12
+  thermal_efficiency: 0.09
+  wind_speed: 5
+- ambient_temperature: 33.00
+  collector_input_temperature: 61.11
+  collector_output_temperature: 62.22
+  irradiance: 874
+  mass_flow_rate: 8.1857
+  run_number: 13
+  thermal_efficiency: 0.01
+  wind_speed: 5
+- ambient_temperature: 33.13
+  collector_input_temperature: 62.31
+  collector_output_temperature: 62.54
+  irradiance: 865
+  mass_flow_rate: 8.1857
+  run_number: 14
+  thermal_efficiency: 0.02
+  wind_speed: 5
