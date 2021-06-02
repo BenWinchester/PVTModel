@@ -23,7 +23,7 @@ fi
 echo -e "Carrying out unglazed Ilaria analysis based on thesis."
 python3.7 -m pvt_model --initial-month 9 --location system_data/london_ilaria/ \
     --pvt-data-file system_data/pvt_panels/ilarias_panel.yaml \
-    --output output_files/may_week_4/ilaria_single_glazed_steady_state_runs \
+    --output output_files/may_week_4/ilaria_unglazed_steady_state_runs \
     --x-resolution 31 --y-resolution 11 --decoupled --steady-state \
     --steady-state-data-file \
     system_data/steady_state_data/ilaria_glazing_validation_runs.yaml \
