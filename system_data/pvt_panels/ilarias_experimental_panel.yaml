@@ -43,7 +43,7 @@ pvt_collector:
   # One fourteenth of the absorber width.
   # width: 0.06142857142 # [m]
   # Ilaria's absorber width of 0.1m.
-  width: 0.1 #[m]
+  width: 0.13425 #[m]
 glass:
   absorptivity: 0.01 # [unitless]
   # @@@ Value NOT taken from Maria's paper.
@@ -56,7 +56,7 @@ glass:
   heat_capacity: 750 # [840J/kg*K]
   thermal_conductivity: 1.80 # [W/m*K]
   thickness: 0.004 # [m]
-  transmissivity: 0.95 # [unitless]
+  transmissivity: 0.91 # [unitless]
 air_gap:
   thickness: 0.005 # [m]
   thermal_conductivity: 0.025 # [W/m*K]
@@ -76,13 +76,13 @@ pv:
   nominal_power: 180 # [W]
   open_circuit_voltage: 36.9 # [V]
   short_cirvuit_current: 8.34 # [A]
-  thermal_coefficient: 0.0053 # [K^-1]
+  thermal_coefficient: 0.04446 # [K^-1]
   # thermal_coefficient: 0.53 # [K^-1]
   # @@@ Value NOT taken from Maria's paper.
   thermal_conductivity: 140 # [W/m*K]
   thickness: 0.00035 # [m]
   transmissivity: 0.01 # [unitless]
-  reference_efficiency: 0.126 # [unitless]
+  reference_efficiency: 0.117 # [unitless]
   reference_temperature: 298.15 # [K]
   # reference_temperature: 318.15 # [K]
 eva:
@@ -103,13 +103,13 @@ absorber:
   emissivity: 0.05 # [unitless]
   # @@@ Value NOT taken from Maria's paper.
   heat_capacity: 386 # [J/kg*K]
-  inner_pipe_diameter: 0.007717 #[m]
+  inner_pipe_diameter: 0.014851 #[m]
   length: 1.66 # [m]
   # mass_flow_rate: 103.2 # [L/h]
   mass_flow_rate: 7.37 # [L/h]
   maximum_operating_pressure: 3.5 # [bar]
   number_of_pipes: 1 # [pipes]
-  outer_pipe_diameter: 0.008 # [m]
+  outer_pipe_diameter: 0.015 # [m]
   pipe_density: 8960 # [kg/m^3]
   pipe_spacing: 0.095 # [m]
   recommended_flow_pressure_drop: 0.15 # [bar]
