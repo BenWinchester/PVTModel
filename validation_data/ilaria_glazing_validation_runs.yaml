@@ -1,0 +1,74 @@
+---
+################################################################################
+# ilaria_glazing_validation_runs.yaml - Contains glazing-comparison data
+#
+# Copyright 2021, Ben Winchester
+################################################################################
+
+# Data is obtained using web-plot digitiser from Ilaria's thesis.
+# The data is a series of points obtained by Ilaria experimentally comparing the
+# performance of single-glazed and un-glazed collectors.
+#
+
+single_glazed:
+  - reduced_temperature: -0.005926493108728944
+    thermal_efficiency: 0.43036734693877554
+  - reduced_temperature: -0.005022101091931925
+    thermal_efficiency: 0.4171513500461913
+  - reduced_temperature: 0.003973473963158336
+    thermal_efficiency: 0.4266651864449484
+  - reduced_temperature: 0.004578649479977409
+    thermal_efficiency: 0.390086125808348
+  - reduced_temperature: 0.00798404391360337
+    thermal_efficiency: 0.38910193583606284
+  - reduced_temperature: 0.007584012639773811
+    thermal_efficiency: 0.3704023263626438
+  - reduced_temperature: 0.012989563442547543
+    thermal_efficiency: 0.3899220941463005
+  - reduced_temperature: 0.01247670283507376
+    thermal_efficiency: 0.3595762366675065
+  - reduced_temperature: 0.018477171942517086
+    thermal_efficiency: 0.35990429999160156
+  - reduced_temperature: 0.018990032549990883
+    thermal_efficiency: 0.37893197278911567
+  - reduced_temperature: 0.023985294866785585
+    thermal_efficiency: 0.3592481733434114
+  - reduced_temperature: 0.023472434259311795
+    thermal_efficiency: 0.3398924372218023
+  - reduced_temperature: 0.028980557183580287
+    thermal_efficiency: 0.3451414504073234
+  - reduced_temperature: 0.029493417791054077
+    thermal_efficiency: 0.3100386747291509
+  - reduced_temperature: 0.0349912835031731
+    thermal_efficiency: 0.3400564688838498
+  - reduced_temperature: 0.04599727213956061
+    thermal_efficiency: 0.3252936192995717
+  - reduced_temperature: 0.04549466874423629
+    thermal_efficiency: 0.30987464306710333
+unglazed:
+  - reduced_temperature: -0.006622226187250144
+    thermal_efficiency: 0.3702382947005963
+  - reduced_temperature: 0.007296810699588489
+    thermal_efficiency: 0.24688648484084988
+  - reduced_temperature: 0.00789172900425808
+    thermal_efficiency: 0.2399971550348534
+  - reduced_temperature: 0.010476546465925982
+    thermal_efficiency: 0.22589043209876536
+  - reduced_temperature: 0.010989407073399772
+    thermal_efficiency: 0.22999122364995372
+  - reduced_temperature: 0.015984669390194474
+    thermal_efficiency: 0.23195960359452417
+  - reduced_temperature: 0.016794989150003062
+    thermal_efficiency: 0.20997936088015445
+  - reduced_temperature: 0.022887773166791678
+    thermal_efficiency: 0.15010780423280412
+  - reduced_temperature: 0.02289803037894115
+    thermal_efficiency: 0.1097560153691105
+  - reduced_temperature: 0.027175287845272553
+    thermal_efficiency: 0.09975008398421087
+  - reduced_temperature: 0.02837538166676122
+    thermal_efficiency: 0.08974415259931118
+  - reduced_temperature: 0.03339115840785487
+    thermal_efficiency: 0.00986073318216163
+  - reduced_temperature: 0.03390401901532866
+    thermal_efficiency: 0.02068682287729884
