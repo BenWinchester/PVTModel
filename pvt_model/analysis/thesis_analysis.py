@@ -27,6 +27,7 @@ from logging import Logger
 from typing import Any, List, Dict, Optional, Union
 
 import re
+import numpy
 import yaml
 
 from matplotlib import pyplot as plt
@@ -351,58 +352,80 @@ def analyse_decoupled_steady_state_data(
         experimental_steady_state_data = yaml.safe_load(f)
 
     # Post-process the data to a plottable format.
-    reduced_data = collections.defaultdict(dict)
-    thermal_efficiency_labels = set()
-    electrical_efficiency_labels = set()
+    single_glazed_data = collections.defaultdict(dict)
+    unglazed_data = collections.defaultdict(dict)
+    single_glazed_thermal_efficiency_labels = set()
+    unglazed_thermal_efficiency_labels = set()
     ilaria_glazing_regex = re.compile(r"ilaria_(?P<glazing>.*)_steady_state_runs.*")
     for key, sub_dict in data.items():
         ilaria_glazing_match = re.match(ilaria_glazing_regex, key)
         if ilaria_glazing_match is None:
             continue
         glazing = ilaria_glazing_match.group("glazing")
-        for sub_key, value in sub_dict.items():
-            reduced_data[sub_key][f"{glazing} thermal efficiency"] = value[
-                "thermal_efficiency"
-            ]
-            thermal_efficiency_labels.add(f"{glazing} thermal efficiency")
-            # Store a copy of the reduced temperature
-            reduced_data[sub_key]["reduced_collector_temperature"] = value[
-                "reduced_collector_temperature"
-            ]
+        if glazing == "single_glazed":
+            for sub_key, value in sub_dict.items():
+                single_glazed_data[sub_key][f"{glazing} thermal efficiency"] = value[
+                    "thermal_efficiency"
+                ]
+                single_glazed_thermal_efficiency_labels.add(
+                    f"{glazing} thermal efficiency"
+                )
+                # Store a copy of the reduced temperature
+                single_glazed_data[sub_key]["reduced_collector_temperature"] = value[
+                    "reduced_collector_temperature"
+                ]
+        else:
+            for sub_key, value in sub_dict.items():
+                unglazed_data[sub_key][f"{glazing} thermal efficiency"] = value[
+                    "thermal_efficiency"
+                ]
+                unglazed_thermal_efficiency_labels.add(f"{glazing} thermal efficiency")
+                # Store a copy of the reduced temperature
+                unglazed_data[sub_key]["reduced_collector_temperature"] = value[
+                    "reduced_collector_temperature"
+                ]
 
     # Thermal efficiency plot.
     logger.info("Plotting thermal efficiency against the reduced temperature.")
 
     # Plot the experimental data.
     _, ax1 = plt.subplots()
-    ax1.scatter(
-        [
+    for glazing in {"single_glazed", "unglazed"}:
+        x_data = [
             entry["reduced_temperature"]
-            for entry in experimental_steady_state_data["single_glazed"]
-        ],
-        [
+            for entry in experimental_steady_state_data[glazing]
+        ]
+        y_data = [
             entry["thermal_efficiency"]
-            for entry in experimental_steady_state_data["single_glazed"]
-        ],
-        marker="s",
-    )
-    ax1.scatter(
-        [
-            entry["reduced_temperature"]
-            for entry in experimental_steady_state_data["unglazed"]
-        ],
-        [
-            entry["thermal_efficiency"]
-            for entry in experimental_steady_state_data["unglazed"]
-        ],
-        marker="s",
-    )
+            for entry in experimental_steady_state_data[glazing]
+        ]
+        ax1.scatter(
+            x_data,
+            y_data,
+            marker="s",
+        )
+        fit = numpy.polyfit(x_data, y_data, 2)
+        x_series = numpy.linspace(min(x_data), max(x_data), 100)
+        y_series = [fit[0] * entry ** 2 + fit[1] * entry + fit[2] for entry in x_series]
+        plt.plot(x_series, y_series)
 
     # Add the model data.
     plot_figure(
         "thesis_glazing_analysis_thermal_efficiency_against_reduced_temperature",
-        reduced_data,
-        first_axis_things_to_plot=thermal_efficiency_labels,
+        single_glazed_data,
+        first_axis_things_to_plot=single_glazed_thermal_efficiency_labels,
+        first_axis_label="Thermal efficiency",
+        x_axis_label="Reduced temperature / K m^2 / W",
+        x_axis_thing_to_plot="reduced_collector_temperature",
+        plot_title="Thermal efficiency against reduced temperature",
+        disable_lines=True,
+        plot_trendline=True,
+        override_axis=ax1,
+    )
+    plot_figure(
+        "thesis_glazing_analysis_thermal_efficiency_against_reduced_temperature",
+        unglazed_data,
+        first_axis_things_to_plot=unglazed_thermal_efficiency_labels,
         first_axis_label="Thermal efficiency",
         x_axis_label="Reduced temperature / K m^2 / W",
         x_axis_thing_to_plot="reduced_collector_temperature",
