@@ -22,9 +22,9 @@
 
 - ambient_temperature: 37.72
   collector_input_temperature: 32.09
-  collector_output_temperature: 35.50
+  collector_output_temperature: 35.5
   irradiance: 668
-  mass_flow_rate: 1.96
+  mass_flow_rate: 0.27999999999999997
   run_number: 1
   thermal_efficiency: 0.43
   wind_speed: 5
@@ -32,7 +32,7 @@
   collector_input_temperature: 32.65
   collector_output_temperature: 36.03
   irradiance: 687
-  mass_flow_rate: 1.96
+  mass_flow_rate: 0.27999999999999997
   run_number: 2
   thermal_efficiency: 0.42
   wind_speed: 5
@@ -40,7 +40,7 @@
   collector_input_temperature: 39.01
   collector_output_temperature: 42.65
   irradiance: 722
-  mass_flow_rate: 1.96
+  mass_flow_rate: 0.27999999999999997
   run_number: 3
   thermal_efficiency: 0.43
   wind_speed: 5
@@ -48,7 +48,7 @@
   collector_input_temperature: 39.51
   collector_output_temperature: 42.82
   irradiance: 709
-  mass_flow_rate: 1.96
+  mass_flow_rate: 0.27999999999999997
   run_number: 4
   thermal_efficiency: 0.39
   wind_speed: 5
@@ -56,7 +56,7 @@
   collector_input_temperature: 41.74
   collector_output_temperature: 44.99
   irradiance: 740
-  mass_flow_rate: 1.96
+  mass_flow_rate: 0.27999999999999997
   run_number: 5
   thermal_efficiency: 0.37
   wind_speed: 5
@@ -64,55 +64,55 @@
   collector_input_temperature: 41.79
   collector_output_temperature: 45.23
   irradiance: 749
-  mass_flow_rate: 1.96
+  mass_flow_rate: 0.27999999999999997
   run_number: 6
   thermal_efficiency: 0.39
   wind_speed: 5
 - ambient_temperature: 38.37
-  collector_input_temperature: 46.30
+  collector_input_temperature: 46.3
   collector_output_temperature: 49.59
   irradiance: 769
-  mass_flow_rate: 1.96
+  mass_flow_rate: 0.27999999999999997
   run_number: 7
   thermal_efficiency: 0.36
   wind_speed: 5
-- ambient_temperature: 38.20
+- ambient_temperature: 38.2
   collector_input_temperature: 46.48
   collector_output_temperature: 50.08
   irradiance: 780
-  mass_flow_rate: 1.96
+  mass_flow_rate: 0.27999999999999997
   run_number: 8
   thermal_efficiency: 0.39
   wind_speed: 5
 - ambient_temperature: 38.23
-  collector_input_temperature: 51.30
+  collector_input_temperature: 51.3
   collector_output_temperature: 54.71
   irradiance: 800
-  mass_flow_rate: 1.96
+  mass_flow_rate: 0.27999999999999997
   run_number: 9
   thermal_efficiency: 0.36
   wind_speed: 5
 - ambient_temperature: 38.26
   collector_input_temperature: 51.58
-  collector_output_temperature: 55.20
+  collector_output_temperature: 55.2
   irradiance: 807
-  mass_flow_rate: 1.96
+  mass_flow_rate: 0.27999999999999997
   run_number: 10
   thermal_efficiency: 0.38
   wind_speed: 5
 - ambient_temperature: 38.72
   collector_input_temperature: 56.36
-  collector_output_temperature: 59.70
+  collector_output_temperature: 59.7
   irradiance: 820
-  mass_flow_rate: 1.96
+  mass_flow_rate: 0.27999999999999997
   run_number: 11
   thermal_efficiency: 0.34
   wind_speed: 5
-- ambient_temperature: 38.30
+- ambient_temperature: 38.3
   collector_input_temperature: 56.49
   collector_output_temperature: 60.02
   irradiance: 826
-  mass_flow_rate: 1.96
+  mass_flow_rate: 0.27999999999999997
   run_number: 12
   thermal_efficiency: 0.36
   wind_speed: 5
@@ -120,7 +120,7 @@
   collector_input_temperature: 61.38
   collector_output_temperature: 64.82
   irradiance: 837
-  mass_flow_rate: 1.96
+  mass_flow_rate: 0.27999999999999997
   run_number: 13
   thermal_efficiency: 0.35
   wind_speed: 5
@@ -128,23 +128,23 @@
   collector_input_temperature: 61.41
   collector_output_temperature: 64.53
   irradiance: 833
-  mass_flow_rate: 1.96
+  mass_flow_rate: 0.27999999999999997
   run_number: 14
   thermal_efficiency: 0.31
   wind_speed: 5
-- ambient_temperature: 38.70
+- ambient_temperature: 38.7
   collector_input_temperature: 66.17
-  collector_output_temperature: 69.70
+  collector_output_temperature: 69.7
   irradiance: 841
-  mass_flow_rate: 1.96
+  mass_flow_rate: 0.27999999999999997
   run_number: 15
   thermal_efficiency: 0.35
   wind_speed: 5
 - ambient_temperature: 38.55
   collector_input_temperature: 66.18
-  collector_output_temperature: 69.60
+  collector_output_temperature: 69.6
   irradiance: 839
-  mass_flow_rate: 1.96
+  mass_flow_rate: 0.27999999999999997
   run_number: 16
   thermal_efficiency: 0.34
   wind_speed: 5
@@ -152,7 +152,7 @@
   collector_input_temperature: 75.52
   collector_output_temperature: 78.67
   irradiance: 843
-  mass_flow_rate: 1.96
+  mass_flow_rate: 0.27999999999999997
   run_number: 17
   thermal_efficiency: 0.31
   wind_speed: 5
@@ -160,7 +160,7 @@
   collector_input_temperature: 75.75
   collector_output_temperature: 79.04
   irradiance: 843
-  mass_flow_rate: 1.96
+  mass_flow_rate: 0.27999999999999997
   run_number: 18
   thermal_efficiency: 0.33
   wind_speed: 5
