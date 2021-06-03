@@ -1,37 +1,38 @@
 #!/usr/bin/python3.7
 # type: ignore
 ########################################################################################
-# analysis.py - The analysis component for the model.
+# thesis_analysis.py - Carries out analysis on data available from Ilaria in her thesis.
 #
 # Author: Ben Winchester
 # Copyright: Ben Winchester, 2021
 ########################################################################################
 """
-Used for analysis of the output of the model runs.
+Carries out analysis to compare results produced by my model to Ilaria's thesis.
 
-NOTE: The mypy type checker is instructed to ignore this component. This is done due to
-the lower standards applied to the analysis code, and the failure of mypy to correctly
-type-check the external matplotlib.pyplot module.
+The glazing validation, analysed in `glazing_analysis.py`, has produced results that
+differ from those obtained by Ilaria with her model. However, in her thesis, she has
+experimental results that look more similar to those obtained by my model.
+
+This module hence carries out analysis to plot my results against those obtained
+experimentally by Ilaria for comparison and validation purposes.
 
 """
 
 import argparse
+import collections
 import os
 import sys
 
 from logging import Logger
 from typing import Any, List, Dict, Optional, Union
 
+import re
 import yaml
 
 from matplotlib import pyplot as plt
 
 try:
-    from ..__utils__ import get_logger
-    from ..pvt_system_model.constants import (  # pylint: disable=unused-import
-        HEAT_CAPACITY_OF_WATER,
-    )
-    from ..pvt_system_model.physics_utils import reduced_temperature
+    from ..__utils__ import get_logger, MissingParametersError
     from .__utils__ import (
         GraphDetail,
         load_model_data,
@@ -63,7 +64,7 @@ OLD_FIGURES_DIRECTORY: str = "old_figures"
 # Used to distinguish steady-state data sets.
 STEADY_STATE_DATA_TYPE = "steady_state"
 # Name of the steady-state data file.
-STEADY_STATE_DATA_FILE_NAME = "autotherm.yaml"
+STEADY_STATE_DATA_FILE_NAME = "ilaria_glazing_validation_runs.yaml"
 # How detailed the graph should be
 GRAPH_DETAIL: GraphDetail = GraphDetail.lowest
 # How many values there should be between each tick on the x-axis
@@ -82,7 +83,9 @@ def _parse_args(args) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        "--data-file-name", "-df", help="Path to the data file to parse."
+        "--data-file-directory",
+        "-dfdir",
+        help="Path to the directory containing data files to parse.",
     )
     parser.add_argument(
         "--show-output",
@@ -315,536 +318,6 @@ def _post_process_data(
     return data_to_post_process
 
 
-def analyse_coupled_dynamic_data(
-    data: Dict[Any, Any], logger: Logger, skip_2d_plots: bool
-) -> None:
-    """
-    Carry out analysis on a set of dynamic data.
-
-    :param data:
-        The data to analyse.
-
-    :param logger:
-        The logger to use for the analysis run.
-
-    :param skip_2d_plots:
-        Whether to skip the 2D plots (True) or include them (False).
-
-    """
-
-    logger.info("Beginning analysis of coupled dynamic data set.")
-
-    # * Reduce the resolution of the data.
-    data = _reduce_data(data, GRAPH_DETAIL, logger)
-    logger.info(
-        "Data successfully reduced to %s graph detail level.", GRAPH_DETAIL.name
-    )
-
-    # * Create new data values where needed.
-    data = _post_process_data(data)
-    logger.info("Post-processing of data complete.")
-
-    # Plot All Temperatures
-    plot_figure(
-        "all_temperatures",
-        data,
-        first_axis_things_to_plot=[
-            "ambient_temperature",
-            "bulk_water_temperature",
-            "absorber_temperature",
-            "collector_input_temperature",
-            "collector_output_temperature",
-            "glass_temperature",
-            "pipe_temperature",
-            "pv_temperature",
-            "sky_temperature",
-            "tank_temperature",
-        ],
-        first_axis_label="Temperature / deg C",
-        first_axis_y_limits=[-10, 110],
-    )
-
-    # Plot All Temperatures
-    plot_figure(
-        "all_temperatures_unbounded",
-        data,
-        first_axis_things_to_plot=[
-            "ambient_temperature",
-            "bulk_water_temperature",
-            "absorber_temperature",
-            "collector_input_temperature",
-            "collector_output_temperature",
-            "glass_temperature",
-            "pipe_temperature",
-            "pv_temperature",
-            "sky_temperature",
-            "tank_temperature",
-        ],
-        first_axis_label="Temperature / deg C",
-    )
-
-    # # Plot Figure 4a: Electrical Demand
-    # plot_figure(
-    #     "maria_4a_electrical_load",
-    #     data,
-    #     ["electrical_load"],
-    #     "Dwelling Load Profile / W",
-    #     first_axis_y_limits=[0, 5000],
-    #     first_axis_shape="d",
-    # )
-
-    # # Plot Figure 4b: Thermal Demand
-    # plot_figure(
-    #     "maria_4b_thermal_load",
-    #     data,
-    #     ["hot_water_load"],
-    #     "Hot Water Consumption / Litres per hour",
-    #     first_axis_y_limits=[0, 12],
-    #     bar_plot=True,
-    # )
-
-    # # Plot Figure 5a: Diurnal Solar Irradiance
-    # plot_figure(
-    #     "maria_5a_solar_irradiance",
-    #     data,
-    #     [
-    #         "solar_irradiance",
-    #         # "normal_irradiance"
-    #     ],
-    #     "Solar Irradiance / Watts / meter squared",
-    #     first_axis_y_limits=[0, 600],
-    # )
-
-    # Plot Figure 5b: Ambient Temperature
-    plot_figure(
-        "ambient_temperature",
-        data,
-        first_axis_things_to_plot=["ambient_temperature", "sky_temperature"],
-        first_axis_label="Temperature / deg C",
-        first_axis_y_limits=[0, 65],
-    )
-
-    # Plot Figure 6a: Panel-related Temperatures
-    plot_figure(
-        "panel_temperature",
-        data,
-        first_axis_things_to_plot=[
-            "ambient_temperature",
-            "bulk_water_temperature",
-            "absorber_temperature",
-            "glass_temperature",
-            "pipe_temperature",
-            "pv_temperature",
-            "sky_temperature",
-        ],
-        first_axis_label="Temperature / deg C",
-        first_axis_y_limits=[-10, 50],
-    )
-
-    # Plot Figure 6b: Tank-related Temperatures
-    plot_figure(
-        "tank_temperature",
-        data,
-        first_axis_things_to_plot=[
-            "collector_output_temperature",
-            "collector_input_temperature",
-            "tank_temperature",
-        ],
-        first_axis_label="Temperature / deg C",
-        first_axis_y_limits=[0, 50],
-    )
-
-    # Plot Figure 7: Stream-related Temperatures
-    plot_figure(
-        "stream_temperature",
-        data,
-        first_axis_things_to_plot=[
-            "absorber_temperature_gain",
-            "exchanger_temperature_drop",
-        ],
-        first_axis_label="Temperature Gain / deg C",
-        # second_axis_things_to_plot=["tank_heat_addition"],
-        # second_axis_label="Tank Heat Addition / W",
-    )
-
-    # # Plot Figure 8A - Electrical Power and Net Electrical Power
-    # plot_figure(
-    #     "maria_8a_electrical_output",
-    #     data,
-    #     ["gross_electrical_output", "net_electrical_output"],
-    #     "Electrical Energy Supplied / Wh",
-    # )
-
-    # # Plot Figure 8B - Thermal Power Supplied and Thermal Power Demanded
-    # plot_figure(
-    #     "maria_8b_thermal_output",
-    #     data,
-    #     ["thermal_load", "thermal_output"],
-    #     "Thermal Energy Supplied / Wh",
-    # )
-
-    # # Plot Figure 10 - Electrical Power, Gross only
-    # plot_figure(
-    #     "maria_10_gross_electrical_output",
-    #     data,
-    #     ["gross_electrical_output"],
-    #     "Electrical Energy Supplied / Wh",
-    # )
-
-    # Plot glass layer temperatures at midnight, 6 am, noon, and 6 pm.
-    if not skip_2d_plots:
-        plot_two_dimensional_figure(
-            "glass_temperature_0000",
-            logger,
-            data,
-            "layer_temperature_map_glass",
-            axis_label="Temperature / degC",
-            hour=0,
-            minute=0,
-            plot_title="Glass layer temperature profile at 00:00",
-        )
-
-        plot_two_dimensional_figure(
-            "glass_temperature_0600",
-            logger,
-            data,
-            "layer_temperature_map_glass",
-            axis_label="Temperature / degC",
-            hour=6,
-            minute=0,
-            plot_title="Glass layer temperature profile at 06:00",
-        )
-
-        plot_two_dimensional_figure(
-            "glass_temperature_1200",
-            logger,
-            data,
-            "layer_temperature_map_glass",
-            axis_label="Temperature / degC",
-            hour=12,
-            minute=0,
-            plot_title="Glass layer temperature profile at 12:00",
-        )
-
-        plot_two_dimensional_figure(
-            "glass_temperature_1800",
-            logger,
-            data,
-            "layer_temperature_map_glass",
-            axis_label="Temperature / degC",
-            hour=18,
-            minute=0,
-            plot_title="Glass layer temperature profile at 18:00",
-        )
-
-        # Plot PV layer temperatures at midnight, 6 am, noon, and 6 pm.
-        plot_two_dimensional_figure(
-            "pv_temperature_0000",
-            logger,
-            data,
-            "layer_temperature_map_pv",
-            axis_label="Temperature / degC",
-            hour=0,
-            minute=0,
-            plot_title="PV layer temperature profile at 00:00",
-        )
-
-        plot_two_dimensional_figure(
-            "pv_temperature_0600",
-            logger,
-            data,
-            "layer_temperature_map_pv",
-            axis_label="Temperature / degC",
-            hour=6,
-            minute=0,
-            plot_title="PV layer temperature profile at 06:00",
-        )
-
-        plot_two_dimensional_figure(
-            "pv_temperature_1200",
-            logger,
-            data,
-            "layer_temperature_map_pv",
-            axis_label="Temperature / degC",
-            hour=12,
-            minute=0,
-            plot_title="PV layer temperature profile at 12:00",
-        )
-
-        plot_two_dimensional_figure(
-            "pv_temperature_1800",
-            logger,
-            data,
-            "layer_temperature_map_pv",
-            axis_label="Temperature / degC",
-            hour=18,
-            minute=0,
-            plot_title="PV layer temperature profile at 18:00",
-        )
-
-        # Plot absorber layer temperatures at midnight, 6 am, noon, and 6 pm.
-        plot_two_dimensional_figure(
-            "absorber_temperature_0000",
-            logger,
-            data,
-            "layer_temperature_map_absorber",
-            axis_label="Temperature / degC",
-            hour=0,
-            minute=0,
-            plot_title="Absorber layer temperature profile at 00:00",
-        )
-
-        plot_two_dimensional_figure(
-            "absorber_temperature_0600",
-            logger,
-            data,
-            "layer_temperature_map_absorber",
-            axis_label="Temperature / degC",
-            hour=6,
-            minute=0,
-            plot_title="Absorber layer temperature profile at 06:00",
-        )
-
-        plot_two_dimensional_figure(
-            "absorber_temperature_1200",
-            logger,
-            data,
-            "layer_temperature_map_absorber",
-            axis_label="Temperature / degC",
-            hour=12,
-            minute=0,
-            plot_title="Absorber layer temperature profile at 12:00",
-        )
-
-        plot_two_dimensional_figure(
-            "absorber_temperature_1800",
-            logger,
-            data,
-            "layer_temperature_map_absorber",
-            axis_label="Temperature / degC",
-            hour=18,
-            minute=0,
-            plot_title="Absorber layer temperature profile at 18:00",
-        )
-
-        # Plot bulk water temperatures at midnight, 6 am, noon, and 6 pm.
-        plot_two_dimensional_figure(
-            "pipe_temperature_0000",
-            logger,
-            data,
-            "layer_temperature_map_pipe",
-            axis_label="Temperature / degC",
-            hour=0,
-            minute=0,
-            plot_title="Pipe temperature profile at 00:00",
-        )
-
-        plot_two_dimensional_figure(
-            "pipe_temperature_0600",
-            logger,
-            data,
-            "layer_temperature_map_pipe",
-            axis_label="Temperature / degC",
-            hour=6,
-            minute=0,
-            plot_title="Pipe temperature profile at 06:00",
-        )
-
-        plot_two_dimensional_figure(
-            "pipe_temperature_1200",
-            logger,
-            data,
-            "layer_temperature_map_pipe",
-            axis_label="Temperature / degC",
-            hour=12,
-            minute=0,
-            plot_title="Pipe temperature profile at 12:00",
-        )
-
-        plot_two_dimensional_figure(
-            "pipe_temperature_1800",
-            logger,
-            data,
-            "layer_temperature_map_pipe",
-            axis_label="Temperature / degC",
-            hour=18,
-            minute=0,
-            plot_title="Pipe temperature profile at 18:00",
-        )
-
-        # Plot bulk water temperatures at midnight, 6 am, noon, and 6 pm.
-        plot_two_dimensional_figure(
-            "bulk_water_temperature_0000",
-            logger,
-            data,
-            "layer_temperature_map_bulk_water",
-            axis_label="Temperature / degC",
-            hour=0,
-            minute=0,
-            plot_title="Bulk-water temperature profile at 00:00",
-        )
-
-        plot_two_dimensional_figure(
-            "bulk_water_temperature_0600",
-            logger,
-            data,
-            "layer_temperature_map_bulk_water",
-            axis_label="Temperature / degC",
-            hour=6,
-            minute=0,
-            plot_title="Bulk-water temperature profile at 06:00",
-        )
-
-        plot_two_dimensional_figure(
-            "bulk_water_temperature_1200",
-            logger,
-            data,
-            "layer_temperature_map_bulk_water",
-            axis_label="Temperature / degC",
-            hour=12,
-            minute=0,
-            plot_title="Bulk-water temperature profile at 12:00",
-        )
-
-        plot_two_dimensional_figure(
-            "bulk_water_temperature_1800",
-            logger,
-            data,
-            "layer_temperature_map_bulk_water",
-            axis_label="Temperature / degC",
-            hour=18,
-            minute=0,
-            plot_title="Bulk-water temperature profile at 18:00",
-        )
-
-    """  # pylint: disable=pointless-string-statement
-    # * Plotting all tank-related temperatures
-    plot_figure(
-        "tank_temperature",
-        data,
-        [
-            "absorber_temperature",
-            "collector_output_temperature",
-            "absorber_temperature_gain",
-            "tank_temperature",
-            # "tank_output_temperature",
-            "ambient_temperature",
-            "sky_temperature",
-        ],
-        "Temperature / degC",
-    )
-
-    # * Plotting all temperatures relevant in the system.
-    plot_figure(
-        "all_temperatures",
-        data,
-        [
-            "absorber_temperature",
-            "collector_output_temperature",
-            "absorber_temperature_gain",
-            "tank_temperature",
-            # "tank_output_temperature",
-            "ambient_temperature",
-            "sky_temperature",
-            "glass_temperature",
-            "pv_temperature",
-        ],
-        "Temperature / degC",
-    )
-
-    # * Plotting all PV-T panel layer temperatures
-    plot_figure(
-        "pvt_panel_temperature",
-        data,
-        [
-            "glass_temperature",
-            "pv_temperature",
-            "absorber_temperature",
-            "ambient_temperature",
-            "sky_temperature",
-        ],
-        "Temperature / degC",
-    )
-
-    # * Plotting all temperatures in an unglazed panel
-    plot_figure(
-        "unglazed_pvt_temperature",
-        data,
-        [
-            "pv_temperature",
-            "absorber_temperature",
-            "ambient_temperature",
-            "sky_temperature",
-        ],
-        "Temperature / degC",
-    )
-
-    # * Plotting thermal-absorber-only temperatures
-    plot_figure(
-        "isolated_thermal_absorber",
-        data,
-        [
-            "absorber_temperature",
-            "ambient_temperature",
-            "sky_temperature",
-        ],
-        "Temperature / degC",
-    )
-
-    # * Plotting demand covered and thermal load on one graph
-    plot_figure(
-        "demand_covered",
-        data,
-        first_axis_things_to_plot=["dc_electrical", "dc_thermal"],
-        first_axis_label="Demand Covered / %",
-        first_axis_y_limits=(0, 100),
-        second_axis_things_to_plot=["thermal_load", "thermal_output"],
-        second_axis_label="Thermal Energy Supplied / Wh",
-    )
-
-    # * Plotting the auxiliary heating required along with the thermal load on the
-    # * system.
-
-    plot_figure(
-        "auxiliary_heating",
-        data,
-        first_axis_things_to_plot=["auxiliary_heating", "tank_heat_addition"],
-        first_axis_label="Auxiliary Heating and Tank Heat Addition / Watts",
-        second_axis_things_to_plot=["thermal_load", "thermal_output"],
-        second_axis_label="Thermal Energy Supplied / Wh",
-    )
-
-    # * Plotting the absorber input, output, gain, and temperature.
-    plot_figure(
-        "absorber_temperatures",
-        data,
-        [
-            "absorber_temperature",
-            "collector_output_temperature",
-            "collector_input_temperature",
-            "absorber_temperature_gain",
-            "tank_temperature",
-        ],
-        "Temperature / K",
-    )
-
-    # * Plotting the tank temperature, absorber temperature, and heat inputted into the
-    # * tank.
-    plot_figure(
-        "tank_heat_gain_profile",
-        data,
-        first_axis_things_to_plot=["tank_temperature", "absorber_temperature"],
-        first_axis_label="Temperature / deg C",
-        first_axis_y_limits=(0, 100),
-        second_axis_things_to_plot=["tank_heat_addition"],
-        second_axis_label="Tank Heat Input / Watts",
-    )
-
-    # * Plotting the tank temperature, absorber temperature, and heat inputted into the
-    # * tank.
-    """  # pylint: disable=pointless-string-statement
-
-
 def analyse_decoupled_steady_state_data(
     data: Dict[Any, Any], logger: Logger, skip_2d_plots: bool
 ) -> None:
@@ -870,129 +343,32 @@ def analyse_decoupled_steady_state_data(
     else:
         print(f"{int(len(data.keys()) * 5 + 2)} figures will be plotted.")
         logger.info("%s figures will be plotted.", int(len(data.keys()) * 5 + 2))
-
-    for temperature in data.keys():
-        temperature_string = str(round(float(temperature), 2)).replace(".", "_")
-
-        if not skip_2d_plots:
-            # Glass Temperatures
-            try:
-                logger.info(
-                    "Plotting 3D upper glass profile at %s degC.", temperature_string
-                )
-                plot_two_dimensional_figure(
-                    "steady_state_upper_glass_layer_{}degC_input".format(
-                        temperature_string
-                    ),
-                    logger,
-                    data,
-                    axis_label="Temperature / deg C",
-                    entry_number=temperature,
-                    plot_title="Upper glass layer temperature with {} K input HTF".format(
-                        round(float(temperature), 2)
-                    ),
-                    thing_to_plot="layer_temperature_map_upper_glass",
-                )
-            except TypeError:
-                logger.info(
-                    "Upper-glass temperature profile could not be plotted due to no data."
-                )
-
-            # Glass Temperatures
-            try:
-                logger.info("Plotting 3D glass profile at %s degC.", temperature_string)
-                plot_two_dimensional_figure(
-                    "steady_state_glass_layer_{}degC_input".format(temperature_string),
-                    logger,
-                    data,
-                    axis_label="Temperature / deg C",
-                    entry_number=temperature,
-                    plot_title="Glass layer temperature with {} K input HTF".format(
-                        round(float(temperature), 2)
-                    ),
-                    thing_to_plot="layer_temperature_map_glass",
-                )
-            except TypeError:
-                print("Glass temperature profile could not be plotted due to no data.")
-
-            # PV Temperatures
-            logger.info("Plotting 3D PV profile at %s degC.", temperature_string)
-            plot_two_dimensional_figure(
-                "steady_state_pv_layer_{}degC_input".format(temperature_string),
-                logger,
-                data,
-                axis_label="Temperature / deg C",
-                entry_number=temperature,
-                plot_title="PV layer temperature with {} K input HTF".format(
-                    round(float(temperature), 2)
-                ),
-                thing_to_plot="layer_temperature_map_pv",
-            )
-
-            # Collector Temperatures
-            logger.info("Plotting 3D absorber profile at %s degC.", temperature_string)
-            plot_two_dimensional_figure(
-                "steady_state_absorber_layer_{}degC_input".format(temperature_string),
-                logger,
-                data,
-                axis_label="Temperature / deg C",
-                entry_number=temperature,
-                plot_title="Collector layer temperature with {} K input HTF".format(
-                    round(float(temperature), 2)
-                ),
-                thing_to_plot="layer_temperature_map_absorber",
-            )
-
-        # Pipe Temperatures
-        logger.info(
-            "Plotting 3D pipe profile at %s degC. NOTE: The profile will appear 2D if "
-            "only one pipe is present.",
-            temperature_string,
-        )
-        plot_two_dimensional_figure(
-            "steady_state_pipe_{}degC_input".format(temperature_string),
-            logger,
-            data,
-            axis_label="Pipe temperature / deg C",
-            entry_number=temperature,
-            plot_title="Pipe temperature with {} K input HTF".format(
-                round(float(temperature), 2)
-            ),
-            thing_to_plot="layer_temperature_map_pipe",
-        )
-
-        # Bulk-water Temperatures
-        logger.info(
-            "Plotting 3D bulk-water profile at %s degC. NOTE: The profile will appear "
-            "2D if only one pipe is present.",
-            temperature_string,
-        )
-        plot_two_dimensional_figure(
-            "steady_state_bulk_water_{}degC_input".format(temperature_string),
-            logger,
-            data,
-            axis_label="Bulk-water temperature / deg C",
-            entry_number=temperature,
-            plot_title="Bulk-water temperature with {} K input HTF".format(
-                round(float(temperature), 2)
-            ),
-            thing_to_plot="layer_temperature_map_bulk_water",
-        )
-
     # Parse the thermal-efficiency data.
     with open(
-        os.path.join("system_data", "steady_state_data", STEADY_STATE_DATA_FILE_NAME),
+        os.path.join("validation_data", STEADY_STATE_DATA_FILE_NAME),
         "r",
     ) as f:  #
         experimental_steady_state_data = yaml.safe_load(f)
 
-    # Post-process this data.
-    for entry in experimental_steady_state_data:
-        entry["reduced_temperature"] = reduced_temperature(
-            entry["ambient_temperature"],
-            entry["average_bulk_water_temperature"],
-            entry["irradiance"],
-        )
+    # Post-process the data to a plottable format.
+    reduced_data = collections.defaultdict(dict)
+    thermal_efficiency_labels = set()
+    electrical_efficiency_labels = set()
+    ilaria_glazing_regex = re.compile(r"ilaria_(?P<glazing>.*)_steady_state_runs.*")
+    for key, sub_dict in data.items():
+        ilaria_glazing_match = re.match(ilaria_glazing_regex, key)
+        if ilaria_glazing_match is None:
+            continue
+        glazing = ilaria_glazing_match.group("glazing")
+        for sub_key, value in sub_dict.items():
+            reduced_data[sub_key][f"{glazing} thermal efficiency"] = value[
+                "thermal_efficiency"
+            ]
+            thermal_efficiency_labels.add(f"{glazing} thermal efficiency")
+            # Store a copy of the reduced temperature
+            reduced_data[sub_key]["reduced_collector_temperature"] = value[
+                "reduced_collector_temperature"
+            ]
 
     # Thermal efficiency plot.
     logger.info("Plotting thermal efficiency against the reduced temperature.")
@@ -1000,125 +376,53 @@ def analyse_decoupled_steady_state_data(
     # Plot the experimental data.
     _, ax1 = plt.subplots()
     ax1.scatter(
-        [entry["reduced_temperature"] for entry in experimental_steady_state_data],
-        [entry["thermal_efficiency"] for entry in experimental_steady_state_data],
+        [
+            entry["reduced_temperature"]
+            for entry in experimental_steady_state_data["single_glazed"]
+        ],
+        [
+            entry["thermal_efficiency"]
+            for entry in experimental_steady_state_data["single_glazed"]
+        ],
+        marker="s",
+    )
+    ax1.scatter(
+        [
+            entry["reduced_temperature"]
+            for entry in experimental_steady_state_data["unglazed"]
+        ],
+        [
+            entry["thermal_efficiency"]
+            for entry in experimental_steady_state_data["unglazed"]
+        ],
         marker="s",
     )
 
     # Add the model data.
     plot_figure(
-        "thermal_efficiency_against_reduced_temperature",
-        data,
-        first_axis_things_to_plot=["thermal_efficiency"],
+        "thesis_glazing_analysis_thermal_efficiency_against_reduced_temperature",
+        reduced_data,
+        first_axis_things_to_plot=thermal_efficiency_labels,
         first_axis_label="Thermal efficiency",
         x_axis_label="Reduced temperature / K m^2 / W",
         x_axis_thing_to_plot="reduced_collector_temperature",
         plot_title="Thermal efficiency against reduced temperature",
         disable_lines=True,
+        plot_trendline=True,
         override_axis=ax1,
-    )
-
-    # Collector temperature gain plot.
-    logger.info(
-        "Plotting collector temperature gain against the input HTF temperature."
-    )
-
-    # Plot the experimental data.
-    _, ax1 = plt.subplots()
-    ax1.scatter(
-        [
-            entry["collector_input_temperature"]
-            for entry in experimental_steady_state_data
-        ],
-        [
-            entry["collector_temperature_gain"]
-            for entry in experimental_steady_state_data
-        ],
-        marker="s",
-    )
-
-    # Add the model data.
-    plot_figure(
-        "collector_tempreature_gain_against_input_temperature",
-        data,
-        first_axis_things_to_plot=["collector_temperature_gain"],
-        first_axis_label="Collector temperature gain / K",
-        x_axis_label="Collector input temperature / degC",
-        use_data_keys_as_x_axis=True,
-        plot_title="Collector temperature gain against input temperature",
-        disable_lines=True,
-        override_axis=ax1,
-    )
-
-    # Plot the electrical efficiency against the reduced temperature.
-    plot_figure(
-        "electrical_efficiency_against_reduced_temperature",
-        data,
-        first_axis_things_to_plot=["electrical_efficiency"],
-        first_axis_label="Electrical efficiency",
-        x_axis_label="Reduced temperature / K m^2 / W",
-        x_axis_thing_to_plot="reduced_collector_temperature",
-        plot_title="Electrical efficiency against reduced temperature",
-        disable_lines=True,
-    )
-
-
-def analyse_decoupled_dynamic_data(data: Dict[Any, Any], logger: Logger) -> None:
-    """
-    Carry out analysis on a decoupled dyanmic set of data.
-
-    :param data:
-        The data to analyse.
-
-    :param logger:
-        The logger to use for the run.
-
-    """
-
-    logger.info("Beginning analysis of a decoupled dynamic data set.")
-
-    # * Reduce the resolution of the data.
-    data = _reduce_data(data, GRAPH_DETAIL, logger)
-    logger.info(
-        "Data successfully reduced to %s graph detail level.", GRAPH_DETAIL.name
-    )
-
-    # * Create new data values where needed.
-    data = _post_process_data(data)
-    logger.info("Post-processing of data complete.")
-
-    # Clip out the data points up to 10 minutes in.
-    data = {key: value for key, value in data.items() if int(key) >= 30}
-
-    # Plot output temperature and irradiance.
-    plot_figure(
-        "collector_output_response",
-        data,
-        first_axis_things_to_plot=[
-            "collector_output_temperature",
-            "collector_input_temperature",
-            "ambient_temperature",
-        ],
-        first_axis_label="Collector Output Temperature / deg C",
-        first_axis_y_limits=[15, 25],
-        second_axis_things_to_plot=[
-            "solar_irradiance",
-        ],
-        second_axis_label="Solar Irradiance / W/m^2",
-        second_axis_y_limits=[0, 1000],
     )
 
 
 def analyse(
-    data_file_name: str,
+    data_file_directory: str,
     show_output: Optional[bool] = False,
     skip_2d_plots: Optional[bool] = False,
 ) -> None:
     """
     The main method for the analysis module.
 
-    :param data_file_name:
-        The path to the data file to analyse.
+    :param data_file_directory:
+        The path to the directory containing data files to analyse.
 
     :param show_output:
         Whether to show the output files generated.
@@ -1129,33 +433,27 @@ def analyse(
     """
 
     # * Set up the logger
-    logger = get_logger(True, "pvt_analysis", True)
+    logger = get_logger(True, "pvt_thesis_analysis", True)
 
     # * Extract the data.
-    data = load_model_data(data_file_name)
-
-    # * Determine whether the data is dynamic or steady-state.
-    try:
-        data_type = data.pop("data_type")
-    except KeyError:
-        logger.error(
-            "Analysis data without an explicit data type is depreciated. Dynamic assumed."
+    data: Dict[str, Dict[str, Any]] = dict()
+    for data_file_name in os.listdir(data_file_directory):
+        data[data_file_name] = load_model_data(
+            os.path.join(data_file_directory, data_file_name)
         )
-        data_type = DYNAMIC_DATA_TYPE
 
-    # * Carry out analysis appropriate to the data type specified.
-    if data_type in (DYNAMIC_DATA_TYPE, f"{COUPLED_DATA_TYPE}_{DYNAMIC_DATA_TYPE}"):
-        analyse_coupled_dynamic_data(data, logger, skip_2d_plots)
-    elif data_type in (
-        STEADY_STATE_DATA_TYPE,
-        f"{DECOUPLED_DATA_TYPE}_{STEADY_STATE_DATA_TYPE}",
-    ):
-        analyse_decoupled_steady_state_data(data, logger, skip_2d_plots)
-    elif data_type == f"{DECOUPLED_DATA_TYPE}_{DYNAMIC_DATA_TYPE}":
-        analyse_decoupled_dynamic_data(data, logger)
-    else:
-        logger.error("Data type was neither 'dynamic' nor 'steady_state'. Exiting...")
-        sys.exit(1)
+        # If the data type is not decoupled, steady-state data, then exit.
+        data_type = data[data_file_name].pop("data_type")
+        if data_type != f"{DECOUPLED_DATA_TYPE}_{STEADY_STATE_DATA_TYPE}":
+            logger.info("Data type was not 'steady_state'. Omitting...")
+            data.pop(data_file_name)
+            continue
+        if "no_pv" in data_file_name:
+            logger.info("Invalid data was removed.")
+            data.pop(data_file_name)
+            continue
+
+    analyse_decoupled_steady_state_data(data, logger, skip_2d_plots)
 
     logger.info("Analysis complete - all figures saved successfully.")
 
@@ -1166,5 +464,7 @@ def analyse(
 if __name__ == "__main__":
     parsed_args = _parse_args(sys.argv[1:])
     analyse(
-        parsed_args.data_file_name, parsed_args.show_output, parsed_args.skip_2d_plots
+        parsed_args.data_file_directory,
+        parsed_args.show_output,
+        parsed_args.skip_2d_plots,
     )
