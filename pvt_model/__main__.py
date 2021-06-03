@@ -1142,6 +1142,20 @@ def main(args) -> None:  # pylint: disable=too-many-branches
             # If specified, parse the steady-state data file.
             steady_state_runs = read_yaml(parsed_args.steady_state_data_file)
 
+            for steady_state_run in steady_state_runs:
+                if parsed_args.ambient_temperature is not None:
+                    steady_state_run[
+                        "ambient_temperature"
+                    ] = parsed_args.ambient_temperature
+                if parsed_args.collector_input_temperature is not None:
+                    steady_state_run[
+                        "collector_input_temperature"
+                    ] = parsed_args.collector_input_temperature
+                if parsed_args.solar_irradiance is not None:
+                    steady_state_run["irradiance"] = parsed_args.solar_irradiance
+                if parsed_args.wind_speed is not None:
+                    steady_state_run["wind_speed"] = parsed_args.wind_speed
+
             logger.info(
                 "%s runs will be attempted based on the input data file.",
                 len(steady_state_runs),

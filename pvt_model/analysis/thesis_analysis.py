@@ -33,12 +33,11 @@ import yaml
 from matplotlib import pyplot as plt
 
 try:
-    from ..__utils__ import get_logger, MissingParametersError
+    from ..__utils__ import get_logger
     from .__utils__ import (
         GraphDetail,
         load_model_data,
         plot_figure,
-        plot_two_dimensional_figure,
     )
 except ModuleNotFoundError:
     import logging
@@ -54,25 +53,14 @@ __all__ = ("analyse",)
 COUPLED_DATA_TYPE = "coupled"
 # Used to distinguished decoupled data sets.
 DECOUPLED_DATA_TYPE = "decoupled"
-# Used to distinguish dynamic data sets.
-DYNAMIC_DATA_TYPE = "dynamic"
-# The directory into which which should be saved
-NEW_FIGURES_DIRECTORY: str = "figures"
 # Used to identify the "time" data set.
 TIME_KEY = "time"
-# The directory in which old figures are saved and stored for long-term access
-OLD_FIGURES_DIRECTORY: str = "old_figures"
 # Used to distinguish steady-state data sets.
 STEADY_STATE_DATA_TYPE = "steady_state"
 # Name of the steady-state data file.
 STEADY_STATE_DATA_FILE_NAME = "ilaria_glazing_validation_runs.yaml"
-# How detailed the graph should be
-GRAPH_DETAIL: GraphDetail = GraphDetail.lowest
-# How many values there should be between each tick on the x-axis
-# X_TICK_SEPARATION: int = int(8 * GRAPH_DETAIL.value / 48)
-X_TICK_SEPARATION: int = 8
-# Which days of data to include
-DAYS_TO_INCLUDE: List[bool] = [False, True]
+# Height of the y error bars.
+Y_ERROR_BAR_HEIGHT = 0.1
 
 
 def _parse_args(args) -> argparse.Namespace:
@@ -319,6 +307,58 @@ def _post_process_data(
     return data_to_post_process
 
 
+def _plot_experimental_data() -> plt.Axes:
+    """
+    Plot the experimental data for the runs, both unglazed and single glazed.
+
+    :return:
+        The axes used for the plotting.
+
+    """
+
+    # Parse the thermal-efficiency data.
+    with open(
+        os.path.join("validation_data", STEADY_STATE_DATA_FILE_NAME),
+        "r",
+    ) as f:  #
+        experimental_steady_state_data = yaml.safe_load(f)
+
+    # Plot the experimental data.
+    _, ax1 = plt.subplots()
+    for glazing, colour in zip(["unglazed", "single_glazed"], ["blue", "orange"]):
+        x_data = [
+            entry["reduced_temperature"]
+            for entry in experimental_steady_state_data[glazing]
+        ]
+        y_data = [
+            entry["thermal_efficiency"]
+            for entry in experimental_steady_state_data[glazing]
+        ]
+        error_bar_data = [
+            entry["error_bar"] for entry in experimental_steady_state_data[glazing]
+        ]
+        ax1.scatter(
+            x_data,
+            y_data,
+            # yerr=Y_ERROR_BAR_HEIGHT,
+            marker="s",
+            # ls="none",
+        )
+        plt.errorbar(
+            x_data,
+            y_data,
+            yerr=error_bar_data,
+            ls="none",
+            color=colour,
+        )
+        fit = numpy.polyfit(x_data, y_data, 2)
+        x_series = numpy.linspace(min(x_data), max(x_data), 100)
+        y_series = [fit[0] * entry ** 2 + fit[1] * entry + fit[2] for entry in x_series]
+        plt.plot(x_series, y_series)
+
+    return ax1
+
+
 def analyse_decoupled_steady_state_data(
     data: Dict[Any, Any], logger: Logger, skip_2d_plots: bool
 ) -> None:
@@ -344,12 +384,6 @@ def analyse_decoupled_steady_state_data(
     else:
         print(f"{int(len(data.keys()) * 5 + 2)} figures will be plotted.")
         logger.info("%s figures will be plotted.", int(len(data.keys()) * 5 + 2))
-    # Parse the thermal-efficiency data.
-    with open(
-        os.path.join("validation_data", STEADY_STATE_DATA_FILE_NAME),
-        "r",
-    ) as f:  #
-        experimental_steady_state_data = yaml.safe_load(f)
 
     # Post-process the data to a plottable format.
     single_glazed_data = collections.defaultdict(dict)
@@ -389,25 +423,7 @@ def analyse_decoupled_steady_state_data(
     logger.info("Plotting thermal efficiency against the reduced temperature.")
 
     # Plot the experimental data.
-    _, ax1 = plt.subplots()
-    for glazing in {"single_glazed", "unglazed"}:
-        x_data = [
-            entry["reduced_temperature"]
-            for entry in experimental_steady_state_data[glazing]
-        ]
-        y_data = [
-            entry["thermal_efficiency"]
-            for entry in experimental_steady_state_data[glazing]
-        ]
-        ax1.scatter(
-            x_data,
-            y_data,
-            marker="s",
-        )
-        fit = numpy.polyfit(x_data, y_data, 2)
-        x_series = numpy.linspace(min(x_data), max(x_data), 100)
-        y_series = [fit[0] * entry ** 2 + fit[1] * entry + fit[2] for entry in x_series]
-        plt.plot(x_series, y_series)
+    ax1 = _plot_experimental_data()
 
     # Add the model data.
     plot_figure(
@@ -421,6 +437,7 @@ def analyse_decoupled_steady_state_data(
         disable_lines=True,
         plot_trendline=True,
         override_axis=ax1,
+        first_axis_y_limits=[-0.1, 0.6],
     )
     plot_figure(
         "thesis_glazing_analysis_thermal_efficiency_against_reduced_temperature",
@@ -433,6 +450,7 @@ def analyse_decoupled_steady_state_data(
         disable_lines=True,
         plot_trendline=True,
         override_axis=ax1,
+        first_axis_y_limits=[-0.1, 0.6],
     )
 
 
