@@ -24,7 +24,7 @@ import os
 import sys
 
 from logging import Logger
-from typing import Any, List, Dict, Optional, Union
+from typing import Any, Dict, Optional, Union
 
 import re
 import numpy
