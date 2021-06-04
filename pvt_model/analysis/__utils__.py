@@ -380,7 +380,10 @@ def save_figure(figure_name: str) -> None:
         )
 
     # Save the figure
-    plt.savefig(os.path.join(NEW_FIGURES_DIRECTORY, f"figure_{figure_name}.jpg"))
+    plt.savefig(
+        os.path.join(NEW_FIGURES_DIRECTORY, f"figure_{figure_name}.png"),
+        transparent=True,
+    )
 
 
 def plot_figure(  # pylint: disable=too-many-branches
