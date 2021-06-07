@@ -438,6 +438,7 @@ def analyse_decoupled_steady_state_data(
         plot_trendline=True,
         override_axis=ax1,
         first_axis_y_limits=[-0.1, 0.6],
+        transparent=True,
     )
     plot_figure(
         "thesis_glazing_analysis_thermal_efficiency_against_reduced_temperature",
@@ -451,6 +452,7 @@ def analyse_decoupled_steady_state_data(
         plot_trendline=True,
         override_axis=ax1,
         first_axis_y_limits=[-0.1, 0.6],
+        transparent=True,
     )
 
 
