@@ -326,12 +326,16 @@ def plot(  # pylint: disable=too-many-branches
     return line if not disable_lines else None
 
 
-def save_figure(figure_name: str) -> None:
+def save_figure(figure_name: str, transparent: bool = False) -> None:
     """
     Saves the figure, shuffling existing files out of the way.
 
     :param figure_name:
         The name of the figure to save.
+
+    :param transparent:
+        Whether to save the figure with a transparent background (True) or a white
+        background (False).
 
     """
 
@@ -382,7 +386,7 @@ def save_figure(figure_name: str) -> None:
     # Save the figure
     plt.savefig(
         os.path.join(NEW_FIGURES_DIRECTORY, f"figure_{figure_name}.png"),
-        transparent=True,
+        transparent=transparent,
     )
 
 
@@ -406,6 +410,7 @@ def plot_figure(  # pylint: disable=too-many-branches
     override_axis: Optional[Axes] = None,
     plot_title: Optional[str] = None,
     plot_trendline: bool = False,
+    transparent: bool = False,
 ) -> None:
     """
     Does all the work needed to plot a figure with up to two axes and save it.
@@ -470,6 +475,10 @@ def plot_figure(  # pylint: disable=too-many-branches
     :param plot_trendline:
         If `True`, then a best-fit trendline will be added.
 
+    :param transparent:
+        Whether to save the figure with a transparent background (True) or with a white
+        background (False).
+
     """
 
     if override_axis is None:
@@ -518,7 +527,7 @@ def plot_figure(  # pylint: disable=too-many-branches
     # Save the figure and return if only one axis is plotted.
     if second_axis_things_to_plot is None:
         ax1.legend(first_axis_things_to_plot)  # , loc="upper left")
-        save_figure(figure_name)
+        save_figure(figure_name, transparent)
         return
 
     # Second-axis plotting.
@@ -563,7 +572,7 @@ def plot_figure(  # pylint: disable=too-many-branches
             ax2,
         )
 
-    save_figure(figure_name)
+    save_figure(figure_name, transparent)
 
 
 def plot_two_dimensional_figure(
@@ -681,7 +690,7 @@ def plot_two_dimensional_figure(
             plt.legend(lines, [thing_to_plot])
         else:
             axis.legend([thing_to_plot])
-        save_figure(figure_name)
+        save_figure(figure_name, False)
 
         return
 
@@ -706,7 +715,7 @@ def plot_two_dimensional_figure(
     # Add axes and colour scale.
     fig3D.colorbar(surface, shrink=0.5, aspect=5, label=axis_label)
 
-    save_figure(figure_name)
+    save_figure(figure_name, False)
 
     x_array = numpy.reshape(x_series, array_shape)
     y_array = numpy.reshape(y_series, array_shape)
@@ -731,6 +740,6 @@ def plot_two_dimensional_figure(
     axes3D.set_ylabel("Y index")
     axes3D.set_zlabel(axis_label)
 
-    save_figure(f"{figure_name}_3d")
+    save_figure(f"{figure_name}_3d", False)
     if not hold:
         plt.close("all")
