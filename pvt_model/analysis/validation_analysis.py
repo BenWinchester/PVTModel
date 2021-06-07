@@ -253,7 +253,7 @@ def _validation_figure(
 
         x_data_series = numpy.linspace(-0.005, 0.035, 100)
         y_data_sets = dict()
-        for data_entry_name in ["single_glazed", "unglazed", "double_glazed"]:
+        for data_entry_name in ["single_glazed", "double_glazed", "unglazed"]:
             data_entry = validation_data_dict[data_entry_name]
             y_data_sets[data_entry_name] = (
                 data_entry["x_squared"] * x_data_series ** 2
@@ -472,6 +472,23 @@ def analyse_decoupled_steady_state_data(  # pylint: disable=too-many-branches
 
     logger.info("Beginning Ilaria glazing analysis.")
     ilaria_glazing_regex = re.compile(r"ilaria_(?P<variable_value>.*)_pc_1_0_.*")
+    _validation_figure(
+        data,
+        logger,
+        "ilaria_glazing",
+        ilaria_glazing_regex,
+        "glazing",
+        validation_filename="glazing_comparison.yaml",
+    )
+    logger.info("Done.")
+    plt.close()
+
+    logger.info("All validation analysis complete.")
+
+    logger.info("Beginning Ilaria theoretical glazing analysis.")
+    ilaria_glazing_regex = re.compile(
+        r"ilarias_theoretical_panel_(?P<variable_value>.*).json"
+    )
     _validation_figure(
         data,
         logger,
