@@ -31,7 +31,6 @@ from . import argparser
 
 from .__utils__ import (
     BColours,
-    CarbonEmissions,
     COARSE_RUN_RESOLUTION,
     FileType,
     fourier_number,
@@ -44,7 +43,6 @@ from .__utils__ import (
     save_data,
     SystemData,
     TemperatureName,
-    TotalPowerData,
 )
 
 from .analysis import analysis
@@ -1063,7 +1061,7 @@ def main(args) -> None:  # pylint: disable=too-many-branches
 
     # Save the data ouputted by the model.
     logger.info("Saving output data to: %s.json.", parsed_args.output)
-    _save_data(FileType.JSON, logger, operating_mode, parsed_args.output, system_data)
+    save_data(FileType.JSON, logger, operating_mode, parsed_args.output, system_data)
     print(f"Model output successfully saved to {parsed_args.output}.json.")
 
     # If in verbose mode, output average, min, and max temperatures.

@@ -28,7 +28,7 @@ import yaml
 
 __all__ = (
     "BColours",
-    "calculate_and_print_fourier_numbers" "CarbonEmissions",
+    "CarbonEmissions",
     "COARSE_RUN_RESOLUTION",
     "fourier_number",
     "get_logger",
