@@ -25,12 +25,12 @@ from typing import List, Tuple, Union
 import numpy
 
 from .. import index_handler
-from ..pvt_panel import pvt
+from ..pvt_collector import pvt
 
 from ...__utils__ import (
     TemperatureName,
 )
-from ..pvt_panel.element import Element
+from ..pvt_collector.element import Element
 
 __all__ = (
     "calculate_decoupled_system_continuity_equation",
@@ -45,7 +45,7 @@ def calculate_decoupled_system_continuity_equation(
     number_of_temperatures: int,
     number_of_x_elements: int,
     number_of_y_elements: int,
-    pvt_panel: pvt.PVT,
+    pvt_collector: pvt.PVT,
 ) -> List[Tuple[List[float], float]]:
     """
     Compute the system continuity equations when the system is decoupled.
@@ -64,7 +64,7 @@ def calculate_decoupled_system_continuity_equation(
     row_equation: List[float] = [0] * number_of_temperatures
     row_equation[
         index_handler.index_from_temperature_name(
-            pvt_panel,
+            pvt_collector,
             TemperatureName.collector_in,
         )
     ] = 1
@@ -78,14 +78,14 @@ def calculate_decoupled_system_continuity_equation(
                 number_of_pipes,
                 number_of_x_elements,
                 pipe_number,  # type: ignore
-                pvt_panel,
+                pvt_collector,
                 TemperatureName.htf_in,
                 0,
             )
         ] = 1
         row_equation[
             index_handler.index_from_temperature_name(
-                pvt_panel,
+                pvt_collector,
                 TemperatureName.collector_in,
             )
         ] = -1
@@ -100,7 +100,7 @@ def calculate_decoupled_system_continuity_equation(
                 number_of_pipes,
                 number_of_x_elements,
                 pipe_number,
-                pvt_panel,
+                pvt_collector,
                 TemperatureName.htf_out,
                 number_of_y_elements - 1,
             )
@@ -109,7 +109,7 @@ def calculate_decoupled_system_continuity_equation(
         )
     row_equation[
         index_handler.index_from_temperature_name(
-            pvt_panel,
+            pvt_collector,
             TemperatureName.collector_out,
         )
     ] = 1
@@ -122,7 +122,7 @@ def calculate_fluid_continuity_equation(
     number_of_pipes: int,
     number_of_temperatures: int,
     number_of_x_elements: int,
-    pvt_panel: pvt.PVT,
+    pvt_collector: pvt.PVT,
     element: Element,
 ) -> Tuple[List[float], float]:
     """
@@ -147,7 +147,7 @@ def calculate_fluid_continuity_equation(
             number_of_pipes,
             number_of_x_elements,
             element.pipe_index,  # type: ignore
-            pvt_panel,
+            pvt_collector,
             TemperatureName.htf_out,
             element.y_index,
         )
@@ -158,7 +158,7 @@ def calculate_fluid_continuity_equation(
             number_of_pipes,
             number_of_x_elements,
             element.pipe_index,  # type: ignore
-            pvt_panel,
+            pvt_collector,
             TemperatureName.htf_in,
             element.y_index + 1,
         )
@@ -173,7 +173,7 @@ def calculate_system_continuity_equations(
     number_of_x_elements: int,
     number_of_y_elements: int,
     previous_temperature_vector: Union[List[float], numpy.ndarray],
-    pvt_panel: pvt.PVT,
+    pvt_collector: pvt.PVT,
 ) -> List[Tuple[List[float], float]]:
     """
     Returns matrix rows and resultant vector values representing system continuities.
@@ -208,14 +208,14 @@ def calculate_system_continuity_equations(
                 number_of_pipes,
                 number_of_x_elements,
                 pipe_number,
-                pvt_panel,
+                pvt_collector,
                 TemperatureName.htf_in,
                 0,
             )
         ] = 1
         resultant_value = previous_temperature_vector[
             index_handler.index_from_temperature_name(
-                pvt_panel,
+                pvt_collector,
                 TemperatureName.collector_in,
             )
         ]
@@ -230,7 +230,7 @@ def calculate_system_continuity_equations(
                 number_of_pipes,
                 number_of_x_elements,
                 pipe_number,
-                pvt_panel,
+                pvt_collector,
                 TemperatureName.htf_out,
                 number_of_y_elements - 1,
             )
@@ -239,7 +239,7 @@ def calculate_system_continuity_equations(
         )
     row_equation[
         index_handler.index_from_temperature_name(
-            pvt_panel,
+            pvt_collector,
             TemperatureName.collector_out,
         )
     ] = 1
@@ -249,13 +249,13 @@ def calculate_system_continuity_equations(
     row_equation = [0] * number_of_temperatures
     row_equation[
         index_handler.index_from_temperature_name(
-            pvt_panel,
+            pvt_collector,
             TemperatureName.collector_out,
         )
     ] = -1
     row_equation[
         index_handler.index_from_temperature_name(
-            pvt_panel,
+            pvt_collector,
             TemperatureName.tank_in,
         )
     ] = 1
@@ -264,13 +264,13 @@ def calculate_system_continuity_equations(
     row_equation = [0] * number_of_temperatures
     row_equation[
         index_handler.index_from_temperature_name(
-            pvt_panel,
+            pvt_collector,
             TemperatureName.tank_out,
         )
     ] = -1
     row_equation[
         index_handler.index_from_temperature_name(
-            pvt_panel,
+            pvt_collector,
             TemperatureName.collector_in,
         )
     ] = 1

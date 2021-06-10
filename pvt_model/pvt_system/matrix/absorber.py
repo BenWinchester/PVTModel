@@ -26,12 +26,12 @@ from typing import List, Optional, Tuple, Union
 import numpy
 
 from .. import index_handler, physics_utils
-from ..pvt_panel import pvt
+from ..pvt_collector import pvt
 
 from ...__utils__ import OperatingMode, ProgrammerJudgementFault, TemperatureName
 from ..__utils__ import WeatherConditions
-from ..pvt_panel.element import Element, ElementCoordinates
-from ..pvt_panel.physics_utils import insulation_thermal_resistance
+from ..pvt_collector.element import Element, ElementCoordinates
+from ..pvt_collector.physics_utils import insulation_thermal_resistance
 
 
 __all__ = ("calculate_absorber_equation",)
@@ -50,7 +50,7 @@ def calculate_absorber_equation(  # pylint: disable=too-many-branches
     operating_mode: OperatingMode,
     previous_temperature_vector: Optional[numpy.ndarray],
     pv_to_absorber_conduction: float,
-    pvt_panel: pvt.PVT,
+    pvt_collector: pvt.PVT,
     resolution: Optional[int],
     element: Element,
     weather_conditions: WeatherConditions,
@@ -84,9 +84,9 @@ def calculate_absorber_equation(  # pylint: disable=too-many-branches
         collector_internal_energy_change: float = (
             element.width  # [m]
             * element.length  # [m]
-            * pvt_panel.absorber.thickness  # [m]
-            * pvt_panel.absorber.density  # [kg/m^3]
-            * pvt_panel.absorber.heat_capacity  # [J/kg*K]
+            * pvt_collector.absorber.thickness  # [m]
+            * pvt_collector.absorber.density  # [kg/m^3]
+            * pvt_collector.absorber.heat_capacity  # [J/kg*K]
             / resolution  # type: ignore  # [s]
         )
     else:
@@ -96,13 +96,13 @@ def calculate_absorber_equation(  # pylint: disable=too-many-branches
     )
 
     # Compute the positive conductive term based on the next element along.
-    positive_x_element = pvt_panel.elements.get(
+    positive_x_element = pvt_collector.elements.get(
         ElementCoordinates(element.x_index + 1, element.y_index)
     )
     if positive_x_element is not None:
         positive_x_wise_conduction: float = (
-            pvt_panel.absorber.conductivity  # [W/m*K]
-            * pvt_panel.absorber.thickness  # [m]
+            pvt_collector.absorber.conductivity  # [W/m*K]
+            * pvt_collector.absorber.thickness  # [m]
             * element.length  # [m]
             / (0.5 * (element.width + positive_x_element.width))  # [m]
         )
@@ -113,13 +113,13 @@ def calculate_absorber_equation(  # pylint: disable=too-many-branches
     )
 
     # Compute the positive conductive term based on the next element along.
-    negative_x_element = pvt_panel.elements.get(
+    negative_x_element = pvt_collector.elements.get(
         ElementCoordinates(element.x_index - 1, element.y_index)
     )
     if negative_x_element is not None:
         negative_x_wise_conduction: float = (
-            pvt_panel.absorber.conductivity  # [W/m*K]
-            * pvt_panel.absorber.thickness  # [m]
+            pvt_collector.absorber.conductivity  # [W/m*K]
+            * pvt_collector.absorber.thickness  # [m]
             * element.length  # [m]
             / (0.5 * (element.width + negative_x_element.width))  # [m]
         )
@@ -134,13 +134,13 @@ def calculate_absorber_equation(  # pylint: disable=too-many-branches
     logger.debug("Absorber x-wise conduction term: %s W/K", x_wise_conduction)
 
     # Compute the positive conductive term based on the next element along.
-    positive_y_element = pvt_panel.elements.get(
+    positive_y_element = pvt_collector.elements.get(
         ElementCoordinates(element.x_index, element.y_index + 1)
     )
     if positive_y_element is not None:
         positive_y_wise_conduction: float = (
-            pvt_panel.absorber.conductivity  # [W/m*K]
-            * pvt_panel.absorber.thickness  # [m]
+            pvt_collector.absorber.conductivity  # [W/m*K]
+            * pvt_collector.absorber.thickness  # [m]
             * element.width  # [m]
             / (0.5 * (element.length + positive_y_element.length))  # [m]
         )
@@ -151,13 +151,13 @@ def calculate_absorber_equation(  # pylint: disable=too-many-branches
     )
 
     # Compute the positive conductive term based on the next element along.
-    negative_y_element = pvt_panel.elements.get(
+    negative_y_element = pvt_collector.elements.get(
         ElementCoordinates(element.x_index, element.y_index - 1)
     )
     if negative_y_element is not None:
         negative_y_wise_conduction: float = (
-            pvt_panel.absorber.conductivity  # [W/m*K]
-            * pvt_panel.absorber.thickness  # [m]
+            pvt_collector.absorber.conductivity  # [W/m*K]
+            * pvt_collector.absorber.thickness  # [m]
             * element.width  # [m]
             / (0.5 * (element.length + negative_y_element.length))  # [m]
         )
@@ -177,10 +177,10 @@ def calculate_absorber_equation(  # pylint: disable=too-many-branches
             * element.length  # [m]
             / insulation_thermal_resistance(
                 best_guess_temperature_vector,
-                pvt_panel,
+                pvt_collector,
                 index_handler.index_from_element_coordinates(
                     number_of_x_elements,
-                    pvt_panel,
+                    pvt_collector,
                     TemperatureName.absorber,
                     element.x_index,
                     element.y_index,
@@ -202,12 +202,12 @@ def calculate_absorber_equation(  # pylint: disable=too-many-branches
             absorber_to_sky_radiation,
         ) = physics_utils.upward_loss_terms(
             best_guess_temperature_vector,
-            pvt_panel,
+            pvt_collector,
             element,
-            pvt_panel.absorber.emissivity,
+            pvt_collector.absorber.emissivity,
             index_handler.index_from_element_coordinates(
                 number_of_x_elements,
-                pvt_panel,
+                pvt_collector,
                 TemperatureName.absorber,
                 element.x_index,
                 element.y_index,
@@ -224,7 +224,7 @@ def calculate_absorber_equation(  # pylint: disable=too-many-branches
     row_equation[
         index_handler.index_from_element_coordinates(
             number_of_x_elements,
-            pvt_panel,
+            pvt_collector,
             TemperatureName.absorber,
             element.x_index,
             element.y_index,
@@ -253,7 +253,7 @@ def calculate_absorber_equation(  # pylint: disable=too-many-branches
         row_equation[
             index_handler.index_from_element_coordinates(
                 number_of_x_elements,
-                pvt_panel,
+                pvt_collector,
                 TemperatureName.absorber,
                 element.x_index + 1,
                 element.y_index,
@@ -267,7 +267,7 @@ def calculate_absorber_equation(  # pylint: disable=too-many-branches
         row_equation[
             index_handler.index_from_element_coordinates(
                 number_of_x_elements,
-                pvt_panel,
+                pvt_collector,
                 TemperatureName.absorber,
                 element.x_index - 1,
                 element.y_index,
@@ -281,7 +281,7 @@ def calculate_absorber_equation(  # pylint: disable=too-many-branches
         row_equation[
             index_handler.index_from_element_coordinates(
                 number_of_x_elements,
-                pvt_panel,
+                pvt_collector,
                 TemperatureName.absorber,
                 element.x_index,
                 element.y_index + 1,
@@ -295,7 +295,7 @@ def calculate_absorber_equation(  # pylint: disable=too-many-branches
         row_equation[
             index_handler.index_from_element_coordinates(
                 number_of_x_elements,
-                pvt_panel,
+                pvt_collector,
                 TemperatureName.absorber,
                 element.x_index,
                 element.y_index - 1,
@@ -309,7 +309,7 @@ def calculate_absorber_equation(  # pylint: disable=too-many-branches
         row_equation[
             index_handler.index_from_element_coordinates(
                 number_of_x_elements,
-                pvt_panel,
+                pvt_collector,
                 TemperatureName.pv,
                 element.x_index,
                 element.y_index,
@@ -321,7 +321,7 @@ def calculate_absorber_equation(  # pylint: disable=too-many-branches
         row_equation[
             index_handler.index_from_element_coordinates(
                 number_of_x_elements,
-                pvt_panel,
+                pvt_collector,
                 TemperatureName.glass,
                 element.x_index,
                 element.y_index,
@@ -341,7 +341,7 @@ def calculate_absorber_equation(  # pylint: disable=too-many-branches
                     number_of_pipes,
                     number_of_x_elements,
                     element.pipe_index,
-                    pvt_panel,
+                    pvt_collector,
                     TemperatureName.pipe,
                     element.y_index,
                 )
@@ -357,7 +357,7 @@ def calculate_absorber_equation(  # pylint: disable=too-many-branches
     # Compute the solar-thermal absorption if relevant.
     if not element.pv:
         solar_thermal_resultant_vector_absorbtion_term = (
-            pvt_panel.absorber_transmissivity_absorptivity_product
+            pvt_collector.absorber_transmissivity_absorptivity_product
             * weather_conditions.irradiance  # [W/m^2]
             * element.width  # [m]
             * element.length  # [m]
@@ -385,7 +385,7 @@ def calculate_absorber_equation(  # pylint: disable=too-many-branches
             * previous_temperature_vector[  # type: ignore
                 index_handler.index_from_element_coordinates(
                     number_of_x_elements,
-                    pvt_panel,
+                    pvt_collector,
                     TemperatureName.absorber,
                     element.x_index,
                     element.y_index,

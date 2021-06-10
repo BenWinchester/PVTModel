@@ -1,6 +1,6 @@
 #!/usr/bin/python3.7
 ########################################################################################
-# pvt_panel/bond.py - Represents an bond layer within a PVT panel.
+# pvt_collector/bond.py - Represents an bond layer within a PVT panel.
 #
 # Author: Ben Winchester
 # Copyright: Ben Winchester, 2021

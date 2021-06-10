@@ -1,6 +1,6 @@
 #!/usr/bin/python3.7
 ########################################################################################
-# pvt_panel/tedlar.py - Represents an tedlar layer within a PVT panel.
+# pvt_collector/tedlar.py - Represents an tedlar layer within a PVT panel.
 #
 # Author: Ben Winchester
 # Copyright: Ben Winchester, 2021

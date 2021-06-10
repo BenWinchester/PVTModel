@@ -23,7 +23,7 @@ import datetime
 from logging import Logger
 from typing import Any, Dict, Optional, Set
 
-from .pvt_panel import adhesive, bond, eva, pvt, element, tedlar
+from .pvt_collector import adhesive, bond, eva, pvt, element, tedlar
 from . import exchanger, tank, pump
 
 from ..__utils__ import (
@@ -45,14 +45,14 @@ from .__utils__ import (
     PVParameters,
 )
 from .index_handler import x_coordinate, y_coordinate
-from .pvt_panel.__utils__ import MicroLayer
+from .pvt_collector.__utils__ import MicroLayer
 
 
 __all__ = (
     "heat_exchanger_from_path",
     "hot_water_tank_from_path",
     "pump_from_path",
-    "pvt_panel_from_path",
+    "pvt_collector_from_path",
 )
 
 #######################
@@ -485,7 +485,7 @@ def _elements_from_data(
     return elements
 
 
-def pvt_panel_from_path(
+def pvt_collector_from_path(
     layers: Set[TemperatureName],
     logger: Logger,
     override_mass_flow_rate: Optional[float],
@@ -578,7 +578,7 @@ def pvt_panel_from_path(
     )
 
     try:
-        pvt_panel = pvt.PVT(
+        pvt_collector = pvt.PVT(
             absorber_pipe_bond=bond.Bond(
                 pvt_data["bond"]["thermal_conductivity"],
                 pvt_data["bond"]["thickness"],
@@ -637,4 +637,4 @@ def pvt_panel_from_path(
             "PVT Data File", f"Error parsing data types - type mismatch: {str(e)}"
         ) from None
 
-    return pvt_panel
+    return pvt_collector

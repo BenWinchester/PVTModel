@@ -3,79 +3,79 @@
 #
 # Copyright 2021, Ben Winchester
 ########################################################################################
-- file: "pvt_model/pvt_panel/tests/test_absorber.py"
+- file: "pvt_model/pvt_collector/tests/test_absorber.py"
   flag: "protected-access"
   justification: "Test module is permitted to access protected members."
   line: 251
-- file: "pvt_model/pvt_panel/tests/test_pvt.py"
+- file: "pvt_model/pvt_collector/tests/test_pvt.py"
   flag: protected-access
   justification: "Test module is permitted to access protected members."
   line: 204
-- file: "pvt_model/pvt_panel/tests/test_pvt.py"
+- file: "pvt_model/pvt_collector/tests/test_pvt.py"
   flag: protected-access
   justification: "Test module is permitted to access protected members."
   line: 223
-- file: "pvt_model/pvt_panel/tests/test_pvt.py"
+- file: "pvt_model/pvt_collector/tests/test_pvt.py"
   flag: protected-access
   justification: "Test module is permitted to access protected members."
   line: 226
-- file: "pvt_model/pvt_panel/tests/test_pvt.py"
+- file: "pvt_model/pvt_collector/tests/test_pvt.py"
   flag: protected-access
   justification: "Test module is permitted to access protected members."
   line: 241
-- file: "pvt_model/pvt_panel/tests/test_pvt.py"
+- file: "pvt_model/pvt_collector/tests/test_pvt.py"
   flag: protected-access
   justification: "Test module is permitted to access protected members."
   line: 244
-- file: "pvt_model/pvt_panel/tests/test_pvt.py"
+- file: "pvt_model/pvt_collector/tests/test_pvt.py"
   flag: protected-access
   justification: "Test module is permitted to access protected members."
   line: 265
-- file: "pvt_model/pvt_panel/tests/test_pvt.py"
+- file: "pvt_model/pvt_collector/tests/test_pvt.py"
   flag: protected-access
   justification: "Test module is permitted to access protected members."
   line: 273
-- file: "pvt_model/pvt_panel/tests/test_pvt.py"
+- file: "pvt_model/pvt_collector/tests/test_pvt.py"
   flag: protected-access
   justification: "Test module is permitted to access protected members."
   line: 274
-- file: "pvt_model/pvt_panel/tests/test_pvt.py"
+- file: "pvt_model/pvt_collector/tests/test_pvt.py"
   flag: protected-access
   justification: "Test module is permitted to access protected members."
   line: 284
-- file: "pvt_model/pvt_panel/tests/test_pvt.py"
+- file: "pvt_model/pvt_collector/tests/test_pvt.py"
   flag: protected-access
   justification: "Test module is permitted to access protected members."
   line: 296
-- file: "pvt_model/pvt_panel/tests/test_pvt.py"
+- file: "pvt_model/pvt_collector/tests/test_pvt.py"
   flag: protected-access
   justification: "Test module is permitted to access protected members."
   line: 304
-- file: "pvt_model/pvt_panel/tests/test_utils.py"
+- file: "pvt_model/pvt_collector/tests/test_utils.py"
   flag: unused-import
   justification: "Test module is permitted to access protected members."
   line: 17
-- file: "pvt_model/pvt_panel/tests/test_utils.py"
+- file: "pvt_model/pvt_collector/tests/test_utils.py"
   flag: unused-import
   justification: "Test module is permitted to access protected members."
   line: 19
-- file: "pvt_model/pvt_panel/tests/test_utils.py"
+- file: "pvt_model/pvt_collector/tests/test_utils.py"
   flag: unused-import
   justification: "Test module is permitted to access protected members."
   line: 21
-- file: "pvt_model/pvt_panel/tests/test_utils.py"
+- file: "pvt_model/pvt_collector/tests/test_utils.py"
   flag: unused-import
   justification: "Test module is permitted to access protected members."
   line: 23
-- file: "pvt_model/pvt_panel/tests/test_utils.py"
+- file: "pvt_model/pvt_collector/tests/test_utils.py"
   flag: protected-access
   justification: "Test module is permitted to access protected members."
   line: 69
-- file: "pvt_model/pvt_panel/tests/test_utils.py"
+- file: "pvt_model/pvt_collector/tests/test_utils.py"
   flag: protected-access
   justification: "Test module is permitted to access protected members."
   line: 73
-- file: "pvt_model/pvt_panel/pvt.py"
+- file: "pvt_model/pvt_collector/pvt.py"
   flag: no-self-use
   justification: "Method has self-use under other functional flow."
   line: 349

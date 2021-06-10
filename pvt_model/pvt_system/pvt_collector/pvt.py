@@ -1,6 +1,6 @@
 #!/usr/bin/python3.7
 ########################################################################################
-# pvt_panel/pvt.py - Models a PVT panel and all contained components.
+# pvt_collector/pvt.py - Models a PVT panel and all contained components.
 #
 # Author: Ben Winchester
 # Copyright: Ben Winchester, 2020

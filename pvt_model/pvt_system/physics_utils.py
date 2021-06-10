@@ -23,8 +23,8 @@ from .constants import (
     THERMAL_CONDUCTIVITY_OF_WATER,
     ZERO_CELCIUS_OFFSET,
 )
-from .pvt_panel import pvt
-from .pvt_panel.element import Element
+from .pvt_collector import pvt
+from .pvt_collector.element import Element
 
 from .__utils__ import ProgrammerJudgementFault, WeatherConditions
 
@@ -44,7 +44,7 @@ __all__ = (
 
 
 def _top_heat_transfer_coefficient(
-    pvt_panel: pvt.PVT,
+    pvt_collector: pvt.PVT,
     element_top_temperature: float,
     weather_conditions: WeatherConditions,
 ) -> float:
@@ -53,7 +53,7 @@ def _top_heat_transfer_coefficient(
 
     NOTE: This includes both conductive (free) and convective (forced) heat transfers.
 
-    :param pvt_panel:
+    :param pvt_collector:
         The pvt panel being modelled.
 
     :param element_top_temperature:
@@ -71,7 +71,7 @@ def _top_heat_transfer_coefficient(
     heat_transfer_coefficient: float = (
         weather_conditions.wind_heat_transfer_coefficient ** 3
         + free_heat_transfer_coefficient_of_air(
-            pvt_panel, element_top_temperature, weather_conditions
+            pvt_collector, element_top_temperature, weather_conditions
         )
         ** 3
     ) ** (1 / 3)
@@ -81,7 +81,7 @@ def _top_heat_transfer_coefficient(
 
 def convective_heat_transfer_coefficient_of_water(
     fluid_temperature: float,
-    pvt_panel: pvt.PVT,
+    pvt_collector: pvt.PVT,
     weather_conditions: WeatherConditions,
 ) -> float:
     """
@@ -90,7 +90,7 @@ def convective_heat_transfer_coefficient_of_water(
     :param fluid_temperature:
         The temperature of the fluid element, measured in Kelvin.
 
-    :param pvt_panel:
+    :param pvt_collector:
         The PVT panel being modelled.
 
     :param weather_conditions:
@@ -105,10 +105,10 @@ def convective_heat_transfer_coefficient_of_water(
     """
 
     # Convert the mass-flow rate into a flow speed.
-    flow_speed: float = pvt_panel.absorber.mass_flow_rate / (
+    flow_speed: float = pvt_collector.absorber.mass_flow_rate / (
         density_of_water(fluid_temperature)
         * pi
-        * (pvt_panel.absorber.inner_pipe_diameter / 2) ** 2
+        * (pvt_collector.absorber.inner_pipe_diameter / 2) ** 2
     )
 
     # Compute the current Reynolds number.
@@ -116,19 +116,21 @@ def convective_heat_transfer_coefficient_of_water(
         density_of_water(fluid_temperature),
         dynamic_viscosity_of_water(fluid_temperature),
         flow_speed,
-        pvt_panel.absorber.inner_pipe_diameter,
+        pvt_collector.absorber.inner_pipe_diameter,
     )
 
     if flow_speed == 0:
         return (
-            2 * THERMAL_CONDUCTIVITY_OF_WATER / pvt_panel.absorber.inner_pipe_diameter
+            2
+            * THERMAL_CONDUCTIVITY_OF_WATER
+            / pvt_collector.absorber.inner_pipe_diameter
         )
 
     if current_reynolds_number < 2300:
         return (
             4.36
             * THERMAL_CONDUCTIVITY_OF_WATER
-            / pvt_panel.absorber.inner_pipe_diameter
+            / pvt_collector.absorber.inner_pipe_diameter
         )
 
     return (
@@ -136,7 +138,7 @@ def convective_heat_transfer_coefficient_of_water(
         * (current_reynolds_number ** 0.8)
         * (prandtl_number(weather_conditions) ** 0.4)
         * THERMAL_CONDUCTIVITY_OF_WATER
-        / pvt_panel.absorber.inner_pipe_diameter
+        / pvt_collector.absorber.inner_pipe_diameter
     )
 
 
@@ -183,14 +185,14 @@ def dynamic_viscosity_of_water(fluid_temperature: float) -> float:
 
 
 def free_heat_transfer_coefficient_of_air(
-    pvt_panel: pvt.PVT,
+    pvt_collector: pvt.PVT,
     element_top_temperature: float,
     weather_conditions: WeatherConditions,
 ) -> float:
     """
     Computes the free (conductive/convective) heat-transfer coefficient of air.
 
-    :param pvt_panel:
+    :param pvt_collector:
         The pvt panel being modelled.
 
     :param element_top_temperature:
@@ -205,12 +207,12 @@ def free_heat_transfer_coefficient_of_air(
 
     """
 
-    length_scale: float = max(pvt_panel.length, pvt_panel.width)
+    length_scale: float = max(pvt_collector.length, pvt_collector.width)
 
     current_rayleigh_number = rayleigh_number(
         length_scale,
         element_top_temperature,
-        pvt_panel.tilt_in_radians,
+        pvt_collector.tilt_in_radians,
         weather_conditions,
     )
 
@@ -230,7 +232,7 @@ def free_heat_transfer_coefficient_of_air(
         nusselt_number(
             length_scale,
             element_top_temperature,
-            pvt_panel.tilt_in_radians,
+            pvt_collector.tilt_in_radians,
             weather_conditions,
         )
         ** (1 / 4)
@@ -502,7 +504,7 @@ def reduced_temperature(
 
 def upward_loss_terms(
     best_guess_temperature_vector: Union[List[float], ndarray],
-    pvt_panel: pvt.PVT,
+    pvt_collector: pvt.PVT,
     element: Element,
     source_emissivity: float,
     source_index: int,
@@ -514,7 +516,7 @@ def upward_loss_terms(
     :param best_guess_temperature_vector:
         The best guess at the temperature vector at the current time step.
 
-    :param pvt_panel:
+    :param pvt_collector:
         The pvt panel being modelled.
 
     :param element:
@@ -540,7 +542,9 @@ def upward_loss_terms(
         element.width  # [m]
         * element.length  # [m]
         * _top_heat_transfer_coefficient(
-            pvt_panel, best_guess_temperature_vector[source_index], weather_conditions
+            pvt_collector,
+            best_guess_temperature_vector[source_index],
+            weather_conditions,
         )  # [W/m^2*K]
     )
 

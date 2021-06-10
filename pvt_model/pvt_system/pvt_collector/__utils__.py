@@ -1,6 +1,6 @@
 #!/usr/bin/python3.7
 ########################################################################################
-# pvt_panel/__utils__.py - The utility module for the PVT panel component.
+# pvt_collector/__utils__.py - The utility module for the PVT panel component.
 #
 # Author: Ben Winchester
 # Copyright: Ben Winchester, 2021

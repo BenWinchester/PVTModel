@@ -57,7 +57,7 @@ __all__ = (
 #############
 
 # Name of the logger used
-PVT_SYSTEM_MODEL_LOGGER_NAME = "pvt_system_model.{tag}_run_{run_number}"
+PVT_SYSTEM_MODEL_LOGGER_NAME = "pvt_system.{tag}_run_{run_number}"
 # Folder containing the solar irradiance profiles
 SOLAR_IRRADIANCE_FOLDERNAME = "solar_irradiance_profiles"
 # Folder containing the temperature profiles

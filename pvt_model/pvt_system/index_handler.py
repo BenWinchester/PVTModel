@@ -22,7 +22,7 @@ from ..__utils__ import (
     ProgrammerJudgementFault,
     TemperatureName,
 )
-from .pvt_panel import pvt
+from .pvt_collector import pvt
 
 __all__ = (
     "index_from_pipe_coordinates",
@@ -36,12 +36,12 @@ __all__ = (
 
 
 def _calculate_number_of_temperatures(
-    pvt_panel: pvt.PVT,
+    pvt_collector: pvt.PVT,
 ) -> Tuple[int, int, int, int, int, int]:
     """
     Calculates, based off the PVT collector, the number of temperatures in each layer.
 
-    :param pvt_panel:
+    :param pvt_collector:
         The PVT collector being modelled.
 
     :return:
@@ -58,14 +58,16 @@ def _calculate_number_of_temperatures(
     """
 
     num_upper_glass_temperatures = sum(
-        [element.upper_glass for element in pvt_panel.elements.values()]
+        [element.upper_glass for element in pvt_collector.elements.values()]
     )
     num_glass_temperatures = sum(
-        [element.glass for element in pvt_panel.elements.values()]
+        [element.glass for element in pvt_collector.elements.values()]
     )
-    num_pv_temperatures = sum([element.pv for element in pvt_panel.elements.values()])
+    num_pv_temperatures = sum(
+        [element.pv for element in pvt_collector.elements.values()]
+    )
     num_absorber_temperatures = sum(
-        [element.absorber for element in pvt_panel.elements.values()]
+        [element.absorber for element in pvt_collector.elements.values()]
     )
     num_panel_temperatures: int = (
         num_upper_glass_temperatures
@@ -74,7 +76,7 @@ def _calculate_number_of_temperatures(
         + num_absorber_temperatures
     )
     num_fluid_temperatures = sum(
-        [element.pipe for element in pvt_panel.elements.values()]
+        [element.pipe for element in pvt_collector.elements.values()]
     )
 
     return (
@@ -89,7 +91,7 @@ def _calculate_number_of_temperatures(
 
 def _get_index(  # pylint: disable=too-many-branches
     temperature_name: TemperatureName,
-    pvt_panel: pvt.PVT,
+    pvt_collector: pvt.PVT,
     *,
     number_of_pipes: Optional[int] = None,
     number_of_x_elements: Optional[int] = None,
@@ -103,7 +105,7 @@ def _get_index(  # pylint: disable=too-many-branches
     :param temperature_name:
         The name of the temperature being indexed.
 
-    :param pvt_panel:
+    :param pvt_collector:
         The :class:`pvt.PVT` instance representing the PVT collector being modelled.
 
     :param number_of_pipes:
@@ -140,7 +142,7 @@ def _get_index(  # pylint: disable=too-many-branches
         _,
         num_panel_temperatures,
         num_fluid_temperatures,
-    ) = _calculate_number_of_temperatures(pvt_panel)
+    ) = _calculate_number_of_temperatures(pvt_collector)
 
     if temperature_name == TemperatureName.upper_glass:
         if number_of_x_elements is None or x_coord is None or y_coord is None:
@@ -244,7 +246,7 @@ def index_from_pipe_coordinates(
     number_of_pipes: int,
     number_of_x_elements: int,
     pipe_number: int,
-    pvt_panel: pvt.PVT,
+    pvt_collector: pvt.PVT,
     temperature_name: TemperatureName,
     y_coord: int,
 ) -> int:
@@ -260,7 +262,7 @@ def index_from_pipe_coordinates(
     :param pipe_number:
         The number of the pipe.
 
-    :param pvt_panel:
+    :param pvt_collector:
         The pvt collector being modelled.
 
     :param temperature_name:
@@ -276,7 +278,7 @@ def index_from_pipe_coordinates(
 
     return _get_index(
         temperature_name,
-        pvt_panel,
+        pvt_collector,
         number_of_pipes=number_of_pipes,
         number_of_x_elements=number_of_x_elements,
         pipe_number=pipe_number,
@@ -286,7 +288,7 @@ def index_from_pipe_coordinates(
 
 def index_from_element_coordinates(
     number_of_x_elements: int,
-    pvt_panel: pvt.PVT,
+    pvt_collector: pvt.PVT,
     temperature_name: TemperatureName,
     x_coord: int,
     y_coord: int,
@@ -297,7 +299,7 @@ def index_from_element_coordinates(
     :param number_of_x_elements:
         The number of elements in the x direction along the panel.
 
-    :param pvt_panel:
+    :param pvt_collector:
         The pvt collector being modelled.
 
     :param temperature_name:
@@ -316,7 +318,7 @@ def index_from_element_coordinates(
 
     return _get_index(
         temperature_name,
-        pvt_panel,
+        pvt_collector,
         number_of_x_elements=number_of_x_elements,
         x_coord=x_coord,
         y_coord=y_coord,
@@ -324,13 +326,13 @@ def index_from_element_coordinates(
 
 
 def index_from_temperature_name(
-    pvt_panel: pvt.PVT,
+    pvt_collector: pvt.PVT,
     temperature_name: TemperatureName,
 ) -> int:
     """
     Computes an index for a body/temperature based solely on the name.
 
-    :param pvt_panel:
+    :param pvt_collector:
         The PVT collector being modelled.
 
     :param temperature_name:
@@ -343,15 +345,15 @@ def index_from_temperature_name(
 
     return _get_index(
         temperature_name,
-        pvt_panel,
+        pvt_collector,
     )
 
 
-def num_temperatures(pvt_panel: pvt.PVT) -> int:
+def num_temperatures(pvt_collector: pvt.PVT) -> int:
     """
     Returns the number of temperature variables being modelled.
 
-    :param pvt_panel:
+    :param pvt_collector:
         The pvt panel being modelled.
 
     :return:
@@ -367,7 +369,7 @@ def num_temperatures(pvt_panel: pvt.PVT) -> int:
                 + element.pv
                 + element.absorber
                 + 4 * element.pipe
-                for element in pvt_panel.elements.values()
+                for element in pvt_collector.elements.values()
             ]
         )
         + 5
@@ -376,7 +378,7 @@ def num_temperatures(pvt_panel: pvt.PVT) -> int:
 
 def temperature_name_from_index(  # pylint: disable=too-many-branches
     index: int,
-    pvt_panel: pvt.PVT,
+    pvt_collector: pvt.PVT,
 ) -> TemperatureName:
     """
     Returns the temperature name from the index_handler.
@@ -388,7 +390,7 @@ def temperature_name_from_index(  # pylint: disable=too-many-branches
     :param index:
         The index of the temperature for which to return the temperature name.
 
-    :param pvt_panel:
+    :param pvt_collector:
         The pvt collector being modelled.
 
     :return:
@@ -411,7 +413,7 @@ def temperature_name_from_index(  # pylint: disable=too-many-branches
         _,
         num_panel_temperatures,
         num_fluid_temperatures,
-    ) = _calculate_number_of_temperatures(pvt_panel)
+    ) = _calculate_number_of_temperatures(pvt_collector)
 
     if index < num_upper_glass_temperatures:
         temperature_name = TemperatureName.upper_glass

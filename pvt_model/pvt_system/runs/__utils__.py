@@ -21,7 +21,7 @@ from typing import Dict, List, Optional, Set, Union
 import numpy
 
 from .. import efficiency, index_handler
-from ..pvt_panel import pvt
+from ..pvt_collector import pvt
 
 from ...__utils__ import OperatingMode, SystemData, TemperatureName
 from ..__utils__ import (
@@ -36,7 +36,7 @@ __all__ = ("system_data_from_run",)
 
 
 def _average_layer_temperature(
-    pvt_panel: pvt.PVT,
+    pvt_collector: pvt.PVT,
     temperature_name: TemperatureName,
     temperature_vector: Union[List[float], numpy.ndarray],
 ) -> float:
@@ -58,7 +58,7 @@ def _average_layer_temperature(
     layer_temperatures: Set[float] = {
         value
         for value_index, value in enumerate(temperature_vector)
-        if index_handler.temperature_name_from_index(value_index, pvt_panel)
+        if index_handler.temperature_name_from_index(value_index, pvt_collector)
         == temperature_name
     }
 
@@ -76,7 +76,7 @@ def _average_layer_temperature(
 def _layer_temperature_profile(
     number_of_pipes: int,
     number_of_x_elements: int,
-    pvt_panel: pvt.PVT,
+    pvt_collector: pvt.PVT,
     temperature_name: TemperatureName,
     temperature_vector: Union[List[float], numpy.ndarray],
 ) -> Dict[str, float]:
@@ -89,7 +89,7 @@ def _layer_temperature_profile(
     :param number_of_x_elements:
         The number of elements in a single row of the absorber.
 
-    :param pvt_panel:
+    :param pvt_collector:
         The PVT panel being modelled.
 
     :param temperature_name:
@@ -116,14 +116,14 @@ def _layer_temperature_profile(
             str(element_coordinates): temperature_vector[
                 index_handler.index_from_element_coordinates(
                     number_of_x_elements,
-                    pvt_panel,
+                    pvt_collector,
                     temperature_name,
                     element.x_index,
                     element.y_index,
                 )
             ]
             - ZERO_CELCIUS_OFFSET
-            for element_coordinates, element in pvt_panel.elements.items()
+            for element_coordinates, element in pvt_collector.elements.items()
         }
     elif temperature_name in [
         TemperatureName.pipe,
@@ -137,13 +137,13 @@ def _layer_temperature_profile(
                     number_of_pipes,
                     number_of_x_elements,
                     element.pipe_index,  # type: ignore
-                    pvt_panel,
+                    pvt_collector,
                     temperature_name,
                     element.y_index,
                 )
             ]
             - ZERO_CELCIUS_OFFSET
-            for element_coordinates, element in pvt_panel.elements.items()
+            for element_coordinates, element in pvt_collector.elements.items()
             if element.pipe
         }
     else:
@@ -161,7 +161,7 @@ def system_data_from_run(
     number_of_pipes: int,
     number_of_x_elements: int,
     operating_mode: OperatingMode,
-    pvt_panel: pvt.PVT,
+    pvt_collector: pvt.PVT,
     save_2d_output: bool,
     temperature_vector: Union[List[float], numpy.ndarray],
     time: datetime.time,
@@ -185,7 +185,7 @@ def system_data_from_run(
     :param operating_mode:
         The operating mode for the run.
 
-    :param pvt_panel:
+    :param pvt_collector:
         A :class:`pvt.PVT` instance representing the PVT absorber being modelled.
 
     :param save_2d_output:
@@ -207,9 +207,9 @@ def system_data_from_run(
     """
 
     # Determine the average temperatures of the various PVT layers.
-    if any({element.upper_glass for element in pvt_panel.elements.values()}):
+    if any({element.upper_glass for element in pvt_collector.elements.values()}):
         average_upper_glass_temperature: Optional[float] = _average_layer_temperature(
-            pvt_panel,
+            pvt_collector,
             TemperatureName.upper_glass,
             temperature_vector,
         )
@@ -218,7 +218,7 @@ def system_data_from_run(
         ] = _layer_temperature_profile(
             number_of_pipes,
             number_of_x_elements,
-            pvt_panel,
+            pvt_collector,
             TemperatureName.upper_glass,
             temperature_vector,
         )
@@ -226,9 +226,9 @@ def system_data_from_run(
         average_upper_glass_temperature = None
         temperature_map_upper_glass_layer = None
 
-    if any({element.glass for element in pvt_panel.elements.values()}):
+    if any({element.glass for element in pvt_collector.elements.values()}):
         average_glass_temperature: Optional[float] = _average_layer_temperature(
-            pvt_panel,
+            pvt_collector,
             TemperatureName.glass,
             temperature_vector,
         )
@@ -237,7 +237,7 @@ def system_data_from_run(
         ] = _layer_temperature_profile(
             number_of_pipes,
             number_of_x_elements,
-            pvt_panel,
+            pvt_collector,
             TemperatureName.glass,
             temperature_vector,
         )
@@ -246,53 +246,53 @@ def system_data_from_run(
         temperature_map_glass_layer = None
 
     average_pv_temperature = _average_layer_temperature(
-        pvt_panel,
+        pvt_collector,
         TemperatureName.pv,
         temperature_vector,
     )
     temperature_map_pv_layer = _layer_temperature_profile(
         number_of_pipes,
         number_of_x_elements,
-        pvt_panel,
+        pvt_collector,
         TemperatureName.pv,
         temperature_vector,
     )
 
     average_absorber_temperature = _average_layer_temperature(
-        pvt_panel,
+        pvt_collector,
         TemperatureName.absorber,
         temperature_vector,
     )
     temperature_map_absorber_layer = _layer_temperature_profile(
         number_of_pipes,
         number_of_x_elements,
-        pvt_panel,
+        pvt_collector,
         TemperatureName.absorber,
         temperature_vector,
     )
 
     average_pipe_temperature = _average_layer_temperature(
-        pvt_panel,
+        pvt_collector,
         TemperatureName.pipe,
         temperature_vector,
     )
     temperature_map_pipe_layer = _layer_temperature_profile(
         number_of_pipes,
         number_of_x_elements,
-        pvt_panel,
+        pvt_collector,
         TemperatureName.pipe,
         temperature_vector,
     )
 
     average_bulk_water_temperature = _average_layer_temperature(
-        pvt_panel,
+        pvt_collector,
         TemperatureName.htf,
         temperature_vector,
     )
     temperature_map_bulk_water_layer = _layer_temperature_profile(
         number_of_pipes,
         number_of_x_elements,
-        pvt_panel,
+        pvt_collector,
         TemperatureName.htf,
         temperature_vector,
     )
@@ -303,25 +303,25 @@ def system_data_from_run(
         exchanger_temperature_drop: Optional[float] = (
             temperature_vector[
                 index_handler.index_from_temperature_name(
-                    pvt_panel,
+                    pvt_collector,
                     TemperatureName.tank_out,
                 )
             ]
             - temperature_vector[
                 index_handler.index_from_temperature_name(
-                    pvt_panel,
+                    pvt_collector,
                     TemperatureName.tank_in,
                 )
             ]
             if temperature_vector[
                 index_handler.index_from_temperature_name(
-                    pvt_panel,
+                    pvt_collector,
                     TemperatureName.tank_in,
                 )
             ]
             > temperature_vector[
                 index_handler.index_from_temperature_name(
-                    pvt_panel,
+                    pvt_collector,
                     TemperatureName.tank,
                 )
             ]
@@ -330,7 +330,7 @@ def system_data_from_run(
         tank_temperature: Optional[float] = (
             temperature_vector[
                 index_handler.index_from_temperature_name(
-                    pvt_panel,
+                    pvt_collector,
                     TemperatureName.tank,
                 )
             ]
@@ -351,13 +351,13 @@ def system_data_from_run(
     # Compute variables in common to both.
     collector_input_temperature = temperature_vector[
         index_handler.index_from_temperature_name(
-            pvt_panel,
+            pvt_collector,
             TemperatureName.collector_in,
         )
     ]
     collector_output_temperature = temperature_vector[
         index_handler.index_from_temperature_name(
-            pvt_panel,
+            pvt_collector,
             TemperatureName.collector_out,
         )
     ]
@@ -365,7 +365,7 @@ def system_data_from_run(
     # Determine the reduced temperature of the system.
     if weather_conditions.irradiance > 0:
         electrical_efficiency: Optional[float] = efficiency.electrical_efficiency(
-            pvt_panel, average_pv_temperature
+            pvt_collector, average_pv_temperature
         )
         reduced_system_temperature: Optional[float] = reduced_temperature(
             weather_conditions.ambient_temperature,
@@ -373,8 +373,8 @@ def system_data_from_run(
             weather_conditions.irradiance,
         )
         thermal_efficiency: Optional[float] = efficiency.thermal_efficiency(
-            pvt_panel.area,
-            pvt_panel.absorber.mass_flow_rate,
+            pvt_collector.area,
+            pvt_collector.absorber.mass_flow_rate,
             weather_conditions.irradiance,
             collector_output_temperature - collector_input_temperature,
         )

@@ -1,6 +1,6 @@
 #!/usr/bin/python3.7
 ########################################################################################
-# pvt_panel/absorber.py - Represents a absorber within a PVT panel.
+# pvt_collector/absorber.py - Represents a absorber within a PVT panel.
 #
 # Author: Ben Winchester
 # Copyright: Ben Winchester, 2021

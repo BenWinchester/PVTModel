@@ -27,15 +27,15 @@ from typing import List, Optional, Tuple, Union
 import numpy
 
 from .. import index_handler
-from ..pvt_panel import pvt
+from ..pvt_collector import pvt
 
 from ...__utils__ import (
     OperatingMode,
     TemperatureName,
 )
 from ..__utils__ import WeatherConditions
-from ..pvt_panel.element import Element
-from ..pvt_panel.physics_utils import insulation_thermal_resistance
+from ..pvt_collector.element import Element
+from ..pvt_collector.physics_utils import insulation_thermal_resistance
 
 __all__ = "calculate_pipe_equation"
 
@@ -50,7 +50,7 @@ def calculate_pipe_equation(
     operating_mode: OperatingMode,
     pipe_to_htf_heat_transfer: float,
     previous_temperature_vector: Optional[numpy.ndarray],
-    pvt_panel: pvt.PVT,
+    pvt_collector: pvt.PVT,
     resolution: Optional[int],
     element: Element,
     weather_conditions: WeatherConditions,
@@ -75,12 +75,12 @@ def calculate_pipe_equation(
         pipe_internal_heat_change: float = (
             numpy.pi
             * (
-                (pvt_panel.absorber.outer_pipe_diameter / 2) ** 2  # [m^2]
-                - (pvt_panel.absorber.inner_pipe_diameter / 2) ** 2  # [m^2]
+                (pvt_collector.absorber.outer_pipe_diameter / 2) ** 2  # [m^2]
+                - (pvt_collector.absorber.inner_pipe_diameter / 2) ** 2  # [m^2]
             )
             * element.length  # [m]
-            * pvt_panel.absorber.pipe_density  # [kg/m^3]
-            * pvt_panel.absorber.heat_capacity  # [J/kg*K]
+            * pvt_collector.absorber.pipe_density  # [kg/m^3]
+            * pvt_collector.absorber.heat_capacity  # [J/kg*K]
             / resolution  # type: ignore  # [s]
         )
     else:
@@ -88,16 +88,16 @@ def calculate_pipe_equation(
 
     pipe_to_surroundings_losses = (
         numpy.pi
-        * (pvt_panel.absorber.outer_pipe_diameter / 2)  # [m]
+        * (pvt_collector.absorber.outer_pipe_diameter / 2)  # [m]
         * element.length  # [m]
         / insulation_thermal_resistance(
             best_guess_temperature_vector,
-            pvt_panel,
+            pvt_collector,
             index_handler.index_from_pipe_coordinates(
                 number_of_pipes,
                 number_of_x_elements,
                 element.pipe_index,  # type: ignore
-                pvt_panel,
+                pvt_collector,
                 TemperatureName.pipe,
                 element.y_index,
             ),
@@ -111,7 +111,7 @@ def calculate_pipe_equation(
             number_of_pipes,
             number_of_x_elements,
             element.pipe_index,  # type: ignore
-            pvt_panel,
+            pvt_collector,
             TemperatureName.pipe,
             element.y_index,
         )
@@ -126,7 +126,7 @@ def calculate_pipe_equation(
     row_equation[
         index_handler.index_from_element_coordinates(
             number_of_x_elements,
-            pvt_panel,
+            pvt_collector,
             TemperatureName.absorber,
             element.x_index,
             element.y_index,
@@ -139,7 +139,7 @@ def calculate_pipe_equation(
             number_of_pipes,
             number_of_x_elements,
             element.pipe_index,  # type: ignore
-            pvt_panel,
+            pvt_collector,
             TemperatureName.htf,
             element.y_index,
         )
@@ -161,7 +161,7 @@ def calculate_pipe_equation(
                     number_of_pipes,
                     number_of_x_elements,
                     element.pipe_index,  # type: ignore
-                    pvt_panel,
+                    pvt_collector,
                     TemperatureName.pipe,
                     element.y_index,
                 )

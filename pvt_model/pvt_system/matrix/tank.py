@@ -27,7 +27,7 @@ from typing import List, Optional, Tuple, Union
 import numpy
 
 from .. import exchanger, index_handler, tank
-from ..pvt_panel import pvt
+from ..pvt_collector import pvt
 
 from ...__utils__ import (
     TemperatureName,
@@ -42,7 +42,7 @@ def calculate_tank_continuity_equation(
     best_guess_temperature_vector: Union[List[float], numpy.ndarray],
     heat_exchanger: exchanger.Exchanger,
     number_of_temperatures: int,
-    pvt_panel: pvt.PVT,
+    pvt_collector: pvt.PVT,
 ) -> Tuple[List[float], float]:
     """
     Returns a matrix row and resultant vector value representing the tank continuity.
@@ -67,20 +67,20 @@ def calculate_tank_continuity_equation(
     if (
         best_guess_temperature_vector[
             index_handler.index_from_temperature_name(
-                pvt_panel,
+                pvt_collector,
                 TemperatureName.tank_in,
             )
         ]
         > best_guess_temperature_vector[
             index_handler.index_from_temperature_name(
-                pvt_panel,
+                pvt_collector,
                 TemperatureName.tank,
             )
         ]
     ):
         row_equation[
             index_handler.index_from_temperature_name(
-                pvt_panel,
+                pvt_collector,
                 TemperatureName.tank,
             )
         ] = (
@@ -88,7 +88,7 @@ def calculate_tank_continuity_equation(
         )
         row_equation[
             index_handler.index_from_temperature_name(
-                pvt_panel,
+                pvt_collector,
                 TemperatureName.tank_in,
             )
         ] = (
@@ -96,7 +96,7 @@ def calculate_tank_continuity_equation(
         )
         row_equation[
             index_handler.index_from_temperature_name(
-                pvt_panel,
+                pvt_collector,
                 TemperatureName.tank_out,
             )
         ] = 1
@@ -105,13 +105,13 @@ def calculate_tank_continuity_equation(
     # Otherwise, the flow is diverted back into the absorber.
     row_equation[
         index_handler.index_from_temperature_name(
-            pvt_panel,
+            pvt_collector,
             TemperatureName.tank_in,
         )
     ] = -1
     row_equation[
         index_handler.index_from_temperature_name(
-            pvt_panel,
+            pvt_collector,
             TemperatureName.tank_out,
         )
     ] = 1
@@ -126,7 +126,7 @@ def calculate_tank_equation(
     logger: logging.Logger,
     number_of_temperatures: int,
     previous_temperature_vector: Optional[numpy.ndarray],
-    pvt_panel: pvt.PVT,
+    pvt_collector: pvt.PVT,
     resolution: Optional[int],
     weather_conditions: WeatherConditions,
 ) -> Tuple[List[float], float]:
@@ -165,19 +165,19 @@ def calculate_tank_equation(
 
     heat_input_term = (
         (
-            pvt_panel.absorber.mass_flow_rate  # [kg/s]
-            * pvt_panel.absorber.htf_heat_capacity  # [J/kg*K]
+            pvt_collector.absorber.mass_flow_rate  # [kg/s]
+            * pvt_collector.absorber.htf_heat_capacity  # [J/kg*K]
             * heat_exchanger.efficiency
         )
         if best_guess_temperature_vector[
             index_handler.index_from_temperature_name(
-                pvt_panel,
+                pvt_collector,
                 TemperatureName.tank_in,
             )
         ]
         > best_guess_temperature_vector[
             index_handler.index_from_temperature_name(
-                pvt_panel,
+                pvt_collector,
                 TemperatureName.tank,
             )
         ]
@@ -188,7 +188,7 @@ def calculate_tank_equation(
     # Compute the T_t term
     row_equation[
         index_handler.index_from_temperature_name(
-            pvt_panel,
+            pvt_collector,
             TemperatureName.tank,
         )
     ] = (
@@ -198,7 +198,7 @@ def calculate_tank_equation(
     # Compute the T_c,out term
     row_equation[
         index_handler.index_from_temperature_name(
-            pvt_panel,
+            pvt_collector,
             TemperatureName.tank_in,
         )
     ] = (
@@ -211,7 +211,7 @@ def calculate_tank_equation(
         tank_internal_energy  # [W/K]
         * previous_temperature_vector[  # type: ignore
             index_handler.index_from_temperature_name(
-                pvt_panel,
+                pvt_collector,
                 TemperatureName.tank,
             )
         ]  # [K]

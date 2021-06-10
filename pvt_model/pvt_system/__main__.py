@@ -333,7 +333,7 @@ def main(  # pylint: disable=too-many-branches
         )
 
     # Initialise the PV-T panel.
-    pvt_panel = process_pvt_system_data.pvt_panel_from_path(
+    pvt_collector = process_pvt_system_data.pvt_collector_from_path(
         layers,
         logger,
         override_mass_flow_rate,
@@ -342,13 +342,13 @@ def main(  # pylint: disable=too-many-branches
         x_resolution,
         y_resolution,
     )
-    logger.info("PV-T panel successfully instantiated: %s", pvt_panel)
+    logger.info("PV-T panel successfully instantiated: %s", pvt_collector)
     logger.debug(
         "PV-T panel elements:\n  %s",
         "\n  ".join(
             [
                 f"{element_coordinates}: {element}"
-                for element_coordinates, element in pvt_panel.elements.items()
+                for element_coordinates, element in pvt_collector.elements.items()
             ]
         ),
     )
@@ -385,20 +385,20 @@ def main(  # pylint: disable=too-many-branches
     number_of_pipes = len(
         {
             element.pipe_index
-            for element in pvt_panel.elements.values()
+            for element in pvt_collector.elements.values()
             if element.pipe_index is not None
         }
     )
     number_of_x_elements = len(
-        {element.x_index for element in pvt_panel.elements.values()}
+        {element.x_index for element in pvt_collector.elements.values()}
     )
     number_of_y_elements = len(
-        {element.y_index for element in pvt_panel.elements.values()}
+        {element.y_index for element in pvt_collector.elements.values()}
     )
     if operating_mode.coupled:
-        number_of_temperatures: int = index_handler.num_temperatures(pvt_panel)
+        number_of_temperatures: int = index_handler.num_temperatures(pvt_collector)
     else:
-        number_of_temperatures = index_handler.num_temperatures(pvt_panel) - 3
+        number_of_temperatures = index_handler.num_temperatures(pvt_collector) - 3
     logger.info(
         "System consists of %s pipes, %s by %s elements, and %s temperatures in all.",
         number_of_pipes,
@@ -421,7 +421,7 @@ def main(  # pylint: disable=too-many-branches
         "System state before beginning run:\n%s\n%s\n%s\n%s",
         heat_exchanger if heat_exchanger is not None else "No heat exchanger",
         hot_water_tank if hot_water_tank is not None else "No hot-water tank",
-        pvt_panel,
+        pvt_collector,
         weather_forecaster,
     )
 
@@ -460,7 +460,7 @@ def main(  # pylint: disable=too-many-branches
             number_of_x_elements,
             number_of_y_elements,
             operating_mode,
-            pvt_panel,
+            pvt_collector,
             resolution,
             save_2d_output,
             start_time,
@@ -487,7 +487,7 @@ def main(  # pylint: disable=too-many-branches
             number_of_x_elements,
             number_of_y_elements,
             operating_mode,
-            pvt_panel,
+            pvt_collector,
             save_2d_output,
             weather_forecaster,
         )
@@ -516,7 +516,7 @@ def main(  # pylint: disable=too-many-branches
             number_of_x_elements,
             number_of_y_elements,
             operating_mode,
-            pvt_panel,
+            pvt_collector,
             resolution,
             save_2d_output,
             start_time,
@@ -534,10 +534,10 @@ def main(  # pylint: disable=too-many-branches
 
 if __name__ == "__main__":
     logging.error(
-        "Calling the internal `pvt_system_model` from the command-line is no longer "
+        "Calling the internal `pvt_system` from the command-line is no longer "
         "supported."
     )
     raise ProgrammerJudgementFault(
-        "Calling the internal `pvt_system_model` from the command-line interface is no "
+        "Calling the internal `pvt_system` from the command-line interface is no "
         "longer supported."
     )

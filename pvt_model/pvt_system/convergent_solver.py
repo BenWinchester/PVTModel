@@ -24,7 +24,7 @@ from scipy import linalg  # type: ignore
 
 from . import exchanger, tank
 from .matrix import matrix
-from .pvt_panel import pvt
+from .pvt_collector import pvt
 
 from ..__utils__ import BColours, OperatingMode, ProgrammerJudgementFault
 from .__utils__ import (
@@ -84,7 +84,7 @@ def solve_temperature_vector_convergence_method(
     number_of_x_elements: int,
     number_of_y_elements: int,
     operating_mode: OperatingMode,
-    pvt_panel: pvt.PVT,
+    pvt_collector: pvt.PVT,
     run_one_temperature_vector: Union[List[float], numpy.ndarray],
     weather_conditions: WeatherConditions,
     convergence_run_number: int = 0,
@@ -155,7 +155,7 @@ def solve_temperature_vector_convergence_method(
     :param previous_run_temperature_vector:
         The temperatures at the previous time step.
 
-    :param pvt_panel:
+    :param pvt_collector:
         A :class:`pvt.PVT` instance representing the PVT panel being modelled.
 
     :param resolution:
@@ -200,7 +200,7 @@ def solve_temperature_vector_convergence_method(
             number_of_y_elements=number_of_y_elements,
             operating_mode=operating_mode,
             previous_temperature_vector=numpy.asarray(previous_run_temperature_vector),
-            pvt_panel=pvt_panel,
+            pvt_collector=pvt_collector,
             resolution=resolution,
             weather_conditions=weather_conditions,
         )
@@ -214,7 +214,7 @@ def solve_temperature_vector_convergence_method(
             number_of_x_elements=number_of_x_elements,
             number_of_y_elements=number_of_y_elements,
             operating_mode=operating_mode,
-            pvt_panel=pvt_panel,
+            pvt_collector=pvt_collector,
             resolution=resolution,
             weather_conditions=weather_conditions,
         )
@@ -229,7 +229,7 @@ def solve_temperature_vector_convergence_method(
             number_of_y_elements=number_of_y_elements,
             operating_mode=operating_mode,
             previous_temperature_vector=numpy.asarray(previous_run_temperature_vector),
-            pvt_panel=pvt_panel,
+            pvt_collector=pvt_collector,
             resolution=resolution,
             weather_conditions=weather_conditions,
         )
@@ -352,7 +352,7 @@ def solve_temperature_vector_convergence_method(
         number_of_y_elements=number_of_y_elements,
         operating_mode=operating_mode,
         previous_run_temperature_vector=previous_run_temperature_vector,
-        pvt_panel=pvt_panel,
+        pvt_collector=pvt_collector,
         resolution=resolution,
         run_one_temperature_vector=run_two_temperature_vector,
         weather_conditions=weather_conditions,

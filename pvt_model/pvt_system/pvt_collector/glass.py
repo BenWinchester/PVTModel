@@ -1,6 +1,6 @@
 #!/usr/bin/python3.7
 ########################################################################################
-# pvt_panel/glass.py - Represents a glass within a PVT panel.
+# pvt_collector/glass.py - Represents a glass within a PVT panel.
 #
 # Author: Ben Winchester
 # Copyright: Ben Winchester, 2021

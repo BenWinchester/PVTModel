@@ -27,7 +27,7 @@ import numpy
 from dateutil.relativedelta import relativedelta
 
 from .. import convergent_solver, weather
-from ..pvt_panel import pvt
+from ..pvt_collector import pvt
 
 from ...__utils__ import BColours, OperatingMode, ProgrammerJudgementFault, SystemData
 from ..__utils__ import DivergentSolutionError, time_iterator
@@ -54,7 +54,7 @@ def decoupled_dynamic_run(
     number_of_x_elements: int,
     number_of_y_elements: int,
     operating_mode: OperatingMode,
-    pvt_panel: pvt.PVT,
+    pvt_collector: pvt.PVT,
     resolution: int,
     save_2d_output: bool,
     start_time: int,
@@ -107,7 +107,7 @@ def decoupled_dynamic_run(
     :param operating_mode:
         The operating mode of the system.
 
-    :param pvt_panel:
+    :param pvt_collector:
         A :class:`pvt.PVT` instance representing the PVT panel being modelled.
 
     :param resolution:
@@ -175,8 +175,8 @@ def decoupled_dynamic_run(
     time_iterator_step = relativedelta(seconds=resolution)
 
     weather_conditions = weather_forecaster.get_weather(
-        pvt_panel.latitude,
-        pvt_panel.longitude,
+        pvt_collector.latitude,
+        pvt_collector.longitude,
         cloud_efficacy_factor,
         initial_date_and_time,
     )
@@ -187,7 +187,7 @@ def decoupled_dynamic_run(
         number_of_pipes,
         number_of_x_elements,
         operating_mode,
-        pvt_panel,
+        pvt_collector,
         save_2d_output,
         initial_system_temperature_vector,
         initial_date_and_time.time(),
@@ -203,7 +203,7 @@ def decoupled_dynamic_run(
             first_time=initial_date_and_time,
             last_time=final_date_and_time,
             resolution=resolution,
-            timezone=pvt_panel.timezone,
+            timezone=pvt_collector.timezone,
         )
     ):
 
@@ -219,8 +219,8 @@ def decoupled_dynamic_run(
         # Determine the "i+1" current weather conditions.
         try:
             weather_conditions = weather_forecaster.get_weather(
-                pvt_panel.latitude,
-                pvt_panel.longitude,
+                pvt_collector.latitude,
+                pvt_collector.longitude,
                 cloud_efficacy_factor,
                 next_date_and_time,
             )
@@ -240,7 +240,7 @@ def decoupled_dynamic_run(
                     number_of_y_elements=number_of_y_elements,
                     operating_mode=operating_mode,
                     previous_run_temperature_vector=previous_run_temperature_vector,
-                    pvt_panel=pvt_panel,
+                    pvt_collector=pvt_collector,
                     resolution=resolution,
                     run_one_temperature_vector=previous_run_temperature_vector,
                     weather_conditions=weather_conditions,
@@ -261,7 +261,7 @@ def decoupled_dynamic_run(
             number_of_pipes,
             number_of_x_elements,
             operating_mode,
-            pvt_panel,
+            pvt_collector,
             save_2d_output,
             current_run_temperature_vector,
             next_date_and_time.time(),
@@ -283,7 +283,7 @@ def decoupled_steady_state_run(
     number_of_x_elements: int,
     number_of_y_elements: int,
     operating_mode: OperatingMode,
-    pvt_panel: pvt.PVT,
+    pvt_collector: pvt.PVT,
     save_2d_output: bool,
     weather_forecaster: weather.WeatherForecaster,
 ) -> Tuple[numpy.ndarray, Dict[float, SystemData]]:
@@ -322,7 +322,7 @@ def decoupled_steady_state_run(
     :param operating_mode:
         The operating mode for the run.
 
-    :param pvt_panel:
+    :param pvt_collector:
         The :class:`pvt.PVT` instance representing the PVT collector being modelled.
 
     :param save_2d_output:
@@ -345,8 +345,8 @@ def decoupled_steady_state_run(
 
     # Set up various variables needed to model the system.
     weather_conditions = weather_forecaster.get_weather(
-        pvt_panel.latitude,
-        pvt_panel.longitude,
+        pvt_collector.latitude,
+        pvt_collector.longitude,
         cloud_efficacy_factor,
     )
 
@@ -363,7 +363,7 @@ def decoupled_steady_state_run(
         number_of_pipes,
         number_of_x_elements,
         operating_mode,
-        pvt_panel,
+        pvt_collector,
         save_2d_output,
         initial_system_temperature_vector,
         initial_date_and_time.time(),
@@ -380,7 +380,7 @@ def decoupled_steady_state_run(
                 number_of_x_elements=number_of_x_elements,
                 number_of_y_elements=number_of_y_elements,
                 operating_mode=operating_mode,
-                pvt_panel=pvt_panel,
+                pvt_collector=pvt_collector,
                 run_one_temperature_vector=initial_system_temperature_vector,
                 weather_conditions=weather_conditions,
             )
@@ -399,7 +399,7 @@ def decoupled_steady_state_run(
         number_of_pipes,
         number_of_x_elements,
         operating_mode,
-        pvt_panel,
+        pvt_collector,
         save_2d_output,
         current_run_temperature_vector,
         initial_date_and_time.time(),

@@ -26,12 +26,12 @@ from typing import List, Optional, Tuple, Union
 import numpy
 
 from .. import index_handler, physics_utils
-from ..pvt_panel import pvt
+from ..pvt_collector import pvt
 
 from ...__utils__ import OperatingMode, TemperatureName
 from ..__utils__ import WeatherConditions
 from ..efficiency import electrical_efficiency
-from ..pvt_panel.element import Element, ElementCoordinates
+from ..pvt_collector.element import Element, ElementCoordinates
 
 __all__ = ("calculate_pv_equation",)
 
@@ -47,7 +47,7 @@ def calculate_pv_equation(  # pylint: disable=too-many-branches
     pv_to_absorber_conduction: float,
     pv_to_glass_conduction: float,
     pv_to_glass_radiation: float,
-    pvt_panel: pvt.PVT,
+    pvt_collector: pvt.PVT,
     resolution: Optional[int],
     element: Element,
     weather_conditions: WeatherConditions,
@@ -84,9 +84,9 @@ def calculate_pv_equation(  # pylint: disable=too-many-branches
         pv_internal_energy: float = (
             element.width  # [m]
             * element.length  # [m]
-            * pvt_panel.pv.thickness  # [m]
-            * pvt_panel.pv.density  # [kg/m^3]
-            * pvt_panel.pv.heat_capacity  # [J/kg*K]
+            * pvt_collector.pv.thickness  # [m]
+            * pvt_collector.pv.density  # [kg/m^3]
+            * pvt_collector.pv.heat_capacity  # [J/kg*K]
             / resolution  # type: ignore  # [s]
         )
     else:
@@ -97,12 +97,12 @@ def calculate_pv_equation(  # pylint: disable=too-many-branches
     if not element.glass:
         (pv_to_air_conduction, pv_to_sky_radiation,) = physics_utils.upward_loss_terms(
             best_guess_temperature_vector,
-            pvt_panel,
+            pvt_collector,
             element,
-            pvt_panel.pv.emissivity,
+            pvt_collector.pv.emissivity,
             index_handler.index_from_element_coordinates(
                 number_of_x_elements,
-                pvt_panel,
+                pvt_collector,
                 TemperatureName.pv,
                 element.x_index,
                 element.y_index,
@@ -116,13 +116,13 @@ def calculate_pv_equation(  # pylint: disable=too-many-branches
         pv_to_sky_radiation = 0
 
     # Compute the positive conductive term based on the next element along.
-    positive_x_element = pvt_panel.elements.get(
+    positive_x_element = pvt_collector.elements.get(
         ElementCoordinates(element.x_index + 1, element.y_index)
     )
     if positive_x_element is not None:
         positive_x_wise_conduction: float = (
-            pvt_panel.pv.conductivity  # [W/m*K]
-            * pvt_panel.pv.thickness  # [m]
+            pvt_collector.pv.conductivity  # [W/m*K]
+            * pvt_collector.pv.thickness  # [m]
             * element.length  # [m]
             / (0.5 * (element.width + positive_x_element.width))  # [m]
         )
@@ -133,13 +133,13 @@ def calculate_pv_equation(  # pylint: disable=too-many-branches
     )
 
     # Compute the positive conductive term based on the next element along.
-    negative_x_element = pvt_panel.elements.get(
+    negative_x_element = pvt_collector.elements.get(
         ElementCoordinates(element.x_index - 1, element.y_index)
     )
     if negative_x_element is not None:
         negative_x_wise_conduction: float = (
-            pvt_panel.pv.conductivity  # [W/m*K]
-            * pvt_panel.pv.thickness  # [m]
+            pvt_collector.pv.conductivity  # [W/m*K]
+            * pvt_collector.pv.thickness  # [m]
             * element.length  # [m]
             / (0.5 * (element.width + negative_x_element.width))  # [m]
         )
@@ -154,13 +154,13 @@ def calculate_pv_equation(  # pylint: disable=too-many-branches
     logger.debug("PV x-wise conduction term: %s W/K", x_wise_conduction)
 
     # Compute the positive conductive term based on the next element along.
-    positive_y_element = pvt_panel.elements.get(
+    positive_y_element = pvt_collector.elements.get(
         ElementCoordinates(element.x_index, element.y_index + 1)
     )
     if positive_y_element is not None:
         positive_y_wise_conduction: float = (
-            pvt_panel.pv.conductivity  # [W/m*K]
-            * pvt_panel.pv.thickness  # [m]
+            pvt_collector.pv.conductivity  # [W/m*K]
+            * pvt_collector.pv.thickness  # [m]
             * element.width  # [m]
             / (0.5 * (element.length + positive_y_element.length))  # [m]
         )
@@ -171,13 +171,13 @@ def calculate_pv_equation(  # pylint: disable=too-many-branches
     )
 
     # Compute the positive conductive term based on the next element along.
-    negative_y_element = pvt_panel.elements.get(
+    negative_y_element = pvt_collector.elements.get(
         ElementCoordinates(element.x_index, element.y_index - 1)
     )
     if negative_y_element is not None:
         negative_y_wise_conduction: float = (
-            pvt_panel.pv.conductivity  # [W/m*K]
-            * pvt_panel.pv.thickness  # [m]
+            pvt_collector.pv.conductivity  # [W/m*K]
+            * pvt_collector.pv.thickness  # [m]
             * element.width  # [m]
             / (0.5 * (element.length + negative_y_element.length))  # [m]
         )
@@ -195,7 +195,7 @@ def calculate_pv_equation(  # pylint: disable=too-many-branches
     row_equation[
         index_handler.index_from_element_coordinates(
             number_of_x_elements,
-            pvt_panel,
+            pvt_collector,
             TemperatureName.pv,
             element.x_index,
             element.y_index,
@@ -216,7 +216,7 @@ def calculate_pv_equation(  # pylint: disable=too-many-branches
         row_equation[
             index_handler.index_from_element_coordinates(
                 number_of_x_elements,
-                pvt_panel,
+                pvt_collector,
                 TemperatureName.pv,
                 element.x_index + 1,
                 element.y_index,
@@ -230,7 +230,7 @@ def calculate_pv_equation(  # pylint: disable=too-many-branches
         row_equation[
             index_handler.index_from_element_coordinates(
                 number_of_x_elements,
-                pvt_panel,
+                pvt_collector,
                 TemperatureName.pv,
                 element.x_index - 1,
                 element.y_index,
@@ -244,7 +244,7 @@ def calculate_pv_equation(  # pylint: disable=too-many-branches
         row_equation[
             index_handler.index_from_element_coordinates(
                 number_of_x_elements,
-                pvt_panel,
+                pvt_collector,
                 TemperatureName.pv,
                 element.x_index,
                 element.y_index + 1,
@@ -258,7 +258,7 @@ def calculate_pv_equation(  # pylint: disable=too-many-branches
         row_equation[
             index_handler.index_from_element_coordinates(
                 number_of_x_elements,
-                pvt_panel,
+                pvt_collector,
                 TemperatureName.pv,
                 element.x_index,
                 element.y_index - 1,
@@ -272,7 +272,7 @@ def calculate_pv_equation(  # pylint: disable=too-many-branches
         row_equation[
             index_handler.index_from_element_coordinates(
                 number_of_x_elements,
-                pvt_panel,
+                pvt_collector,
                 TemperatureName.glass,
                 element.x_index,
                 element.y_index,
@@ -284,7 +284,7 @@ def calculate_pv_equation(  # pylint: disable=too-many-branches
         row_equation[
             index_handler.index_from_element_coordinates(
                 number_of_x_elements,
-                pvt_panel,
+                pvt_collector,
                 TemperatureName.absorber,
                 element.x_index,
                 element.y_index,
@@ -294,7 +294,7 @@ def calculate_pv_equation(  # pylint: disable=too-many-branches
         )
 
     solar_thermal_resultant_vector_absorbtion_term = (
-        pvt_panel.pv_transmissivity_absorptivity_product
+        pvt_collector.pv_transmissivity_absorptivity_product
         * weather_conditions.irradiance  # [W/m^2]
         * element.width  # [m]
         * element.length  # [m]
@@ -303,11 +303,11 @@ def calculate_pv_equation(  # pylint: disable=too-many-branches
         * element.width  # [m]
         * element.length  # [m]
         * electrical_efficiency(
-            pvt_panel,
+            pvt_collector,
             best_guess_temperature_vector[
                 index_handler.index_from_element_coordinates(
                     number_of_x_elements,
-                    pvt_panel,
+                    pvt_collector,
                     TemperatureName.pv,
                     element.x_index,
                     element.y_index,
@@ -337,7 +337,7 @@ def calculate_pv_equation(  # pylint: disable=too-many-branches
             * previous_temperature_vector[  # type: ignore
                 index_handler.index_from_element_coordinates(
                     number_of_x_elements,
-                    pvt_panel,
+                    pvt_collector,
                     TemperatureName.pv,
                     element.x_index,
                     element.y_index,

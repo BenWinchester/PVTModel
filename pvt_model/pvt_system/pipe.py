@@ -1,6 +1,6 @@
 #!/usr/bin/python3.7
 ########################################################################################
-# pvt_panel/pipe.py - Represents a pipe within the system.
+# pvt_collector/pipe.py - Represents a pipe within the system.
 #
 # Author: Ben Winchester
 # Copyright: Ben Winchester, 2021

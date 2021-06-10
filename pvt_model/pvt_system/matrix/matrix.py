@@ -33,7 +33,7 @@ import logging
 import numpy
 
 from .. import exchanger, index_handler, tank
-from ..pvt_panel import pvt
+from ..pvt_collector import pvt
 
 from ...__utils__ import (
     BColours,
@@ -46,8 +46,8 @@ from ..physics_utils import (
     convective_heat_transfer_coefficient_of_water,
     radiative_heat_transfer_coefficient,
 )
-from ..pvt_panel.element import Element
-from ..pvt_panel.physics_utils import (
+from ..pvt_collector.element import Element
+from ..pvt_collector.physics_utils import (
     glass_absorber_air_gap_resistance,
     glass_glass_air_gap_resistance,
     glass_pv_air_gap_resistance,
@@ -79,7 +79,7 @@ def _boundary_condition_equations(
     number_of_temperatures: int,
     number_of_x_elements: int,
     number_of_y_elements: int,
-    pvt_panel: pvt.PVT,
+    pvt_collector: pvt.PVT,
 ) -> List[Tuple[List[float], float]]:
     """
     Returns matrix rows and resultant vector values representing boundary conditions.
@@ -119,7 +119,7 @@ def _boundary_condition_equations(
             row_equation[
                 index_handler.index_from_element_coordinates(
                     number_of_x_elements,
-                    pvt_panel,
+                    pvt_collector,
                     temperature_name,
                     0,
                     y_coord,
@@ -128,7 +128,7 @@ def _boundary_condition_equations(
             row_equation[
                 index_handler.index_from_element_coordinates(
                     number_of_x_elements,
-                    pvt_panel,
+                    pvt_collector,
                     temperature_name,
                     1,
                     y_coord,
@@ -140,7 +140,7 @@ def _boundary_condition_equations(
             row_equation[
                 index_handler.index_from_element_coordinates(
                     number_of_x_elements,
-                    pvt_panel,
+                    pvt_collector,
                     temperature_name,
                     number_of_x_elements - 1,
                     y_coord,
@@ -149,7 +149,7 @@ def _boundary_condition_equations(
             row_equation[
                 index_handler.index_from_element_coordinates(
                     number_of_x_elements,
-                    pvt_panel,
+                    pvt_collector,
                     temperature_name,
                     number_of_x_elements - 2,
                     y_coord,
@@ -164,7 +164,7 @@ def _boundary_condition_equations(
             row_equation[
                 index_handler.index_from_element_coordinates(
                     number_of_x_elements,
-                    pvt_panel,
+                    pvt_collector,
                     temperature_name,
                     x_coord,
                     0,
@@ -173,7 +173,7 @@ def _boundary_condition_equations(
             row_equation[
                 index_handler.index_from_element_coordinates(
                     number_of_x_elements,
-                    pvt_panel,
+                    pvt_collector,
                     temperature_name,
                     x_coord,
                     1,
@@ -185,7 +185,7 @@ def _boundary_condition_equations(
             row_equation[
                 index_handler.index_from_element_coordinates(
                     number_of_x_elements,
-                    pvt_panel,
+                    pvt_collector,
                     temperature_name,
                     x_coord,
                     number_of_y_elements - 1,
@@ -194,7 +194,7 @@ def _boundary_condition_equations(
             row_equation[
                 index_handler.index_from_element_coordinates(
                     number_of_x_elements,
-                    pvt_panel,
+                    pvt_collector,
                     temperature_name,
                     x_coord,
                     number_of_y_elements - 2,
@@ -210,7 +210,7 @@ def _calculate_downward_glass_terms(
     element: Element,
     logger: logging.Logger,
     number_of_x_elements: int,
-    pvt_panel: pvt.PVT,
+    pvt_collector: pvt.PVT,
     weather_conditions: WeatherConditions,
 ) -> Tuple[float, float]:
     """
@@ -225,7 +225,7 @@ def _calculate_downward_glass_terms(
 
     # If the PV layer is below the glass layer.
     if element.glass and element.pv:
-        if pvt_panel.glass is None:
+        if pvt_collector.glass is None:
             raise ProgrammerJudgementFault(
                 "{}Element {} has a glass layer but no glass data supplied ".format(
                     BColours.FAIL, element
@@ -237,13 +237,13 @@ def _calculate_downward_glass_terms(
             element.width
             * element.length
             / glass_pv_air_gap_resistance(
-                pvt_panel,
+                pvt_collector,
                 0.5
                 * (
                     best_guess_temperature_vector[
                         index_handler.index_from_element_coordinates(
                             number_of_x_elements,
-                            pvt_panel,
+                            pvt_collector,
                             TemperatureName.pv,
                             element.x_index,
                             element.y_index,
@@ -252,7 +252,7 @@ def _calculate_downward_glass_terms(
                     + best_guess_temperature_vector[
                         index_handler.index_from_element_coordinates(
                             number_of_x_elements,
-                            pvt_panel,
+                            pvt_collector,
                             TemperatureName.glass,
                             element.x_index,
                             element.y_index,
@@ -268,21 +268,21 @@ def _calculate_downward_glass_terms(
             element.width
             * element.length
             * radiative_heat_transfer_coefficient(
-                destination_emissivity=pvt_panel.pv.emissivity,
+                destination_emissivity=pvt_collector.pv.emissivity,
                 destination_temperature=best_guess_temperature_vector[
                     index_handler.index_from_element_coordinates(
                         number_of_x_elements,
-                        pvt_panel,
+                        pvt_collector,
                         TemperatureName.pv,
                         element.x_index,
                         element.y_index,
                     )
                 ],
-                source_emissivity=pvt_panel.glass.emissivity,
+                source_emissivity=pvt_collector.glass.emissivity,
                 source_temperature=best_guess_temperature_vector[
                     index_handler.index_from_element_coordinates(
                         number_of_x_elements,
-                        pvt_panel,
+                        pvt_collector,
                         TemperatureName.glass,
                         element.x_index,
                         element.y_index,
@@ -296,7 +296,7 @@ def _calculate_downward_glass_terms(
 
     # If the absorber layer is below the glass layer.
     if element.glass and element.absorber:
-        if pvt_panel.glass is None:
+        if pvt_collector.glass is None:
             raise ProgrammerJudgementFault(
                 "{}Element {} has a glass layer but no glass data supplied ".format(
                     BColours.FAIL, element
@@ -308,13 +308,13 @@ def _calculate_downward_glass_terms(
             element.width
             * element.length
             / glass_absorber_air_gap_resistance(
-                pvt_panel,
+                pvt_collector,
                 0.5
                 * (
                     best_guess_temperature_vector[
                         index_handler.index_from_element_coordinates(
                             number_of_x_elements,
-                            pvt_panel,
+                            pvt_collector,
                             TemperatureName.absorber,
                             element.x_index,
                             element.y_index,
@@ -323,7 +323,7 @@ def _calculate_downward_glass_terms(
                     + best_guess_temperature_vector[
                         index_handler.index_from_element_coordinates(
                             number_of_x_elements,
-                            pvt_panel,
+                            pvt_collector,
                             TemperatureName.glass,
                             element.x_index,
                             element.y_index,
@@ -339,21 +339,21 @@ def _calculate_downward_glass_terms(
             element.width
             * element.length
             * radiative_heat_transfer_coefficient(
-                destination_emissivity=pvt_panel.absorber.emissivity,
+                destination_emissivity=pvt_collector.absorber.emissivity,
                 destination_temperature=best_guess_temperature_vector[
                     index_handler.index_from_element_coordinates(
                         number_of_x_elements,
-                        pvt_panel,
+                        pvt_collector,
                         TemperatureName.absorber,
                         element.x_index,
                         element.y_index,
                     )
                 ],
-                source_emissivity=pvt_panel.glass.emissivity,
+                source_emissivity=pvt_collector.glass.emissivity,
                 source_temperature=best_guess_temperature_vector[
                     index_handler.index_from_element_coordinates(
                         number_of_x_elements,
-                        pvt_panel,
+                        pvt_collector,
                         TemperatureName.glass,
                         element.x_index,
                         element.y_index,
@@ -389,7 +389,7 @@ def _calculate_downward_upper_glass_terms(
     element: Element,
     logger: logging.Logger,
     number_of_x_elements: int,
-    pvt_panel: pvt.PVT,
+    pvt_collector: pvt.PVT,
     weather_conditions: WeatherConditions,
 ) -> Tuple[float, float]:
     """
@@ -406,7 +406,7 @@ def _calculate_downward_upper_glass_terms(
     if not element.upper_glass:
         return 0, 0
 
-    if not pvt_panel.upper_glass:
+    if not pvt_collector.upper_glass:
         raise ProgrammerJudgementFault(
             "{}Cannot compute double-glazing without `upper_glass` layer ".format(
                 BColours.FAIL
@@ -414,7 +414,7 @@ def _calculate_downward_upper_glass_terms(
             + "present.{}".format(BColours.ENDC)
         )
 
-    if not pvt_panel.glass:
+    if not pvt_collector.glass:
         raise ProgrammerJudgementFault(
             "{}Cannot compute double-glazing without `glass` layer present.{}".format(
                 BColours.FAIL, BColours.ENDC
@@ -426,13 +426,13 @@ def _calculate_downward_upper_glass_terms(
         element.width
         * element.length
         / glass_glass_air_gap_resistance(
-            pvt_panel,
+            pvt_collector,
             0.5
             * (
                 best_guess_temperature_vector[
                     index_handler.index_from_element_coordinates(
                         number_of_x_elements,
-                        pvt_panel,
+                        pvt_collector,
                         TemperatureName.upper_glass,
                         element.x_index,
                         element.y_index,
@@ -441,7 +441,7 @@ def _calculate_downward_upper_glass_terms(
                 + best_guess_temperature_vector[
                     index_handler.index_from_element_coordinates(
                         number_of_x_elements,
-                        pvt_panel,
+                        pvt_collector,
                         TemperatureName.glass,
                         element.x_index,
                         element.y_index,
@@ -459,21 +459,21 @@ def _calculate_downward_upper_glass_terms(
         element.width
         * element.length
         * radiative_heat_transfer_coefficient(
-            destination_emissivity=pvt_panel.glass.emissivity,
+            destination_emissivity=pvt_collector.glass.emissivity,
             destination_temperature=best_guess_temperature_vector[
                 index_handler.index_from_element_coordinates(
                     number_of_x_elements,
-                    pvt_panel,
+                    pvt_collector,
                     TemperatureName.glass,
                     element.x_index,
                     element.y_index,
                 )
             ],
-            source_emissivity=pvt_panel.upper_glass.emissivity,
+            source_emissivity=pvt_collector.upper_glass.emissivity,
             source_temperature=best_guess_temperature_vector[
                 index_handler.index_from_element_coordinates(
                     number_of_x_elements,
-                    pvt_panel,
+                    pvt_collector,
                     TemperatureName.upper_glass,
                     element.x_index,
                     element.y_index,
@@ -502,7 +502,7 @@ def calculate_matrix_equation(  # pylint: disable=too-many-branches
     number_of_x_elements: int,
     number_of_y_elements: int,
     operating_mode: OperatingMode,
-    pvt_panel: pvt.PVT,
+    pvt_collector: pvt.PVT,
     resolution: Optional[int],
     weather_conditions: WeatherConditions,
     collector_input_temperature: Optional[float] = None,
@@ -531,7 +531,7 @@ def calculate_matrix_equation(  # pylint: disable=too-many-branches
     matrix = numpy.zeros([0, number_of_temperatures])
     resultant_vector = numpy.zeros([0, 1])
 
-    for element_coordinates, element in pvt_panel.elements.items():
+    for element_coordinates, element in pvt_collector.elements.items():
         logger.debug("Calculating equations for element %s", element_coordinates)
         # Compute the various shared values.
         (
@@ -542,7 +542,7 @@ def calculate_matrix_equation(  # pylint: disable=too-many-branches
             element,
             logger,
             number_of_x_elements,
-            pvt_panel,
+            pvt_collector,
             weather_conditions,
         )
 
@@ -554,12 +554,14 @@ def calculate_matrix_equation(  # pylint: disable=too-many-branches
             element,
             logger,
             number_of_x_elements,
-            pvt_panel,
+            pvt_collector,
             weather_conditions,
         )
 
         pv_to_absorber_conduction = (
-            element.width * element.length / pvt_panel.pv_to_absorber_thermal_resistance
+            element.width
+            * element.length
+            / pvt_collector.pv_to_absorber_thermal_resistance
         )
         logger.debug("PV to absorber conduction: %s W/K", pv_to_absorber_conduction)
 
@@ -567,8 +569,8 @@ def calculate_matrix_equation(  # pylint: disable=too-many-branches
             (
                 element.width  # [m]
                 * element.length  # [m]
-                * pvt_panel.bond.conductivity  # [W/m*K]
-                / pvt_panel.bond.thickness  # [m]
+                * pvt_collector.bond.conductivity  # [W/m*K]
+                / pvt_collector.bond.thickness  # [m]
             )
             if element.pipe
             else 0
@@ -587,7 +589,7 @@ def calculate_matrix_equation(  # pylint: disable=too-many-branches
                 number_of_y_elements,
                 operating_mode,
                 previous_temperature_vector,
-                pvt_panel,
+                pvt_collector,
                 resolution,
                 element,
                 upper_glass_downward_conduction,
@@ -617,7 +619,7 @@ def calculate_matrix_equation(  # pylint: disable=too-many-branches
                 number_of_y_elements,
                 operating_mode,
                 previous_temperature_vector,
-                pvt_panel,
+                pvt_collector,
                 resolution,
                 element,
                 upper_glass_downward_conduction,
@@ -645,7 +647,7 @@ def calculate_matrix_equation(  # pylint: disable=too-many-branches
                 pv_to_absorber_conduction,
                 glass_downward_conduction,
                 glass_downward_radiation,
-                pvt_panel,
+                pvt_collector,
                 resolution,
                 element,
                 weather_conditions,
@@ -673,7 +675,7 @@ def calculate_matrix_equation(  # pylint: disable=too-many-branches
                 operating_mode,
                 previous_temperature_vector,
                 pv_to_absorber_conduction,
-                pvt_panel,
+                pvt_collector,
                 resolution,
                 element,
                 weather_conditions,
@@ -697,19 +699,19 @@ def calculate_matrix_equation(  # pylint: disable=too-many-branches
         pipe_to_htf_heat_transfer = (
             element.length  # [m]
             * numpy.pi
-            * pvt_panel.absorber.inner_pipe_diameter  # [m]
+            * pvt_collector.absorber.inner_pipe_diameter  # [m]
             * convective_heat_transfer_coefficient_of_water(
                 best_guess_temperature_vector[
                     index_handler.index_from_pipe_coordinates(
                         number_of_pipes,
                         number_of_x_elements,
                         element.pipe_index,  # type: ignore
-                        pvt_panel,
+                        pvt_collector,
                         TemperatureName.htf,
                         element.y_index,
                     )
                 ],
-                pvt_panel,
+                pvt_collector,
                 weather_conditions,
             )  # [W/m^2*K]
         )
@@ -725,7 +727,7 @@ def calculate_matrix_equation(  # pylint: disable=too-many-branches
             operating_mode,
             pipe_to_htf_heat_transfer,
             previous_temperature_vector,
-            pvt_panel,
+            pvt_collector,
             resolution,
             element,
             weather_conditions,
@@ -747,7 +749,7 @@ def calculate_matrix_equation(  # pylint: disable=too-many-branches
             operating_mode,
             pipe_to_htf_heat_transfer,
             previous_temperature_vector,
-            pvt_panel,
+            pvt_collector,
             resolution,
             element,
         )
@@ -764,7 +766,7 @@ def calculate_matrix_equation(  # pylint: disable=too-many-branches
             number_of_pipes,
             number_of_temperatures,
             number_of_x_elements,
-            pvt_panel,
+            pvt_collector,
             element,
         )
         logger.debug(
@@ -789,7 +791,7 @@ def calculate_matrix_equation(  # pylint: disable=too-many-branches
             number_of_pipes,
             number_of_temperatures,
             number_of_x_elements,
-            pvt_panel,
+            pvt_collector,
             element,
         )
         logger.debug(
@@ -837,7 +839,7 @@ def calculate_matrix_equation(  # pylint: disable=too-many-branches
                 number_of_temperatures,
                 number_of_x_elements,
                 number_of_y_elements,
-                pvt_panel,
+                pvt_collector,
             )
         )
         for equation, resultant_value in decoupled_system_continuity_equations:
@@ -880,7 +882,7 @@ def calculate_matrix_equation(  # pylint: disable=too-many-branches
         logger,
         number_of_temperatures,
         previous_temperature_vector,
-        pvt_panel,
+        pvt_collector,
         resolution,
         weather_conditions,
     )
@@ -897,7 +899,7 @@ def calculate_matrix_equation(  # pylint: disable=too-many-branches
         best_guess_temperature_vector,
         heat_exchanger,
         number_of_temperatures,
-        pvt_panel,
+        pvt_collector,
     )
     logger.debug(
         "Tank continuity equation computed:\nEquation: %s\nResultant value: %s W",
@@ -915,7 +917,7 @@ def calculate_matrix_equation(  # pylint: disable=too-many-branches
         number_of_x_elements,
         number_of_y_elements,
         previous_temperature_vector,
-        pvt_panel,
+        pvt_collector,
     )
     logger.debug(
         "%s system continuity equations computed.", len(system_continuity_equations)

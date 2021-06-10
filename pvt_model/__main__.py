@@ -49,26 +49,26 @@ from .__utils__ import (
 
 from .analysis import analysis
 
-from .pvt_system_model import index_handler, tank
-from .pvt_system_model.pvt_panel import pvt
-from .pvt_system_model.__main__ import main as pvt_system_model_main
-from .pvt_system_model.__utils__ import DivergentSolutionError
+from .pvt_system import index_handler, tank
+from .pvt_system.pvt_collector import pvt
+from .pvt_system.__main__ import main as pvt_system_main
+from .pvt_system.__utils__ import DivergentSolutionError
 
-from .pvt_system_model.constants import (
+from .pvt_system.constants import (
     DEFAULT_SYSTEM_TEMPERATURE,
     DENSITY_OF_WATER,
     HEAT_CAPACITY_OF_WATER,
     THERMAL_CONDUCTIVITY_OF_WATER,
     ZERO_CELCIUS_OFFSET,
 )
-from .pvt_system_model.process_pvt_system_data import (
+from .pvt_system.process_pvt_system_data import (
     hot_water_tank_from_path,
-    pvt_panel_from_path,
+    pvt_collector_from_path,
 )
 
 
 def _get_system_fourier_numbers(
-    hot_water_tank: Optional[tank.Tank], pvt_panel: pvt.PVT, resolution: float
+    hot_water_tank: Optional[tank.Tank], pvt_collector: pvt.PVT, resolution: float
 ) -> Dict[TemperatureName, float]:
     """
     Determine the Fourier numbers of the various system components.
@@ -76,7 +76,7 @@ def _get_system_fourier_numbers(
     :param hot_water_tank:
         A :class:`tank.Tank` instance representing the hot-water tank in the system.
 
-    :param pvt_panel:
+    :param pvt_collector:
         A :class:`pvt.PVT` instance representing the PVT panel being modelled.
 
     :param resolution:
@@ -89,44 +89,44 @@ def _get_system_fourier_numbers(
 
     # Determine the Fourier coefficients of the panel's layers.
     fourier_number_map: Dict[TemperatureName, float] = dict()
-    if pvt_panel.glass is not None:
+    if pvt_collector.glass is not None:
         fourier_number_map[TemperatureName.glass] = round(
             fourier_number(
-                pvt_panel.glass.thickness,
-                pvt_panel.glass.conductivity,
-                pvt_panel.glass.density,
-                pvt_panel.glass.heat_capacity,
+                pvt_collector.glass.thickness,
+                pvt_collector.glass.conductivity,
+                pvt_collector.glass.density,
+                pvt_collector.glass.heat_capacity,
                 resolution,
             ),
             2,
         )
-    if pvt_panel.pv is not None:
+    if pvt_collector.pv is not None:
         fourier_number_map[TemperatureName.pv] = round(
             fourier_number(
-                pvt_panel.pv.thickness,
-                pvt_panel.pv.conductivity,
-                pvt_panel.pv.density,
-                pvt_panel.pv.heat_capacity,
+                pvt_collector.pv.thickness,
+                pvt_collector.pv.conductivity,
+                pvt_collector.pv.density,
+                pvt_collector.pv.heat_capacity,
                 resolution,
             ),
             2,
         )
     fourier_number_map[TemperatureName.absorber] = round(
         fourier_number(
-            pvt_panel.absorber.thickness,
-            pvt_panel.absorber.conductivity,
-            pvt_panel.absorber.density,
-            pvt_panel.absorber.heat_capacity,
+            pvt_collector.absorber.thickness,
+            pvt_collector.absorber.conductivity,
+            pvt_collector.absorber.density,
+            pvt_collector.absorber.heat_capacity,
             resolution,
         ),
         2,
     )
     fourier_number_map[TemperatureName.htf] = round(
         fourier_number(
-            pvt_panel.absorber.inner_pipe_diameter,
+            pvt_collector.absorber.inner_pipe_diameter,
             THERMAL_CONDUCTIVITY_OF_WATER,
             DENSITY_OF_WATER,
-            pvt_panel.absorber.htf_heat_capacity,
+            pvt_collector.absorber.htf_heat_capacity,
             resolution,
         ),
         2,
@@ -150,7 +150,7 @@ def _calculate_and_print_fourier_numbers(
     hot_water_tank: Optional[tank.Tank],
     logger: Logger,
     parsed_args: Namespace,
-    pvt_panel: pvt.PVT,
+    pvt_collector: pvt.PVT,
 ) -> None:
     """
     Determines, prints, and logs the various Fourier numbers.
@@ -164,14 +164,14 @@ def _calculate_and_print_fourier_numbers(
     :param parsed_args:
         The parsed commnand-line arguments.
 
-    :param pvt_panel:
-        The pvt panel, represented as a :class:`pvt_panel.pvt.PVT` instance.
+    :param pvt_collector:
+        The pvt panel, represented as a :class:`pvt_collector.pvt.PVT` instance.
 
     """
 
     # Determine the Fourier numbers.
     fourier_number_map = _get_system_fourier_numbers(
-        hot_water_tank, pvt_panel, parsed_args.resolution
+        hot_water_tank, pvt_collector, parsed_args.resolution
     )
 
     logger.info(
@@ -263,7 +263,7 @@ def _determine_consistent_conditions(
     logger: Logger,
     operating_mode: OperatingMode,
     parsed_args: Namespace,
-    pvt_panel: pvt.PVT,
+    pvt_collector: pvt.PVT,
     *,
     override_ambient_temperature: Optional[float] = None,
     override_collector_input_temperature: Optional[float] = None,
@@ -295,7 +295,7 @@ def _determine_consistent_conditions(
     :param parsed_args:
         The parsed command-line arguments.
 
-    :param pvt_panel:
+    :param pvt_collector:
         The :class:`pvt.PVT` instance representing the pvt panel being modelled.
 
     :param override_ambient_tempearture:
@@ -325,15 +325,15 @@ def _determine_consistent_conditions(
         if operating_mode.coupled:
             running_system_temperature_vector = [
                 DEFAULT_SYSTEM_TEMPERATURE
-            ] * index_handler.num_temperatures(pvt_panel)
+            ] * index_handler.num_temperatures(pvt_collector)
         else:
             running_system_temperature_vector = [DEFAULT_SYSTEM_TEMPERATURE] * (
-                index_handler.num_temperatures(pvt_panel) - 3
+                index_handler.num_temperatures(pvt_collector) - 3
             )
 
     # Call the model to generate the output of the run.
     logger.info("Running the model. Run number %s.", run_depth)
-    final_temperature_vector, system_data = pvt_system_model_main(
+    final_temperature_vector, system_data = pvt_system_main(
         parsed_args.average_irradiance,
         parsed_args.cloud_efficacy_factor,
         parsed_args.disable_logging,
@@ -394,7 +394,7 @@ def _determine_consistent_conditions(
         logger,
         operating_mode,
         parsed_args,
-        pvt_panel,
+        pvt_collector,
         override_ambient_temperature=override_ambient_temperature,
         override_collector_input_temperature=override_collector_input_temperature,
         override_irradiance=override_irradiance,
@@ -413,7 +413,7 @@ def _multiprocessing_determine_consistent_conditions(
     logger: Logger,
     operating_mode: OperatingMode,
     parsed_args: Namespace,
-    pvt_panel: pvt.PVT,
+    pvt_collector: pvt.PVT,
 ) -> Dict[float, SystemData]:
     """
     Wrapper function around `determine_consistent_conditions` to enable multi-processing
@@ -440,7 +440,7 @@ def _multiprocessing_determine_consistent_conditions(
     :param parsed_args:
         The parsed command-line arguments.
 
-    :param pvt_panel:
+    :param pvt_collector:
         The :class:`pvt.PVT` instance representing the pvt panel being modelled.
 
     :return:
@@ -454,7 +454,7 @@ def _multiprocessing_determine_consistent_conditions(
         logger,
         operating_mode,
         parsed_args,
-        pvt_panel,
+        pvt_collector,
         override_ambient_temperature=steady_state_run["ambient_temperature"],
         override_collector_input_temperature=steady_state_run[
             "collector_input_temperature"
@@ -824,7 +824,7 @@ def main(args) -> None:  # pylint: disable=too-many-branches
 
     # Parse the PVT system information and generate a PVT panel based on the args for
     # use in Fourier-number calculations.
-    pvt_panel = pvt_panel_from_path(
+    pvt_collector = pvt_collector_from_path(
         layers,
         logger,
         parsed_args.mass_flow_rate,
@@ -838,7 +838,7 @@ def main(args) -> None:  # pylint: disable=too-many-branches
         "\n  ".join(
             [
                 f"{element_coordinates}: {element}"
-                for element_coordinates, element in pvt_panel.elements.items()
+                for element_coordinates, element in pvt_collector.elements.items()
             ]
         ),
     )
@@ -860,13 +860,15 @@ def main(args) -> None:  # pylint: disable=too-many-branches
 
     logger.debug(
         "PVT system information successfully parsed:\n%s\n%s",
-        str(pvt_panel),
+        str(pvt_collector),
         str(hot_water_tank) if hot_water_tank is not None else "NO HOT-WATER TANK",
     )
 
     # Determine the Fourier number for the PV-T panel.
     logger.info("Beginning Fourier number calculation.")
-    _calculate_and_print_fourier_numbers(hot_water_tank, logger, parsed_args, pvt_panel)
+    _calculate_and_print_fourier_numbers(
+        hot_water_tank, logger, parsed_args, pvt_collector
+    )
 
     # Determine the operating mode of the system.
     operating_mode = OperatingMode(not parsed_args.decoupled, parsed_args.dynamic)
@@ -900,12 +902,12 @@ def main(args) -> None:  # pylint: disable=too-many-branches
             )
 
             initial_system_temperature_vector, _ = _determine_consistent_conditions(
-                pvt_panel.absorber.number_of_pipes,
+                pvt_collector.absorber.number_of_pipes,
                 layers,
                 logger,
                 operating_mode,
                 parsed_args,
-                pvt_panel,
+                pvt_collector,
             )
             logger.info(
                 "Consistent initial conditions determined at coarse resolution."
@@ -917,12 +919,12 @@ def main(args) -> None:  # pylint: disable=too-many-branches
                 f"successive runs at CLI resolution of {parsed_args.resolution}s."
             )
             initial_system_temperature_vector, _ = _determine_consistent_conditions(
-                pvt_panel.absorber.number_of_pipes,
+                pvt_collector.absorber.number_of_pipes,
                 layers,
                 logger,
                 operating_mode,
                 parsed_args,
-                pvt_panel,
+                pvt_collector,
                 resolution=parsed_args.resolution,
                 running_system_temperature_vector=initial_system_temperature_vector,
             )
@@ -947,7 +949,7 @@ def main(args) -> None:  # pylint: disable=too-many-branches
             # determined by the data fed in, and the initial conditions can simply be
             # taken as the default conditions.
             initial_system_temperature_vector = [DEFAULT_SYSTEM_TEMPERATURE] * (
-                index_handler.num_temperatures(pvt_panel) - 3
+                index_handler.num_temperatures(pvt_collector) - 3
             )
 
         logger.info(
@@ -957,7 +959,7 @@ def main(args) -> None:  # pylint: disable=too-many-branches
             f"Running the model at the high CLI resolution of {parsed_args.resolution}s."
         )
         # Run the model at this higher resolution.
-        _, system_data = pvt_system_model_main(
+        _, system_data = pvt_system_main(
             parsed_args.average_irradiance,
             parsed_args.cloud_efficacy_factor,
             parsed_args.disable_logging,
@@ -1034,12 +1036,12 @@ def main(args) -> None:  # pylint: disable=too-many-branches
                 multi_processing_output = worker_pool.map(
                     partial(
                         _multiprocessing_determine_consistent_conditions,
-                        number_of_pipes=pvt_panel.absorber.number_of_pipes,
+                        number_of_pipes=pvt_collector.absorber.number_of_pipes,
                         layers=layers,
                         logger=logger,
                         operating_mode=operating_mode,
                         parsed_args=parsed_args,
-                        pvt_panel=pvt_panel,
+                        pvt_collector=pvt_collector,
                     ),
                     steady_state_runs,
                 )

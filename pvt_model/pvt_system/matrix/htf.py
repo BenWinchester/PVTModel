@@ -25,14 +25,14 @@ from typing import List, Optional, Tuple, Union
 import numpy
 
 from .. import index_handler
-from ..pvt_panel import pvt
+from ..pvt_collector import pvt
 
 from ...__utils__ import (
     OperatingMode,
     TemperatureName,
 )
 from ..physics_utils import density_of_water
-from ..pvt_panel.element import Element
+from ..pvt_collector.element import Element
 
 __all__ = ("calculate_htf_continuity_equation", "calculate_htf_equation")
 
@@ -41,7 +41,7 @@ def calculate_htf_continuity_equation(
     number_of_pipes: int,
     number_of_temperatures: int,
     number_of_x_elements: int,
-    pvt_panel: pvt.PVT,
+    pvt_collector: pvt.PVT,
     element: Element,
 ) -> Tuple[List[float], float]:
     """
@@ -66,7 +66,7 @@ def calculate_htf_continuity_equation(
             number_of_pipes,
             number_of_x_elements,
             element.pipe_index,  # type: ignore
-            pvt_panel,
+            pvt_collector,
             TemperatureName.htf,
             element.y_index,
         )
@@ -78,7 +78,7 @@ def calculate_htf_continuity_equation(
             number_of_pipes,
             number_of_x_elements,
             element.pipe_index,  # type: ignore
-            pvt_panel,
+            pvt_collector,
             TemperatureName.htf_in,
             element.y_index,
         )
@@ -90,7 +90,7 @@ def calculate_htf_continuity_equation(
             number_of_pipes,
             number_of_x_elements,
             element.pipe_index,  # type: ignore
-            pvt_panel,
+            pvt_collector,
             TemperatureName.htf_out,
             element.y_index,
         )
@@ -107,7 +107,7 @@ def calculate_htf_equation(
     operating_mode: OperatingMode,
     pipe_to_bulk_water_heat_transfer: float,
     previous_temperature_vector: Optional[numpy.ndarray],
-    pvt_panel: pvt.PVT,
+    pvt_collector: pvt.PVT,
     resolution: Optional[int],
     element: Element,
 ) -> Tuple[List[float], float]:
@@ -130,7 +130,7 @@ def calculate_htf_equation(
     if operating_mode.dynamic:
         bulk_water_internal_energy: float = (
             numpy.pi
-            * (pvt_panel.absorber.inner_pipe_diameter / 2) ** 2  # [m^2]
+            * (pvt_collector.absorber.inner_pipe_diameter / 2) ** 2  # [m^2]
             * element.length  # [m]
             * density_of_water(
                 best_guess_temperature_vector[
@@ -138,22 +138,22 @@ def calculate_htf_equation(
                         number_of_pipes,
                         number_of_x_elements,
                         element.pipe_index,  # type: ignore
-                        pvt_panel,
+                        pvt_collector,
                         TemperatureName.htf,
                         element.y_index,
                     )
                 ]
             )  # [kg/m^3]
-            * pvt_panel.absorber.htf_heat_capacity  # [J/kg*K]
+            * pvt_collector.absorber.htf_heat_capacity  # [J/kg*K]
             / resolution  # type: ignore  # [s]
         )  # [W/K]
     else:
         bulk_water_internal_energy = 0
 
     fluid_input_output_transfer_term = (
-        pvt_panel.absorber.mass_flow_rate  # [kg/s]
-        * pvt_panel.absorber.htf_heat_capacity  # [J/kg*K]
-        / pvt_panel.absorber.number_of_pipes
+        pvt_collector.absorber.mass_flow_rate  # [kg/s]
+        * pvt_collector.absorber.htf_heat_capacity  # [J/kg*K]
+        / pvt_collector.absorber.number_of_pipes
     )  # [W/K]
 
     # Compute the T_f(#, j) term.
@@ -162,7 +162,7 @@ def calculate_htf_equation(
             number_of_pipes,
             number_of_x_elements,
             element.pipe_index,  # type: ignore
-            pvt_panel,
+            pvt_collector,
             TemperatureName.htf,
             element.y_index,
         )
@@ -176,7 +176,7 @@ def calculate_htf_equation(
             number_of_pipes,
             number_of_x_elements,
             element.pipe_index,  # type: ignore
-            pvt_panel,
+            pvt_collector,
             TemperatureName.htf_in,
             element.y_index,
         )
@@ -190,7 +190,7 @@ def calculate_htf_equation(
             number_of_pipes,
             number_of_x_elements,
             element.pipe_index,  # type: ignore
-            pvt_panel,
+            pvt_collector,
             TemperatureName.htf_out,
             element.y_index,
         )
@@ -202,7 +202,7 @@ def calculate_htf_equation(
             number_of_pipes,
             number_of_x_elements,
             element.pipe_index,  # type: ignore
-            pvt_panel,
+            pvt_collector,
             TemperatureName.pipe,
             element.y_index,
         )
@@ -222,7 +222,7 @@ def calculate_htf_equation(
                     number_of_pipes,
                     number_of_x_elements,
                     element.pipe_index,  # type: ignore
-                    pvt_panel,
+                    pvt_collector,
                     TemperatureName.htf,
                     element.y_index,
                 )

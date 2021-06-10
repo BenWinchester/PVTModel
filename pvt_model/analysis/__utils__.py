@@ -29,7 +29,7 @@ from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D as plt3D
 
 try:
-    from ..pvt_system_model.constants import (  # pylint: disable=unused-import
+    from ..pvt_system.constants import (  # pylint: disable=unused-import
         HEAT_CAPACITY_OF_WATER,
     )
 except ModuleNotFoundError:
