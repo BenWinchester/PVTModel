@@ -22,7 +22,7 @@ import argparse
 from logging import Logger
 from typing import Set
 
-from .__utils__ import BColours, TemperatureName
+from .__utils__ import BColours, MissingParametersError, TemperatureName
 
 __all__ = ("check_args", "parse_args")
 
@@ -74,6 +74,26 @@ def check_args(  # pylint: disable=too-many-branches
         Raised if the command-line arguments mismatch.
 
     """
+
+    # Check that the output file is correctly specified without a file extension.
+    if parsed_args.output is None or parsed_args.output == "":
+        logger.error(
+            "%sAn output filename must be provided on the command-line interface.%s",
+            BColours.FAIL,
+            BColours.ENDC,
+        )
+        raise MissingParametersError(
+            "Command-Line Interface", "An output file name must be provided."
+        )
+    if parsed_args.output.endswith(".yaml") or parsed_args.output.endswith(".json"):
+        logger.error(
+            "%sThe output filename must be irrespective of data type..%s",
+            BColours.FAIL,
+            BColours.ENDC,
+        )
+        raise Exception(
+            "The output file must be irrespecitve of file extension/data type."
+        )
 
     # Enforce that all required arguments are specified.
     if parsed_args.portion_covered is None:

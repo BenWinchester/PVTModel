@@ -14,18 +14,21 @@ various modules throughout the PVT model.
 
 """
 
+import dataclasses
 import enum
 import logging
 import os
 
+import json
+
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 import yaml
 
 __all__ = (
     "BColours",
-    "CarbonEmissions",
+    "calculate_and_print_fourier_numbers" "CarbonEmissions",
     "COARSE_RUN_RESOLUTION",
     "fourier_number",
     "get_logger",
@@ -36,6 +39,7 @@ __all__ = (
     "ProgrammerJudgementFault",
     "MissingParametersError",
     "read_yaml",
+    "save_data",
     "SystemData",
     "TotalPowerData",
 )
@@ -568,3 +572,98 @@ class TotalPowerData:
         self.electricity_demand += electricity_demand_incriment
         self.heating_supplied += heating_supplied_increment
         self.heating_demand += heating_demand_increment
+
+
+def save_data(
+    file_type: FileType,
+    logger: logging.Logger,
+    operating_mode: OperatingMode,
+    output_file_name: str,
+    system_data: Dict[float, SystemData],
+    carbon_emissions: Optional[CarbonEmissions] = None,
+    total_power_data: Optional[TotalPowerData] = None,
+) -> None:
+    """
+    Save data when called. The data entry should be appended to the file.
+
+    :param file_type:
+        The file type that's being saved.
+
+    :param logger:
+        The logger used for the run.
+
+    :param operating_mode:
+        The operating mode for the run.
+
+    :param output_file_name:
+        The destination file name.
+
+    :param system_data:
+        The data to save.
+
+    :param carbon_emissions:
+        The carbon emissions data for the run.
+
+    :param total_power_data:
+        The total power data for the run.
+
+    """
+
+    # Convert the system data entry to JSON-readable format
+    system_data_dict: Dict[Union[float, str], Union[str, Dict[str, Any]]] = {
+        key: dataclasses.asdict(value) for key, value in system_data.items()
+    }
+    logger.info(
+        "Saving data: System data successfully converted to json-readable format."
+    )
+
+    # If we're saving YAML data part-way through, then append to the file.
+    if file_type == FileType.YAML:
+        logger.info("Saving as YAML format.")
+        with open(f"{output_file_name}.yaml", "a") as output_yaml_file:
+            yaml.dump(
+                system_data_dict,
+                output_yaml_file,
+            )
+
+    # If we're dumping JSON, open the file, and append to it.
+    if file_type == FileType.JSON:
+        logger.info("Saving as JSON format.")
+        # Append the total power and emissions data for the run.
+        if total_power_data is not None:
+            system_data_dict.update(dataclasses.asdict(total_power_data))  # type: ignore
+            logger.info("Total power data updated.")
+        if carbon_emissions is not None:
+            system_data_dict.update(dataclasses.asdict(carbon_emissions))  # type: ignore
+            logger.info("Carbon emissions updated.")
+
+        # Append the data type for the run.
+        system_data_dict["data_type"] = "{coupling}_{timing}".format(
+            coupling="coupled" if operating_mode.coupled else "decoupled",
+            timing="steady_state" if operating_mode.steady_state else "dynamic",
+        )
+        logger.info("Data type added successfully.")
+
+        # Save the data
+        # If this is the initial dump, then create the file.
+        if not os.path.isfile(f"{output_file_name}.json"):
+            logger.info("Attempting first dump to a non-existent file.")
+            logger.info("Output file name: %s", output_file_name)
+            with open(f"{output_file_name}.json", "w") as output_json_file:
+                json.dump(
+                    system_data_dict,
+                    output_json_file,
+                    indent=4,
+                )
+        else:
+            with open(f"{output_file_name}.json", "r+") as output_json_file:
+                # Read the data and append the current update.
+                filedata = json.load(output_json_file)
+                filedata.update(system_data_dict)
+                # Overwrite the file with the updated data.
+                output_json_file.seek(0)
+                json.dump(
+                    filedata,
+                    output_json_file,
+                    indent=4,
+                )

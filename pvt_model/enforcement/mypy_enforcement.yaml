@@ -26,10 +26,10 @@
 - file: pvt_model/__main__.py
   justification: "Glass temperature cannot be `None`, already processed."
   usage: "{round(entry.glass_temperature, 3) for entry in system_data.values()}"
-- file: pvt_model/__main__.py
+- file: pvt_model/__utils__.py
   justification: "Further investigation required - FIXME"
   usage: "system_data_dict.update(dataclasses.asdict(total_power_data))"
-- file: pvt_model/__main__.py
+- file: pvt_model/__utils__.py
   justification: "Further investigation required - FIXME"
   usage: "system_data_dict.update(dataclasses.asdict(carbon_emissions))"
 - file: pvt_model/analysis/__utils__.py
