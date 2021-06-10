@@ -2,6 +2,8 @@
 #PBS -lwalltime=12:00:00
 #PBS -lselect=1:ncpus=8:mem=11800Mb
 
+echo -e "HPC script executed"
+
 # Load the anaconda environment
 module load anaconda3/py37
 source activate py37
@@ -20,8 +22,8 @@ else
 fi
 
 # Sending more runs to the HPC
-echo -e "Sending 'more runs' command."
-python3.7 -m pvt_model --initial-month 9 --location system_data/london_ilaria/ --pvt-data-file system_data/pvt_panels/ilarias_panel.yaml --output output_files/hpc_run_outputs/ilaria_single_glazed_pv_layer_present_80_0_litres_per_hour_31_x_50 --x-resolution 31 --y-resolution 50 --decoupled --steady-state --steady-state-data-file system_data/steady_state_data/autotherm.yaml --layers g pv a p f --portion-covered 1 --skip-analysis --mass-flow-rate 80
+echo -e "Carrying out analysis with arguments: $@"
+python3.7 -m pvt_model --skip-analysis $@
 
 cd $CURRENT_DIR
 
