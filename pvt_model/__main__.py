@@ -13,7 +13,6 @@ The model is run from here for several runs as determined by command-line argume
 
 """
 
-import dataclasses
 import os
 import sys
 
@@ -22,10 +21,7 @@ from functools import partial
 from logging import Logger
 from multiprocessing import Pool
 from statistics import mean
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
-
-import json
-import yaml
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from . import argparser
 
