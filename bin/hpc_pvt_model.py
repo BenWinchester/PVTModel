@@ -56,7 +56,7 @@ def main() -> None:
 
         # Adjust the permissions and execute.
         os.chmod(temp_file.name, 0o775)
-        subprocess.run(temp_file.name, check=True)
+        subprocess.run(f"qsub {temp_file.name}", check=True)
 
         # Close the temporary file - this is not really necessary but saves on space.
         temp_file.close()
