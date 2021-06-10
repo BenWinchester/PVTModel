@@ -13,7 +13,6 @@ The model is run from here for several runs as determined by command-line argume
 
 """
 
-import dataclasses
 import os
 import sys
 
@@ -22,53 +21,48 @@ from functools import partial
 from logging import Logger
 from multiprocessing import Pool
 from statistics import mean
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
-
-import json
-import yaml
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from . import argparser
 
 from .__utils__ import (
     BColours,
-    CarbonEmissions,
     COARSE_RUN_RESOLUTION,
     FileType,
     fourier_number,
     get_logger,
     INITIAL_CONDITION_PRECISION,
     LOGGER_NAME,
-    MissingParametersError,
     OperatingMode,
     ProgrammerJudgementFault,
     read_yaml,
+    save_data,
     SystemData,
     TemperatureName,
-    TotalPowerData,
 )
 
 from .analysis import analysis
 
-from .pvt_system_model import index_handler, tank
-from .pvt_system_model.pvt_panel import pvt
-from .pvt_system_model.__main__ import main as pvt_system_model_main
-from .pvt_system_model.__utils__ import DivergentSolutionError
+from .pvt_system import index_handler, tank
+from .pvt_system.pvt_collector import pvt
+from .pvt_system.__main__ import main as pvt_system_main
+from .pvt_system.__utils__ import DivergentSolutionError
 
-from .pvt_system_model.constants import (
+from .pvt_system.constants import (
     DEFAULT_SYSTEM_TEMPERATURE,
     DENSITY_OF_WATER,
     HEAT_CAPACITY_OF_WATER,
     THERMAL_CONDUCTIVITY_OF_WATER,
     ZERO_CELCIUS_OFFSET,
 )
-from .pvt_system_model.process_pvt_system_data import (
+from .pvt_system.process_pvt_system_data import (
     hot_water_tank_from_path,
-    pvt_panel_from_path,
+    pvt_collector_from_path,
 )
 
 
 def _get_system_fourier_numbers(
-    hot_water_tank: Optional[tank.Tank], pvt_panel: pvt.PVT, resolution: float
+    hot_water_tank: Optional[tank.Tank], pvt_collector: pvt.PVT, resolution: float
 ) -> Dict[TemperatureName, float]:
     """
     Determine the Fourier numbers of the various system components.
@@ -76,7 +70,7 @@ def _get_system_fourier_numbers(
     :param hot_water_tank:
         A :class:`tank.Tank` instance representing the hot-water tank in the system.
 
-    :param pvt_panel:
+    :param pvt_collector:
         A :class:`pvt.PVT` instance representing the PVT panel being modelled.
 
     :param resolution:
@@ -89,44 +83,44 @@ def _get_system_fourier_numbers(
 
     # Determine the Fourier coefficients of the panel's layers.
     fourier_number_map: Dict[TemperatureName, float] = dict()
-    if pvt_panel.glass is not None:
+    if pvt_collector.glass is not None:
         fourier_number_map[TemperatureName.glass] = round(
             fourier_number(
-                pvt_panel.glass.thickness,
-                pvt_panel.glass.conductivity,
-                pvt_panel.glass.density,
-                pvt_panel.glass.heat_capacity,
+                pvt_collector.glass.thickness,
+                pvt_collector.glass.conductivity,
+                pvt_collector.glass.density,
+                pvt_collector.glass.heat_capacity,
                 resolution,
             ),
             2,
         )
-    if pvt_panel.pv is not None:
+    if pvt_collector.pv is not None:
         fourier_number_map[TemperatureName.pv] = round(
             fourier_number(
-                pvt_panel.pv.thickness,
-                pvt_panel.pv.conductivity,
-                pvt_panel.pv.density,
-                pvt_panel.pv.heat_capacity,
+                pvt_collector.pv.thickness,
+                pvt_collector.pv.conductivity,
+                pvt_collector.pv.density,
+                pvt_collector.pv.heat_capacity,
                 resolution,
             ),
             2,
         )
     fourier_number_map[TemperatureName.absorber] = round(
         fourier_number(
-            pvt_panel.absorber.thickness,
-            pvt_panel.absorber.conductivity,
-            pvt_panel.absorber.density,
-            pvt_panel.absorber.heat_capacity,
+            pvt_collector.absorber.thickness,
+            pvt_collector.absorber.conductivity,
+            pvt_collector.absorber.density,
+            pvt_collector.absorber.heat_capacity,
             resolution,
         ),
         2,
     )
     fourier_number_map[TemperatureName.htf] = round(
         fourier_number(
-            pvt_panel.absorber.inner_pipe_diameter,
+            pvt_collector.absorber.inner_pipe_diameter,
             THERMAL_CONDUCTIVITY_OF_WATER,
             DENSITY_OF_WATER,
-            pvt_panel.absorber.htf_heat_capacity,
+            pvt_collector.absorber.htf_heat_capacity,
             resolution,
         ),
         2,
@@ -146,11 +140,11 @@ def _get_system_fourier_numbers(
     return fourier_number_map
 
 
-def _determine_fourier_numbers(
+def _calculate_and_print_fourier_numbers(
     hot_water_tank: Optional[tank.Tank],
     logger: Logger,
     parsed_args: Namespace,
-    pvt_panel: pvt.PVT,
+    pvt_collector: pvt.PVT,
 ) -> None:
     """
     Determines, prints, and logs the various Fourier numbers.
@@ -164,14 +158,14 @@ def _determine_fourier_numbers(
     :param parsed_args:
         The parsed commnand-line arguments.
 
-    :param pvt_panel:
-        The pvt panel, represented as a :class:`pvt_panel.pvt.PVT` instance.
+    :param pvt_collector:
+        The pvt panel, represented as a :class:`pvt_collector.pvt.PVT` instance.
 
     """
 
     # Determine the Fourier numbers.
     fourier_number_map = _get_system_fourier_numbers(
-        hot_water_tank, pvt_panel, parsed_args.resolution
+        hot_water_tank, pvt_collector, parsed_args.resolution
     )
 
     logger.info(
@@ -263,7 +257,7 @@ def _determine_consistent_conditions(
     logger: Logger,
     operating_mode: OperatingMode,
     parsed_args: Namespace,
-    pvt_panel: pvt.PVT,
+    pvt_collector: pvt.PVT,
     *,
     override_ambient_temperature: Optional[float] = None,
     override_collector_input_temperature: Optional[float] = None,
@@ -275,6 +269,10 @@ def _determine_consistent_conditions(
 ) -> Tuple[Optional[List[float]], Dict[float, SystemData]]:
     """
     Determines the initial system temperatures for the run.
+
+    This function is called recursively until the temperature vector outputted by the
+    system is consistent within some error given by the
+    :module:`INITIAL_CONDITION_PRECISION` variable.
 
     :param number_of_pipes:
         The number of pipes on the base of the hot-water absorber.
@@ -291,7 +289,7 @@ def _determine_consistent_conditions(
     :param parsed_args:
         The parsed command-line arguments.
 
-    :param pvt_panel:
+    :param pvt_collector:
         The :class:`pvt.PVT` instance representing the pvt panel being modelled.
 
     :param override_ambient_tempearture:
@@ -321,15 +319,15 @@ def _determine_consistent_conditions(
         if operating_mode.coupled:
             running_system_temperature_vector = [
                 DEFAULT_SYSTEM_TEMPERATURE
-            ] * index_handler.num_temperatures(pvt_panel)
+            ] * index_handler.num_temperatures(pvt_collector)
         else:
             running_system_temperature_vector = [DEFAULT_SYSTEM_TEMPERATURE] * (
-                index_handler.num_temperatures(pvt_panel) - 3
+                index_handler.num_temperatures(pvt_collector) - 3
             )
 
     # Call the model to generate the output of the run.
     logger.info("Running the model. Run number %s.", run_depth)
-    final_temperature_vector, system_data = pvt_system_model_main(
+    final_temperature_vector, system_data = pvt_system_main(
         parsed_args.average_irradiance,
         parsed_args.cloud_efficacy_factor,
         parsed_args.disable_logging,
@@ -362,7 +360,7 @@ def _determine_consistent_conditions(
 
     # If in verbose mode, output average, min, and max temperatures.
     if parsed_args.verbose:
-        _output_temperature_info(logger, parsed_args, system_data)
+        _determine_and_print_average_temperatures(logger, parsed_args, system_data)
 
     # If all the temperatures are within the desired limit, return the temperatures.
     if all(
@@ -390,7 +388,7 @@ def _determine_consistent_conditions(
         logger,
         operating_mode,
         parsed_args,
-        pvt_panel,
+        pvt_collector,
         override_ambient_temperature=override_ambient_temperature,
         override_collector_input_temperature=override_collector_input_temperature,
         override_irradiance=override_irradiance,
@@ -409,7 +407,7 @@ def _multiprocessing_determine_consistent_conditions(
     logger: Logger,
     operating_mode: OperatingMode,
     parsed_args: Namespace,
-    pvt_panel: pvt.PVT,
+    pvt_collector: pvt.PVT,
 ) -> Dict[float, SystemData]:
     """
     Wrapper function around `determine_consistent_conditions` to enable multi-processing
@@ -436,7 +434,7 @@ def _multiprocessing_determine_consistent_conditions(
     :param parsed_args:
         The parsed command-line arguments.
 
-    :param pvt_panel:
+    :param pvt_collector:
         The :class:`pvt.PVT` instance representing the pvt panel being modelled.
 
     :return:
@@ -450,7 +448,7 @@ def _multiprocessing_determine_consistent_conditions(
         logger,
         operating_mode,
         parsed_args,
-        pvt_panel,
+        pvt_collector,
         override_ambient_temperature=steady_state_run["ambient_temperature"],
         override_collector_input_temperature=steady_state_run[
             "collector_input_temperature"
@@ -463,71 +461,59 @@ def _multiprocessing_determine_consistent_conditions(
     return system_data_entry
 
 
-def _print_temperature_info(
-    average_temperature_map: Dict[str, float],
-    logger: Logger,
-    maximum_temperature_map: Dict[str, float],
-    minimum_temperature_map: Dict[str, float],
-    verbose_mode: bool = False,
+def _determine_and_print_average_temperatures(
+    logger: Logger, parsed_args: Namespace, system_data: Dict[float, SystemData]
 ) -> None:
     """
-    Prints out the average temperatures to the console and logger.
+    Determines and prints information about the system temperatures.
 
-    :param average_temperature_map:
-        A mapping between temperature name, as a `str`, and the average temperature for
-        the run.
+    The average, minimum, and maximum temperatures of the various components are
+    outputted to the console and the logs.
 
     :param logger:
-        The logger used.
+        The logger used for the run.
 
-    :param maximum_temperature_run:
-        A mapping between temperature name, as a `str`, and the maximum temperature for
-        the run.
+    :param parsed_args:
+        The parsed command-line arguments.
 
-    :param minimum_temperature_run:
-        A mapping between temperature name, as a `str`, and the minimum temperature for
-        the run.
-
-    :param verbose_mode:
-        If True, then colouring will be done of the output to indicate that it is
-        verbose-mode specific.
+    :param system_data:
+        The system data ouputted by the run.
 
     """
 
-    logger.info(
-        "Average temperatures for the run in degC:\n%s\n%s",
-        "|".join(
-            [
-                " {}{}".format(
-                    key,
-                    " "
-                    * (
-                        max([len(key) for key in average_temperature_map])
-                        - len(key)
-                        + 1
-                    ),
-                )
-                for key in average_temperature_map
-            ]
-        ),
-        "|".join(
-            [
-                " {}{}".format(
-                    value,
-                    " "
-                    * (
-                        max([len(key) for key in average_temperature_map])
-                        - len(str(value))
-                        + 1
-                    ),
-                )
-                for value in average_temperature_map.values()
-            ]
-        ),
-    )
-    print(
-        "{}Average temperatures for the run in degC:\n{}\n{}{}".format(
-            BColours.OKTEAL if verbose_mode else "",
+    def _print_temperature_info(
+        average_temperature_map: Dict[str, float],
+        logger: Logger,
+        maximum_temperature_map: Dict[str, float],
+        minimum_temperature_map: Dict[str, float],
+        verbose_mode: bool = False,
+    ) -> None:
+        """
+        Prints out the average temperatures to the console and logger.
+
+        :param average_temperature_map:
+            A mapping between temperature name, as a `str`, and the average temperature for
+            the run.
+
+        :param logger:
+            The logger used.
+
+        :param maximum_temperature_run:
+            A mapping between temperature name, as a `str`, and the maximum temperature for
+            the run.
+
+        :param minimum_temperature_run:
+            A mapping between temperature name, as a `str`, and the minimum temperature for
+            the run.
+
+        :param verbose_mode:
+            If True, then colouring will be done of the output to indicate that it is
+            verbose-mode specific.
+
+        """
+
+        logger.info(
+            "Average temperatures for the run in degC:\n%s\n%s",
             "|".join(
                 [
                     " {}{}".format(
@@ -556,44 +542,44 @@ def _print_temperature_info(
                     for value in average_temperature_map.values()
                 ]
             ),
-            BColours.ENDC,
         )
-    )
+        print(
+            "{}Average temperatures for the run in degC:\n{}\n{}{}".format(
+                BColours.OKTEAL if verbose_mode else "",
+                "|".join(
+                    [
+                        " {}{}".format(
+                            key,
+                            " "
+                            * (
+                                max([len(key) for key in average_temperature_map])
+                                - len(key)
+                                + 1
+                            ),
+                        )
+                        for key in average_temperature_map
+                    ]
+                ),
+                "|".join(
+                    [
+                        " {}{}".format(
+                            value,
+                            " "
+                            * (
+                                max([len(key) for key in average_temperature_map])
+                                - len(str(value))
+                                + 1
+                            ),
+                        )
+                        for value in average_temperature_map.values()
+                    ]
+                ),
+                BColours.ENDC,
+            )
+        )
 
-    logger.info(
-        "Maximum temperatures for the run in degC:\n%s\n%s",
-        "|".join(
-            [
-                " {}{}".format(
-                    key,
-                    " "
-                    * (
-                        max([len(key) for key in maximum_temperature_map])
-                        - len(key)
-                        + 1
-                    ),
-                )
-                for key in maximum_temperature_map
-            ]
-        ),
-        "|".join(
-            [
-                " {}{}".format(
-                    value,
-                    " "
-                    * (
-                        max([len(key) for key in maximum_temperature_map])
-                        - len(str(value))
-                        + 1
-                    ),
-                )
-                for value in maximum_temperature_map.values()
-            ]
-        ),
-    )
-    print(
-        "{}Maximum temperatures for the run in degC:\n{}\n{}{}".format(
-            BColours.OKTEAL if verbose_mode else "",
+        logger.info(
+            "Maximum temperatures for the run in degC:\n%s\n%s",
             "|".join(
                 [
                     " {}{}".format(
@@ -622,44 +608,44 @@ def _print_temperature_info(
                     for value in maximum_temperature_map.values()
                 ]
             ),
-            BColours.ENDC,
         )
-    )
+        print(
+            "{}Maximum temperatures for the run in degC:\n{}\n{}{}".format(
+                BColours.OKTEAL if verbose_mode else "",
+                "|".join(
+                    [
+                        " {}{}".format(
+                            key,
+                            " "
+                            * (
+                                max([len(key) for key in maximum_temperature_map])
+                                - len(key)
+                                + 1
+                            ),
+                        )
+                        for key in maximum_temperature_map
+                    ]
+                ),
+                "|".join(
+                    [
+                        " {}{}".format(
+                            value,
+                            " "
+                            * (
+                                max([len(key) for key in maximum_temperature_map])
+                                - len(str(value))
+                                + 1
+                            ),
+                        )
+                        for value in maximum_temperature_map.values()
+                    ]
+                ),
+                BColours.ENDC,
+            )
+        )
 
-    logger.info(
-        "Minimum temperatures for the run in degC:\n%s\n%s",
-        "|".join(
-            [
-                " {}{}".format(
-                    key,
-                    " "
-                    * (
-                        max([len(key) for key in minimum_temperature_map])
-                        - len(key)
-                        + 1
-                    ),
-                )
-                for key in minimum_temperature_map
-            ]
-        ),
-        "|".join(
-            [
-                " {}{}".format(
-                    value,
-                    " "
-                    * (
-                        max([len(key) for key in minimum_temperature_map])
-                        - len(str(value))
-                        + 1
-                    ),
-                )
-                for value in minimum_temperature_map.values()
-            ]
-        ),
-    )
-    print(
-        "{}Minimum temperatures for the run in degC:\n{}\n{}{}".format(
-            BColours.OKTEAL if verbose_mode else "",
+        logger.info(
+            "Minimum temperatures for the run in degC:\n%s\n%s",
             "|".join(
                 [
                     " {}{}".format(
@@ -688,30 +674,41 @@ def _print_temperature_info(
                     for value in minimum_temperature_map.values()
                 ]
             ),
-            BColours.ENDC,
         )
-    )
-
-
-def _output_temperature_info(
-    logger: Logger, parsed_args: Namespace, system_data: Dict[float, SystemData]
-) -> None:
-    """
-    Determines and prints information about the system temperatures.
-
-    The average, minimum, and maximum temperatures of the various components are
-    outputted to the console and the logs.
-
-    :param logger:
-        The logger used for the run.
-
-    :param parsed_args:
-        The parsed command-line arguments.
-
-    :param system_data:
-        The system data ouputted by the run.
-
-    """
+        print(
+            "{}Minimum temperatures for the run in degC:\n{}\n{}{}".format(
+                BColours.OKTEAL if verbose_mode else "",
+                "|".join(
+                    [
+                        " {}{}".format(
+                            key,
+                            " "
+                            * (
+                                max([len(key) for key in minimum_temperature_map])
+                                - len(key)
+                                + 1
+                            ),
+                        )
+                        for key in minimum_temperature_map
+                    ]
+                ),
+                "|".join(
+                    [
+                        " {}{}".format(
+                            value,
+                            " "
+                            * (
+                                max([len(key) for key in minimum_temperature_map])
+                                - len(str(value))
+                                + 1
+                            ),
+                        )
+                        for value in minimum_temperature_map.values()
+                    ]
+                ),
+                BColours.ENDC,
+            )
+        )
 
     # Determine the average, minimum, and maximum temperatures.
     average_temperature_map = {
@@ -787,101 +784,6 @@ def _output_temperature_info(
     )
 
 
-def _save_data(
-    file_type: FileType,
-    logger: Logger,
-    operating_mode: OperatingMode,
-    output_file_name: str,
-    system_data: Dict[float, SystemData],
-    carbon_emissions: Optional[CarbonEmissions] = None,
-    total_power_data: Optional[TotalPowerData] = None,
-) -> None:
-    """
-    Save data when called. The data entry should be appended to the file.
-
-    :param file_type:
-        The file type that's being saved.
-
-    :param logger:
-        The logger used for the run.
-
-    :param operating_mode:
-        The operating mode for the run.
-
-    :param output_file_name:
-        The destination file name.
-
-    :param system_data:
-        The data to save.
-
-    :param carbon_emissions:
-        The carbon emissions data for the run.
-
-    :param total_power_data:
-        The total power data for the run.
-
-    """
-
-    # Convert the system data entry to JSON-readable format
-    system_data_dict: Dict[Union[float, str], Union[str, Dict[str, Any]]] = {
-        key: dataclasses.asdict(value) for key, value in system_data.items()
-    }
-    logger.info(
-        "Saving data: System data successfully converted to json-readable format."
-    )
-
-    # If we're saving YAML data part-way through, then append to the file.
-    if file_type == FileType.YAML:
-        logger.info("Saving as YAML format.")
-        with open(f"{output_file_name}.yaml", "a") as output_yaml_file:
-            yaml.dump(
-                system_data_dict,
-                output_yaml_file,
-            )
-
-    # If we're dumping JSON, open the file, and append to it.
-    if file_type == FileType.JSON:
-        logger.info("Saving as JSON format.")
-        # Append the total power and emissions data for the run.
-        if total_power_data is not None:
-            system_data_dict.update(dataclasses.asdict(total_power_data))  # type: ignore
-            logger.info("Total power data updated.")
-        if carbon_emissions is not None:
-            system_data_dict.update(dataclasses.asdict(carbon_emissions))  # type: ignore
-            logger.info("Carbon emissions updated.")
-
-        # Append the data type for the run.
-        system_data_dict["data_type"] = "{coupling}_{timing}".format(
-            coupling="coupled" if operating_mode.coupled else "decoupled",
-            timing="steady_state" if operating_mode.steady_state else "dynamic",
-        )
-        logger.info("Data type added successfully.")
-
-        # Save the data
-        # If this is the initial dump, then create the file.
-        if not os.path.isfile(f"{output_file_name}.json"):
-            logger.info("Attempting first dump to a non-existent file.")
-            logger.info("Output file name: %s", output_file_name)
-            with open(f"{output_file_name}.json", "w") as output_json_file:
-                json.dump(
-                    system_data_dict,
-                    output_json_file,
-                    indent=4,
-                )
-        else:
-            with open(f"{output_file_name}.json", "r+") as output_json_file:
-                # Read the data and append the current update.
-                filedata = json.load(output_json_file)
-                filedata.update(system_data_dict)
-                # Overwrite the file with the updated data.
-                output_json_file.seek(0)
-                json.dump(
-                    filedata,
-                    output_json_file,
-                    indent=4,
-                )
-
-
 def main(args) -> None:  # pylint: disable=too-many-branches
     """
     The main module for the code.
@@ -907,15 +809,16 @@ def main(args) -> None:  # pylint: disable=too-many-branches
         )
     )
 
-    # Check that all CLI args are valid.
+    # Validate the CLI arguments.
     layers = argparser.check_args(
         parsed_args,
         logger,
         read_yaml(parsed_args.pvt_data_file)["absorber"]["number_of_pipes"],
     )
 
-    # Parse the PVT system information and generate a PVT panel based on the args.
-    pvt_panel = pvt_panel_from_path(
+    # Parse the PVT system information and generate a PVT panel based on the args for
+    # use in Fourier-number calculations.
+    pvt_collector = pvt_collector_from_path(
         layers,
         logger,
         parsed_args.mass_flow_rate,
@@ -929,30 +832,11 @@ def main(args) -> None:  # pylint: disable=too-many-branches
         "\n  ".join(
             [
                 f"{element_coordinates}: {element}"
-                for element_coordinates, element in pvt_panel.elements.items()
+                for element_coordinates, element in pvt_collector.elements.items()
             ]
         ),
     )
 
-    # Check that the output file is specified, and that it doesn't already exist.
-    if parsed_args.output is None or parsed_args.output == "":
-        logger.error(
-            "%sAn output filename must be provided on the command-line interface.%s",
-            BColours.FAIL,
-            BColours.ENDC,
-        )
-        raise MissingParametersError(
-            "Command-Line Interface", "An output file name must be provided."
-        )
-    if parsed_args.output.endswith(".yaml") or parsed_args.output.endswith(".json"):
-        logger.error(
-            "%sThe output filename must be irrespective of data type..%s",
-            BColours.FAIL,
-            BColours.ENDC,
-        )
-        raise Exception(
-            "The output file must be irrespecitve of file extension/data type."
-        )
     if os.path.isfile(f"{parsed_args.output}.yaml"):
         logger.info("The output YAML file specified already exists. Moving...")
         os.rename(f"{parsed_args.output}.yaml", f"{parsed_args.output}.yaml.1")
@@ -970,75 +854,97 @@ def main(args) -> None:  # pylint: disable=too-many-branches
 
     logger.debug(
         "PVT system information successfully parsed:\n%s\n%s",
-        str(pvt_panel),
+        str(pvt_collector),
         str(hot_water_tank) if hot_water_tank is not None else "NO HOT-WATER TANK",
     )
 
     # Determine the Fourier number for the PV-T panel.
     logger.info("Beginning Fourier number calculation.")
-    _determine_fourier_numbers(hot_water_tank, logger, parsed_args, pvt_panel)
+    _calculate_and_print_fourier_numbers(
+        hot_water_tank, logger, parsed_args, pvt_collector
+    )
 
     # Determine the operating mode of the system.
     operating_mode = OperatingMode(not parsed_args.decoupled, parsed_args.dynamic)
 
-    if operating_mode.dynamic and operating_mode.coupled:
+    if operating_mode.dynamic:
         logger.info(
-            "Running a dynamic and coupled system.",
+            "Running a dynamic and %scoupled system.",
+            "de" if operating_mode.decoupled else "",
         )
         print(
-            "{}Running a dynamic and coupled system.{}".format(
+            "{}Running a dynamic and {}coupled system.{}".format(
                 BColours.OKGREEN,
+                "de" if operating_mode.decoupled else "",
                 BColours.ENDC,
             )
         )
 
-        # Iterate to determine the initial conditions for the run.
-        logger.info("Determining consistent initial conditions at coarse resolution.")
-        print(
-            "Determining consistent initial conditions via successive runs at "
-            f"{COARSE_RUN_RESOLUTION}s resolution."
-        )
+        if operating_mode.coupled:
+            # The initial system conditions for the run need to be determined so that
+            # they match up at the start and end of the time period being modelled,
+            # i.e., so that there is no transient in the data.
 
-        initial_system_temperature_vector, _ = _determine_consistent_conditions(
-            pvt_panel.absorber.number_of_pipes,
-            layers,
-            logger,
-            operating_mode,
-            parsed_args,
-            pvt_panel,
-        )
-        logger.info("Consistent initial conditions determined at coarse resolution.")
-        logger.info(
-            "Running at the fine CLI resolution of %ss.", parsed_args.resolution
-        )
-        print(
-            "Rough initial conditions determined at coarse resolution, refining via "
-            f"successive runs at CLI resolution of {parsed_args.resolution}s."
-        )
-        initial_system_temperature_vector, _ = _determine_consistent_conditions(
-            pvt_panel.absorber.number_of_pipes,
-            layers,
-            logger,
-            operating_mode,
-            parsed_args,
-            pvt_panel,
-            resolution=parsed_args.resolution,
-            running_system_temperature_vector=initial_system_temperature_vector,
-        )
-        if initial_system_temperature_vector is None:
-            raise ProgrammerJudgementFault(
-                "{}The initial system conditions were not returned as ".format(
-                    BColours.FAIL
-                )
-                + "expected when performing a coupled run.{}".format(BColours.ENDC)
+            # Iterate to determine the initial conditions for the run at a rough
+            # resolution.
+            logger.info(
+                "Determining consistent initial conditions at coarse resolution."
             )
-        logger.info(
-            "Initial system temperatures successfully determined to %sK precision.",
-            INITIAL_CONDITION_PRECISION,
-        )
-        print(
-            f"Initial conditions determined to {INITIAL_CONDITION_PRECISION}K precision."
-        )
+            print(
+                "Determining consistent initial conditions via successive runs at "
+                f"{COARSE_RUN_RESOLUTION}s resolution."
+            )
+
+            initial_system_temperature_vector, _ = _determine_consistent_conditions(
+                pvt_collector.absorber.number_of_pipes,
+                layers,
+                logger,
+                operating_mode,
+                parsed_args,
+                pvt_collector,
+            )
+            logger.info(
+                "Consistent initial conditions determined at coarse resolution."
+            )
+
+            # Run again at a fine resolution to better determine the initial conditions.
+            print(
+                "Rough initial conditions determined at coarse resolution, refining via "
+                f"successive runs at CLI resolution of {parsed_args.resolution}s."
+            )
+            initial_system_temperature_vector, _ = _determine_consistent_conditions(
+                pvt_collector.absorber.number_of_pipes,
+                layers,
+                logger,
+                operating_mode,
+                parsed_args,
+                pvt_collector,
+                resolution=parsed_args.resolution,
+                running_system_temperature_vector=initial_system_temperature_vector,
+            )
+            if initial_system_temperature_vector is None:
+                raise ProgrammerJudgementFault(
+                    "{}The initial system conditions were not returned as ".format(
+                        BColours.FAIL
+                    )
+                    + "expected when performing a coupled run.{}".format(BColours.ENDC)
+                )
+            logger.info(
+                "Initial system temperatures successfully determined to %sK precision.",
+                INITIAL_CONDITION_PRECISION,
+            )
+            print(
+                f"Initial conditions determined to {INITIAL_CONDITION_PRECISION}K precision."
+            )
+
+        else:
+            # In the case of a decoupled and dynamic model, usually a step change is
+            # being modelled. In these instances, the system is run for some time,
+            # determined by the data fed in, and the initial conditions can simply be
+            # taken as the default conditions.
+            initial_system_temperature_vector = [DEFAULT_SYSTEM_TEMPERATURE] * (
+                index_handler.num_temperatures(pvt_collector) - 3
+            )
 
         logger.info(
             "Running the model at the CLI resolution of %ss.", parsed_args.resolution
@@ -1047,63 +953,13 @@ def main(args) -> None:  # pylint: disable=too-many-branches
             f"Running the model at the high CLI resolution of {parsed_args.resolution}s."
         )
         # Run the model at this higher resolution.
-        _, system_data = pvt_system_model_main(
+        _, system_data = pvt_system_main(
             parsed_args.average_irradiance,
             parsed_args.cloud_efficacy_factor,
             parsed_args.disable_logging,
             parsed_args.exchanger_data_file,
             parsed_args.initial_month,
             initial_system_temperature_vector,
-            layers,
-            parsed_args.location,
-            operating_mode,
-            parsed_args.portion_covered,
-            parsed_args.pvt_data_file,
-            parsed_args.resolution,
-            not parsed_args.skip_2d_output,
-            parsed_args.tank_data_file,
-            parsed_args.use_pvgis,
-            parsed_args.verbose,
-            parsed_args.x_resolution,
-            parsed_args.y_resolution,
-            days=parsed_args.days,
-            minutes=parsed_args.minutes,
-            months=parsed_args.months,
-            override_ambient_temperature=parsed_args.ambient_temperature,
-            override_collector_input_temperature=parsed_args.collector_input_temperature,
-            override_irradiance=parsed_args.solar_irradiance,
-            override_mass_flow_rate=parsed_args.mass_flow_rate,
-            override_wind_speed=parsed_args.wind_speed,
-            run_number=1,
-            start_time=parsed_args.start_time,
-        )
-
-    elif operating_mode.decoupled and operating_mode.dynamic:
-        logger.info(
-            "Running a dynamic and decoupled system.",
-        )
-        print(
-            "{}Running a dynamic and decoupled system.{}".format(
-                BColours.OKGREEN,
-                BColours.ENDC,
-            )
-        )
-
-        logger.info(
-            "Running the model at the CLI resolution of %ss.", parsed_args.resolution
-        )
-        print(
-            f"Running the model at the high CLI resolution of {parsed_args.resolution}s."
-        )
-        # Run the model at this higher resolution.
-        _, system_data = pvt_system_model_main(
-            parsed_args.average_irradiance,
-            parsed_args.cloud_efficacy_factor,
-            parsed_args.disable_logging,
-            parsed_args.exchanger_data_file,
-            parsed_args.initial_month,
-            [DEFAULT_SYSTEM_TEMPERATURE]
-            * (index_handler.num_temperatures(pvt_panel) - 3),
             layers,
             parsed_args.location,
             operating_mode,
@@ -1174,12 +1030,12 @@ def main(args) -> None:  # pylint: disable=too-many-branches
                 multi_processing_output = worker_pool.map(
                     partial(
                         _multiprocessing_determine_consistent_conditions,
-                        number_of_pipes=pvt_panel.absorber.number_of_pipes,
+                        number_of_pipes=pvt_collector.absorber.number_of_pipes,
                         layers=layers,
                         logger=logger,
                         operating_mode=operating_mode,
                         parsed_args=parsed_args,
-                        pvt_panel=pvt_panel,
+                        pvt_collector=pvt_collector,
                     ),
                     steady_state_runs,
                 )
@@ -1201,12 +1057,12 @@ def main(args) -> None:  # pylint: disable=too-many-branches
 
     # Save the data ouputted by the model.
     logger.info("Saving output data to: %s.json.", parsed_args.output)
-    _save_data(FileType.JSON, logger, operating_mode, parsed_args.output, system_data)
+    save_data(FileType.JSON, logger, operating_mode, parsed_args.output, system_data)
     print(f"Model output successfully saved to {parsed_args.output}.json.")
 
     # If in verbose mode, output average, min, and max temperatures.
     if parsed_args.verbose:
-        _output_temperature_info(logger, parsed_args, system_data)
+        _determine_and_print_average_temperatures(logger, parsed_args, system_data)
 
     if parsed_args.skip_analysis:
         logger.info("Analysis will be skippted.")

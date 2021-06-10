@@ -28,10 +28,10 @@ from matplotlib import pyplot as plt
 
 try:
     from ..__utils__ import get_logger
-    from ..pvt_system_model.constants import (  # pylint: disable=unused-import
+    from ..pvt_system.constants import (  # pylint: disable=unused-import
         HEAT_CAPACITY_OF_WATER,
     )
-    from ..pvt_system_model.physics_utils import reduced_temperature
+    from ..pvt_system.physics_utils import reduced_temperature
     from .__utils__ import (
         GraphDetail,
         load_model_data,
@@ -754,7 +754,7 @@ def analyse_coupled_dynamic_data(
 
     # * Plotting all PV-T panel layer temperatures
     plot_figure(
-        "pvt_panel_temperature",
+        "pvt_collector_temperature",
         data,
         [
             "glass_temperature",

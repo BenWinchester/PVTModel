@@ -32,7 +32,7 @@ from matplotlib import pyplot as plt
 
 try:
     from ..__utils__ import get_logger
-    from ..pvt_system_model.constants import (  # pylint: disable=unused-import
+    from ..pvt_system.constants import (  # pylint: disable=unused-import
         HEAT_CAPACITY_OF_WATER,
     )
     from .__utils__ import (
