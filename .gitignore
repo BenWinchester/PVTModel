@@ -25,3 +25,4 @@ foo.txt
 # HPC files
 *e[0-9]*
 *o[0-9]*
+# Testing
