@@ -1140,6 +1140,14 @@ def main(args) -> None:  # pylint: disable=too-many-branches
                         str(e),
                     )
                     continue
+                except DivergentSolutionError as e:
+                    logger.error(
+                        "A divergent solution occurred - have you considered the "
+                        "difference between Celcius and Kelvin in all your units, "
+                        "especially override CLI units. Consider checking this before "
+                        "investigating further."
+                    )
+                    continue
 
                 for key, value in output.items():
                     system_data[f"run_{run_number}_T_in_{key}degC"] = value
