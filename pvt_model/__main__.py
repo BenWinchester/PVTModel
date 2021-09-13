@@ -1145,7 +1145,9 @@ def main(args) -> None:  # pylint: disable=too-many-branches
                         "A divergent solution occurred - have you considered the "
                         "difference between Celcius and Kelvin in all your units, "
                         "especially override CLI units. Consider checking this before "
-                        "investigating further."
+                        "investigating further.\nRun attempted: %s\nError: %s",
+                        steady_state_run,
+                        str(e)
                     )
                     continue
 
