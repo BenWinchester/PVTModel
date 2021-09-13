@@ -1123,15 +1123,23 @@ def main(args) -> None:  # pylint: disable=too-many-branches
                     run_number,
                     len(steady_state_runs),
                 )
-                output = _multiprocessing_determine_consistent_conditions(
-                    steady_state_run,
-                    number_of_pipes=pvt_collector.absorber.number_of_pipes,
-                    layers=layers,
-                    logger=logger,
-                    operating_mode=operating_mode,
-                    parsed_args=parsed_args,
-                    pvt_collector=pvt_collector,
-                )
+                try:
+                    output = _multiprocessing_determine_consistent_conditions(
+                        steady_state_run,
+                        number_of_pipes=pvt_collector.absorber.number_of_pipes,
+                        layers=layers,
+                        logger=logger,
+                        operating_mode=operating_mode,
+                        parsed_args=parsed_args,
+                        pvt_collector=pvt_collector,
+                    )
+                except RecursionError as e:
+                    logger.error(
+                        "Recursion error processing steady state run.\nRun: %s\nMsg: %s",
+                        steady_state_run,
+                        str(e),
+                    )
+                    continue
 
                 for key, value in output.items():
                     system_data[f"run_{run_number}_T_in_{key}degC"] = value
