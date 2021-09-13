@@ -5,7 +5,7 @@
 echo -e "HPC script executed"
 
 # Load the anaconda environment
-module load anaconda3/py37
+module load anaconda3/personal
 source activate py37
 
 OUTPUT_DIR="$PBS_O_WORKDIR/output_files"
