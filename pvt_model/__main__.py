@@ -61,6 +61,40 @@ from .pvt_system.process_pvt_system_data import (
 )
 
 
+# PVT header string:
+#   Text to display when instantiating the PV-T model.
+PVT_HEADER_STRING = """
+
+                                       ,
+                                       ,
+                          ,           ,,,           ,
+                           ,,         ,,,         ,,
+                            ,,,.     .,,,,      ,,,
+                             ,,,,.            ,,,,.
+                 ,,.              ,,,,,,,,,,,    ,         .,,.
+                    ,,,,,,.   ,,,,,,,,,,,,,,,,,,,   .,,,,,,.
+                       ,,,  ,,,,,,,,,,,,,,,,,,,,,,,  ,,,.
+                           ,,,,,,,,,,,,,,,,,,,,,,,,,
+                          ,,,,,,,,,,,,,,,,,,,,,,,,,,,
+           .,,,,,,,,,,,,  ,,,,,,,,,.,.,,,,,,,,,,,,,,,  ,,,,,,,,,,,,,
+
+               _    _ ______       _______ _____                 _
+              | |  | |  ____|   /\\|__   __|  __ \\               | |
+              | |__| | |__     /  \\  | |  | |__) |_ _ _ __   ___| |
+              |  __  |  __|   / /\\ \\ | |  |  ___/ _` | '_ \\ / _ \\ |
+              | |  | | |____ / ____ \\| |  | |  | (_| | | | |  __/ |
+              |_|  |_|______/_/    \\_\\_|  |_|   \\__,_|_| |_|\\___|_|
+
+
+                    Hybrid Electric And Thermal Panel Model
+                      Copyright Benedict Winchester, 2021
+
+              For more information, contact Benedict Winchester at
+                         benedict.winchester@gmail.com
+
+"""
+
+
 def _get_system_fourier_numbers(
     hot_water_tank: Optional[tank.Tank], pvt_collector: pvt.PVT, resolution: float
 ) -> Dict[TemperatureName, float]:
@@ -792,6 +826,9 @@ def main(args) -> None:  # pylint: disable=too-many-branches
         The command-line arguments passed into the component.
 
     """
+
+    # Print the header string.
+    print(PVT_HEADER_STRING)
 
     # Parse the arguments passed in.
     parsed_args = argparser.parse_args(args)
