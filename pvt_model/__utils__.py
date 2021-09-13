@@ -22,7 +22,7 @@ import os
 import json
 
 from dataclasses import dataclass
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional, Tuple, Union
 
 import yaml
 
@@ -40,17 +40,25 @@ __all__ = (
     "MissingParametersError",
     "read_yaml",
     "save_data",
+    "SteadyStateRun",
     "SystemData",
     "TotalPowerData",
 )
 
-# The resolution in seconds for determining the initial conditions.
+# Coarse-run resolution:
+#   The resolution in seconds for determining the initial conditions.
 COARSE_RUN_RESOLUTION: int = 1800
-# The prevision to reach when searching for consistent initial temperatures.
+
+# Initial-condition precision:
+#   The prevision to reach when searching for consistent initial temperatures.
 INITIAL_CONDITION_PRECISION: float = 1
-# The directory for storing the logs.
+
+# Logger directory:
+#   The directory for storing the logs.
 LOGGER_DIRECTORY = "logs"
-# The name used for the internal logger.
+
+# Logger name:
+#   The name used for the internal logger.
 LOGGER_NAME = "pvt_model"
 
 
@@ -667,3 +675,67 @@ def save_data(
                     output_json_file,
                     indent=4,
                 )
+
+
+@dataclass(frozen=True)
+class SteadyStateRun:
+    """
+    Represents a steady-state run which is to be carreid out.
+
+    .. attribute:: ambient_temperature
+        The ambient temperature, in Celcius, to use for the run.
+
+    .. attribute:: collector_input_temperature
+        The collector input temperature, in Celcius, to use for the run.
+
+    .. attribute:: irradiance
+        The incidient irradiance, in Watts per meter squared, to use for the run.
+
+    .. attribute:: mass_flow_rate
+        The mass-flow-rate, in litres per hour, to use for the run.
+
+    .. attribute:: wind_speed
+        The wind speed, in meters per second, to use for the run.
+
+    """
+
+    ambient_temperature: float
+    collector_input_temperature: float
+    irradiance: float
+    mass_flow_rate: float
+    wind_speed: float
+
+    @classmethod
+    def from_data(cls, data: Dict[str, float]) -> Any:
+        """
+        Generates a :class:`SteadyStateData` instance based on the input data.
+
+        :param data:
+            The input data, extracted from the state-state inputs file.
+
+        """
+
+        return cls(
+            data["ambient_temperature"],
+            data["collector_input_temperature"],
+            data["irradiance"],
+            data["mass_flow_rate"],
+            data["wind_speed"],
+        )
+
+    def to_tuple(self) -> Tuple[float, float, float, float, float]:
+        """
+        Returns a `tuple` containing the data.
+
+        :returns:
+            A `tuple` containing the data.
+
+        """
+
+        return (
+            self.ambient_temperature,
+            self.collector_input_temperature,
+            self.irradiance,
+            self.mass_flow_rate,
+            self.wind_speed,
+        )
