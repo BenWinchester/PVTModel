@@ -28,6 +28,8 @@ from matplotlib import cm
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D as plt3D
 
+from tqdm import tqdm
+
 try:
     from ..pvt_system.constants import (  # pylint: disable=unused-import
         HEAT_CAPACITY_OF_WATER,
@@ -51,25 +53,35 @@ __all__ = (
 
 # Used to distinguish copled data sets.
 COUPLED_DATA_TYPE = "coupled"
+
 # Used to distinguished decoupled data sets.
 DECOUPLED_DATA_TYPE = "decoupled"
+
 # Used to distinguish dynamic data sets.
 DYNAMIC_DATA_TYPE = "dynamic"
+
 # The directory into which which should be saved
 NEW_FIGURES_DIRECTORY: str = "figures"
+
 # Used to identify the "time" data set.
 TIME_KEY = "time"
+
 # The directory in which old figures are saved and stored for long-term access
 OLD_FIGURES_DIRECTORY: str = "old_figures"
+
 # Used to distinguish steady-state data sets.
 STEADY_STATE_DATA_TYPE = "steady_state"
+
 # Name of the steady-state data file.
 STEADY_STATE_DATA_FILE_NAME = "autotherm.yaml"
+
 # How many values there should be between each tick on the x-axis
 # X_TICK_SEPARATION: int = int(8 * GRAPH_DETAIL.value / 48)
 X_TICK_SEPARATION: int = 8
+
 # Which days of data to include
 DAYS_TO_INCLUDE: List[bool] = [False, True]
+
 # The resolution to use for the trendline.
 TRENDLINE_RESOLUTION = 200
 
@@ -353,7 +365,7 @@ def save_figure(figure_name: str, transparent: bool = False) -> None:
     filenames.reverse()
 
     # Incriment all files in the old_figures directory.
-    for filename in filenames:
+    for filename in tqdm(filenames, desc="renaming old files", uint="file"):
         file_match = re.match(file_regex, filename)
         if file_match is None:
             continue
