@@ -32,6 +32,8 @@ from typing import List, Optional, Tuple, Union
 import logging
 import numpy
 
+from tqdm import tqdm
+
 from .. import exchanger, index_handler, tank
 from ..pvt_collector import pvt
 
@@ -531,7 +533,12 @@ def calculate_matrix_equation(  # pylint: disable=too-many-branches
     matrix = numpy.zeros([0, number_of_temperatures])
     resultant_vector = numpy.zeros([0, 1])
 
-    for element_coordinates, element in pvt_collector.elements.items():
+    for element_coordinates, element in tqdm(
+        pvt_collector.elements.items(),
+        desc="computing matrix equation",
+        unit="element",
+        leave=False,
+    ):
         logger.debug("Calculating equations for element %s", element_coordinates)
         # Compute the various shared values.
         (
