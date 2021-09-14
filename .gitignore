@@ -10,6 +10,7 @@
 .vscode
 # Ignore internal Python directories
 **/__pycache__
+*.pyc
 **/pyyaml
 # Ignore data files
 data_*

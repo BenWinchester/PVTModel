@@ -21,6 +21,7 @@ pytz>=2021.1
 PyYAML>=5.4.1
 regex>=2021.3.17
 scipy>=1.6.1
+tqdm>=4.59.0
 types-python-dateutil>=0.1.2
 types-pytz>=0.1.0
 types-PyYaml>=0.1.6

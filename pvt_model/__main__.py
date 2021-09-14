@@ -23,12 +23,15 @@ from multiprocessing import Pool
 from statistics import mean
 from typing import Any, Dict, List, Optional, Set, Tuple
 
+from tqdm import tqdm
+
 from . import argparser
 
 from .__utils__ import (
     BColours,
     COARSE_RUN_RESOLUTION,
     FileType,
+    SteadyStateRun,
     fourier_number,
     get_logger,
     INITIAL_CONDITION_PRECISION,
@@ -59,6 +62,48 @@ from .pvt_system.process_pvt_system_data import (
     hot_water_tank_from_path,
     pvt_collector_from_path,
 )
+
+
+# Done message:
+#   The message to display when a task was successful.
+DONE: str = "[   DONE   ]"
+
+# Failed message:
+#   The message to display when a task has failed.
+FAILED: str = "[  FAILED  ]"
+
+# PVT header string:
+#   Text to display when instantiating the PV-T model.
+PVT_HEADER_STRING = """
+
+                                       ,
+                                       ,
+                          ,           ,,,           ,
+                           ,,         ,,,         ,,
+                            ,,,.     .,,,,      ,,,
+                             ,,,,.            ,,,,.
+                 ,,.              ,,,,,,,,,,,    ,         .,,.
+                    ,,,,,,.   ,,,,,,,,,,,,,,,,,,,   .,,,,,,.
+                       ,,,  ,,,,,,,,,,,,,,,,,,,,,,,  ,,,.
+                           ,,,,,,,,,,,,,,,,,,,,,,,,,
+                          ,,,,,,,,,,,,,,,,,,,,,,,,,,,
+           .,,,,,,,,,,,,  ,,,,,,,,,.,.,,,,,,,,,,,,,,,  ,,,,,,,,,,,,,
+
+               _    _ ______       _______ _____                 _
+              | |  | |  ____|   /\\|__   __|  __ \\               | |
+              | |__| | |__     /  \\  | |  | |__) |_ _ _ __   ___| |
+              |  __  |  __|   / /\\ \\ | |  |  ___/ _` | '_ \\ / _ \\ |
+              | |  | | |____ / ____ \\| |  | |  | (_| | | | |  __/ |
+              |_|  |_|______/_/    \\_\\_|  |_|   \\__,_|_| |_|\\___|_|
+
+
+                    Hybrid Electric And Thermal Panel Model
+                      Copyright Benedict Winchester, 2021
+
+              For more information, contact Benedict Winchester at
+                         benedict.winchester@gmail.com
+
+"""
 
 
 def _get_system_fourier_numbers(
@@ -262,6 +307,7 @@ def _determine_consistent_conditions(
     override_ambient_temperature: Optional[float] = None,
     override_collector_input_temperature: Optional[float] = None,
     override_irradiance: Optional[float] = None,
+    override_mass_flow_rate: Optional[float] = None,
     override_wind_speed: Optional[float] = None,
     resolution: int = COARSE_RUN_RESOLUTION,
     run_depth: int = 1,
@@ -295,6 +341,10 @@ def _determine_consistent_conditions(
     :param override_ambient_tempearture:
         If specified, this can be used as a value to override the weather forecaster's
         inbuilt ambient temperature.
+
+    :param override_mass_flow_rate:
+        If specified, this can be used as a value to override the collector input file's
+        default mass-flow rate.
 
     :param resolution:
         The resolution for the run, measured in seconds.
@@ -352,7 +402,9 @@ def _determine_consistent_conditions(
         override_ambient_temperature=override_ambient_temperature,
         override_collector_input_temperature=override_collector_input_temperature,
         override_irradiance=override_irradiance,
-        override_mass_flow_rate=parsed_args.mass_flow_rate,
+        override_mass_flow_rate=override_mass_flow_rate
+        if override_mass_flow_rate is not None
+        else parsed_args.mass_flow_rate,
         override_wind_speed=override_wind_speed,
         run_number=run_depth,
         start_time=parsed_args.start_time,
@@ -392,6 +444,9 @@ def _determine_consistent_conditions(
         override_ambient_temperature=override_ambient_temperature,
         override_collector_input_temperature=override_collector_input_temperature,
         override_irradiance=override_irradiance,
+        override_mass_flow_rate=override_mass_flow_rate
+        if override_mass_flow_rate is not None
+        else parsed_args.mass_flow_rate,
         override_wind_speed=override_wind_speed,
         resolution=resolution,
         run_depth=run_depth + 1,
@@ -400,7 +455,7 @@ def _determine_consistent_conditions(
 
 
 def _multiprocessing_determine_consistent_conditions(
-    steady_state_run: Dict[Any, Any],
+    steady_state_run: SteadyStateRun,
     *,
     number_of_pipes: int,
     layers: Set[TemperatureName],
@@ -449,13 +504,12 @@ def _multiprocessing_determine_consistent_conditions(
         operating_mode,
         parsed_args,
         pvt_collector,
-        override_ambient_temperature=steady_state_run["ambient_temperature"],
-        override_collector_input_temperature=steady_state_run[
-            "collector_input_temperature"
-        ]
+        override_ambient_temperature=steady_state_run.ambient_temperature,
+        override_collector_input_temperature=steady_state_run.collector_input_temperature
         + ZERO_CELCIUS_OFFSET,
-        override_irradiance=steady_state_run["irradiance"],
-        override_wind_speed=steady_state_run["wind_speed"],
+        override_irradiance=steady_state_run.irradiance,
+        override_mass_flow_rate=steady_state_run.mass_flow_rate,
+        override_wind_speed=steady_state_run.wind_speed,
     )
 
     return system_data_entry
@@ -793,6 +847,9 @@ def main(args) -> None:  # pylint: disable=too-many-branches
 
     """
 
+    # Print the header string.
+    print(PVT_HEADER_STRING)
+
     # Parse the arguments passed in.
     parsed_args = argparser.parse_args(args)
 
@@ -802,19 +859,30 @@ def main(args) -> None:  # pylint: disable=too-many-branches
         "%s PVT model instantiated. %s\nCommand: %s", "=" * 20, "=" * 20, " ".join(args)
     )
     print(
-        "PVT model instantiated{}.".format(
+        "HEAT model of a hybrid PV-T collector instantiated{}.".format(
             f"{BColours.OKTEAL} in verbose mode{BColours.ENDC}"
             if parsed_args.verbose
             else ""
         )
     )
 
-    # Validate the CLI arguments.
-    layers = argparser.check_args(
-        parsed_args,
-        logger,
-        read_yaml(parsed_args.pvt_data_file)["absorber"]["number_of_pipes"],
+    print(
+        "Verifying input information and arguments {}    ".format(
+            "." * 21,
+        ),
+        end="",
     )
+    try:
+        # Validate the CLI arguments.
+        layers = argparser.check_args(
+            parsed_args,
+            logger,
+            read_yaml(parsed_args.pvt_data_file)["absorber"]["number_of_pipes"],
+        )
+    except argparser.ArgumentMismatchError:
+        print(FAILED)
+        raise
+    print(DONE)
 
     # Parse the PVT system information and generate a PVT panel based on the args for
     # use in Fourier-number calculations.
@@ -996,54 +1064,95 @@ def main(args) -> None:  # pylint: disable=too-many-branches
 
         if parsed_args.steady_state_data_file is not None:
             # If specified, parse the steady-state data file.
-            steady_state_runs = read_yaml(parsed_args.steady_state_data_file)
+            steady_state_runs = [
+                SteadyStateRun.from_data(entry)
+                for entry in read_yaml(parsed_args.steady_state_data_file)
+            ]
 
             for steady_state_run in steady_state_runs:
                 if parsed_args.ambient_temperature is not None:
-                    steady_state_run[
-                        "ambient_temperature"
-                    ] = parsed_args.ambient_temperature
+                    steady_state_run.ambient_temperature = (
+                        parsed_args.ambient_temperature
+                    )
                 if parsed_args.collector_input_temperature is not None:
-                    steady_state_run[
-                        "collector_input_temperature"
-                    ] = parsed_args.collector_input_temperature
+                    steady_state_run.collector_input_temperature = (
+                        parsed_args.collector_input_temperature
+                    )
                 if parsed_args.solar_irradiance is not None:
-                    steady_state_run["irradiance"] = parsed_args.solar_irradiance
+                    steady_state_run.irradiance = parsed_args.solar_irradiance
                 if parsed_args.wind_speed is not None:
-                    steady_state_run["wind_speed"] = parsed_args.wind_speed
+                    steady_state_run.wind_speed = parsed_args.wind_speed
 
             logger.info(
-                "%s runs will be attempted based on the input data file.",
+                "%s run%s will be attempted based on the input data file.",
                 len(steady_state_runs),
+                "s" if len(steady_state_runs) > 1 else "",
             )
             print(
                 f"{BColours.OKGREEN}"
-                f"{len(steady_state_runs)} runs will be attempted based on the "
-                f"information in {parsed_args.steady_state_data_file}."
-                f"{BColours.ENDC}"
+                + "{} run{} will be attempted based on the ".format(
+                    len(steady_state_runs), "s" if len(steady_state_runs) > 1 else ""
+                )
+                + f"information in {parsed_args.steady_state_data_file}."
+                + f"{BColours.ENDC}"
             )
 
-            with Pool(8) as worker_pool:
+            # with Pool(8) as worker_pool:
+            #     logger.info(
+            #         "A multi-process worker pool will be used to parallelise the task."
+            #     )
+            #     multi_processing_output = worker_pool.map(
+            #         partial(
+            #             _multiprocessing_determine_consistent_conditions,
+            #             number_of_pipes=pvt_collector.absorber.number_of_pipes,
+            #             layers=layers,
+            #             logger=logger,
+            #             operating_mode=operating_mode,
+            #             parsed_args=parsed_args,
+            #             pvt_collector=pvt_collector,
+            #         ),
+            #         steady_state_runs
+            #     )
+            #     logger.info("Multi-process worker pool successfully completed.")
+
+            for run_number, steady_state_run in enumerate(
+                tqdm(steady_state_runs, desc="steady state runs", unit="run"), 1
+            ):
                 logger.info(
-                    "A multi-process worker pool will be used to parallelise the task."
+                    "Carrying out steady-state run %s of %s.",
+                    run_number,
+                    len(steady_state_runs),
                 )
-                multi_processing_output = worker_pool.map(
-                    partial(
-                        _multiprocessing_determine_consistent_conditions,
+                try:
+                    output = _multiprocessing_determine_consistent_conditions(
+                        steady_state_run,
                         number_of_pipes=pvt_collector.absorber.number_of_pipes,
                         layers=layers,
                         logger=logger,
                         operating_mode=operating_mode,
                         parsed_args=parsed_args,
                         pvt_collector=pvt_collector,
-                    ),
-                    steady_state_runs,
-                )
-                logger.info("Multi-process worker pool successfully completed.")
+                    )
+                except RecursionError as e:
+                    logger.error(
+                        "Recursion error processing steady state run.\nRun: %s\nMsg: %s",
+                        steady_state_run,
+                        str(e),
+                    )
+                    continue
+                except DivergentSolutionError as e:
+                    logger.error(
+                        "A divergent solution occurred - have you considered the "
+                        "difference between Celcius and Kelvin in all your units, "
+                        "especially override CLI units. Consider checking this before "
+                        "investigating further.\nRun attempted: %s\nError: %s",
+                        steady_state_run,
+                        str(e)
+                    )
+                    continue
 
-            for multi_processing_output_entry in multi_processing_output:
-                for key, value in multi_processing_output_entry.items():
-                    system_data[key] = value
+                for key, value in output.items():
+                    system_data[f"run_{run_number}_T_in_{key}degC"] = value
 
         else:
             raise ProgrammerJudgementFault(
