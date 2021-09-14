@@ -30,7 +30,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, Optional, Set, Tuple, Union
 
 import json
-import pysolar
+# import pysolar
 
 from ..__utils__ import MissingParametersError, read_yaml
 
@@ -291,10 +291,13 @@ def _get_solar_angles(
 
     """
 
-    return (
-        pysolar.solar.get_azimuth(latitude, longitude, date_and_time),
-        pysolar.solar.get_altitude(latitude, longitude, date_and_time),
-    )
+    # return (
+    #     pysolar.solar.get_azimuth(latitude, longitude, date_and_time),
+    #     pysolar.solar.get_altitude(latitude, longitude, date_and_time),
+    # )
+
+    # @@@ Modification made for PV-T to run on the HPC
+    return 180, 90
 
 
 def _get_sunrise(
