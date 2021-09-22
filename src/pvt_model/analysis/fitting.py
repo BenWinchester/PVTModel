@@ -330,16 +330,16 @@ def fit(data_file_name: str) -> None:
     initial_guesses = (-0.01, -0.04, -0.004, 0.001, 0.001, 0.001)
 
     # Attempt a curve fit.
-    fit = curve_fit(_best_guess, (ambient_temperatures, solar_irradiances), thermal_efficiencies, initial_guesses)
+    results = curve_fit(_best_guess, (ambient_temperatures, solar_irradiances), thermal_efficiencies, initial_guesses)
 
     plt.scatter(ambient_temperatures, thermal_efficiencies, label="true data")
-    plt.scatter(ambient_temperatures, _best_guess((ambient_temperatures, solar_irradiances,), *fit[0]), label="fitted data")
+    plt.scatter(ambient_temperatures, _best_guess((ambient_temperatures, solar_irradiances,), *results[0]), label="fitted data")
     plt.legend()
     plt.title("Ambient temperature reconstruction")
     plt.show()
 
     plt.scatter(solar_irradiances, thermal_efficiencies, label="true data")
-    plt.scatter(solar_irradiances, _best_guess((ambient_temperatures, solar_irradiances,), *fit[0]), label="fitted data")
+    plt.scatter(solar_irradiances, _best_guess((ambient_temperatures, solar_irradiances,), *results[0]), label="fitted data")
     plt.legend()
     plt.title("Solar irradiance reconstruction")
     plt.show()
