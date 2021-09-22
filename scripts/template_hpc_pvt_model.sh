@@ -1,5 +1,5 @@
 #!/bin/bash
-#PBS -lwalltime=72:00:00
+#PBS -lwalltime=12:00:00
 #PBS -lselect=1:ncpus=8:mem=11800Mb
 
 echo -e "HPC script executed"
