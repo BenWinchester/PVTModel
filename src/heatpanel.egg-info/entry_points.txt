@@ -1,3 +1,0 @@
-[console_scripts]
-heatpanel = pvt_model.scripts.heatpanel:main
-

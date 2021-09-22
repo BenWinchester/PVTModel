@@ -28,3 +28,4 @@ foo.txt
 *o[0-9]*
 # Ignore packages
 **/dist
+*egg*

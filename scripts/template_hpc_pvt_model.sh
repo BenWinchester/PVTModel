@@ -23,7 +23,7 @@ fi
 
 # Sending more runs to the HPC
 echo -e "Carrying out analysis with arguments: $@"
-python3.7 -m pvt_model --skip-analysis $@
+python3.7 -u -m src.pvt_model --skip-analysis $@
 
 cd $CURRENT_DIR
 
