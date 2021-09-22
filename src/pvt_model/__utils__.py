@@ -415,6 +415,9 @@ class SystemData:
         The temperature of the glass layer, measured in Celcius.  Can be `None` if no
         glass present.
 
+    .. attribute:: mass_flow_rate
+        The mass-flow rate of HTF through the collector.
+
     .. attribute:: pipe_temperature
         The temperature of the pipe, measured in Celcius.
 
@@ -441,6 +444,9 @@ class SystemData:
     .. attribute:: upper_glass_temperature
         The temperature of the upper-glass (i.e., double-glazing) temperature, measured
         in Celcius. Can be `None` if no double-glazing present.
+
+    .. attribute:: wind_speed
+        The wind speed, in meters per second, over the collector.
 
     .. attribute:: collector_input_temperature
         The temperature of the HTF inputted into the absorber, measured in Celcius.
@@ -489,6 +495,7 @@ class SystemData:
     electrical_efficiency: Optional[float]
     glass_temperature: Optional[float]
     exchanger_temperature_drop: Optional[float]
+    mass_flow_rate: float
     pipe_temperature: float
     pv_temperature: float
     reduced_collector_temperature: Optional[float]
@@ -497,6 +504,7 @@ class SystemData:
     tank_temperature: Optional[float]
     thermal_efficiency: Optional[float]
     upper_glass_temperature: Optional[float]
+    wind_speed: float
     collector_input_temperature: Optional[float] = None
     collector_output_temperature: Optional[float] = None
     collector_temperature_gain: Optional[float] = None
