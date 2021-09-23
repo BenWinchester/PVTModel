@@ -306,6 +306,14 @@ def _best_guess(
     a_15: float,
     a_16: float,
     a_17: float,
+    a_10: float,
+    a_11: float,
+    a_12: float,
+    a_13: float,
+    a_14: float,
+    a_15: float,
+    a_16: float,
+    a_17: float,
 ) -> List[float]:
     """
     Attempts a best-guess solution
@@ -358,6 +366,10 @@ def _best_guess(
             + a_15 * np.log(mass_flow_rate)
             + a_16 * (np.log(mass_flow_rate)) ** 2
             + a_17 * np.log(solar_irradiance) * np.log(mass_flow_rate)
+            + a_26 * np.log(wind_speed)
+            + a_27 * (np.log(wind_speed)) ** 2
+            + a_28 * np.log(wind_speed) * np.log(mass_flow_rate)
+            + a_29 * np.log(wind_speed) * np.log(solar_irradiance)
         )
     )
 
