@@ -427,5 +427,5 @@ def system_data_from_run(
         thermal_efficiency=thermal_efficiency,
         solar_irradiance=weather_conditions.irradiance,
         mass_flow_rate=pvt_collector.absorber.mass_flow_rate,
-        wind_speed=weather_conditions.wind_speed
+        wind_speed=weather_conditions.wind_speed,
     )
