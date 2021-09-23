@@ -44,6 +44,10 @@ COLLECTOR_OUTPUT_TEMPERATURE: str = "collector_output_temperature"
 #   Keyword for the mass-flow rate of the collector.
 MASS_FLOW_RATE: str = "mass_flow_rate"
 
+# Reconstruction resolution:
+#   The resolution to use when reconstructing reduced plots.
+RECONSTRUCTION_RESOLUTION: int = 200
+
 # Solar irradiance:
 #   Keyword for the solar irradiance.
 SOLAR_IRRADIANCE: str = "solar_irradiance"
@@ -533,6 +537,54 @@ def fit(data_file_name: str) -> None:
     plt.xlabel("Solar irradiance / W/m^2")
     plt.ylabel("Thermal efficiency")
     plt.title("Solar irradiance reconstruction")
+    plt.show()
+
+    plt.scatter(
+        ambient_temperatures[::RECONSTRUCTION_RESOLUTION],
+        thermal_efficiencies[::RECONSTRUCTION_RESOLUTION],
+        label="true data",
+    )
+    plt.scatter(
+        ambient_temperatures[::RECONSTRUCTION_RESOLUTION],
+        _best_guess(
+            (
+                np.array(ambient_temperatures[::RECONSTRUCTION_RESOLUTION]),
+                np.array(collector_input_temperatures)[::RECONSTRUCTION_RESOLUTION],
+                np.array(mass_flow_rates[::RECONSTRUCTION_RESOLUTION]),
+                np.array(solar_irradiances[::RECONSTRUCTION_RESOLUTION]),
+            ),
+            *results[0],
+        ),
+        label="fitted data",
+    )
+    plt.xlabel("Ambient temeprature / degC")
+    plt.ylabel("Thermal efficiency")
+    plt.legend()
+    plt.title("Select ambient temperature reconstruction points")
+    plt.show()
+
+    plt.scatter(
+        mass_flow_rates[::RECONSTRUCTION_RESOLUTION],
+        thermal_efficiencies[::RECONSTRUCTION_RESOLUTION],
+        label="true data",
+    )
+    plt.scatter(
+        mass_flow_rates[::RECONSTRUCTION_RESOLUTION],
+        _best_guess(
+            (
+                np.array(ambient_temperatures[::RECONSTRUCTION_RESOLUTION]),
+                np.array(collector_input_temperatures)[::RECONSTRUCTION_RESOLUTION],
+                np.array(mass_flow_rates[::RECONSTRUCTION_RESOLUTION]),
+                np.array(solar_irradiances[::RECONSTRUCTION_RESOLUTION]),
+            ),
+            *results[0],
+        ),
+        label="fitted data",
+    )
+    plt.xlabel("Mass flow rate / litres/hour")
+    plt.ylabel("Thermal efficiency")
+    plt.legend()
+    plt.title("Select mass-flow rate reconstruction points")
     plt.show()
 
 
