@@ -386,7 +386,7 @@ def fit(data_file_name: str) -> None:
 
     ambient_temperatures = [entry[0] for entry in processed_data]
     collector_input_temperatures = [entry[1] for entry in processed_data]
-    mass_flow_rates = [entry[2] for entry in processed_data]
+    mass_flow_rates = [3600 * entry[2] for entry in processed_data]
     solar_irradiances = [entry[3] for entry in processed_data]
     thermal_efficiencies = [entry[4] for entry in processed_data]
 
@@ -543,6 +543,7 @@ def fit(data_file_name: str) -> None:
         ambient_temperatures[::RECONSTRUCTION_RESOLUTION],
         thermal_efficiencies[::RECONSTRUCTION_RESOLUTION],
         label="true data",
+        marker="x",
     )
     plt.scatter(
         ambient_temperatures[::RECONSTRUCTION_RESOLUTION],
@@ -556,6 +557,7 @@ def fit(data_file_name: str) -> None:
             *results[0],
         ),
         label="fitted data",
+        marker="x",
     )
     plt.xlabel("Ambient temeprature / degC")
     plt.ylabel("Thermal efficiency")
@@ -564,9 +566,36 @@ def fit(data_file_name: str) -> None:
     plt.show()
 
     plt.scatter(
+        collector_input_temperatures[::RECONSTRUCTION_RESOLUTION],
+        thermal_efficiencies[::RECONSTRUCTION_RESOLUTION],
+        label="true data",
+        marker="x",
+    )
+    plt.scatter(
+        collector_input_temperatures[::RECONSTRUCTION_RESOLUTION],
+        _best_guess(
+            (
+                np.array(ambient_temperatures[::RECONSTRUCTION_RESOLUTION]),
+                np.array(collector_input_temperatures)[::RECONSTRUCTION_RESOLUTION],
+                np.array(mass_flow_rates[::RECONSTRUCTION_RESOLUTION]),
+                np.array(solar_irradiances[::RECONSTRUCTION_RESOLUTION]),
+            ),
+            *results[0],
+        ),
+        label="fitted data",
+        marker="x",
+    )
+    plt.xlabel("Collector input temeprature / degC")
+    plt.ylabel("Thermal efficiency")
+    plt.legend()
+    plt.title("Select collector input temperature reconstruction points")
+    plt.show()
+
+    plt.scatter(
         mass_flow_rates[::RECONSTRUCTION_RESOLUTION],
         thermal_efficiencies[::RECONSTRUCTION_RESOLUTION],
         label="true data",
+        marker="x",
     )
     plt.scatter(
         mass_flow_rates[::RECONSTRUCTION_RESOLUTION],
@@ -580,6 +609,7 @@ def fit(data_file_name: str) -> None:
             *results[0],
         ),
         label="fitted data",
+        marker="x",
     )
     plt.xlabel("Mass flow rate / litres/hour")
     plt.ylabel("Thermal efficiency")
