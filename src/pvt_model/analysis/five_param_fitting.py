@@ -306,14 +306,18 @@ def _best_guess(
     a_15: float,
     a_16: float,
     a_17: float,
-    a_10: float,
-    a_11: float,
-    a_12: float,
-    a_13: float,
-    a_14: float,
-    a_15: float,
-    a_16: float,
-    a_17: float,
+    a_18: float,
+    a_19: float,
+    a_20: float,
+    a_21: float,
+    a_22: float,
+    a_23: float,
+    a_24: float,
+    a_25: float,
+    a_26: float,
+    a_27: float,
+    a_28: float,
+    a_29: float,
 ) -> List[float]:
     """
     Attempts a best-guess solution
@@ -430,6 +434,17 @@ def fit(data_file_name: str) -> None:
         0,
         0,
         0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
     )
 
     # Attempt a curve fit.
@@ -457,25 +472,43 @@ def fit(data_file_name: str) -> None:
             a_4=round(results[0][4], 2),
             a_5=round(results[0][5], 2),
         )
+        + "+ {a_18}ln(v_w) + {a_19}|ln(v_w)|^2 + ln(v_w) * ({a_20}ln(m_dot) + {a_21}ln(G) ) ".format(
+            a_18=round(results[0][18], 2),
+            a_19=round(results[0][19], 2),
+            a_20=round(results[0][20], 2),
+            a_21=round(results[0][21], 2),
+        )
         + "+ T_amb * ({a_6} + {a_7}ln(G) + {a_8}|ln(G)|^2 ".format(
             a_6=round(results[0][6], 2),
             a_7=round(results[0][7], 2),
             a_8=round(results[0][8], 2),
         )
-        + "+ {a_9}ln(m_dot) + {a_10}|ln(m_dot)|^2 + {a_11}ln(m_dot) * ln(G) ) ".format(
+        + "+ {a_9}ln(m_dot) + {a_10}|ln(m_dot)|^2 + {a_11}ln(m_dot) * ln(G) ".format(
             a_9=round(results[0][9], 2),
             a_10=round(results[0][10], 2),
             a_11=round(results[0][11], 2),
+        )
+        + "+ {a_22}ln(v_w) + {a_23}|ln(v_w)|^2 + ln(v_w) * ({a_24}ln(m_dot) + {a_25}ln(G) )) ".format(
+            a_22=round(results[0][22], 2),
+            a_23=round(results[0][23], 2),
+            a_24=round(results[0][24], 2),
+            a_25=round(results[0][25], 2),
         )
         + "+ T_c,in * ({a_12} + {a_13}ln(G) + {a_14}|ln(G)|^2) ".format(
             a_12=round(results[0][12], 2),
             a_13=round(results[0][13], 2),
             a_14=round(results[0][14], 2),
         )
-        + "+ {a_15}ln(m_dot) + {a_16}|ln(m_dot)|^2 + {a_17}ln(m_dot) * ln(G) ) ".format(
+        + "+ {a_15}ln(m_dot) + {a_16}|ln(m_dot)|^2 + {a_17}ln(m_dot) * ln(G) ".format(
             a_15=round(results[0][15], 2),
             a_16=round(results[0][16], 2),
             a_17=round(results[0][17], 2),
+        )
+        + "+ {a_26}ln(v_w) + {a_27}|ln(v_w)|^2 + ln(v_w) * ({a_28}ln(m_dot) + {a_29}ln(G) )) ".format(
+            a_26=round(results[0][26], 2),
+            a_27=round(results[0][27], 2),
+            a_28=round(results[0][28], 2),
+            a_29=round(results[0][29], 2),
         )
     )
 
