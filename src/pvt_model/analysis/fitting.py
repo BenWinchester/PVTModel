@@ -50,7 +50,7 @@ SOLAR_IRRADIANCE: str = "solar_irradiance"
 
 # Thermal efficiency:
 #   Keyword for the thermal efficiency.
-THERMAL_EFFICIENCY :str = "thermal_efficiency"
+THERMAL_EFFICIENCY: str = "thermal_efficiency"
 
 # Wind speed:
 #   Keyword for the wind speed.
@@ -88,7 +88,9 @@ def analyse(data_file_name: str) -> None:
 
     # Determine the various sets.
     ambient_temperatures: Set[float] = {entry[AMBIENT_TEMPERATURE] for entry in data}
-    collector_input_temperatures: Set[float] = {entry[COLLECTOR_INPUT_TEMPERATURE] for entry in data}
+    collector_input_temperatures: Set[float] = {
+        entry[COLLECTOR_INPUT_TEMPERATURE] for entry in data
+    }
     mass_flow_rates: Set[float] = {entry[MASS_FLOW_RATE] for entry in data}
     solar_irradiances: Set[float] = {entry[SOLAR_IRRADIANCE] for entry in data}
     wind_speeds: Set[float] = {entry[WIND_SPEED] for entry in data}
@@ -100,12 +102,15 @@ def analyse(data_file_name: str) -> None:
     # Set up a variable for holding the polyfits.
     polyfits = []
 
-    for T_amb in tqdm(ambient_temperatures, desc="ambient_temperature", leave=False, unit="value"):
+    for T_amb in tqdm(
+        ambient_temperatures, desc="ambient_temperature", leave=False, unit="value"
+    ):
         for T_c_in in collector_input_temperatures:
             for m_dot in mass_flow_rates:
                 for G in solar_irradiances:
                     reduced_runs = {
-                        entry[WIND_SPEED]: entry[THERMAL_EFFICIENCY] for entry in data
+                        entry[WIND_SPEED]: entry[THERMAL_EFFICIENCY]
+                        for entry in data
                         if entry[AMBIENT_TEMPERATURE] == T_amb
                         and entry[COLLECTOR_INPUT_TEMPERATURE] == T_c_in
                         and entry[MASS_FLOW_RATE] == m_dot
@@ -114,9 +119,10 @@ def analyse(data_file_name: str) -> None:
                     }
                     if len(reduced_runs) <= 1:
                         continue
-                    fit = np.polyfit(list(reduced_runs.keys()), list(reduced_runs.values()), 2)
+                    fit = np.polyfit(
+                        list(reduced_runs.keys()), list(reduced_runs.values()), 2
+                    )
                     polyfits.append(fit)
-
 
     fig, axs = plt.subplots(2, 2)
     ax = axs[0, 0]
@@ -144,7 +150,9 @@ def analyse(data_file_name: str) -> None:
     # ax.set_title("Fourth coefficient")
 
     # print(f"Fit of wind speed gives {np.mean(first):.3f}v_w^3 + {np.mean(second):.3f}v_w^2 + {np.mean(third):.3f}v_2 + {np.mean(fourth):.3f}")
-    print(f"Fit of wind speed gives {np.mean(first):.3f}v_w^2 + {np.mean(second):.3f}v_w + {np.mean(third):.3f}")
+    print(
+        f"Fit of wind speed gives {np.mean(first):.3f}v_w^2 + {np.mean(second):.3f}v_w + {np.mean(third):.3f}"
+    )
 
     fig.suptitle("Wind speed fitting")
     plt.show()
@@ -156,12 +164,15 @@ def analyse(data_file_name: str) -> None:
     # Set up a variable for holding the polyfits.
     polyfits = []
 
-    for T_amb in tqdm(ambient_temperatures, desc="ambient_temperature", leave=False, unit="value"):
+    for T_amb in tqdm(
+        ambient_temperatures, desc="ambient_temperature", leave=False, unit="value"
+    ):
         for T_c_in in collector_input_temperatures:
             for G in solar_irradiances:
                 for v_w in wind_speeds:
                     reduced_runs = {
-                        entry[MASS_FLOW_RATE]: entry[THERMAL_EFFICIENCY] for entry in data
+                        entry[MASS_FLOW_RATE]: entry[THERMAL_EFFICIENCY]
+                        for entry in data
                         if entry[AMBIENT_TEMPERATURE] == T_amb
                         and entry[COLLECTOR_INPUT_TEMPERATURE] == T_c_in
                         and entry[SOLAR_IRRADIANCE] == G
@@ -170,7 +181,9 @@ def analyse(data_file_name: str) -> None:
                     }
                     if len(reduced_runs) <= 1:
                         continue
-                    fit = np.polyfit(list(reduced_runs.keys()), list(reduced_runs.values()), 2)
+                    fit = np.polyfit(
+                        list(reduced_runs.keys()), list(reduced_runs.values()), 2
+                    )
                     polyfits.append(fit)
 
     fig, axs = plt.subplots(2, 2)
@@ -199,7 +212,9 @@ def analyse(data_file_name: str) -> None:
     # ax.set_title("Fourth coefficient")
 
     # print(f"Fit of mass flow rates gives {np.mean(first):.3f}\\dot(m)^3 + {np.mean(second):.3f}\\dot(m)^2 + {np.mean(third):.3f}\\dot(m) + {np.mean(fourth)}")
-    print(f"Fit of mass flow rates gives {np.mean(first):.3f}\\dot(m)^2 + {np.mean(second):.3f}\\dot(m) + {np.mean(third):.3f}")
+    print(
+        f"Fit of mass flow rates gives {np.mean(first):.3f}\\dot(m)^2 + {np.mean(second):.3f}\\dot(m) + {np.mean(third):.3f}"
+    )
 
     fig.suptitle("Mass flow-rate fitting")
     plt.show()
@@ -211,12 +226,15 @@ def analyse(data_file_name: str) -> None:
     # Set up a variable for holding the polyfits.
     polyfits = []
 
-    for T_amb in tqdm(ambient_temperatures, desc="ambient_temperature", leave=False, unit="value"):
+    for T_amb in tqdm(
+        ambient_temperatures, desc="ambient_temperature", leave=False, unit="value"
+    ):
         for m_dot in mass_flow_rates:
             for G in solar_irradiances:
                 for v_w in wind_speeds:
                     reduced_runs = {
-                        entry[COLLECTOR_INPUT_TEMPERATURE]: entry[THERMAL_EFFICIENCY] for entry in data
+                        entry[COLLECTOR_INPUT_TEMPERATURE]: entry[THERMAL_EFFICIENCY]
+                        for entry in data
                         if entry[AMBIENT_TEMPERATURE] == T_amb
                         and entry[MASS_FLOW_RATE] == m_dot
                         and entry[SOLAR_IRRADIANCE] == G
@@ -225,9 +243,10 @@ def analyse(data_file_name: str) -> None:
                     }
                     if len(reduced_runs) <= 1:
                         continue
-                    fit = np.polyfit(list(reduced_runs.keys()), list(reduced_runs.values()), 2)
+                    fit = np.polyfit(
+                        list(reduced_runs.keys()), list(reduced_runs.values()), 2
+                    )
                     polyfits.append(fit)
-
 
     fig, axs = plt.subplots(2, 2)
     ax = axs[0, 0]
@@ -255,7 +274,9 @@ def analyse(data_file_name: str) -> None:
     # ax.set_title("Fourth coefficient")
 
     # print(f"Fit of collector input temperatures gives {np.mean(first):.3f}T_c_in^3 + {np.mean(second):.3f}T_c_in^2 + {np.mean(third):.3f}T_C_in + {np.mean(fourth):.3f}")
-    print(f"Fit of collector input temperatures gives {np.mean(first):.3f}T_c_in^2 + {np.mean(second):.3f}T_c_in + {np.mean(third):.3f}")
+    print(
+        f"Fit of collector input temperatures gives {np.mean(first):.3f}T_c_in^2 + {np.mean(second):.3f}T_c_in + {np.mean(third):.3f}"
+    )
 
     fig.suptitle("Input temperature fitting")
     plt.show()
@@ -288,11 +309,8 @@ def _best_guess(
         a_0
         + a_1 * np.log(solar_irradiance)
         + a_2 * (np.log(solar_irradiance)) ** 2
-        + ambient_temperature * (
-            a_3
-            + a_4 * np.log(solar_irradiance)
-            + a_5 * (np.log(solar_irradiance)) ** 2
-        )
+        + ambient_temperature
+        * (a_3 + a_4 * np.log(solar_irradiance) + a_5 * (np.log(solar_irradiance)) ** 2)
     )
 
 
@@ -330,16 +348,41 @@ def fit(data_file_name: str) -> None:
     initial_guesses = (-0.01, -0.04, -0.004, 0.001, 0.001, 0.001)
 
     # Attempt a curve fit.
-    results = curve_fit(_best_guess, (ambient_temperatures, solar_irradiances), thermal_efficiencies, initial_guesses)
+    results = curve_fit(
+        _best_guess,
+        (ambient_temperatures, solar_irradiances),
+        thermal_efficiencies,
+        initial_guesses,
+    )
 
     plt.scatter(ambient_temperatures, thermal_efficiencies, label="true data")
-    plt.scatter(ambient_temperatures, _best_guess((ambient_temperatures, solar_irradiances,), *results[0]), label="fitted data")
+    plt.scatter(
+        ambient_temperatures,
+        _best_guess(
+            (
+                ambient_temperatures,
+                solar_irradiances,
+            ),
+            *results[0],
+        ),
+        label="fitted data",
+    )
     plt.legend()
     plt.title("Ambient temperature reconstruction")
     plt.show()
 
     plt.scatter(solar_irradiances, thermal_efficiencies, label="true data")
-    plt.scatter(solar_irradiances, _best_guess((ambient_temperatures, solar_irradiances,), *results[0]), label="fitted data")
+    plt.scatter(
+        solar_irradiances,
+        _best_guess(
+            (
+                ambient_temperatures,
+                solar_irradiances,
+            ),
+            *results[0],
+        ),
+        label="fitted data",
+    )
     plt.legend()
     plt.title("Solar irradiance reconstruction")
     plt.show()
@@ -354,6 +397,4 @@ if __name__ == "__main__":
     # )
 
     # Attempt at fitting
-    fit(
-        parsed_args.data_file_name
-    )
+    fit(parsed_args.data_file_name)

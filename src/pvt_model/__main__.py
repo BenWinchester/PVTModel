@@ -1147,7 +1147,7 @@ def main(args) -> None:  # pylint: disable=too-many-branches
                         "especially override CLI units. Consider checking this before "
                         "investigating further.\nRun attempted: %s\nError: %s",
                         steady_state_run,
-                        str(e)
+                        str(e),
                     )
                     continue
 
