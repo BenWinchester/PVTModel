@@ -26,6 +26,7 @@ import numpy as np  # type: ignore  # pylint: disable=import-error
 
 from matplotlib import pyplot as plt
 from scipy.optimize import curve_fit
+from scipy.sparse import data
 from tqdm import tqdm
 
 # Ambient temperature:
@@ -40,17 +41,29 @@ COLLECTOR_INPUT_TEMPERATURE: str = "collector_input_temperature"
 #   Keyword for the output temperature of the collector.
 COLLECTOR_OUTPUT_TEMPERATURE: str = "collector_output_temperature"
 
+# Electrical efficiency:
+#   Keyword for the electrical efficiency of the collector.
+ELECTRICAL_EFFICIENCY: str = "electrical_efficiency"
+
 # Mass-flow rate:
 #   Keyword for the mass-flow rate of the collector.
 MASS_FLOW_RATE: str = "mass_flow_rate"
 
 # Reconstruction resolution:
 #   The resolution to use when reconstructing reduced plots.
-RECONSTRUCTION_RESOLUTION: int = 200
+RECONSTRUCTION_RESOLUTION: int = 800
+
+# Reduced model:
+#   Label to use for reduced model data.
+REDUCED_MODEL: str = "reduced model"
 
 # Solar irradiance:
 #   Keyword for the solar irradiance.
 SOLAR_IRRADIANCE: str = "solar_irradiance"
+
+# Technical model:
+#   Label to use for technical 3d model data.
+TECHNICAL_MODEL: str = "technical 3d model"
 
 # Thermal efficiency:
 #   Keyword for the thermal efficiency.
@@ -318,6 +331,15 @@ def _best_guess(
     a_27: float,
     a_28: float,
     a_29: float,
+    a_30: float,
+    a_31: float,
+    a_32: float,
+    a_33: float,
+    a_34: float,
+    a_35: float,
+    a_36: float,
+    a_37: float,
+    a_38: float,
 ) -> List[float]:
     """
     Attempts a best-guess solution
@@ -345,37 +367,381 @@ def _best_guess(
         + a_3 * np.log(mass_flow_rate)
         + a_4 * (np.log(mass_flow_rate)) ** 2
         + a_5 * np.log(solar_irradiance) * np.log(mass_flow_rate)
-        + a_18 * np.log(wind_speed)
-        + a_19 * (np.log(wind_speed)) ** 2
-        + a_20 * np.log(wind_speed) * np.log(mass_flow_rate)
-        + a_21 * np.log(wind_speed) * np.log(solar_irradiance)
+        + a_6 * wind_speed
+        + a_7 * wind_speed ** 2
+        + a_8 * wind_speed ** 3
+        + a_9 * wind_speed * np.log(mass_flow_rate)
+        + a_10 * wind_speed * np.log(solar_irradiance)
+        + a_11 * wind_speed ** 2 * np.log(mass_flow_rate)
+        + a_12 * wind_speed ** 2 * np.log(solar_irradiance)
         + ambient_temperature
         * (
-            a_6
-            + a_7 * np.log(solar_irradiance)
-            + a_8 * (np.log(solar_irradiance)) ** 2
-            + a_9 * np.log(mass_flow_rate)
-            + a_10 * (np.log(mass_flow_rate)) ** 2
-            + a_11 * np.log(solar_irradiance) * np.log(mass_flow_rate)
-            + a_22 * np.log(wind_speed)
-            + a_23 * (np.log(wind_speed)) ** 2
-            + a_24 * np.log(wind_speed) * np.log(mass_flow_rate)
-            + a_25 * np.log(wind_speed) * np.log(solar_irradiance)
+            a_13
+            + a_14 * np.log(solar_irradiance)
+            + a_15 * (np.log(solar_irradiance)) ** 2
+            + a_16 * np.log(mass_flow_rate)
+            + a_17 * (np.log(mass_flow_rate)) ** 2
+            + a_18 * np.log(solar_irradiance) * np.log(mass_flow_rate)
+            + a_19 * wind_speed
+            + a_20 * wind_speed ** 2
+            + a_21 * wind_speed ** 3
+            + a_22 * wind_speed * np.log(mass_flow_rate)
+            + a_23 * wind_speed * np.log(solar_irradiance)
+            + a_24 * wind_speed ** 2 * np.log(mass_flow_rate)
+            + a_25 * wind_speed ** 2 * np.log(solar_irradiance)
         )
         + collector_input_temperature
         * (
-            a_12
-            + a_13 * np.log(solar_irradiance)
-            + a_14 * (np.log(solar_irradiance)) ** 2
-            + a_15 * np.log(mass_flow_rate)
-            + a_16 * (np.log(mass_flow_rate)) ** 2
-            + a_17 * np.log(solar_irradiance) * np.log(mass_flow_rate)
-            + a_26 * np.log(wind_speed)
-            + a_27 * (np.log(wind_speed)) ** 2
-            + a_28 * np.log(wind_speed) * np.log(mass_flow_rate)
-            + a_29 * np.log(wind_speed) * np.log(solar_irradiance)
+            a_26
+            + a_27 * np.log(solar_irradiance)
+            + a_28 * (np.log(solar_irradiance)) ** 2
+            + a_29 * np.log(mass_flow_rate)
+            + a_30 * (np.log(mass_flow_rate)) ** 2
+            + a_31 * np.log(solar_irradiance) * np.log(mass_flow_rate)
+            + a_32 * wind_speed
+            + a_33 * wind_speed ** 2
+            + a_34 * wind_speed ** 3
+            + a_35 * wind_speed * np.log(mass_flow_rate)
+            + a_36 * wind_speed * np.log(solar_irradiance)
+            + a_37 * wind_speed ** 2 * np.log(mass_flow_rate)
+            + a_38 * wind_speed ** 2 * np.log(solar_irradiance)
         )
     )
+
+
+def _plot(
+    ambient_temperatures: List[float],
+    collector_input_temperatures: List[float],
+    data_type: str,
+    mass_flow_rates: List[float],
+    results: np.ndarray,
+    solar_irradiances: List[float],
+    y_data: List[float],
+    wind_speeds: List[float],
+) -> None:
+    """
+    Plots the various outputs.
+
+    :param data_type:
+        The data type being plotted to display on the y axes.
+
+    :param results:
+        The results of the curve fitting.
+
+    """
+
+    print(f"Fitted curve params: {results[0]}")
+    print(
+        "Fitted curve: {a_0:.2g} + {a_1:.2g}ln(G) + {a_2:.2g}|ln(G)|^2 ".format(
+            a_0=results[0][0],
+            a_1=results[0][1],
+            a_2=results[0][2],
+        )
+        + "+ {a_3:.2g}ln(m_dot) + {a_4:.2g}|ln(m_dot)|^2 + {a_5:.2g}ln(m_dot) * ln(G) ".format(
+            a_3=results[0][3],
+            a_4=results[0][4],
+            a_5=results[0][5],
+        )
+        + "+ {a_6:.2g}v_w + {a_7:.2g}v_w^2 + {a_8:.2g}v_w^3 ".format(
+            a_6=results[0][6],
+            a_7=results[0][7],
+            a_8=results[0][8],
+        )
+        + "+ v_w * ({a_9:.2g}ln(m_dot) + {a_10:.2g}ln(G) ) ".format(
+            a_9=results[0][9],
+            a_10=results[0][10],
+        )
+        + "+ v_w^2 * ({a_11:.2g}ln(m_dot) + {a_12:.2g}ln(G) ) ".format(
+            a_11=results[0][11],
+            a_12=results[0][12],
+        )
+        + "+ T_amb * ({a_13:.2g} + {a_14:.2g}ln(G) + {a_15:.2g}|ln(G)|^2 ".format(
+            a_13=results[0][13],
+            a_14=results[0][14],
+            a_15=results[0][15],
+        )
+        + "+ {a_16:.2g}ln(m_dot) + {a_17:.2g}|ln(m_dot)|^2 + {a_18:.2g}ln(m_dot) * ln(G) ".format(
+            a_16=results[0][16],
+            a_17=results[0][17],
+            a_18=results[0][18],
+        )
+        + "+ {a_19:.2g}v_w + {a_20:.2g}v_w^2 + {a_21:.2g}v_w^3 ".format(
+            a_19=results[0][19],
+            a_20=results[0][20],
+            a_21=results[0][21],
+        )
+        + "+ v_w * ({a_22:.2g}ln(m_dot) + {a_23:.2g}ln(G) ) ".format(
+            a_22=results[0][22],
+            a_23=results[0][23],
+        )
+        + "+ v_w^2 * ({a_24:.2g}ln(m_dot) + {a_25:.2g}ln(G) )) ".format(
+            a_24=results[0][24],
+            a_25=results[0][25],
+        )
+        + "+ T_c,in * ({a_26:.2g} + {a_27:.2g}ln(G) + {a_28:.2g}|ln(G)|^2 ".format(
+            a_26=results[0][26],
+            a_27=results[0][27],
+            a_28=results[0][28],
+        )
+        + "+ {a_29:.2g}ln(m_dot) + {a_30:.2g}|ln(m_dot)|^2 + {a_31:.2g}ln(m_dot) * ln(G) ".format(
+            a_29=results[0][29],
+            a_30=results[0][30],
+            a_31=results[0][31],
+        )
+        + "+ {a_32:.2g}v_w + {a_33:.2g}v_w^2 + {a_34:.2g}v_w^3 ".format(
+            a_32=results[0][32],
+            a_33=results[0][33],
+            a_34=results[0][34],
+        )
+        + "+ v_w * ({a_35:.2g}ln(m_dot) + {a_36:.2g}ln(G) ) ".format(
+            a_35=results[0][35],
+            a_36=results[0][36],
+        )
+        + "+ v_w^2 * ({a_37:.2g}ln(m_dot) + {a_38:.2g}ln(G) )) ".format(
+            a_37=results[0][37],
+            a_38=results[0][38],
+        )
+    )
+
+    plt.scatter(ambient_temperatures, y_data, label=TECHNICAL_MODEL)
+    plt.scatter(
+        ambient_temperatures,
+        _best_guess(
+            (
+                np.array(ambient_temperatures),
+                np.array(collector_input_temperatures),
+                np.array(mass_flow_rates),
+                np.array(solar_irradiances),
+                np.array(wind_speeds),
+            ),
+            *results[0],
+        ),
+        label=REDUCED_MODEL,
+    )
+    plt.xlabel("Ambient temeprature / degC")
+    plt.ylabel(data_type)
+    plt.legend()
+    plt.title("Ambient temperature reconstruction")
+    plt.show()
+
+    plt.scatter(collector_input_temperatures, y_data, label=TECHNICAL_MODEL)
+    plt.scatter(
+        collector_input_temperatures,
+        _best_guess(
+            (
+                np.array(ambient_temperatures),
+                np.array(collector_input_temperatures),
+                np.array(mass_flow_rates),
+                np.array(solar_irradiances),
+                np.array(wind_speeds),
+            ),
+            *results[0],
+        ),
+        label=REDUCED_MODEL,
+    )
+    plt.legend()
+    plt.xlabel("Collector input temperature / degC")
+    plt.ylabel(data_type)
+    plt.title("Collector input temperature reconstruction")
+    plt.show()
+
+    plt.scatter(mass_flow_rates, y_data, label=TECHNICAL_MODEL)
+    plt.scatter(
+        mass_flow_rates,
+        _best_guess(
+            (
+                np.array(ambient_temperatures),
+                np.array(collector_input_temperatures),
+                np.array(mass_flow_rates),
+                np.array(solar_irradiances),
+                np.array(wind_speeds),
+            ),
+            *results[0],
+        ),
+        label=REDUCED_MODEL,
+    )
+    plt.legend()
+    plt.xlabel("Mass flow rate / litres/hour")
+    plt.ylabel(data_type)
+    plt.title("Mass-flow rate reconstruction")
+    plt.show()
+
+    plt.scatter(solar_irradiances, y_data, label=TECHNICAL_MODEL)
+    plt.scatter(
+        solar_irradiances,
+        _best_guess(
+            (
+                np.array(ambient_temperatures),
+                np.array(collector_input_temperatures),
+                np.array(mass_flow_rates),
+                np.array(solar_irradiances),
+                np.array(wind_speeds),
+            ),
+            *results[0],
+        ),
+        label=REDUCED_MODEL,
+    )
+    plt.legend()
+    plt.xlabel("Solar irradiance / W/m^2")
+    plt.ylabel(data_type)
+    plt.title("Solar irradiance reconstruction")
+    plt.show()
+
+    plt.scatter(wind_speeds, y_data, label=TECHNICAL_MODEL)
+    plt.scatter(
+        wind_speeds,
+        _best_guess(
+            (
+                np.array(ambient_temperatures),
+                np.array(collector_input_temperatures),
+                np.array(mass_flow_rates),
+                np.array(solar_irradiances),
+                np.array(wind_speeds),
+            ),
+            *results[0],
+        ),
+        label=REDUCED_MODEL,
+    )
+    plt.xlabel("Wind speed / m/2")
+    plt.ylabel(data_type)
+    plt.legend()
+    plt.title("Wind speed reconstruction")
+    plt.show()
+
+    plt.scatter(
+        ambient_temperatures[::RECONSTRUCTION_RESOLUTION],
+        y_data[::RECONSTRUCTION_RESOLUTION],
+        label=TECHNICAL_MODEL,
+        marker="x",
+    )
+    plt.scatter(
+        ambient_temperatures[::RECONSTRUCTION_RESOLUTION],
+        _best_guess(
+            (
+                np.array(ambient_temperatures[::RECONSTRUCTION_RESOLUTION]),
+                np.array(collector_input_temperatures)[::RECONSTRUCTION_RESOLUTION],
+                np.array(mass_flow_rates[::RECONSTRUCTION_RESOLUTION]),
+                np.array(solar_irradiances[::RECONSTRUCTION_RESOLUTION]),
+                np.array(wind_speeds[::RECONSTRUCTION_RESOLUTION]),
+            ),
+            *results[0],
+        ),
+        label=REDUCED_MODEL,
+        marker="x",
+    )
+    plt.xlabel("Ambient temeprature / degC")
+    plt.ylabel(data_type)
+    plt.legend()
+    plt.title("Select ambient temperature reconstruction points")
+    plt.show()
+
+    plt.scatter(
+        collector_input_temperatures[::RECONSTRUCTION_RESOLUTION],
+        y_data[::RECONSTRUCTION_RESOLUTION],
+        label=TECHNICAL_MODEL,
+        marker="x",
+    )
+    plt.scatter(
+        collector_input_temperatures[::RECONSTRUCTION_RESOLUTION],
+        _best_guess(
+            (
+                np.array(ambient_temperatures[::RECONSTRUCTION_RESOLUTION]),
+                np.array(collector_input_temperatures)[::RECONSTRUCTION_RESOLUTION],
+                np.array(mass_flow_rates[::RECONSTRUCTION_RESOLUTION]),
+                np.array(solar_irradiances[::RECONSTRUCTION_RESOLUTION]),
+                np.array(wind_speeds[::RECONSTRUCTION_RESOLUTION]),
+            ),
+            *results[0],
+        ),
+        label=REDUCED_MODEL,
+        marker="x",
+    )
+    plt.xlabel("Collector input temeprature / degC")
+    plt.ylabel(data_type)
+    plt.legend()
+    plt.title("Select collector input temperature reconstruction points")
+    plt.show()
+
+    plt.scatter(
+        mass_flow_rates[::RECONSTRUCTION_RESOLUTION],
+        y_data[::RECONSTRUCTION_RESOLUTION],
+        label=TECHNICAL_MODEL,
+        marker="x",
+    )
+    plt.scatter(
+        mass_flow_rates[::RECONSTRUCTION_RESOLUTION],
+        _best_guess(
+            (
+                np.array(ambient_temperatures[::RECONSTRUCTION_RESOLUTION]),
+                np.array(collector_input_temperatures)[::RECONSTRUCTION_RESOLUTION],
+                np.array(mass_flow_rates[::RECONSTRUCTION_RESOLUTION]),
+                np.array(solar_irradiances[::RECONSTRUCTION_RESOLUTION]),
+                np.array(wind_speeds[::RECONSTRUCTION_RESOLUTION]),
+            ),
+            *results[0],
+        ),
+        label=REDUCED_MODEL,
+        marker="x",
+    )
+    plt.xlabel("Mass flow rate / litres/hour")
+    plt.ylabel(data_type)
+    plt.legend()
+    plt.title("Select mass-flow rate reconstruction points")
+    plt.show()
+
+    plt.scatter(
+        solar_irradiances[::RECONSTRUCTION_RESOLUTION],
+        y_data[::RECONSTRUCTION_RESOLUTION],
+        label=TECHNICAL_MODEL,
+        marker="x",
+    )
+    plt.scatter(
+        solar_irradiances[::RECONSTRUCTION_RESOLUTION],
+        _best_guess(
+            (
+                np.array(ambient_temperatures[::RECONSTRUCTION_RESOLUTION]),
+                np.array(collector_input_temperatures)[::RECONSTRUCTION_RESOLUTION],
+                np.array(mass_flow_rates[::RECONSTRUCTION_RESOLUTION]),
+                np.array(solar_irradiances[::RECONSTRUCTION_RESOLUTION]),
+                np.array(wind_speeds[::RECONSTRUCTION_RESOLUTION]),
+            ),
+            *results[0],
+        ),
+        label=REDUCED_MODEL,
+        marker="x",
+    )
+    plt.xlabel("Solar irradiance / W/m^2")
+    plt.ylabel(data_type)
+    plt.legend()
+    plt.title("Select solar irradiance reconstruction points")
+    plt.show()
+
+    plt.scatter(
+        wind_speeds[::RECONSTRUCTION_RESOLUTION],
+        y_data[::RECONSTRUCTION_RESOLUTION],
+        label=TECHNICAL_MODEL,
+        marker="x",
+    )
+    plt.scatter(
+        wind_speeds[::RECONSTRUCTION_RESOLUTION],
+        _best_guess(
+            (
+                np.array(ambient_temperatures[::RECONSTRUCTION_RESOLUTION]),
+                np.array(collector_input_temperatures)[::RECONSTRUCTION_RESOLUTION],
+                np.array(mass_flow_rates[::RECONSTRUCTION_RESOLUTION]),
+                np.array(solar_irradiances[::RECONSTRUCTION_RESOLUTION]),
+                np.array(wind_speeds[::RECONSTRUCTION_RESOLUTION]),
+            ),
+            *results[0],
+        ),
+        label=REDUCED_MODEL,
+        marker="x",
+    )
+    plt.xlabel("Wind speed / m/s")
+    plt.ylabel(data_type)
+    plt.legend()
+    plt.title("Select wind speed reconstruction points")
+    plt.show()
 
 
 def fit(data_file_name: str) -> None:
@@ -396,23 +762,29 @@ def fit(data_file_name: str) -> None:
         (
             entry[AMBIENT_TEMPERATURE],
             entry[COLLECTOR_INPUT_TEMPERATURE],
+            entry[ELECTRICAL_EFFICIENCY],
             entry[MASS_FLOW_RATE],
             entry[SOLAR_IRRADIANCE],
             entry[THERMAL_EFFICIENCY],
+            entry[WIND_SPEED],
         )
         for entry in data
         if entry[AMBIENT_TEMPERATURE] is not None
         and entry[COLLECTOR_INPUT_TEMPERATURE] is not None
+        and entry[ELECTRICAL_EFFICIENCY] is not None
         and entry[MASS_FLOW_RATE] is not None
         and entry[SOLAR_IRRADIANCE] is not None
         and entry[THERMAL_EFFICIENCY] is not None
+        and entry[WIND_SPEED] is not None
     ]
 
     ambient_temperatures = [entry[0] for entry in processed_data]
     collector_input_temperatures = [entry[1] for entry in processed_data]
-    mass_flow_rates = [3600 * entry[2] for entry in processed_data]
-    solar_irradiances = [entry[3] for entry in processed_data]
-    thermal_efficiencies = [entry[4] for entry in processed_data]
+    electrical_efficiencies = [entry[2] for entry in processed_data]
+    mass_flow_rates = [3600 * entry[3] for entry in processed_data]
+    solar_irradiances = [entry[4] for entry in processed_data]
+    thermal_efficiencies = [entry[5] for entry in processed_data]
+    wind_speeds = [entry[6] for entry in processed_data]
 
     # Set up initial guesses for the parameters.
     initial_guesses = (
@@ -444,231 +816,68 @@ def fit(data_file_name: str) -> None:
         0,
         0,
         0,
-        0
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
     )
 
     # Attempt a curve fit.
-    results = curve_fit(
+    thermal_efficiency_results = curve_fit(
         _best_guess,
         (
             ambient_temperatures,
             collector_input_temperatures,
             mass_flow_rates,
             solar_irradiances,
+            wind_speeds,
         ),
         thermal_efficiencies,
         initial_guesses,
     )
 
-    print(f"Fitted curve params: {results[0]}")
-    print(
-        "Fitted curve: {a_0} + {a_1}ln(G) + {a_2}|ln(G)|^2 ".format(
-            a_0=round(results[0][0], 2),
-            a_1=round(results[0][1], 2),
-            a_2=round(results[0][2], 2),
-        )
-        + "+ {a_3}ln(m_dot) + {a_4}|ln(m_dot)|^2 + {a_5}ln(m_dot) * ln(G) ".format(
-            a_3=round(results[0][3], 2),
-            a_4=round(results[0][4], 2),
-            a_5=round(results[0][5], 2),
-        )
-        + "+ {a_18}ln(v_w) + {a_19}|ln(v_w)|^2 + ln(v_w) * ({a_20}ln(m_dot) + {a_21}ln(G) ) ".format(
-            a_18=round(results[0][18], 2),
-            a_19=round(results[0][19], 2),
-            a_20=round(results[0][20], 2),
-            a_21=round(results[0][21], 2),
-        )
-        + "+ T_amb * ({a_6} + {a_7}ln(G) + {a_8}|ln(G)|^2 ".format(
-            a_6=round(results[0][6], 2),
-            a_7=round(results[0][7], 2),
-            a_8=round(results[0][8], 2),
-        )
-        + "+ {a_9}ln(m_dot) + {a_10}|ln(m_dot)|^2 + {a_11}ln(m_dot) * ln(G) ".format(
-            a_9=round(results[0][9], 2),
-            a_10=round(results[0][10], 2),
-            a_11=round(results[0][11], 2),
-        )
-        + "+ {a_22}ln(v_w) + {a_23}|ln(v_w)|^2 + ln(v_w) * ({a_24}ln(m_dot) + {a_25}ln(G) )) ".format(
-            a_22=round(results[0][22], 2),
-            a_23=round(results[0][23], 2),
-            a_24=round(results[0][24], 2),
-            a_25=round(results[0][25], 2),
-        )
-        + "+ T_c,in * ({a_12} + {a_13}ln(G) + {a_14}|ln(G)|^2) ".format(
-            a_12=round(results[0][12], 2),
-            a_13=round(results[0][13], 2),
-            a_14=round(results[0][14], 2),
-        )
-        + "+ {a_15}ln(m_dot) + {a_16}|ln(m_dot)|^2 + {a_17}ln(m_dot) * ln(G) ".format(
-            a_15=round(results[0][15], 2),
-            a_16=round(results[0][16], 2),
-            a_17=round(results[0][17], 2),
-        )
-        + "+ {a_26}ln(v_w) + {a_27}|ln(v_w)|^2 + ln(v_w) * ({a_28}ln(m_dot) + {a_29}ln(G) )) ".format(
-            a_26=round(results[0][26], 2),
-            a_27=round(results[0][27], 2),
-            a_28=round(results[0][28], 2),
-            a_29=round(results[0][29], 2),
-        )
+    electrical_efficiency_results = curve_fit(
+        _best_guess,
+        (
+            ambient_temperatures,
+            collector_input_temperatures,
+            mass_flow_rates,
+            solar_irradiances,
+            wind_speeds,
+        ),
+        electrical_efficiencies,
+        initial_guesses,
     )
 
-    plt.scatter(ambient_temperatures, thermal_efficiencies, label="true data")
-    plt.scatter(
+    # Plot the various outputs.
+    _plot(
         ambient_temperatures,
-        _best_guess(
-            (
-                np.array(ambient_temperatures),
-                np.array(collector_input_temperatures),
-                np.array(mass_flow_rates),
-                np.array(solar_irradiances),
-            ),
-            *results[0],
-        ),
-        label="fitted data",
-    )
-    plt.xlabel("Ambient temeprature / degC")
-    plt.ylabel("Thermal efficiency")
-    plt.legend()
-    plt.title("Ambient temperature reconstruction")
-    plt.show()
-
-    plt.scatter(collector_input_temperatures, thermal_efficiencies, label="true data")
-    plt.scatter(
         collector_input_temperatures,
-        _best_guess(
-            (
-                np.array(ambient_temperatures),
-                np.array(collector_input_temperatures),
-                np.array(mass_flow_rates),
-                np.array(solar_irradiances),
-            ),
-            *results[0],
-        ),
-        label="fitted data",
-    )
-    plt.legend()
-    plt.xlabel("Collector input temperature / degC")
-    plt.ylabel("Thermal efficiency")
-    plt.title("Collector input temperature reconstruction")
-    plt.show()
-
-    plt.scatter(mass_flow_rates, thermal_efficiencies, label="true data")
-    plt.scatter(
+        "Thermal efficiency",
         mass_flow_rates,
-        _best_guess(
-            (
-                np.array(ambient_temperatures),
-                np.array(collector_input_temperatures),
-                np.array(mass_flow_rates),
-                np.array(solar_irradiances),
-            ),
-            *results[0],
-        ),
-        label="fitted data",
-    )
-    plt.legend()
-    plt.xlabel("Mass flow rate / litres/hour")
-    plt.ylabel("Thermal efficiency")
-    plt.title("Mass-flow rate reconstruction")
-    plt.show()
-
-    plt.scatter(solar_irradiances, thermal_efficiencies, label="true data")
-    plt.scatter(
+        thermal_efficiency_results,
         solar_irradiances,
-        _best_guess(
-            (
-                np.array(ambient_temperatures),
-                np.array(collector_input_temperatures),
-                np.array(mass_flow_rates),
-                np.array(solar_irradiances),
-            ),
-            *results[0],
-        ),
-        label="fitted data",
+        thermal_efficiencies,
+        wind_speeds,
     )
-    plt.legend()
-    plt.xlabel("Solar irradiance / W/m^2")
-    plt.ylabel("Thermal efficiency")
-    plt.title("Solar irradiance reconstruction")
-    plt.show()
 
-    plt.scatter(
-        ambient_temperatures[::RECONSTRUCTION_RESOLUTION],
-        thermal_efficiencies[::RECONSTRUCTION_RESOLUTION],
-        label="true data",
-        marker="x",
+    _plot(
+        ambient_temperatures,
+        collector_input_temperatures,
+        "Electrical efficiency",
+        mass_flow_rates,
+        electrical_efficiency_results,
+        solar_irradiances,
+        electrical_efficiencies,
+        wind_speeds,
     )
-    plt.scatter(
-        ambient_temperatures[::RECONSTRUCTION_RESOLUTION],
-        _best_guess(
-            (
-                np.array(ambient_temperatures[::RECONSTRUCTION_RESOLUTION]),
-                np.array(collector_input_temperatures)[::RECONSTRUCTION_RESOLUTION],
-                np.array(mass_flow_rates[::RECONSTRUCTION_RESOLUTION]),
-                np.array(solar_irradiances[::RECONSTRUCTION_RESOLUTION]),
-            ),
-            *results[0],
-        ),
-        label="fitted data",
-        marker="x",
-    )
-    plt.xlabel("Ambient temeprature / degC")
-    plt.ylabel("Thermal efficiency")
-    plt.legend()
-    plt.title("Select ambient temperature reconstruction points")
-    plt.show()
-
-    plt.scatter(
-        collector_input_temperatures[::RECONSTRUCTION_RESOLUTION],
-        thermal_efficiencies[::RECONSTRUCTION_RESOLUTION],
-        label="true data",
-        marker="x",
-    )
-    plt.scatter(
-        collector_input_temperatures[::RECONSTRUCTION_RESOLUTION],
-        _best_guess(
-            (
-                np.array(ambient_temperatures[::RECONSTRUCTION_RESOLUTION]),
-                np.array(collector_input_temperatures)[::RECONSTRUCTION_RESOLUTION],
-                np.array(mass_flow_rates[::RECONSTRUCTION_RESOLUTION]),
-                np.array(solar_irradiances[::RECONSTRUCTION_RESOLUTION]),
-            ),
-            *results[0],
-        ),
-        label="fitted data",
-        marker="x",
-    )
-    plt.xlabel("Collector input temeprature / degC")
-    plt.ylabel("Thermal efficiency")
-    plt.legend()
-    plt.title("Select collector input temperature reconstruction points")
-    plt.show()
-
-    plt.scatter(
-        mass_flow_rates[::RECONSTRUCTION_RESOLUTION],
-        thermal_efficiencies[::RECONSTRUCTION_RESOLUTION],
-        label="true data",
-        marker="x",
-    )
-    plt.scatter(
-        mass_flow_rates[::RECONSTRUCTION_RESOLUTION],
-        _best_guess(
-            (
-                np.array(ambient_temperatures[::RECONSTRUCTION_RESOLUTION]),
-                np.array(collector_input_temperatures)[::RECONSTRUCTION_RESOLUTION],
-                np.array(mass_flow_rates[::RECONSTRUCTION_RESOLUTION]),
-                np.array(solar_irradiances[::RECONSTRUCTION_RESOLUTION]),
-            ),
-            *results[0],
-        ),
-        label="fitted data",
-        marker="x",
-    )
-    plt.xlabel("Mass flow rate / litres/hour")
-    plt.ylabel("Thermal efficiency")
-    plt.legend()
-    plt.title("Select mass-flow rate reconstruction points")
-    plt.show()
 
 
 if __name__ == "__main__":
