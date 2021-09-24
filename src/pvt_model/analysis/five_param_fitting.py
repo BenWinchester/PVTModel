@@ -340,6 +340,12 @@ def _best_guess(
     a_36: float,
     a_37: float,
     a_38: float,
+    a_39: float,
+    a_40: float,
+    a_41: float,
+    a_42: float,
+    a_43: float,
+    a_44: float,
 ) -> List[float]:
     """
     Attempts a best-guess solution
@@ -370,41 +376,47 @@ def _best_guess(
         + a_6 * wind_speed
         + a_7 * wind_speed ** 2
         + a_8 * wind_speed ** 3
-        + a_9 * wind_speed * np.log(mass_flow_rate)
-        + a_10 * wind_speed * np.log(solar_irradiance)
-        + a_11 * wind_speed ** 2 * np.log(mass_flow_rate)
-        + a_12 * wind_speed ** 2 * np.log(solar_irradiance)
+        + a_9 * wind_speed ** 4
+        + a_10 * wind_speed ** 5
+        + a_11 * wind_speed * np.log(mass_flow_rate)
+        + a_12 * wind_speed * np.log(solar_irradiance)
+        + a_13 * wind_speed ** 2 * np.log(mass_flow_rate)
+        + a_14 * wind_speed ** 2 * np.log(solar_irradiance)
         + ambient_temperature
         * (
-            a_13
-            + a_14 * np.log(solar_irradiance)
-            + a_15 * (np.log(solar_irradiance)) ** 2
-            + a_16 * np.log(mass_flow_rate)
-            + a_17 * (np.log(mass_flow_rate)) ** 2
-            + a_18 * np.log(solar_irradiance) * np.log(mass_flow_rate)
-            + a_19 * wind_speed
-            + a_20 * wind_speed ** 2
-            + a_21 * wind_speed ** 3
-            + a_22 * wind_speed * np.log(mass_flow_rate)
-            + a_23 * wind_speed * np.log(solar_irradiance)
-            + a_24 * wind_speed ** 2 * np.log(mass_flow_rate)
-            + a_25 * wind_speed ** 2 * np.log(solar_irradiance)
+            a_15
+            + a_16 * np.log(solar_irradiance)
+            + a_17 * (np.log(solar_irradiance)) ** 2
+            + a_18 * np.log(mass_flow_rate)
+            + a_19 * (np.log(mass_flow_rate)) ** 2
+            + a_20 * np.log(solar_irradiance) * np.log(mass_flow_rate)
+            + a_21 * wind_speed
+            + a_22 * wind_speed ** 2
+            + a_23 * wind_speed ** 3
+            + a_24 * wind_speed ** 4
+            + a_25 * wind_speed ** 5
+            + a_26 * wind_speed * np.log(mass_flow_rate)
+            + a_27 * wind_speed * np.log(solar_irradiance)
+            + a_28 * wind_speed ** 2 * np.log(mass_flow_rate)
+            + a_29 * wind_speed ** 2 * np.log(solar_irradiance)
         )
         + collector_input_temperature
         * (
-            a_26
-            + a_27 * np.log(solar_irradiance)
-            + a_28 * (np.log(solar_irradiance)) ** 2
-            + a_29 * np.log(mass_flow_rate)
-            + a_30 * (np.log(mass_flow_rate)) ** 2
-            + a_31 * np.log(solar_irradiance) * np.log(mass_flow_rate)
-            + a_32 * wind_speed
-            + a_33 * wind_speed ** 2
-            + a_34 * wind_speed ** 3
-            + a_35 * wind_speed * np.log(mass_flow_rate)
-            + a_36 * wind_speed * np.log(solar_irradiance)
-            + a_37 * wind_speed ** 2 * np.log(mass_flow_rate)
-            + a_38 * wind_speed ** 2 * np.log(solar_irradiance)
+            a_30
+            + a_31 * np.log(solar_irradiance)
+            + a_32 * (np.log(solar_irradiance)) ** 2
+            + a_33 * np.log(mass_flow_rate)
+            + a_34 * (np.log(mass_flow_rate)) ** 2
+            + a_35 * np.log(solar_irradiance) * np.log(mass_flow_rate)
+            + a_36 * wind_speed
+            + a_37 * wind_speed ** 2
+            + a_38 * wind_speed ** 3
+            + a_39 * wind_speed ** 4
+            + a_40 * wind_speed ** 5
+            + a_41 * wind_speed * np.log(mass_flow_rate)
+            + a_42 * wind_speed * np.log(solar_irradiance)
+            + a_43 * wind_speed ** 2 * np.log(mass_flow_rate)
+            + a_44 * wind_speed ** 2 * np.log(solar_irradiance)
         )
     )
 
@@ -432,74 +444,86 @@ def _plot(
 
     print(f"Fitted curve params: {results[0]}")
     print(
-        "Fitted curve: {a_0:.2g} + {a_1:.2g}ln(G) + {a_2:.2g}|ln(G)|^2 ".format(
-            a_0=results[0][0],
-            a_1=results[0][1],
-            a_2=results[0][2],
+        "Fitted curve: {a:.2g} + {b:.2g}ln(G) + {c:.2g}|ln(G)|^2 ".format(
+            a=results[0][0],
+            b=results[0][1],
+            c=results[0][2],
         )
-        + "+ {a_3:.2g}ln(m_dot) + {a_4:.2g}|ln(m_dot)|^2 + {a_5:.2g}ln(m_dot) * ln(G) ".format(
-            a_3=results[0][3],
-            a_4=results[0][4],
-            a_5=results[0][5],
+        + "+ {a:.2g}ln(m_dot) + {b:.2g}|ln(m_dot)|^2 + {c:.2g}ln(m_dot) * ln(G) ".format(
+            a=results[0][3],
+            b=results[0][4],
+            c=results[0][5],
         )
-        + "+ {a_6:.2g}v_w + {a_7:.2g}v_w^2 + {a_8:.2g}v_w^3 ".format(
-            a_6=results[0][6],
-            a_7=results[0][7],
-            a_8=results[0][8],
+        + "+ {a:.2g}v_w + {b:.2g}v_w^2 + {c:.2g}v_w^3 ".format(
+            a=results[0][6],
+            b=results[0][7],
+            c=results[0][8],
         )
-        + "+ v_w * ({a_9:.2g}ln(m_dot) + {a_10:.2g}ln(G) ) ".format(
-            a_9=results[0][9],
-            a_10=results[0][10],
+        + "+ {a:.2g}v_w^4 + {b:.2g}v_w^5 ".format(
+            a=results[0][9],
+            b=results[0][10],
         )
-        + "+ v_w^2 * ({a_11:.2g}ln(m_dot) + {a_12:.2g}ln(G) ) ".format(
-            a_11=results[0][11],
-            a_12=results[0][12],
+        + "+ v_w * ({a:.2g}ln(m_dot) + {b:.2g}ln(G) ) ".format(
+            a=results[0][11],
+            b=results[0][12],
         )
-        + "+ T_amb * ({a_13:.2g} + {a_14:.2g}ln(G) + {a_15:.2g}|ln(G)|^2 ".format(
-            a_13=results[0][13],
-            a_14=results[0][14],
-            a_15=results[0][15],
+        + "+ v_w^2 * ({a:.2g}ln(m_dot) + {b:.2g}ln(G) ) ".format(
+            a=results[0][13],
+            b=results[0][14],
         )
-        + "+ {a_16:.2g}ln(m_dot) + {a_17:.2g}|ln(m_dot)|^2 + {a_18:.2g}ln(m_dot) * ln(G) ".format(
-            a_16=results[0][16],
-            a_17=results[0][17],
-            a_18=results[0][18],
+        + "+ T_amb * ({a:.2g} + {b:.2g}ln(G) + {c:.2g}|ln(G)|^2 ".format(
+            a=results[0][15],
+            b=results[0][16],
+            c=results[0][17],
         )
-        + "+ {a_19:.2g}v_w + {a_20:.2g}v_w^2 + {a_21:.2g}v_w^3 ".format(
-            a_19=results[0][19],
-            a_20=results[0][20],
-            a_21=results[0][21],
+        + "+ {a:.2g}ln(m_dot) + {b:.2g}|ln(m_dot)|^2 + {c:.2g}ln(m_dot) * ln(G) ".format(
+            a=results[0][18],
+            b=results[0][19],
+            c=results[0][20],
         )
-        + "+ v_w * ({a_22:.2g}ln(m_dot) + {a_23:.2g}ln(G) ) ".format(
-            a_22=results[0][22],
-            a_23=results[0][23],
+        + "+ {a:.2g}v_w + {b:.2g}v_w^2 + {c:.2g}v_w^3 ".format(
+            a=results[0][21],
+            b=results[0][22],
+            c=results[0][23],
         )
-        + "+ v_w^2 * ({a_24:.2g}ln(m_dot) + {a_25:.2g}ln(G) )) ".format(
-            a_24=results[0][24],
-            a_25=results[0][25],
+        + "+ {a:.2g}v_w^4 + {b:.2g}v_w^5 ".format(
+            a=results[0][24],
+            b=results[0][25],
         )
-        + "+ T_c,in * ({a_26:.2g} + {a_27:.2g}ln(G) + {a_28:.2g}|ln(G)|^2 ".format(
-            a_26=results[0][26],
-            a_27=results[0][27],
-            a_28=results[0][28],
+        + "+ v_w * ({a:.2g}ln(m_dot) + {b:.2g}ln(G) ) ".format(
+            a=results[0][26],
+            b=results[0][27],
         )
-        + "+ {a_29:.2g}ln(m_dot) + {a_30:.2g}|ln(m_dot)|^2 + {a_31:.2g}ln(m_dot) * ln(G) ".format(
-            a_29=results[0][29],
-            a_30=results[0][30],
-            a_31=results[0][31],
+        + "+ v_w^2 * ({a:.2g}ln(m_dot) + {b:.2g}ln(G) )) ".format(
+            a=results[0][28],
+            b=results[0][29],
         )
-        + "+ {a_32:.2g}v_w + {a_33:.2g}v_w^2 + {a_34:.2g}v_w^3 ".format(
-            a_32=results[0][32],
-            a_33=results[0][33],
-            a_34=results[0][34],
+        + "+ T_c,in * ({a:.2g} + {b:.2g}ln(G) + {c:.2g}|ln(G)|^2 ".format(
+            a=results[0][30],
+            b=results[0][31],
+            c=results[0][32],
         )
-        + "+ v_w * ({a_35:.2g}ln(m_dot) + {a_36:.2g}ln(G) ) ".format(
-            a_35=results[0][35],
-            a_36=results[0][36],
+        + "+ {a:.2g}ln(m_dot) + {b:.2g}|ln(m_dot)|^2 + {c:.2g}ln(m_dot) * ln(G) ".format(
+            a=results[0][33],
+            b=results[0][34],
+            c=results[0][35],
         )
-        + "+ v_w^2 * ({a_37:.2g}ln(m_dot) + {a_38:.2g}ln(G) )) ".format(
-            a_37=results[0][37],
-            a_38=results[0][38],
+        + "+ {a:.2g}v_w + {b:.2g}v_w^2 + {c:.2g}v_w^3 ".format(
+            a=results[0][36],
+            b=results[0][37],
+            c=results[0][38],
+        )
+        + "+ {a:.2g}v_w^4 + {b:.2g}v_w^5 ".format(
+            a=results[0][39],
+            b=results[0][40],
+        )
+        + "+ v_w * ({a:.2g}ln(m_dot) + {b:.2g}ln(G) ) ".format(
+            a=results[0][41],
+            b=results[0][42],
+        )
+        + "+ v_w^2 * ({a:.2g}ln(m_dot) + {b:.2g}ln(G) )) ".format(
+            a=results[0][43],
+            b=results[0][44],
         )
     )
 
@@ -794,6 +818,12 @@ def fit(data_file_name: str) -> None:
         0.4,
         -0.1,
         0.005,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
         0,
         0,
         0,
