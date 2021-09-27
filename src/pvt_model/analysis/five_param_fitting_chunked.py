@@ -697,13 +697,13 @@ def _plot(
 
     # Compute the chunk-by-chunk best-guess data.
     best_guess_data = []
-    for index, ambient_temperature in enumerate(ambient_temperatures):
-        if ambient_temperature < 5:
+    for index, collector_input_temperature in enumerate(collector_input_temperatures):
+        if collector_input_temperature < 10:
             best_guess_data.append(
                 _best_guess(
                     (
-                        np.array(ambient_temperature),
-                        np.array(collector_input_temperatures[index]),
+                        np.array(ambient_temperatures[index]),
+                        np.array(collector_input_temperature),
                         np.array(mass_flow_rates[index]),
                         np.array(solar_irradiances[index]),
                         np.array(wind_speeds[index]),
@@ -712,12 +712,12 @@ def _plot(
                 )
             )
             continue
-        if ambient_temperature < 20:
+        if collector_input_temperature < 20:
             best_guess_data.append(
                 _best_guess(
                     (
-                        np.array(ambient_temperature),
-                        np.array(collector_input_temperatures[index]),
+                        np.array(ambient_temperatures[index]),
+                        np.array(collector_input_temperature),
                         np.array(mass_flow_rates[index]),
                         np.array(solar_irradiances[index]),
                         np.array(wind_speeds[index]),
@@ -726,12 +726,12 @@ def _plot(
                 )
             )
             continue
-        if ambient_temperature < 30:
+        if collector_input_temperature < 30:
             best_guess_data.append(
                 _best_guess(
                     (
-                        np.array(ambient_temperature),
-                        np.array(collector_input_temperatures[index]),
+                        np.array(ambient_temperatures[index]),
+                        np.array(collector_input_temperature),
                         np.array(mass_flow_rates[index]),
                         np.array(solar_irradiances[index]),
                         np.array(wind_speeds[index]),
@@ -740,12 +740,12 @@ def _plot(
                 )
             )
             continue
-        if ambient_temperature < 40:
+        if collector_input_temperature < 40:
             best_guess_data.append(
                 _best_guess(
                     (
-                        np.array(ambient_temperature),
-                        np.array(collector_input_temperatures[index]),
+                        np.array(ambient_temperatures[index]),
+                        np.array(collector_input_temperature),
                         np.array(mass_flow_rates[index]),
                         np.array(solar_irradiances[index]),
                         np.array(wind_speeds[index]),
@@ -754,12 +754,12 @@ def _plot(
                 )
             )
             continue
-        if ambient_temperature < 60:
+        if collector_input_temperature < 60:
             best_guess_data.append(
                 _best_guess(
                     (
-                        np.array(ambient_temperature),
-                        np.array(collector_input_temperatures[index]),
+                        np.array(ambient_temperatures[index]),
+                        np.array(collector_input_temperature),
                         np.array(mass_flow_rates[index]),
                         np.array(solar_irradiances[index]),
                         np.array(wind_speeds[index]),
@@ -768,12 +768,12 @@ def _plot(
                 )
             )
             continue
-        if ambient_temperature < 70:
+        if collector_input_temperature < 70:
             best_guess_data.append(
                 _best_guess(
                     (
-                        np.array(ambient_temperature),
-                        np.array(collector_input_temperatures[index]),
+                        np.array(ambient_temperatures[index]),
+                        np.array(collector_input_temperature),
                         np.array(mass_flow_rates[index]),
                         np.array(solar_irradiances[index]),
                         np.array(wind_speeds[index]),
@@ -782,12 +782,12 @@ def _plot(
                 )
             )
             continue
-        if ambient_temperature < 80:
+        if collector_input_temperature < 80:
             best_guess_data.append(
                 _best_guess(
                     (
-                        np.array(ambient_temperature),
-                        np.array(collector_input_temperatures[index]),
+                        np.array(ambient_temperatures[index]),
+                        np.array(collector_input_temperature),
                         np.array(mass_flow_rates[index]),
                         np.array(solar_irradiances[index]),
                         np.array(wind_speeds[index]),
@@ -796,18 +796,19 @@ def _plot(
                 )
             )
             continue
-        best_guess_data.append(
-            _best_guess(
-                (
-                    np.array(ambient_temperature),
-                    np.array(collector_input_temperatures[index]),
-                    np.array(mass_flow_rates[index]),
-                    np.array(solar_irradiances[index]),
-                    np.array(wind_speeds[index]),
-                ),
-                *results[7][0],
+        if collector_input_temperature < 100:
+            best_guess_data.append(
+                _best_guess(
+                    (
+                        np.array(ambient_temperatures[index]),
+                        np.array(collector_input_temperature),
+                        np.array(mass_flow_rates[index]),
+                        np.array(solar_irradiances[index]),
+                        np.array(wind_speeds[index]),
+                    ),
+                    *results[7][0],
+                )
             )
-        )
 
     plt.scatter(ambient_temperatures, y_data, label=TECHNICAL_MODEL)
     plt.scatter(
@@ -992,6 +993,7 @@ def fit(data_file_name: str) -> None:
         and entry[SOLAR_IRRADIANCE] is not None
         and entry[THERMAL_EFFICIENCY] is not None
         and entry[WIND_SPEED] is not None
+        and entry[COLLECTOR_INPUT_TEMPERATURE] <= 100
     ]
 
     ambient_temperatures = [entry[0] for entry in processed_data]
@@ -1101,7 +1103,7 @@ def fit(data_file_name: str) -> None:
     ambient_temperatures_fifth_chunk = [
         entry
         for index, entry in enumerate(ambient_temperatures)
-        if 60 <= collector_input_temperatures[index] < 60
+        if 40 <= collector_input_temperatures[index] < 60
     ]
     collector_input_temperatures_fifth_chunk = [
         entry for entry in collector_input_temperatures if 40 <= entry < 60
@@ -1173,25 +1175,25 @@ def fit(data_file_name: str) -> None:
     ambient_temperatures_eigth_chunk = [
         entry
         for index, entry in enumerate(ambient_temperatures)
-        if collector_input_temperatures[index] > 80
+        if 80 <= collector_input_temperatures[index] <= 100
     ]
     collector_input_temperatures_eigth_chunk = [
-        entry for entry in collector_input_temperatures if entry > 80
+        entry for entry in collector_input_temperatures if 80 <= entry <= 100
     ]
     mass_flow_rates_eigth_chunk = [
         entry
         for index, entry in enumerate(mass_flow_rates)
-        if collector_input_temperatures[index] > 80
+        if 80 <= collector_input_temperatures[index] <= 100
     ]
     solar_irradiances_eigth_chunk = [
         entry
         for index, entry in enumerate(solar_irradiances)
-        if collector_input_temperatures[index] > 80
+        if 80 <= collector_input_temperatures[index] <= 100
     ]
     wind_speeds_eigth_chunk = [
         entry
         for index, entry in enumerate(wind_speeds)
-        if collector_input_temperatures[index] > 80
+        if 80 <= collector_input_temperatures[index] <= 100
     ]
 
     # Set up initial guesses for the parameters.
@@ -1354,7 +1356,7 @@ def fit(data_file_name: str) -> None:
     )
     print("[  DONE  ]")
 
-    print("Computing fit for fourth chunk ........... ", end="")
+    print("Computing fit for fourth chunk .......... ", end="")
     # Attempt a curve fit based on ambient temperature chunks.
     fourth_thermal_efficiency_results = curve_fit(
         _best_guess,
@@ -1516,7 +1518,7 @@ def fit(data_file_name: str) -> None:
         [
             entry
             for index, entry in enumerate(thermal_efficiencies)
-            if collector_input_temperatures[index] > 80
+            if 80 <= collector_input_temperatures[index] <= 100
         ],
         initial_guesses,
     )
@@ -1533,7 +1535,7 @@ def fit(data_file_name: str) -> None:
         [
             entry
             for index, entry in enumerate(electrical_efficiencies)
-            if collector_input_temperatures[index] > 80
+            if 80 <= collector_input_temperatures[index] <= 100
         ],
         initial_guesses,
     )
