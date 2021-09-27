@@ -442,7 +442,9 @@ def _plot(
 
     """
 
-    print(f"Fitted curve params:\n- first chunk: {results[0][0]}\n- second chunk: {results[1][0]}\n- third chunk: {results[2][0]}")
+    print(
+        f"Fitted curve params:\n- first chunk: {results[0][0]}\n- second chunk: {results[1][0]}\n- third chunk: {results[2][0]}"
+    )
     print(
         "Fitted curve for first chunk: {a:.2g} + {b:.2g}ln(G) + {c:.2g}|ln(G)|^2 ".format(
             a=results[0][0][0],
@@ -695,13 +697,13 @@ def _plot(
 
     # Compute the chunk-by-chunk best-guess data.
     best_guess_data = []
-    for index, ambient_temperature in enumerate(ambient_temperatures):
-        if ambient_temperature < 5:
+    for index, collector_input_temperature in enumerate(collector_input_temperatures):
+        if collector_input_temperature < 10:
             best_guess_data.append(
                 _best_guess(
                     (
-                        np.array(ambient_temperature),
-                        np.array(collector_input_temperatures[index]),
+                        np.array(ambient_temperatures[index]),
+                        np.array(collector_input_temperature),
                         np.array(mass_flow_rates[index]),
                         np.array(solar_irradiances[index]),
                         np.array(wind_speeds[index]),
@@ -710,12 +712,12 @@ def _plot(
                 )
             )
             continue
-        if ambient_temperature < 20:
+        if collector_input_temperature < 20:
             best_guess_data.append(
                 _best_guess(
                     (
-                        np.array(ambient_temperature),
-                        np.array(collector_input_temperatures[index]),
+                        np.array(ambient_temperatures[index]),
+                        np.array(collector_input_temperature),
                         np.array(mass_flow_rates[index]),
                         np.array(solar_irradiances[index]),
                         np.array(wind_speeds[index]),
@@ -724,12 +726,12 @@ def _plot(
                 )
             )
             continue
-        if ambient_temperature < 30:
+        if collector_input_temperature < 30:
             best_guess_data.append(
                 _best_guess(
                     (
-                        np.array(ambient_temperature),
-                        np.array(collector_input_temperatures[index]),
+                        np.array(ambient_temperatures[index]),
+                        np.array(collector_input_temperature),
                         np.array(mass_flow_rates[index]),
                         np.array(solar_irradiances[index]),
                         np.array(wind_speeds[index]),
@@ -738,12 +740,12 @@ def _plot(
                 )
             )
             continue
-        if ambient_temperature < 40:
+        if collector_input_temperature < 40:
             best_guess_data.append(
                 _best_guess(
                     (
-                        np.array(ambient_temperature),
-                        np.array(collector_input_temperatures[index]),
+                        np.array(ambient_temperatures[index]),
+                        np.array(collector_input_temperature),
                         np.array(mass_flow_rates[index]),
                         np.array(solar_irradiances[index]),
                         np.array(wind_speeds[index]),
@@ -752,12 +754,12 @@ def _plot(
                 )
             )
             continue
-        if ambient_temperature < 60:
+        if collector_input_temperature < 60:
             best_guess_data.append(
                 _best_guess(
                     (
-                        np.array(ambient_temperature),
-                        np.array(collector_input_temperatures[index]),
+                        np.array(ambient_temperatures[index]),
+                        np.array(collector_input_temperature),
                         np.array(mass_flow_rates[index]),
                         np.array(solar_irradiances[index]),
                         np.array(wind_speeds[index]),
@@ -766,12 +768,12 @@ def _plot(
                 )
             )
             continue
-        if ambient_temperature < 70:
+        if collector_input_temperature < 70:
             best_guess_data.append(
                 _best_guess(
                     (
-                        np.array(ambient_temperature),
-                        np.array(collector_input_temperatures[index]),
+                        np.array(ambient_temperatures[index]),
+                        np.array(collector_input_temperature),
                         np.array(mass_flow_rates[index]),
                         np.array(solar_irradiances[index]),
                         np.array(wind_speeds[index]),
@@ -780,12 +782,12 @@ def _plot(
                 )
             )
             continue
-        if ambient_temperature < 80:
+        if collector_input_temperature < 80:
             best_guess_data.append(
                 _best_guess(
                     (
-                        np.array(ambient_temperature),
-                        np.array(collector_input_temperatures[index]),
+                        np.array(ambient_temperatures[index]),
+                        np.array(collector_input_temperature),
                         np.array(mass_flow_rates[index]),
                         np.array(solar_irradiances[index]),
                         np.array(wind_speeds[index]),
@@ -794,18 +796,19 @@ def _plot(
                 )
             )
             continue
-        best_guess_data.append(
+        if collector_input_temperature < 100:
+            best_guess_data.append(
                 _best_guess(
-                (
-                    np.array(ambient_temperature),
-                    np.array(collector_input_temperatures[index]),
-                    np.array(mass_flow_rates[index]),
-                    np.array(solar_irradiances[index]),
-                    np.array(wind_speeds[index]),
-                ),
-                *results[7][0],
+                    (
+                        np.array(ambient_temperatures[index]),
+                        np.array(collector_input_temperature),
+                        np.array(mass_flow_rates[index]),
+                        np.array(solar_irradiances[index]),
+                        np.array(wind_speeds[index]),
+                    ),
+                    *results[7][0],
+                )
             )
-        )
 
     plt.scatter(ambient_temperatures, y_data, label=TECHNICAL_MODEL)
     plt.scatter(
@@ -990,6 +993,7 @@ def fit(data_file_name: str) -> None:
         and entry[SOLAR_IRRADIANCE] is not None
         and entry[THERMAL_EFFICIENCY] is not None
         and entry[WIND_SPEED] is not None
+        and entry[COLLECTOR_INPUT_TEMPERATURE] <= 100
     ]
 
     ambient_temperatures = [entry[0] for entry in processed_data]
@@ -1000,53 +1004,197 @@ def fit(data_file_name: str) -> None:
     thermal_efficiencies = [entry[5] for entry in processed_data]
     wind_speeds = [entry[6] for entry in processed_data]
 
-    ambient_temperatures_first_chunk = [entry for index, entry in enumerate(ambient_temperatures) if collector_input_temperatures[index] < 10 ]
-    collector_input_temperatures_first_chunk = [entry for entry in collector_input_temperatures if entry < 10 ]
-    mass_flow_rates_first_chunk = [entry for index, entry in enumerate(mass_flow_rates) if collector_input_temperatures[index] < 10 ]
-    solar_irradiances_first_chunk = [entry for index, entry in enumerate(solar_irradiances) if collector_input_temperatures[index] < 10 ]
-    wind_speeds_first_chunk = [entry for index, entry in enumerate(wind_speeds) if collector_input_temperatures[index] < 10 ]
+    ambient_temperatures_first_chunk = [
+        entry
+        for index, entry in enumerate(ambient_temperatures)
+        if collector_input_temperatures[index] < 10
+    ]
+    collector_input_temperatures_first_chunk = [
+        entry for entry in collector_input_temperatures if entry < 10
+    ]
+    mass_flow_rates_first_chunk = [
+        entry
+        for index, entry in enumerate(mass_flow_rates)
+        if collector_input_temperatures[index] < 10
+    ]
+    solar_irradiances_first_chunk = [
+        entry
+        for index, entry in enumerate(solar_irradiances)
+        if collector_input_temperatures[index] < 10
+    ]
+    wind_speeds_first_chunk = [
+        entry
+        for index, entry in enumerate(wind_speeds)
+        if collector_input_temperatures[index] < 10
+    ]
 
-    ambient_temperatures_second_chunk = [entry for index, entry in enumerate(ambient_temperatures) if 10 <= collector_input_temperatures[index] < 20]
-    collector_input_temperatures_second_chunk = [entry for entry in collector_input_temperatures if 10 <= entry < 20]
-    mass_flow_rates_second_chunk = [entry for index, entry in enumerate(mass_flow_rates) if 10  <= collector_input_temperatures[index] < 20]
-    solar_irradiances_second_chunk = [entry for index, entry in enumerate(solar_irradiances) if  10  <= collector_input_temperatures[index] < 20]
-    wind_speeds_second_chunk = [entry for index, entry in enumerate(wind_speeds) if 10  <= collector_input_temperatures[index] < 20]
+    ambient_temperatures_second_chunk = [
+        entry
+        for index, entry in enumerate(ambient_temperatures)
+        if 10 <= collector_input_temperatures[index] < 20
+    ]
+    collector_input_temperatures_second_chunk = [
+        entry for entry in collector_input_temperatures if 10 <= entry < 20
+    ]
+    mass_flow_rates_second_chunk = [
+        entry
+        for index, entry in enumerate(mass_flow_rates)
+        if 10 <= collector_input_temperatures[index] < 20
+    ]
+    solar_irradiances_second_chunk = [
+        entry
+        for index, entry in enumerate(solar_irradiances)
+        if 10 <= collector_input_temperatures[index] < 20
+    ]
+    wind_speeds_second_chunk = [
+        entry
+        for index, entry in enumerate(wind_speeds)
+        if 10 <= collector_input_temperatures[index] < 20
+    ]
 
-    ambient_temperatures_third_chunk = [entry for index, entry in enumerate(ambient_temperatures) if 20 <= collector_input_temperatures[index] < 30]
-    collector_input_temperatures_third_chunk = [entry for entry in collector_input_temperatures if 20 <= entry < 30]
-    mass_flow_rates_third_chunk = [entry for index, entry in enumerate(mass_flow_rates) if 20 <= collector_input_temperatures[index] < 30]
-    solar_irradiances_third_chunk = [entry for index, entry in enumerate(solar_irradiances) if  20 <= collector_input_temperatures[index] < 30]
-    wind_speeds_third_chunk = [entry for index, entry in enumerate(wind_speeds) if 20 <= collector_input_temperatures[index] < 30]
+    ambient_temperatures_third_chunk = [
+        entry
+        for index, entry in enumerate(ambient_temperatures)
+        if 20 <= collector_input_temperatures[index] < 30
+    ]
+    collector_input_temperatures_third_chunk = [
+        entry for entry in collector_input_temperatures if 20 <= entry < 30
+    ]
+    mass_flow_rates_third_chunk = [
+        entry
+        for index, entry in enumerate(mass_flow_rates)
+        if 20 <= collector_input_temperatures[index] < 30
+    ]
+    solar_irradiances_third_chunk = [
+        entry
+        for index, entry in enumerate(solar_irradiances)
+        if 20 <= collector_input_temperatures[index] < 30
+    ]
+    wind_speeds_third_chunk = [
+        entry
+        for index, entry in enumerate(wind_speeds)
+        if 20 <= collector_input_temperatures[index] < 30
+    ]
 
-    ambient_temperatures_fourth_chunk = [entry for index, entry in enumerate(ambient_temperatures) if 30 <= collector_input_temperatures[index] < 40]
-    collector_input_temperatures_fourth_chunk = [entry for entry in collector_input_temperatures if 30 <= entry < 40]
-    mass_flow_rates_fourth_chunk = [entry for index, entry in enumerate(mass_flow_rates) if 30 <= collector_input_temperatures[index] < 40]
-    solar_irradiances_fourth_chunk = [entry for index, entry in enumerate(solar_irradiances) if  30 <= collector_input_temperatures[index] < 40]
-    wind_speeds_fourth_chunk = [entry for index, entry in enumerate(wind_speeds) if 30 <= collector_input_temperatures[index] < 40]
+    ambient_temperatures_fourth_chunk = [
+        entry
+        for index, entry in enumerate(ambient_temperatures)
+        if 30 <= collector_input_temperatures[index] < 40
+    ]
+    collector_input_temperatures_fourth_chunk = [
+        entry for entry in collector_input_temperatures if 30 <= entry < 40
+    ]
+    mass_flow_rates_fourth_chunk = [
+        entry
+        for index, entry in enumerate(mass_flow_rates)
+        if 30 <= collector_input_temperatures[index] < 40
+    ]
+    solar_irradiances_fourth_chunk = [
+        entry
+        for index, entry in enumerate(solar_irradiances)
+        if 30 <= collector_input_temperatures[index] < 40
+    ]
+    wind_speeds_fourth_chunk = [
+        entry
+        for index, entry in enumerate(wind_speeds)
+        if 30 <= collector_input_temperatures[index] < 40
+    ]
 
-    ambient_temperatures_fifth_chunk = [entry for index, entry in enumerate(ambient_temperatures) if 60 <= collector_input_temperatures[index] < 60]
-    collector_input_temperatures_fifth_chunk = [entry for entry in collector_input_temperatures if 40 <= entry < 60]
-    mass_flow_rates_fifth_chunk = [entry for index, entry in enumerate(mass_flow_rates) if 40 <= collector_input_temperatures[index] < 60]
-    solar_irradiances_fifth_chunk = [entry for index, entry in enumerate(solar_irradiances) if  40 <= collector_input_temperatures[index] < 60]
-    wind_speeds_fifth_chunk = [entry for index, entry in enumerate(wind_speeds) if 40 <= collector_input_temperatures[index] < 60]
+    ambient_temperatures_fifth_chunk = [
+        entry
+        for index, entry in enumerate(ambient_temperatures)
+        if 40 <= collector_input_temperatures[index] < 60
+    ]
+    collector_input_temperatures_fifth_chunk = [
+        entry for entry in collector_input_temperatures if 40 <= entry < 60
+    ]
+    mass_flow_rates_fifth_chunk = [
+        entry
+        for index, entry in enumerate(mass_flow_rates)
+        if 40 <= collector_input_temperatures[index] < 60
+    ]
+    solar_irradiances_fifth_chunk = [
+        entry
+        for index, entry in enumerate(solar_irradiances)
+        if 40 <= collector_input_temperatures[index] < 60
+    ]
+    wind_speeds_fifth_chunk = [
+        entry
+        for index, entry in enumerate(wind_speeds)
+        if 40 <= collector_input_temperatures[index] < 60
+    ]
 
-    ambient_temperatures_sixth_chunk = [entry for index, entry in enumerate(ambient_temperatures) if 60 <= collector_input_temperatures[index] < 70]
-    collector_input_temperatures_sixth_chunk = [entry for entry in collector_input_temperatures if 60 <= entry < 70]
-    mass_flow_rates_sixth_chunk = [entry for index, entry in enumerate(mass_flow_rates) if 60 <= collector_input_temperatures[index] < 70]
-    solar_irradiances_sixth_chunk = [entry for index, entry in enumerate(solar_irradiances) if  60 <= collector_input_temperatures[index] < 70]
-    wind_speeds_sixth_chunk = [entry for index, entry in enumerate(wind_speeds) if 60 <= collector_input_temperatures[index] < 70]
+    ambient_temperatures_sixth_chunk = [
+        entry
+        for index, entry in enumerate(ambient_temperatures)
+        if 60 <= collector_input_temperatures[index] < 70
+    ]
+    collector_input_temperatures_sixth_chunk = [
+        entry for entry in collector_input_temperatures if 60 <= entry < 70
+    ]
+    mass_flow_rates_sixth_chunk = [
+        entry
+        for index, entry in enumerate(mass_flow_rates)
+        if 60 <= collector_input_temperatures[index] < 70
+    ]
+    solar_irradiances_sixth_chunk = [
+        entry
+        for index, entry in enumerate(solar_irradiances)
+        if 60 <= collector_input_temperatures[index] < 70
+    ]
+    wind_speeds_sixth_chunk = [
+        entry
+        for index, entry in enumerate(wind_speeds)
+        if 60 <= collector_input_temperatures[index] < 70
+    ]
 
-    ambient_temperatures_seventh_chunk = [entry for index, entry in enumerate(ambient_temperatures) if 70 <= collector_input_temperatures[index] < 80]
-    collector_input_temperatures_seventh_chunk = [entry for entry in collector_input_temperatures if 70 <= entry < 80]
-    mass_flow_rates_seventh_chunk = [entry for index, entry in enumerate(mass_flow_rates) if 70 <= collector_input_temperatures[index] < 80]
-    solar_irradiances_seventh_chunk = [entry for index, entry in enumerate(solar_irradiances) if  70 <= collector_input_temperatures[index] < 80]
-    wind_speeds_seventh_chunk = [entry for index, entry in enumerate(wind_speeds) if 70 <= collector_input_temperatures[index] < 80]
+    ambient_temperatures_seventh_chunk = [
+        entry
+        for index, entry in enumerate(ambient_temperatures)
+        if 70 <= collector_input_temperatures[index] < 80
+    ]
+    collector_input_temperatures_seventh_chunk = [
+        entry for entry in collector_input_temperatures if 70 <= entry < 80
+    ]
+    mass_flow_rates_seventh_chunk = [
+        entry
+        for index, entry in enumerate(mass_flow_rates)
+        if 70 <= collector_input_temperatures[index] < 80
+    ]
+    solar_irradiances_seventh_chunk = [
+        entry
+        for index, entry in enumerate(solar_irradiances)
+        if 70 <= collector_input_temperatures[index] < 80
+    ]
+    wind_speeds_seventh_chunk = [
+        entry
+        for index, entry in enumerate(wind_speeds)
+        if 70 <= collector_input_temperatures[index] < 80
+    ]
 
-    ambient_temperatures_eigth_chunk = [entry for index, entry in enumerate(ambient_temperatures) if collector_input_temperatures[index] > 80]
-    collector_input_temperatures_eigth_chunk = [entry for entry in collector_input_temperatures if entry > 80]
-    mass_flow_rates_eigth_chunk = [entry for index, entry in enumerate(mass_flow_rates) if collector_input_temperatures[index] > 80]
-    solar_irradiances_eigth_chunk = [entry for index, entry in enumerate(solar_irradiances) if collector_input_temperatures[index] > 80]
-    wind_speeds_eigth_chunk = [entry for index, entry in enumerate(wind_speeds) if collector_input_temperatures[index] > 80]
+    ambient_temperatures_eigth_chunk = [
+        entry
+        for index, entry in enumerate(ambient_temperatures)
+        if 80 <= collector_input_temperatures[index] <= 100
+    ]
+    collector_input_temperatures_eigth_chunk = [
+        entry for entry in collector_input_temperatures if 80 <= entry <= 100
+    ]
+    mass_flow_rates_eigth_chunk = [
+        entry
+        for index, entry in enumerate(mass_flow_rates)
+        if 80 <= collector_input_temperatures[index] <= 100
+    ]
+    solar_irradiances_eigth_chunk = [
+        entry
+        for index, entry in enumerate(solar_irradiances)
+        if 80 <= collector_input_temperatures[index] <= 100
+    ]
+    wind_speeds_eigth_chunk = [
+        entry
+        for index, entry in enumerate(wind_speeds)
+        if 80 <= collector_input_temperatures[index] <= 100
+    ]
 
     # Set up initial guesses for the parameters.
     initial_guesses = (
@@ -1108,7 +1256,11 @@ def fit(data_file_name: str) -> None:
             solar_irradiances_first_chunk,
             wind_speeds_first_chunk,
         ),
-        [entry for index, entry in enumerate(thermal_efficiencies) if collector_input_temperatures[index] < 10],
+        [
+            entry
+            for index, entry in enumerate(thermal_efficiencies)
+            if collector_input_temperatures[index] < 10
+        ],
         initial_guesses,
     )
 
@@ -1121,7 +1273,11 @@ def fit(data_file_name: str) -> None:
             solar_irradiances_first_chunk,
             wind_speeds_first_chunk,
         ),
-        [entry for index, entry in enumerate(electrical_efficiencies) if collector_input_temperatures[index] < 10],
+        [
+            entry
+            for index, entry in enumerate(electrical_efficiencies)
+            if collector_input_temperatures[index] < 10
+        ],
         initial_guesses,
     )
     print("[  DONE  ]")
@@ -1137,7 +1293,11 @@ def fit(data_file_name: str) -> None:
             solar_irradiances_second_chunk,
             wind_speeds_second_chunk,
         ),
-        [entry for index, entry in enumerate(thermal_efficiencies) if 10 <= collector_input_temperatures[index] < 20],
+        [
+            entry
+            for index, entry in enumerate(thermal_efficiencies)
+            if 10 <= collector_input_temperatures[index] < 20
+        ],
         initial_guesses,
     )
 
@@ -1150,7 +1310,11 @@ def fit(data_file_name: str) -> None:
             solar_irradiances_second_chunk,
             wind_speeds_second_chunk,
         ),
-        [entry for index, entry in enumerate(electrical_efficiencies) if 10 <= collector_input_temperatures[index] < 20],
+        [
+            entry
+            for index, entry in enumerate(electrical_efficiencies)
+            if 10 <= collector_input_temperatures[index] < 20
+        ],
         initial_guesses,
     )
     print("[  DONE  ]")
@@ -1166,7 +1330,11 @@ def fit(data_file_name: str) -> None:
             solar_irradiances_third_chunk,
             wind_speeds_third_chunk,
         ),
-        [entry for index, entry in enumerate(thermal_efficiencies) if 20 <= collector_input_temperatures[index] < 30],
+        [
+            entry
+            for index, entry in enumerate(thermal_efficiencies)
+            if 20 <= collector_input_temperatures[index] < 30
+        ],
         initial_guesses,
     )
 
@@ -1179,12 +1347,16 @@ def fit(data_file_name: str) -> None:
             solar_irradiances_third_chunk,
             wind_speeds_third_chunk,
         ),
-        [entry for index, entry in enumerate(electrical_efficiencies) if 20 <= collector_input_temperatures[index] < 30],
+        [
+            entry
+            for index, entry in enumerate(electrical_efficiencies)
+            if 20 <= collector_input_temperatures[index] < 30
+        ],
         initial_guesses,
     )
     print("[  DONE  ]")
 
-    print("Computing fit for fourth chunk ........... ", end="")
+    print("Computing fit for fourth chunk .......... ", end="")
     # Attempt a curve fit based on ambient temperature chunks.
     fourth_thermal_efficiency_results = curve_fit(
         _best_guess,
@@ -1195,7 +1367,11 @@ def fit(data_file_name: str) -> None:
             solar_irradiances_fourth_chunk,
             wind_speeds_fourth_chunk,
         ),
-        [entry for index, entry in enumerate(thermal_efficiencies) if 30 <= collector_input_temperatures[index] < 40],
+        [
+            entry
+            for index, entry in enumerate(thermal_efficiencies)
+            if 30 <= collector_input_temperatures[index] < 40
+        ],
         initial_guesses,
     )
 
@@ -1208,7 +1384,11 @@ def fit(data_file_name: str) -> None:
             solar_irradiances_fourth_chunk,
             wind_speeds_fourth_chunk,
         ),
-        [entry for index, entry in enumerate(electrical_efficiencies) if 30 <= collector_input_temperatures[index] < 40],
+        [
+            entry
+            for index, entry in enumerate(electrical_efficiencies)
+            if 30 <= collector_input_temperatures[index] < 40
+        ],
         initial_guesses,
     )
     print("[  DONE  ]")
@@ -1224,7 +1404,11 @@ def fit(data_file_name: str) -> None:
             solar_irradiances_fifth_chunk,
             wind_speeds_fifth_chunk,
         ),
-        [entry for index, entry in enumerate(thermal_efficiencies) if 40 <= collector_input_temperatures[index] < 60],
+        [
+            entry
+            for index, entry in enumerate(thermal_efficiencies)
+            if 40 <= collector_input_temperatures[index] < 60
+        ],
         initial_guesses,
     )
 
@@ -1237,7 +1421,11 @@ def fit(data_file_name: str) -> None:
             solar_irradiances_fifth_chunk,
             wind_speeds_fifth_chunk,
         ),
-        [entry for index, entry in enumerate(electrical_efficiencies) if 40 <= collector_input_temperatures[index] < 60],
+        [
+            entry
+            for index, entry in enumerate(electrical_efficiencies)
+            if 40 <= collector_input_temperatures[index] < 60
+        ],
         initial_guesses,
     )
     print("[  DONE  ]")
@@ -1253,7 +1441,11 @@ def fit(data_file_name: str) -> None:
             solar_irradiances_sixth_chunk,
             wind_speeds_sixth_chunk,
         ),
-        [entry for index, entry in enumerate(thermal_efficiencies) if 60 <= collector_input_temperatures[index] < 70],
+        [
+            entry
+            for index, entry in enumerate(thermal_efficiencies)
+            if 60 <= collector_input_temperatures[index] < 70
+        ],
         initial_guesses,
     )
 
@@ -1266,7 +1458,11 @@ def fit(data_file_name: str) -> None:
             solar_irradiances_sixth_chunk,
             wind_speeds_sixth_chunk,
         ),
-        [entry for index, entry in enumerate(electrical_efficiencies) if 60 <= collector_input_temperatures[index] < 70],
+        [
+            entry
+            for index, entry in enumerate(electrical_efficiencies)
+            if 60 <= collector_input_temperatures[index] < 70
+        ],
         initial_guesses,
     )
     print("[  DONE  ]")
@@ -1282,7 +1478,11 @@ def fit(data_file_name: str) -> None:
             solar_irradiances_seventh_chunk,
             wind_speeds_seventh_chunk,
         ),
-        [entry for index, entry in enumerate(thermal_efficiencies) if 70 <= collector_input_temperatures[index] < 80],
+        [
+            entry
+            for index, entry in enumerate(thermal_efficiencies)
+            if 70 <= collector_input_temperatures[index] < 80
+        ],
         initial_guesses,
     )
 
@@ -1295,7 +1495,11 @@ def fit(data_file_name: str) -> None:
             solar_irradiances_seventh_chunk,
             wind_speeds_seventh_chunk,
         ),
-        [entry for index, entry in enumerate(electrical_efficiencies) if 70 <= collector_input_temperatures[index] < 80],
+        [
+            entry
+            for index, entry in enumerate(electrical_efficiencies)
+            if 70 <= collector_input_temperatures[index] < 80
+        ],
         initial_guesses,
     )
     print("[  DONE  ]")
@@ -1311,7 +1515,11 @@ def fit(data_file_name: str) -> None:
             solar_irradiances_eigth_chunk,
             wind_speeds_eigth_chunk,
         ),
-        [entry for index, entry in enumerate(thermal_efficiencies) if collector_input_temperatures[index] > 80],
+        [
+            entry
+            for index, entry in enumerate(thermal_efficiencies)
+            if 80 <= collector_input_temperatures[index] <= 100
+        ],
         initial_guesses,
     )
 
@@ -1324,7 +1532,11 @@ def fit(data_file_name: str) -> None:
             solar_irradiances_eigth_chunk,
             wind_speeds_eigth_chunk,
         ),
-        [entry for index, entry in enumerate(electrical_efficiencies) if collector_input_temperatures[index] > 80],
+        [
+            entry
+            for index, entry in enumerate(electrical_efficiencies)
+            if 80 <= collector_input_temperatures[index] <= 100
+        ],
         initial_guesses,
     )
     print("[  DONE  ]")
