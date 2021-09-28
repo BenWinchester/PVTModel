@@ -13,4 +13,13 @@
 ########################################################################################
 
 # Depending on the environmental variable, run the appropriate HPC job.
+
+module load anaconda3/personal
+source activate py37
+
+OUTPUT_DIR="$PBS_O_WORKDIR/output_files"
+CURRENT_DIR=$(pwd)
+cd $PBS_O_WORKDIR
+
 cat autotherm_10_pipe_runs.txt | head -n $PBS_ARRAY_INDEX | tail -n 1 | bash
+
