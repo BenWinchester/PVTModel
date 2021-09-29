@@ -1,0 +1,129 @@
+---
+################################################################################
+# ilarias_panel.yaml - Data about the PV-T panel
+#
+# Copyright 2021, Ben Winchester
+################################################################################
+
+# Some properties obtained from
+# Trinuruk, P., Sorapipatana, C., et al.,
+# "Effects of Air Gap Spacing between a Photovoltaic Panel and Building Envelope
+# on Electricity Generation and Heat Gains through a Building";
+# yamllint disable-line rule:line-length
+# https://www.researchgate.net/figure/Physical-properties-of-photovoltaic-components-and-building-materials-11-12-13-and-14_tbl1_242288788
+#
+# PV Absorptivity data for a PV layer in a PV-T system obtained from
+# Santbergen, R., van Zolingen, R. J. C.;
+# The absorption factor of crystalline silicon PV cells: A numerical and
+# experimental study
+# https://www.sciencedirect.com/science/article/pii/S0927024807004023
+#
+# The remaining parameters were taken from Maria's paper,
+# A UK-based assessment of hybrid PV and solar-thermal systems for domestic
+# heating and power System performance;
+# downloaded and stored in Google Drive.
+
+pvt_collector:
+  azimuthal_orientation: 180 # [deg]
+  horizontal_tracking: false
+  latitude: 44.867 # [deg]
+  longitude: 8.8 # [deg]
+  # The length of the absorber is measured in meters.
+  length: 1.66 # [m]
+  # length: 0.11857142857 # [m]
+  # These parameters set up how the panel is orientated.
+  # All angles are measured in degrees
+  tilt: 45 # [deg]
+  # The timezone offset in Hours from UTC.
+  timezone: 0 # [hours]
+  vertical_tracking: false
+  # The width of the absorber is measured in meters.
+  # Full absorber width.
+  # width: 0.86 #[m]
+  # One fourteenth of the absorber width.
+  width: 0.06142857142 # [m]
+  # Ilaria's absorber width of 0.1m.
+  # width: 0.1 #[m]
+glass:
+  absorptivity: 0.01 # [unitless]
+  # @@@ Value NOT taken from Maria's paper.
+  # density: 2270 # [kg/m^3]
+  # @@@ Value updated from online search.
+  density: 2700
+  diffuse_reflection_coefficient: 0.16
+  # Emissivity ref: https://pdf.sciencedirectassets.com/277910/1-s2.0-S1876610212X00213/1-s2.0-S1876610212015305/main.pdf?X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLWVhc3QtMSJHMEUCIQCRbIGSjqpta9NGtqitPbPkI7DUqYZXXpkiqc2WUQWnkAIgD4Y9kQgrCiQj2VOd0jEuUQpKBmfxrRed%2BeS7zzdTsoQqtAMIdhADGgwwNTkwMDM1NDY4NjUiDH22M7qLpOA1oDl3bSqRAz5maIhKgPJyHJmjmJxfK21HalVGAazOZmpBJ29Y4H1qBRYv8sp25yLy%2BU8zsE2kBHlyt%2Fnhpxb%2FaZB0uIKCJMt5zaI9IbmvNkfmyprTIydYngPAAE0EmVavRZVUYLSWjIhqWi9xR4Lxf06vpz6r%2B5bZ0H%2FHQqvYBvThxc0Dc6jK9fOt5MS9Pd%2B3P6EGgt9mzpO1yHwZSolQkxonYTgbKRpDKaPNKgv%2FQ3zCpl4taHVzZc1rLkXWaznZah1rWpa7SYJtqGeWth06jwtk19qDLVvH2rqdVl9E59sQfk%2Fyv2r4xU1PSSw3rSW%2F5OS5KoXT%2F6uxoBJeP%2BoEv7wOd%2FX82qyUMW0Jk%2BcJurx1%2FiAqilXGt2zT%2BT6QrsVxsAZpjrmdha1v37rgFdz2TzSaYUQMMFk%2BbkWDVrN6q8qmduAs%2FAC4n58pyiQmnBZSUqQVSVmo0x%2FHRaA%2Ff6OS2OexZQkBbyBe%2BS2RfeiaTfJeyjhl86ZqCls%2BkW6a%2BooLmZU4%2BKWEr5gg6jWhYpCpYxOltuLWsYthMJupwYMGOusBajNAjDrk9QhxURqrAk1JeOQw4pemfDnbAyFkTCEZ5W4rk0VEBN1OVk9I5gwyRYdU5ZJ%2BAwUCfRtCEzQcRB6Cz2hVwG99OzhO0wPQlCkH%2B%2B5qjt1H00GPmdEs48NyEJ6f5CuQAfPUnOo9Kxgwg3z%2Fy09vPVetCcGvL2jOGeKQuFtAQqXVKFh2YxbtKH371YZYMpcq%2F2PTul7ymDxaNJs6ftOok3HRUiLn32Mr%2BpmplOSKwOZCXKMM0Sw1%2B7fise29jWLq5DvL39X1kaBVvtKsz4ZI%2BP8sJGNrs8gTk2cFp50GBzCGxvQ1Cpp8mw%3D%3D&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20210409T141154Z&X-Amz-SignedHeaders=host&X-Amz-Expires=300&X-Amz-Credential=ASIAQ3PHCVTYZT4KTBMS%2F20210409%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Signature=0d1129ca84bb1608e8e78fefdc6eecb151416736be802b9e52a21685e70547e4&hash=6e8476bd54cc211d6a75a1c201e03b14d817e90cf54a98d6b1fbd6a4071c5dae&host=68042c943591013ac2b2430a89b270f6af2c76d8dfd086a07176afe7c76c2c61&pii=S1876610212015305&tid=spdf-32d208b2-d76b-4ba7-8129-b4caf78058ed&sid=e11e035359448044219af0f736a8e864b1c7gxrqb&type=client
+  emissivity: 0.90 # [unitless]
+  # @@@ Value NOT taken from Maria's paper.
+  heat_capacity: 800 # [840J/kg*K]
+  thermal_conductivity: 1.80 # [W/m*K]
+  thickness: 0.004 # [m]
+  # Transmissivity ref: https://pdf.sciencedirectassets.com/277910/1-s2.0-S1876610212X00213/1-s2.0-S1876610212015305/main.pdf?X-Amz-Security-Token=IQoJb3JpZ2luX2VjEB4aCXVzLWVhc3QtMSJHMEUCIQCRbIGSjqpta9NGtqitPbPkI7DUqYZXXpkiqc2WUQWnkAIgD4Y9kQgrCiQj2VOd0jEuUQpKBmfxrRed%2BeS7zzdTsoQqtAMIdhADGgwwNTkwMDM1NDY4NjUiDH22M7qLpOA1oDl3bSqRAz5maIhKgPJyHJmjmJxfK21HalVGAazOZmpBJ29Y4H1qBRYv8sp25yLy%2BU8zsE2kBHlyt%2Fnhpxb%2FaZB0uIKCJMt5zaI9IbmvNkfmyprTIydYngPAAE0EmVavRZVUYLSWjIhqWi9xR4Lxf06vpz6r%2B5bZ0H%2FHQqvYBvThxc0Dc6jK9fOt5MS9Pd%2B3P6EGgt9mzpO1yHwZSolQkxonYTgbKRpDKaPNKgv%2FQ3zCpl4taHVzZc1rLkXWaznZah1rWpa7SYJtqGeWth06jwtk19qDLVvH2rqdVl9E59sQfk%2Fyv2r4xU1PSSw3rSW%2F5OS5KoXT%2F6uxoBJeP%2BoEv7wOd%2FX82qyUMW0Jk%2BcJurx1%2FiAqilXGt2zT%2BT6QrsVxsAZpjrmdha1v37rgFdz2TzSaYUQMMFk%2BbkWDVrN6q8qmduAs%2FAC4n58pyiQmnBZSUqQVSVmo0x%2FHRaA%2Ff6OS2OexZQkBbyBe%2BS2RfeiaTfJeyjhl86ZqCls%2BkW6a%2BooLmZU4%2BKWEr5gg6jWhYpCpYxOltuLWsYthMJupwYMGOusBajNAjDrk9QhxURqrAk1JeOQw4pemfDnbAyFkTCEZ5W4rk0VEBN1OVk9I5gwyRYdU5ZJ%2BAwUCfRtCEzQcRB6Cz2hVwG99OzhO0wPQlCkH%2B%2B5qjt1H00GPmdEs48NyEJ6f5CuQAfPUnOo9Kxgwg3z%2Fy09vPVetCcGvL2jOGeKQuFtAQqXVKFh2YxbtKH371YZYMpcq%2F2PTul7ymDxaNJs6ftOok3HRUiLn32Mr%2BpmplOSKwOZCXKMM0Sw1%2B7fise29jWLq5DvL39X1kaBVvtKsz4ZI%2BP8sJGNrs8gTk2cFp50GBzCGxvQ1Cpp8mw%3D%3D&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20210409T141154Z&X-Amz-SignedHeaders=host&X-Amz-Expires=300&X-Amz-Credential=ASIAQ3PHCVTYZT4KTBMS%2F20210409%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Signature=0d1129ca84bb1608e8e78fefdc6eecb151416736be802b9e52a21685e70547e4&hash=6e8476bd54cc211d6a75a1c201e03b14d817e90cf54a98d6b1fbd6a4071c5dae&host=68042c943591013ac2b2430a89b270f6af2c76d8dfd086a07176afe7c76c2c61&pii=S1876610212015305&tid=spdf-32d208b2-d76b-4ba7-8129-b4caf78058ed&sid=e11e035359448044219af0f736a8e864b1c7gxrqb&type=client
+  transmissivity: 0.90179 # [unitless]
+air_gap:
+  thickness: 0.005 # [m]
+  thermal_conductivity: 0.025 # [W/m*K]
+pv:
+  absorptivity: 0.93 # [unitless]
+  # @@@ Value NOT taken from Maria's paper.
+  cell_material: "silicon"
+  cell_type: "monocrystalline"
+  density: 2328 # [kg/m^3]
+  # # @@@ Value adjusted from online mass values.
+  # density: 32142 # [kg/m^3]
+  emissivity: 0.9 # [unitless]
+  # @@@ Value NOT taken from Maria's paper.
+  heat_capacity: 677 # [J/kg*K]
+  maximum_power_point_current: 8.34 # [A]
+  maximum_power_point_voltage: 30 # [V]
+  nominal_power: 180 # [W]
+  open_circuit_voltage: 36.9 # [V]
+  short_cirvuit_current: 8.34 # [A]
+  thermal_coefficient: 0.0053 # [K^-1]
+  # thermal_coefficient: 0.53 # [K^-1]
+  # @@@ Value NOT taken from Maria's paper.
+  thermal_conductivity: 140 # [W/m*K]
+  thickness: 0.00035 # [m]
+  transmissivity: 0.01 # [unitless]
+  reference_efficiency: 0.25 # [unitless]
+  reference_temperature: 298.15 # [K]
+  # reference_temperature: 318.15 # [K]
+eva:
+  thickness: 0.0005 # [m]
+  thermal_conductivity: 0.35 # [W/m*K]
+adhesive:
+  thickness: 0.00005 # [m]
+  thermal_conductivity: 0.85 # [W/m*K]
+tedlar:
+  thickness: 0.0001 # [m]
+  thermal_conductivity: 0.2 # [W/m*K]
+absorber:
+  absorptivity: 0.95 # [unitless]
+  # @@@ Value NOT taken from Maria's paper.
+  density: 8978 # [kg/m^3]
+  # # @@@ Value updated from online search.
+  # density: 87500 # [kg/m^3]
+  emissivity: 0.05 # [unitless]
+  # @@@ Value NOT taken from Maria's paper.
+  heat_capacity: 385 # [J/kg*K]
+  inner_pipe_diameter: 0.007717 #[m]
+  length: 1.66 # [m]
+  # mass_flow_rate: 103.2 # [L/h]
+  mass_flow_rate: 7.37 # [L/h]
+  maximum_operating_pressure: 3.5 # [bar]
+  number_of_pipes: 1 # [pipes]
+  outer_pipe_diameter: 0.008 # [m]
+  pipe_density: 8960 # [kg/m^3]
+  pipe_spacing: 0.095 # [m]
+  recommended_flow_pressure_drop: 0.15 # [bar]
+  recommended_mass_flow_rate: 108 # [L/h]
+  # @@@ Value NOT taken from Maria's paper.
+  thermal_conductivity: 310 # [W/m*K]
+  thickness: 0.00012 # [m]
+  transmissivity: 0 # [unitless]
+bond:
+  thermal_conductivity: 0.85 # [W/m*K]
+  thickness: 0.00005 # [m]
+  width: 0.004 # [m]
+insulation:
+  thickness: 0.02 # [m]
+  thermal_conductivity: 0.035 # [W/m*K]

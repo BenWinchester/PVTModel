@@ -1,0 +1,74 @@
+absorber:
+  absorptivity: 0.95
+  density: 8978
+  emissivity: 0.05
+  heat_capacity: 385
+  inner_pipe_diameter: 0.007717
+  length: 1.66
+  mass_flow_rate: 17.198
+  maximum_operating_pressure: 3.5
+  number_of_pipes: 1
+  outer_pipe_diameter: 0.008
+  pipe_density: 8960
+  pipe_spacing: 0.095
+  recommended_flow_pressure_drop: 0.15
+  recommended_mass_flow_rate: 108
+  thermal_conductivity: 310
+  thickness: 0.00012
+  transmissivity: 0
+adhesive:
+  thermal_conductivity: 0.85
+  thickness: 5.0e-05
+air_gap:
+  thermal_conductivity: 0.025
+  thickness: 0.005
+bond:
+  thermal_conductivity: 0.85
+  thickness: 5.0e-05
+  width: 0.004
+eva:
+  thermal_conductivity: 0.35
+  thickness: 0.0005
+glass:
+  absorptivity: 0.01
+  density: 2700
+  diffuse_reflection_coefficient: 0.16
+  emissivity: 0.9
+  heat_capacity: 800
+  thermal_conductivity: 1.8
+  thickness: 0.004
+  transmissivity: 0.9
+insulation:
+  thermal_conductivity: 0.035
+  thickness: 0.02
+pv:
+  absorptivity: 0.93
+  cell_material: silicon
+  cell_type: monocrystalline
+  density: 2328
+  emissivity: 0.9
+  heat_capacity: 677
+  maximum_power_point_current: 8.34
+  maximum_power_point_voltage: 30
+  nominal_power: 180
+  open_circuit_voltage: 36.9
+  reference_efficiency: 0.126
+  reference_temperature: 298.15
+  short_cirvuit_current: 8.34
+  thermal_coefficient: 0.0053
+  thermal_conductivity: 140
+  thickness: 0.00035
+  transmissivity: 0.01
+pvt_collector:
+  azimuthal_orientation: 180
+  horizontal_tracking: false
+  latitude: 44.867
+  length: 1.66
+  longitude: 8.8
+  tilt: 45
+  timezone: 0
+  vertical_tracking: false
+  width: 0.14333333331
+tedlar:
+  thermal_conductivity: 0.2
+  thickness: 0.0001
