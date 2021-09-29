@@ -21,5 +21,5 @@ OUTPUT_DIR="$PBS_O_WORKDIR/output_files"
 CURRENT_DIR=$(pwd)
 cd $PBS_O_WORKDIR
 
-cat autotherm_10_pipe_runs.txt | head -n $PBS_ARRAY_INDEX | tail -n 1 | bash
+cat runs.txt | head -n $PBS_ARRAY_INDEX | tail -n 1 | bash
 

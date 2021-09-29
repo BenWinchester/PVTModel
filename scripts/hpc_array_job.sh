@@ -1,5 +1,5 @@
 #!/bin/bash
-#PBS -J 118-120
+#PBS -J 1-7620
 #PBS -lwalltime=00:45:00
 #PBS -lselect=1:ncpus=8:mem=11800Mb
 
@@ -23,5 +23,5 @@ else
 fi
 
 echo -e "Running PV-T model"
-.bin/hpc_array_pvt_model.sh
+./bin/hpc_array_pvt_model.sh
 echo -e "PV-T model run successfully"
