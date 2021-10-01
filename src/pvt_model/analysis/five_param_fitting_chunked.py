@@ -335,21 +335,18 @@ def _best_guess(
     a_30: float,
     a_31: float,
     a_32: float,
-    a_33: float,
-    a_34: float,
-    a_35: float,
-    a_36: float,
-    a_37: float,
-    a_38: float,
-    a_39: float,
-    a_40: float,
-    a_41: float,
-    a_42: float,
-    a_43: float,
-    a_44: float,
-    a_45: float,
-    a_46: float,
-    a_47: float,
+    # a_33: float,
+    # a_34: float,
+    # a_35: float,
+    # a_36: float,
+    # a_37: float,
+    # a_38: float,
+    # a_39: float,
+    # a_40: float,
+    # a_41: float,
+    # a_42: float,
+    # a_43: float,
+    # a_44: float,
 ) -> List[float]:
     """
     Attempts a best-guess solution
@@ -374,50 +371,38 @@ def _best_guess(
         a_0
         + a_1 * np.log(solar_irradiance)
         + a_2 * (np.log(solar_irradiance)) ** 2
-        + a_3 * mass_flow_rate
-        + a_4 * mass_flow_rate ** 2
-        + a_5 * np.log(solar_irradiance) * mass_flow_rate
-        + a_6 * abs(wind_speed ** 2 + a_7) ** (1 / 2)
-        + a_8 * abs(wind_speed ** 3 + a_7) ** (1 / 3)
-        + a_10 * wind_speed * mass_flow_rate
-        + a_11 * wind_speed * mass_flow_rate ** 2
-        + a_12 * wind_speed * np.log(solar_irradiance)
-        + a_13 * wind_speed ** 2 * mass_flow_rate
-        + a_45 * wind_speed ** 2 * mass_flow_rate ** 2
-        + a_14 * wind_speed ** 2 * np.log(solar_irradiance)
+        + a_3 * mass_flow_rate * (1 - np.exp(-a_3 / mass_flow_rate))
+        + a_4 * np.log(solar_irradiance) * mass_flow_rate * (1 - np.exp(-a_5 / mass_flow_rate))
+        + a_6 * (wind_speed ** 3 + a_7) ** (1 / 3)
+        + a_8 * wind_speed * (
+            + a_9 * mass_flow_rate * (1 - np.exp(-a_9 / mass_flow_rate))
+            + a_10 * np.log(solar_irradiance)
+        )
         + ambient_temperature
         * (
-            a_15
-            + a_16 * np.log(solar_irradiance)
-            + a_17 * (np.log(solar_irradiance)) ** 2
-            + a_18 * mass_flow_rate
-            + a_19 * mass_flow_rate ** 2
-            + a_20 * np.log(solar_irradiance) * mass_flow_rate
-            + a_21 * abs(wind_speed ** 2 + a_22) ** (1 / 2)
-            + a_23 * abs(wind_speed ** 3 + a_24) ** (1 / 3)
-            + a_25 * wind_speed * mass_flow_rate
-            + a_26 * wind_speed * mass_flow_rate ** 2
-            + a_27 * wind_speed * np.log(solar_irradiance)
-            + a_28 * wind_speed ** 2 * mass_flow_rate
-            + a_46 * wind_speed ** 2 * mass_flow_rate ** 2
-            + a_29 * wind_speed ** 2 * np.log(solar_irradiance)
+            a_11
+            + a_12 * np.log(solar_irradiance)
+            + a_13 * (np.log(solar_irradiance)) ** 2
+            + a_14 * mass_flow_rate * (1 - np.exp(-a_14 / mass_flow_rate))
+            + a_15 * np.log(solar_irradiance) * mass_flow_rate * (1 - np.exp(-a_16 / mass_flow_rate))
+            + a_17 * (wind_speed ** 3 + a_18) ** (1 / 3)
+            + a_19 * wind_speed * (
+                + a_20 * mass_flow_rate * (1 - np.exp(-a_20 / mass_flow_rate))
+                + a_21 * np.log(solar_irradiance)
+            )
         )
         + collector_input_temperature
         * (
-            a_30
-            + a_31 * np.log(solar_irradiance)
-            + a_32 * (np.log(solar_irradiance)) ** 2
-            + a_33 * mass_flow_rate
-            + a_34 * mass_flow_rate ** 2
-            + a_35 * np.log(solar_irradiance) * mass_flow_rate
-            + a_36 * abs(wind_speed ** 2 + a_37) ** (1 / 2)
-            + a_38 * abs(wind_speed ** 3 + a_39) ** (1 / 3)
-            + a_40 * wind_speed * mass_flow_rate
-            + a_41 * wind_speed * mass_flow_rate ** 2
-            + a_42 * wind_speed * np.log(solar_irradiance)
-            + a_43 * wind_speed ** 2 * mass_flow_rate
-            + a_47 * wind_speed ** 2 * mass_flow_rate ** 2
-            + a_44 * wind_speed ** 2 * np.log(solar_irradiance)
+            a_22
+            + a_23 * np.log(solar_irradiance)
+            + a_24 * (np.log(solar_irradiance)) ** 2
+            + a_25 * mass_flow_rate * (1 - np.exp(-a_25 / mass_flow_rate))
+            + a_26 * np.log(solar_irradiance) * mass_flow_rate * (1 - np.exp(-a_27 / mass_flow_rate))
+            + a_28 * (wind_speed ** 3 + a_29) ** (1 / 3)
+            + a_30 * wind_speed * (
+                + a_31 * mass_flow_rate * (1 - np.exp(-a_31 / mass_flow_rate))
+                + a_32 * np.log(solar_irradiance)
+            )
         )
     )
 
@@ -446,6 +431,10 @@ def _plot(
     # Plot the various outputs.
     print("Saving output ........................... ", end="")
 
+    import pdb
+
+    pdb.set_trace()
+
     params = [
         "- fit #{fit_number}:\n{params}".format(
             fit_number=index,
@@ -454,7 +443,7 @@ def _plot(
                     "  - {value}: {sd}".format(
                         value=entry[0][sub_index],
                         sd=np.sqrt(
-                            np.diag(entry[1])
+                            np.diag(np.ma.masked_invalid(entry[1]))
                         )[sub_index],
                     )
                     for sub_index in range(48)
@@ -464,7 +453,9 @@ def _plot(
         for index, entry in enumerate(results)
     ]
 
-    with open(f"fitted_parameters_{datetime.datetime.now()}.txt", "w") as f:
+    filename = re.sub("-| |:", "_", str(datetime.datetime.now()))
+
+    with open(f"fitted_parameters_{filename}.txt", "w") as f:
         f.write("\n - ".join(params))
 
     print("[  DONE  ]")
@@ -1338,54 +1329,45 @@ def _partial_fit(
 
     # Set up initial guesses for the parameters.
     initial_guesses = (
-        -2.8,
-        1,
-        -0.05,
-        0.4,
-        -0.1,
-        0.005,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
+        0, # a_0
+        0, # a_1
+        0, # a_2
+        0, # a_3
+        0, # a_4
+        0, # a_5
+        0, # a_6
+        0, # a_7
+        0, # a_8
+        0, # a_9
+        0, # a_10
+        0, # a_11
+        0, # a_12
+        0, # a_13
+        0, # a_14
+        0, # a_15
+        0, # a_16
+        0, # a_17
+        0, # a_18
+        0, # a_19
+        0, # a_20
+        0, # a_21
+        0, # a_22
+        0, # a_23
+        0, # a_24
+        0, # a_25
+        0, # a_26
+        0, # a_27
+        0, # a_28
+        0, # a_29
+        0, # a_30
+        0, # a_31
+        0, # a_32
+        # 0, # a_33
+        # 0, # a_34
+        # 0, # a_35
+        # 0, # a_36
+        # 0, # a_37
+        # 0, # a_38
     )
 
     print("Computing fit for first chunk ........... ", end="")
@@ -1406,6 +1388,8 @@ def _partial_fit(
             and collector_input_temperatures[index] < 20
         ],
         initial_guesses,
+        bounds=([-35] * 7 + [0] + [-35] * 10 + [0] + [-35] * 10 + [0] + [-35] * 3, 35),
+        maxfev=10000,
     )
 
     first_electrical_efficiency_results = curve_fit(
