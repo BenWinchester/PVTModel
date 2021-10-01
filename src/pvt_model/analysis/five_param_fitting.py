@@ -320,9 +320,9 @@ def _best_guess(
     a_16: float,
     a_17: float,
     a_18: float,
-    a_19: float,
-    a_20: float,
-    a_21: float,
+    # a_19: float,
+    # a_20: float,
+    # a_21: float,
     a_22: float,
     a_23: float,
     a_24: float,
@@ -331,21 +331,21 @@ def _best_guess(
     a_27: float,
     a_28: float,
     a_29: float,
-    a_30: float,
-    a_31: float,
-    a_32: float,
-    a_33: float,
-    a_34: float,
-    a_35: float,
-    a_36: float,
-    a_37: float,
-    a_38: float,
-    a_39: float,
-    a_40: float,
-    a_41: float,
-    a_42: float,
-    a_43: float,
-    a_44: float,
+    # a_30: float,
+    # a_31: float,
+    # a_32: float,
+    # a_33: float,
+    # a_34: float,
+    # a_35: float,
+    # a_36: float,
+    # a_37: float,
+    # a_38: float,
+    # a_39: float,
+    # a_40: float,
+    # a_41: float,
+    # a_42: float,
+    # a_43: float,
+    # a_44: float,
 ) -> List[float]:
     """
     Attempts a best-guess solution
@@ -365,6 +365,45 @@ def _best_guess(
         solar_irradiance,
         wind_speed,
     ) = input_runs
+
+    return (
+        a_0
+        + a_1 * np.log(solar_irradiance)
+        + a_2 * (np.log(solar_irradiance)) ** 2
+        + a_3 * mass_flow_rate * (1 - np.exp(-a_3 / mass_flow_rate))
+        + a_4 * np.log(solar_irradiance) * mass_flow_rate * (1 - np.exp(-a_5 / mass_flow_rate))
+        + a_6 * (wind_speed ** 3 + a_7) ** (1 / 3)
+        + a_8 * wind_speed * (
+            + a_9 * mass_flow_rate * (1 - np.exp(-a_9 / mass_flow_rate))
+            + a_10 * np.log(solar_irradiance)
+        )
+        + ambient_temperature
+        * (
+            a_11
+            + a_12 * np.log(solar_irradiance)
+            + a_13 * (np.log(solar_irradiance)) ** 2
+            + a_14 * mass_flow_rate * (1 - np.exp(-a_14 / mass_flow_rate))
+            + a_15 * np.log(solar_irradiance) * mass_flow_rate * (1 - np.exp(-a_16 / mass_flow_rate))
+            + a_17 * (wind_speed ** 3 + a_18) ** (1 / 3)
+            # + a_19 * wind_speed * (
+            #     + a_20 * mass_flow_rate * (1 - np.exp(-a_20 / mass_flow_rate))
+            #     + a_21 * np.log(solar_irradiance)
+            # )
+        )
+        + collector_input_temperature
+        * (
+            a_22
+            + a_23 * np.log(solar_irradiance)
+            + a_24 * (np.log(solar_irradiance)) ** 2
+            + a_25 * mass_flow_rate * (1 - np.exp(-a_25 / mass_flow_rate))
+            + a_26 * np.log(solar_irradiance) * mass_flow_rate * (1 - np.exp(-a_27 / mass_flow_rate))
+            + a_28 * (wind_speed ** 3 + a_29) ** (1 / 3)
+        #     + a_30 * wind_speed * (
+        #         + a_31 * mass_flow_rate * (1 - np.exp(-a_31 / mass_flow_rate))
+        #         + a_32 * np.log(solar_irradiance)
+        #     )
+        )
+    )
 
     return (
         a_0
@@ -443,89 +482,89 @@ def _plot(
     """
 
     print(f"Fitted curve params: {results[0]}")
-    print(
-        "Fitted curve: {a:.2g} + {b:.2g}ln(G) + {c:.2g}|ln(G)|^2 ".format(
-            a=results[0][0],
-            b=results[0][1],
-            c=results[0][2],
-        )
-        + "+ {a:.2g}ln(m_dot) + {b:.2g}|ln(m_dot)|^2 + {c:.2g}ln(m_dot) * ln(G) ".format(
-            a=results[0][3],
-            b=results[0][4],
-            c=results[0][5],
-        )
-        + "+ {a:.2g}v_w + {b:.2g}v_w^2 + {c:.2g}v_w^3 ".format(
-            a=results[0][6],
-            b=results[0][7],
-            c=results[0][8],
-        )
-        + "+ {a:.2g}v_w^4 + {b:.2g}v_w^5 ".format(
-            a=results[0][9],
-            b=results[0][10],
-        )
-        + "+ v_w * ({a:.2g}ln(m_dot) + {b:.2g}ln(G) ) ".format(
-            a=results[0][11],
-            b=results[0][12],
-        )
-        + "+ v_w^2 * ({a:.2g}ln(m_dot) + {b:.2g}ln(G) ) ".format(
-            a=results[0][13],
-            b=results[0][14],
-        )
-        + "+ T_amb * ({a:.2g} + {b:.2g}ln(G) + {c:.2g}|ln(G)|^2 ".format(
-            a=results[0][15],
-            b=results[0][16],
-            c=results[0][17],
-        )
-        + "+ {a:.2g}ln(m_dot) + {b:.2g}|ln(m_dot)|^2 + {c:.2g}ln(m_dot) * ln(G) ".format(
-            a=results[0][18],
-            b=results[0][19],
-            c=results[0][20],
-        )
-        + "+ {a:.2g}v_w + {b:.2g}v_w^2 + {c:.2g}v_w^3 ".format(
-            a=results[0][21],
-            b=results[0][22],
-            c=results[0][23],
-        )
-        + "+ {a:.2g}v_w^4 + {b:.2g}v_w^5 ".format(
-            a=results[0][24],
-            b=results[0][25],
-        )
-        + "+ v_w * ({a:.2g}ln(m_dot) + {b:.2g}ln(G) ) ".format(
-            a=results[0][26],
-            b=results[0][27],
-        )
-        + "+ v_w^2 * ({a:.2g}ln(m_dot) + {b:.2g}ln(G) )) ".format(
-            a=results[0][28],
-            b=results[0][29],
-        )
-        + "+ T_c,in * ({a:.2g} + {b:.2g}ln(G) + {c:.2g}|ln(G)|^2 ".format(
-            a=results[0][30],
-            b=results[0][31],
-            c=results[0][32],
-        )
-        + "+ {a:.2g}ln(m_dot) + {b:.2g}|ln(m_dot)|^2 + {c:.2g}ln(m_dot) * ln(G) ".format(
-            a=results[0][33],
-            b=results[0][34],
-            c=results[0][35],
-        )
-        + "+ {a:.2g}v_w + {b:.2g}v_w^2 + {c:.2g}v_w^3 ".format(
-            a=results[0][36],
-            b=results[0][37],
-            c=results[0][38],
-        )
-        + "+ {a:.2g}v_w^4 + {b:.2g}v_w^5 ".format(
-            a=results[0][39],
-            b=results[0][40],
-        )
-        + "+ v_w * ({a:.2g}ln(m_dot) + {b:.2g}ln(G) ) ".format(
-            a=results[0][41],
-            b=results[0][42],
-        )
-        + "+ v_w^2 * ({a:.2g}ln(m_dot) + {b:.2g}ln(G) )) ".format(
-            a=results[0][43],
-            b=results[0][44],
-        )
-    )
+    # print(
+    #     "Fitted curve: {a:.2g} + {b:.2g}ln(G) + {c:.2g}|ln(G)|^2 ".format(
+    #         a=results[0][0],
+    #         b=results[0][1],
+    #         c=results[0][2],
+    #     )
+    #     + "+ {a:.2g}ln(m_dot) + {b:.2g}|ln(m_dot)|^2 + {c:.2g}ln(m_dot) * ln(G) ".format(
+    #         a=results[0][3],
+    #         b=results[0][4],
+    #         c=results[0][5],
+    #     )
+    #     + "+ {a:.2g}v_w + {b:.2g}v_w^2 + {c:.2g}v_w^3 ".format(
+    #         a=results[0][6],
+    #         b=results[0][7],
+    #         c=results[0][8],
+    #     )
+    #     + "+ {a:.2g}v_w^4 + {b:.2g}v_w^5 ".format(
+    #         a=results[0][9],
+    #         b=results[0][10],
+    #     )
+    #     + "+ v_w * ({a:.2g}ln(m_dot) + {b:.2g}ln(G) ) ".format(
+    #         a=results[0][11],
+    #         b=results[0][12],
+    #     )
+    #     + "+ v_w^2 * ({a:.2g}ln(m_dot) + {b:.2g}ln(G) ) ".format(
+    #         a=results[0][13],
+    #         b=results[0][14],
+    #     )
+    #     + "+ T_amb * ({a:.2g} + {b:.2g}ln(G) + {c:.2g}|ln(G)|^2 ".format(
+    #         a=results[0][15],
+    #         b=results[0][16],
+    #         c=results[0][17],
+    #     )
+    #     + "+ {a:.2g}ln(m_dot) + {b:.2g}|ln(m_dot)|^2 + {c:.2g}ln(m_dot) * ln(G) ".format(
+    #         a=results[0][18],
+    #         b=results[0][19],
+    #         c=results[0][20],
+    #     )
+    #     + "+ {a:.2g}v_w + {b:.2g}v_w^2 + {c:.2g}v_w^3 ".format(
+    #         a=results[0][21],
+    #         b=results[0][22],
+    #         c=results[0][23],
+    #     )
+    #     + "+ {a:.2g}v_w^4 + {b:.2g}v_w^5 ".format(
+    #         a=results[0][24],
+    #         b=results[0][25],
+    #     )
+    #     + "+ v_w * ({a:.2g}ln(m_dot) + {b:.2g}ln(G) ) ".format(
+    #         a=results[0][26],
+    #         b=results[0][27],
+    #     )
+    #     + "+ v_w^2 * ({a:.2g}ln(m_dot) + {b:.2g}ln(G) )) ".format(
+    #         a=results[0][28],
+    #         b=results[0][29],
+    #     )
+    #     + "+ T_c,in * ({a:.2g} + {b:.2g}ln(G) + {c:.2g}|ln(G)|^2 ".format(
+    #         a=results[0][30],
+    #         b=results[0][31],
+    #         c=results[0][32],
+    #     )
+    #     + "+ {a:.2g}ln(m_dot) + {b:.2g}|ln(m_dot)|^2 + {c:.2g}ln(m_dot) * ln(G) ".format(
+    #         a=results[0][33],
+    #         b=results[0][34],
+    #         c=results[0][35],
+    #     )
+    #     + "+ {a:.2g}v_w + {b:.2g}v_w^2 + {c:.2g}v_w^3 ".format(
+    #         a=results[0][36],
+    #         b=results[0][37],
+    #         c=results[0][38],
+    #     )
+    #     + "+ {a:.2g}v_w^4 + {b:.2g}v_w^5 ".format(
+    #         a=results[0][39],
+    #         b=results[0][40],
+    #     )
+    #     + "+ v_w * ({a:.2g}ln(m_dot) + {b:.2g}ln(G) ) ".format(
+    #         a=results[0][41],
+    #         b=results[0][42],
+    #     )
+    #     + "+ v_w^2 * ({a:.2g}ln(m_dot) + {b:.2g}ln(G) )) ".format(
+    #         a=results[0][43],
+    #         b=results[0][44],
+    #     )
+    # )
 
     plt.scatter(ambient_temperatures, y_data, label=TECHNICAL_MODEL)
     plt.scatter(
@@ -812,51 +851,51 @@ def fit(data_file_name: str) -> None:
 
     # Set up initial guesses for the parameters.
     initial_guesses = (
-        -2.8,
-        1,
-        -0.05,
-        0.4,
-        -0.1,
-        0.005,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
+        -2.8,  # a_0
+        1,  # a_1
+        -0.05,  # a_2
+        0.4,  # a_3
+        -0.1,  # a_4
+        0.005,  # a_5
+        0,  # a_6
+        0,  # a_7
+        0,  # a_8
+        0,  # a_9
+        0,  # a_10
+        0,  # a_11
+        0,  # a_12
+        0,  # a_13
+        0,  # a_14
+        0,  # a_15
+        0,  # a_16
+        0,  # a_17
+        0,  # a_18
+        # 0,  # a_19
+        # 0,  # a_20
+        # 0,  # a_21
+        0,  # a_22
+        0,  # a_23
+        0,  # a_24
+        0,  # a_25
+        0,  # a_26
+        0,  # a_27
+        0,  # a_28
+        0,  # a_29
+        # 0,  # a_30
+        # 0,  # a_31
+        # 0,  # a_32
+        # 0,  # a_33
+        # 0,  # a_34
+        # 0,  # a_35
+        # 0,  # a_36
+        # 0,  # a_37
+        # 0,  # a_38
+        # 0,  # a_39
+        # 0,  # a_40
+        # 0,  # a_41
+        # 0,  # a_42
+        # 0,  # a_43
+        # 0,  # a_44
     )
 
     # Attempt a curve fit.

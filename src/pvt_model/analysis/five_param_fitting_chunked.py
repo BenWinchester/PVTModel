@@ -321,9 +321,9 @@ def _best_guess(
     a_16: float,
     a_17: float,
     a_18: float,
-    a_19: float,
-    a_20: float,
-    a_21: float,
+    # a_19: float,
+    # a_20: float,
+    # a_21: float,
     a_22: float,
     a_23: float,
     a_24: float,
@@ -332,9 +332,9 @@ def _best_guess(
     a_27: float,
     a_28: float,
     a_29: float,
-    a_30: float,
-    a_31: float,
-    a_32: float,
+    # a_30: float,
+    # a_31: float,
+    # a_32: float,
     # a_33: float,
     # a_34: float,
     # a_35: float,
@@ -386,10 +386,10 @@ def _best_guess(
             + a_14 * mass_flow_rate * (1 - np.exp(-a_14 / mass_flow_rate))
             + a_15 * np.log(solar_irradiance) * mass_flow_rate * (1 - np.exp(-a_16 / mass_flow_rate))
             + a_17 * (wind_speed ** 3 + a_18) ** (1 / 3)
-            + a_19 * wind_speed * (
-                + a_20 * mass_flow_rate * (1 - np.exp(-a_20 / mass_flow_rate))
-                + a_21 * np.log(solar_irradiance)
-            )
+            # + a_19 * wind_speed * (
+            #     + a_20 * mass_flow_rate * (1 - np.exp(-a_20 / mass_flow_rate))
+            #     + a_21 * np.log(solar_irradiance)
+            # )
         )
         + collector_input_temperature
         * (
@@ -399,10 +399,10 @@ def _best_guess(
             + a_25 * mass_flow_rate * (1 - np.exp(-a_25 / mass_flow_rate))
             + a_26 * np.log(solar_irradiance) * mass_flow_rate * (1 - np.exp(-a_27 / mass_flow_rate))
             + a_28 * (wind_speed ** 3 + a_29) ** (1 / 3)
-            + a_30 * wind_speed * (
-                + a_31 * mass_flow_rate * (1 - np.exp(-a_31 / mass_flow_rate))
-                + a_32 * np.log(solar_irradiance)
-            )
+        #     + a_30 * wind_speed * (
+        #         + a_31 * mass_flow_rate * (1 - np.exp(-a_31 / mass_flow_rate))
+        #         + a_32 * np.log(solar_irradiance)
+        #     )
         )
     )
 
@@ -1348,9 +1348,9 @@ def _partial_fit(
         0, # a_16
         0, # a_17
         0, # a_18
-        0, # a_19
-        0, # a_20
-        0, # a_21
+        # 0, # a_19
+        # 0, # a_20
+        # 0, # a_21
         0, # a_22
         0, # a_23
         0, # a_24
@@ -1359,9 +1359,9 @@ def _partial_fit(
         0, # a_27
         0, # a_28
         0, # a_29
-        0, # a_30
-        0, # a_31
-        0, # a_32
+        # 0, # a_30
+        # 0, # a_31
+        # 0, # a_32
         # 0, # a_33
         # 0, # a_34
         # 0, # a_35
@@ -1388,7 +1388,8 @@ def _partial_fit(
             and collector_input_temperatures[index] < 20
         ],
         initial_guesses,
-        bounds=([-35] * 7 + [0] + [-35] * 10 + [0] + [-35] * 10 + [0] + [-35] * 3, 35),
+        # bounds=([-35] * 7 + [0] + [-35] * 10 + [0] + [-35] * 10 + [0] + [-35] * 3, 35),
+        bounds=([-35] * 7 + [0] + [-35] * 10 + [0] + [-35] * 7 + [0], 35),
         maxfev=10000,
     )
 
