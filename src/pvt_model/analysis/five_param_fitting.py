@@ -16,6 +16,7 @@ type-check the external matplotlib.pyplot module.
 """
 
 import argparse
+import datetime
 import json
 import re
 import sys
@@ -310,27 +311,27 @@ def _best_guess(
     a_6: float,
     a_7: float,
     a_8: float,
-    a_9: float,
+    # a_9: float,
     a_10: float,
     a_11: float,
     a_12: float,
     a_13: float,
     a_14: float,
-    a_15: float,
-    a_16: float,
-    a_17: float,
-    a_18: float,
-    # a_19: float,
-    # a_20: float,
-    # a_21: float,
+    # a_15: float,
+    # a_16: float,
+    # a_17: float,
+    # a_18: float,
+    a_19: float,
+    a_20: float,
+    a_21: float,
     a_22: float,
     a_23: float,
-    a_24: float,
-    a_25: float,
-    a_26: float,
-    a_27: float,
-    a_28: float,
-    a_29: float,
+    # a_24: float,
+    # a_25: float,
+    # a_26: float,
+    # a_27: float,
+    # a_28: float,
+    # a_29: float,
     # a_30: float,
     # a_31: float,
     # a_32: float,
@@ -368,40 +369,52 @@ def _best_guess(
 
     return (
         a_0
-        + a_1 * np.log(solar_irradiance)
-        + a_2 * (np.log(solar_irradiance)) ** 2
-        + a_3 * mass_flow_rate * (1 - np.exp(-a_3 / mass_flow_rate))
-        + a_4 * np.log(solar_irradiance) * mass_flow_rate * (1 - np.exp(-a_5 / mass_flow_rate))
-        + a_6 * (wind_speed ** 3 + a_7) ** (1 / 3)
-        + a_8 * wind_speed * (
-            + a_9 * mass_flow_rate * (1 - np.exp(-a_9 / mass_flow_rate))
-            + a_10 * np.log(solar_irradiance)
+        + (
+            (
+                a_1 * np.log(solar_irradiance)
+                + a_2 * (np.log(solar_irradiance)) ** 2
+            ) + (
+                a_3 * np.log(mass_flow_rate)
+                # a_3 * mass_flow_rate
+                + a_4 * (np.log(mass_flow_rate)) ** 2
+                # + a_4 * (1 - np.exp(-a_4 ** 2 / mass_flow_rate)) ** 2
+                # + a_4 * mass_flow_rate * (1 - np.exp(-a_4 ** 2 / mass_flow_rate)) ** 2
+            )
+            + a_5 * np.log(mass_flow_rate) * np.log(solar_irradiance)
         )
-        + ambient_temperature
-        * (
-            a_11
-            + a_12 * np.log(solar_irradiance)
-            + a_13 * (np.log(solar_irradiance)) ** 2
-            + a_14 * mass_flow_rate * (1 - np.exp(-a_14 / mass_flow_rate))
-            + a_15 * np.log(solar_irradiance) * mass_flow_rate * (1 - np.exp(-a_16 / mass_flow_rate))
-            + a_17 * (wind_speed ** 3 + a_18) ** (1 / 3)
-            # + a_19 * wind_speed * (
-            #     + a_20 * mass_flow_rate * (1 - np.exp(-a_20 / mass_flow_rate))
-            #     + a_21 * np.log(solar_irradiance)
-            # )
+        + (
+            a_6 * ambient_temperature
+            + a_7 * wind_speed ** 0.16
+            + a_8 * ambient_temperature * wind_speed ** 0.16
+        ) * (
+            (
+                (
+                    a_10 * np.log(solar_irradiance)
+                    + a_11 * (np.log(solar_irradiance)) ** 2
+                ) + (
+                    a_12 * np.log(mass_flow_rate)
+                    # a_12 * mass_flow_rate
+                    + a_13 * (np.log(mass_flow_rate)) ** 2
+                    # + a_13 * (1 - np.exp(-a_13 ** 2 / mass_flow_rate)) ** 2
+                    # + a_13 * mass_flow_rate * (1 - np.exp(-a_13 ** 2 / mass_flow_rate)) ** 2
+                )
+                + a_14 * np.log(solar_irradiance) * np.log(mass_flow_rate)
+            )
         )
-        + collector_input_temperature
-        * (
-            a_22
-            + a_23 * np.log(solar_irradiance)
-            + a_24 * (np.log(solar_irradiance)) ** 2
-            + a_25 * mass_flow_rate * (1 - np.exp(-a_25 / mass_flow_rate))
-            + a_26 * np.log(solar_irradiance) * mass_flow_rate * (1 - np.exp(-a_27 / mass_flow_rate))
-            + a_28 * (wind_speed ** 3 + a_29) ** (1 / 3)
-        #     + a_30 * wind_speed * (
-        #         + a_31 * mass_flow_rate * (1 - np.exp(-a_31 / mass_flow_rate))
-        #         + a_32 * np.log(solar_irradiance)
-        #     )
+        + collector_input_temperature * (
+            (
+                (
+                    a_19 * np.log(solar_irradiance)
+                    + a_20 * (np.log(solar_irradiance)) ** 2
+                ) + (
+                    a_21 * np.log(mass_flow_rate)
+                    # a_21 * mass_flow_rate
+                    + a_22 * (np.log(mass_flow_rate)) ** 2
+                    # + a_22 * (1 - np.exp(-a_22 ** 2 / mass_flow_rate)) ** 2
+                    # + a_22 * mass_flow_rate * (1 - np.exp(-a_22 ** 2 / mass_flow_rate)) ** 2
+                )
+                + a_23 * np.log(solar_irradiance) * np.log(mass_flow_rate)
+            )
         )
     )
 
@@ -481,7 +494,6 @@ def _plot(
 
     """
 
-    print(f"Fitted curve params: {results[0]}")
     # print(
     #     "Fitted curve: {a:.2g} + {b:.2g}ln(G) + {c:.2g}|ln(G)|^2 ".format(
     #         a=results[0][0],
@@ -565,6 +577,31 @@ def _plot(
     #         b=results[0][44],
     #     )
     # )
+
+
+    params = [
+        "-> fit #1:\n{params}".format(
+            params="\n".join(
+                [
+                    "{sub_index}:  -> {value}: {sd}".format(
+                        value=results[0][sub_index],
+                        sd=np.sqrt(
+                            np.diag(np.ma.masked_invalid(results[1]))
+                        )[sub_index],
+                        sub_index=sub_index
+                    )
+                    for sub_index in range(len(results[0]))
+                ]
+            ),
+        )
+    ]
+
+    filename = re.sub("-| |:", "_", str(datetime.datetime.now()))
+
+    with open(f"fitted_parameters_{filename}.txt", "w") as f:
+        f.write("\n - ".join(params))
+    print("Fitted curve params:\n{}".format('\n - '.join(params)))
+
 
     plt.scatter(ambient_temperatures, y_data, label=TECHNICAL_MODEL)
     plt.scatter(
@@ -851,40 +888,40 @@ def fit(data_file_name: str) -> None:
 
     # Set up initial guesses for the parameters.
     initial_guesses = (
-        -2.8,  # a_0
+        0.5,  # a_0
         1,  # a_1
         -0.05,  # a_2
         0.4,  # a_3
         -0.1,  # a_4
-        0.005,  # a_5
-        0,  # a_6
-        0,  # a_7
+        0.6215,  # a_5
+        -11.37,  # a_6
+        0.3965,  # a_7
         0,  # a_8
-        0,  # a_9
+        # 0,  # a_9
         0,  # a_10
         0,  # a_11
         0,  # a_12
         0,  # a_13
         0,  # a_14
-        0,  # a_15
-        0,  # a_16
-        0,  # a_17
-        0,  # a_18
-        # 0,  # a_19
-        # 0,  # a_20
-        # 0,  # a_21
+        # 0,  # a_15
+        # 0,  # a_16
+        # 0,  # a_17
+        # 0,  # a_18
+        0,  # a_19
+        0,  # a_20
+        0,  # a_21
         0,  # a_22
         0,  # a_23
-        0,  # a_24
-        0,  # a_25
-        0,  # a_26
-        0,  # a_27
-        0,  # a_28
-        0,  # a_29
+        # 0,  # a_24
+        # 0,  # a_25
+        # 0,  # a_26
+        # 0,  # a_27
+        # 0,  # a_28
+        # 0,  # a_29
         # 0,  # a_30
         # 0,  # a_31
         # 0,  # a_32
-        # 0,  # a_33
+        # # 0,  # a_33
         # 0,  # a_34
         # 0,  # a_35
         # 0,  # a_36
