@@ -328,10 +328,10 @@ def _best_guess(
     a_23: float,
     a_24: float,
     a_25: float,
-    # a_26: float,
-    # a_27: float,
-    # a_28: float,
-    # a_29: float,
+    a_26: float,
+    a_27: float,
+    a_28: float,
+    a_29: float,
     # a_30: float,
     # a_31: float,
     # a_32: float,
@@ -382,52 +382,56 @@ def _best_guess(
         )
         + ambient_temperature
         * (
-            (a_6 * np.log(solar_irradiance) + a_7 * (np.log(solar_irradiance)) ** 2)
+            a_6
+            + (a_7 * np.log(solar_irradiance) + a_8 * (np.log(solar_irradiance)) ** 2)
             + (
-                a_8 * np.log(mass_flow_rate)
+                a_9 * np.log(mass_flow_rate)
                 # a_12 * mass_flow_rate
-                + a_9 * (np.log(mass_flow_rate)) ** 2
+                + a_10 * (np.log(mass_flow_rate)) ** 2
                 # + a_13 * (1 - np.exp(-a_13 ** 2 / mass_flow_rate)) ** 2
                 # + a_13 * mass_flow_rate * (1 - np.exp(-a_13 ** 2 / mass_flow_rate)) ** 2
             )
-            + a_10 * np.log(solar_irradiance) * np.log(mass_flow_rate)
+            + a_11 * np.log(solar_irradiance) * np.log(mass_flow_rate)
         )
         + wind_speed ** 0.16
         * (
-            (a_11 * np.log(solar_irradiance) + a_12 * (np.log(solar_irradiance)) ** 2)
+            a_12
+            + (a_13 * np.log(solar_irradiance) + a_14 * (np.log(solar_irradiance)) ** 2)
             + (
-                a_13 * np.log(mass_flow_rate)
+                a_15 * np.log(mass_flow_rate)
                 # a_12 * mass_flow_rate
-                + a_14 * (np.log(mass_flow_rate)) ** 2
+                + a_16 * (np.log(mass_flow_rate)) ** 2
                 # + a_13 * (1 - np.exp(-a_13 ** 2 / mass_flow_rate)) ** 2
                 # + a_13 * mass_flow_rate * (1 - np.exp(-a_13 ** 2 / mass_flow_rate)) ** 2
             )
-            + a_15 * np.log(solar_irradiance) * np.log(mass_flow_rate)
+            + a_17 * np.log(solar_irradiance) * np.log(mass_flow_rate)
         )
         + ambient_temperature
         * wind_speed ** 0.16
         * (
-            (a_16 * np.log(solar_irradiance) + a_17 * (np.log(solar_irradiance)) ** 2)
+            a_18
+            + (a_19 * np.log(solar_irradiance) + a_20 * (np.log(solar_irradiance)) ** 2)
             + (
-                a_18 * np.log(mass_flow_rate)
+                a_21 * np.log(mass_flow_rate)
                 # a_12 * mass_flow_rate
-                + a_19 * (np.log(mass_flow_rate)) ** 2
+                + a_22 * (np.log(mass_flow_rate)) ** 2
                 # + a_13 * (1 - np.exp(-a_13 ** 2 / mass_flow_rate)) ** 2
                 # + a_13 * mass_flow_rate * (1 - np.exp(-a_13 ** 2 / mass_flow_rate)) ** 2
             )
-            + a_20 * np.log(solar_irradiance) * np.log(mass_flow_rate)
+            + a_23 * np.log(solar_irradiance) * np.log(mass_flow_rate)
         )
         + collector_input_temperature
         * (
-            (a_21 * np.log(solar_irradiance) + a_22 * (np.log(solar_irradiance)) ** 2)
+            a_24
+            + (a_25 * np.log(solar_irradiance) + a_26 * (np.log(solar_irradiance)) ** 2)
             + (
-                a_23 * np.log(mass_flow_rate)
+                a_27 * np.log(mass_flow_rate)
                 # a_21 * mass_flow_rate
-                + a_24 * (np.log(mass_flow_rate)) ** 2
+                + a_28 * (np.log(mass_flow_rate)) ** 2
                 # + a_22 * (1 - np.exp(-a_22 ** 2 / mass_flow_rate)) ** 2
                 # + a_22 * mass_flow_rate * (1 - np.exp(-a_22 ** 2 / mass_flow_rate)) ** 2
             )
-            + a_25 * np.log(solar_irradiance) * np.log(mass_flow_rate)
+            + a_29 * np.log(solar_irradiance) * np.log(mass_flow_rate)
         )
     )
 
@@ -876,7 +880,7 @@ def fit(data_file_name: str) -> None:
             entry[ELECTRICAL_EFFICIENCY],
             entry[MASS_FLOW_RATE],
             entry[SOLAR_IRRADIANCE],
-            entry[THERMAL_EFFICIENCY],
+            entry[COLLECTOR_OUTPUT_TEMPERATURE],
             entry[WIND_SPEED],
         )
         for entry in data
@@ -885,8 +889,9 @@ def fit(data_file_name: str) -> None:
         and entry[ELECTRICAL_EFFICIENCY] is not None
         and entry[MASS_FLOW_RATE] is not None
         and entry[SOLAR_IRRADIANCE] is not None
-        and entry[THERMAL_EFFICIENCY] is not None
+        and entry[COLLECTOR_OUTPUT_TEMPERATURE] is not None
         and entry[WIND_SPEED] is not None
+        and entry[COLLECTOR_OUTPUT_TEMPERATURE] <= 100
     ]
 
     ambient_temperatures = [entry[0] for entry in processed_data]
@@ -925,10 +930,10 @@ def fit(data_file_name: str) -> None:
         0,  # a_23
         0,  # a_24
         0,  # a_25
-        # 0,  # a_26
-        # 0,  # a_27
-        # 0,  # a_28
-        # 0,  # a_29
+        0,  # a_26
+        0,  # a_27
+        0,  # a_28
+        0,  # a_29
         # 0,  # a_30
         # 0,  # a_31
         # 0,  # a_32
