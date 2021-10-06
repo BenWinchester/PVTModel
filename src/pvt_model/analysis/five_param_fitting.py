@@ -18,6 +18,7 @@ type-check the external matplotlib.pyplot module.
 import argparse
 import datetime
 import json
+import pdb
 import re
 import sys
 
@@ -873,26 +874,49 @@ def fit(data_file_name: str) -> None:
         data = json.load(f)
 
     # Transform the data to tuples.
-    processed_data = [
-        (
-            entry[AMBIENT_TEMPERATURE],
-            entry[COLLECTOR_INPUT_TEMPERATURE],
-            entry[ELECTRICAL_EFFICIENCY],
-            entry[MASS_FLOW_RATE],
-            entry[SOLAR_IRRADIANCE],
-            entry[COLLECTOR_OUTPUT_TEMPERATURE],
-            entry[WIND_SPEED],
-        )
-        for entry in data
-        if entry[AMBIENT_TEMPERATURE] is not None
-        and entry[COLLECTOR_INPUT_TEMPERATURE] is not None
-        and entry[ELECTRICAL_EFFICIENCY] is not None
-        and entry[MASS_FLOW_RATE] is not None
-        and entry[SOLAR_IRRADIANCE] is not None
-        and entry[COLLECTOR_OUTPUT_TEMPERATURE] is not None
-        and entry[WIND_SPEED] is not None
-        and entry[COLLECTOR_OUTPUT_TEMPERATURE] <= 100
-    ]
+    if isinstance(data, list):
+        processed_data = [
+            (
+                entry[AMBIENT_TEMPERATURE],
+                entry[COLLECTOR_INPUT_TEMPERATURE],
+                entry[ELECTRICAL_EFFICIENCY],
+                entry[MASS_FLOW_RATE],
+                entry[SOLAR_IRRADIANCE],
+                entry[COLLECTOR_OUTPUT_TEMPERATURE],
+                entry[WIND_SPEED],
+            )
+            for entry in data
+            if entry[AMBIENT_TEMPERATURE] is not None
+            and entry[COLLECTOR_INPUT_TEMPERATURE] is not None
+            and entry[ELECTRICAL_EFFICIENCY] is not None
+            and entry[MASS_FLOW_RATE] is not None
+            and entry[SOLAR_IRRADIANCE] is not None
+            and entry[COLLECTOR_OUTPUT_TEMPERATURE] is not None
+            and entry[WIND_SPEED] is not None
+            and entry[COLLECTOR_OUTPUT_TEMPERATURE] <= 100
+        ]
+    else:
+        processed_data = [
+            (
+                entry[AMBIENT_TEMPERATURE],
+                entry[COLLECTOR_INPUT_TEMPERATURE],
+                entry[ELECTRICAL_EFFICIENCY],
+                entry[MASS_FLOW_RATE],
+                entry[SOLAR_IRRADIANCE],
+                entry[COLLECTOR_OUTPUT_TEMPERATURE],
+                entry[WIND_SPEED],
+            )
+            for entry in data.values()
+            if entry[AMBIENT_TEMPERATURE] is not None
+            and entry[COLLECTOR_INPUT_TEMPERATURE] is not None
+            and entry[ELECTRICAL_EFFICIENCY] is not None
+            and entry[MASS_FLOW_RATE] is not None
+            and entry[SOLAR_IRRADIANCE] is not None
+            and entry[COLLECTOR_OUTPUT_TEMPERATURE] is not None
+            and entry[WIND_SPEED] is not None
+            and entry[COLLECTOR_OUTPUT_TEMPERATURE] <= 100
+            and entry[COLLECTOR_INPUT_TEMPERATURE] <= 90
+        ]
 
     ambient_temperatures = [entry[0] for entry in processed_data]
     collector_input_temperatures = [entry[1] for entry in processed_data]
