@@ -16,7 +16,9 @@ type-check the external matplotlib.pyplot module.
 """
 
 import argparse
+import datetime
 import json
+import pdb
 import re
 import sys
 
@@ -331,21 +333,21 @@ def _best_guess(
     a_27: float,
     a_28: float,
     a_29: float,
-    a_30: float,
-    a_31: float,
-    a_32: float,
-    a_33: float,
-    a_34: float,
-    a_35: float,
-    a_36: float,
-    a_37: float,
-    a_38: float,
-    a_39: float,
-    a_40: float,
-    a_41: float,
-    a_42: float,
-    a_43: float,
-    a_44: float,
+    # a_30: float,
+    # a_31: float,
+    # a_32: float,
+    # a_33: float,
+    # a_34: float,
+    # a_35: float,
+    # a_36: float,
+    # a_37: float,
+    # a_38: float,
+    # a_39: float,
+    # a_40: float,
+    # a_41: float,
+    # a_42: float,
+    # a_43: float,
+    # a_44: float,
 ) -> List[float]:
     """
     Attempts a best-guess solution
@@ -368,57 +370,125 @@ def _best_guess(
 
     return (
         a_0
-        + a_1 * np.log(solar_irradiance)
-        + a_2 * (np.log(solar_irradiance)) ** 2
-        + a_3 * np.log(mass_flow_rate)
-        + a_4 * (np.log(mass_flow_rate)) ** 2
-        + a_5 * np.log(solar_irradiance) * np.log(mass_flow_rate)
-        + a_6 * wind_speed
-        + a_7 * wind_speed ** 2
-        + a_8 * wind_speed ** 3
-        + a_9 * wind_speed ** 4
-        + a_10 * wind_speed ** 5
-        + a_11 * wind_speed * np.log(mass_flow_rate)
-        + a_12 * wind_speed * np.log(solar_irradiance)
-        + a_13 * wind_speed ** 2 * np.log(mass_flow_rate)
-        + a_14 * wind_speed ** 2 * np.log(solar_irradiance)
+        + (
+            (a_1 * np.log(solar_irradiance) + a_2 * (np.log(solar_irradiance)) ** 2)
+            + (
+                a_3 * np.log(mass_flow_rate)
+                # a_3 * mass_flow_rate
+                + a_4 * (np.log(mass_flow_rate)) ** 2
+                # + a_4 * (1 - np.exp(-a_4 ** 2 / mass_flow_rate)) ** 2
+                # + a_4 * mass_flow_rate * (1 - np.exp(-a_4 ** 2 / mass_flow_rate)) ** 2
+            )
+            + a_5 * np.log(mass_flow_rate) * np.log(solar_irradiance)
+        )
         + ambient_temperature
         * (
-            a_15
-            + a_16 * np.log(solar_irradiance)
-            + a_17 * (np.log(solar_irradiance)) ** 2
-            + a_18 * np.log(mass_flow_rate)
-            + a_19 * (np.log(mass_flow_rate)) ** 2
-            + a_20 * np.log(solar_irradiance) * np.log(mass_flow_rate)
-            + a_21 * wind_speed
-            + a_22 * wind_speed ** 2
-            + a_23 * wind_speed ** 3
-            + a_24 * wind_speed ** 4
-            + a_25 * wind_speed ** 5
-            + a_26 * wind_speed * np.log(mass_flow_rate)
-            + a_27 * wind_speed * np.log(solar_irradiance)
-            + a_28 * wind_speed ** 2 * np.log(mass_flow_rate)
-            + a_29 * wind_speed ** 2 * np.log(solar_irradiance)
+            a_6
+            + (a_7 * np.log(solar_irradiance) + a_8 * (np.log(solar_irradiance)) ** 2)
+            + (
+                a_9 * np.log(mass_flow_rate)
+                # a_12 * mass_flow_rate
+                + a_10 * (np.log(mass_flow_rate)) ** 2
+                # + a_13 * (1 - np.exp(-a_13 ** 2 / mass_flow_rate)) ** 2
+                # + a_13 * mass_flow_rate * (1 - np.exp(-a_13 ** 2 / mass_flow_rate)) ** 2
+            )
+            + a_11 * np.log(solar_irradiance) * np.log(mass_flow_rate)
+        )
+        + wind_speed ** 0.16
+        * (
+            a_12
+            + (a_13 * np.log(solar_irradiance) + a_14 * (np.log(solar_irradiance)) ** 2)
+            + (
+                a_15 * np.log(mass_flow_rate)
+                # a_12 * mass_flow_rate
+                + a_16 * (np.log(mass_flow_rate)) ** 2
+                # + a_13 * (1 - np.exp(-a_13 ** 2 / mass_flow_rate)) ** 2
+                # + a_13 * mass_flow_rate * (1 - np.exp(-a_13 ** 2 / mass_flow_rate)) ** 2
+            )
+            + a_17 * np.log(solar_irradiance) * np.log(mass_flow_rate)
+        )
+        + ambient_temperature
+        * wind_speed ** 0.16
+        * (
+            a_18
+            + (a_19 * np.log(solar_irradiance) + a_20 * (np.log(solar_irradiance)) ** 2)
+            + (
+                a_21 * np.log(mass_flow_rate)
+                # a_12 * mass_flow_rate
+                + a_22 * (np.log(mass_flow_rate)) ** 2
+                # + a_13 * (1 - np.exp(-a_13 ** 2 / mass_flow_rate)) ** 2
+                # + a_13 * mass_flow_rate * (1 - np.exp(-a_13 ** 2 / mass_flow_rate)) ** 2
+            )
+            + a_23 * np.log(solar_irradiance) * np.log(mass_flow_rate)
         )
         + collector_input_temperature
         * (
-            a_30
-            + a_31 * np.log(solar_irradiance)
-            + a_32 * (np.log(solar_irradiance)) ** 2
-            + a_33 * np.log(mass_flow_rate)
-            + a_34 * (np.log(mass_flow_rate)) ** 2
-            + a_35 * np.log(solar_irradiance) * np.log(mass_flow_rate)
-            + a_36 * wind_speed
-            + a_37 * wind_speed ** 2
-            + a_38 * wind_speed ** 3
-            + a_39 * wind_speed ** 4
-            + a_40 * wind_speed ** 5
-            + a_41 * wind_speed * np.log(mass_flow_rate)
-            + a_42 * wind_speed * np.log(solar_irradiance)
-            + a_43 * wind_speed ** 2 * np.log(mass_flow_rate)
-            + a_44 * wind_speed ** 2 * np.log(solar_irradiance)
+            a_24
+            + (a_25 * np.log(solar_irradiance) + a_26 * (np.log(solar_irradiance)) ** 2)
+            + (
+                a_27 * np.log(mass_flow_rate)
+                # a_21 * mass_flow_rate
+                + a_28 * (np.log(mass_flow_rate)) ** 2
+                # + a_22 * (1 - np.exp(-a_22 ** 2 / mass_flow_rate)) ** 2
+                # + a_22 * mass_flow_rate * (1 - np.exp(-a_22 ** 2 / mass_flow_rate)) ** 2
+            )
+            + a_29 * np.log(solar_irradiance) * np.log(mass_flow_rate)
         )
     )
+
+    # return (
+    #     a_0
+    #     + a_1 * np.log(solar_irradiance)
+    #     + a_2 * (np.log(solar_irradiance)) ** 2
+    #     + a_3 * np.log(mass_flow_rate)
+    #     + a_4 * (np.log(mass_flow_rate)) ** 2
+    #     + a_5 * np.log(solar_irradiance) * np.log(mass_flow_rate)
+    #     + a_6 * wind_speed
+    #     + a_7 * wind_speed ** 2
+    #     + a_8 * wind_speed ** 3
+    #     + a_9 * wind_speed ** 4
+    #     + a_10 * wind_speed ** 5
+    #     + a_11 * wind_speed * np.log(mass_flow_rate)
+    #     + a_12 * wind_speed * np.log(solar_irradiance)
+    #     + a_13 * wind_speed ** 2 * np.log(mass_flow_rate)
+    #     + a_14 * wind_speed ** 2 * np.log(solar_irradiance)
+    #     + ambient_temperature
+    #     * (
+    #         a_15
+    #         + a_16 * np.log(solar_irradiance)
+    #         + a_17 * (np.log(solar_irradiance)) ** 2
+    #         + a_18 * np.log(mass_flow_rate)
+    #         + a_19 * (np.log(mass_flow_rate)) ** 2
+    #         + a_20 * np.log(solar_irradiance) * np.log(mass_flow_rate)
+    #         + a_21 * wind_speed
+    #         + a_22 * wind_speed ** 2
+    #         + a_23 * wind_speed ** 3
+    #         + a_24 * wind_speed ** 4
+    #         + a_25 * wind_speed ** 5
+    #         + a_26 * wind_speed * np.log(mass_flow_rate)
+    #         + a_27 * wind_speed * np.log(solar_irradiance)
+    #         + a_28 * wind_speed ** 2 * np.log(mass_flow_rate)
+    #         + a_29 * wind_speed ** 2 * np.log(solar_irradiance)
+    #     )
+    #     + collector_input_temperature
+    #     * (
+    #         a_30
+    #         + a_31 * np.log(solar_irradiance)
+    #         + a_32 * (np.log(solar_irradiance)) ** 2
+    #         + a_33 * np.log(mass_flow_rate)
+    #         + a_34 * (np.log(mass_flow_rate)) ** 2
+    #         + a_35 * np.log(solar_irradiance) * np.log(mass_flow_rate)
+    #         + a_36 * wind_speed
+    #         + a_37 * wind_speed ** 2
+    #         + a_38 * wind_speed ** 3
+    #         + a_39 * wind_speed ** 4
+    #         + a_40 * wind_speed ** 5
+    #         + a_41 * wind_speed * np.log(mass_flow_rate)
+    #         + a_42 * wind_speed * np.log(solar_irradiance)
+    #         + a_43 * wind_speed ** 2 * np.log(mass_flow_rate)
+    #         + a_44 * wind_speed ** 2 * np.log(solar_irradiance)
+    #     )
+    # )
 
 
 def _plot(
@@ -442,90 +512,112 @@ def _plot(
 
     """
 
-    print(f"Fitted curve params: {results[0]}")
-    print(
-        "Fitted curve: {a:.2g} + {b:.2g}ln(G) + {c:.2g}|ln(G)|^2 ".format(
-            a=results[0][0],
-            b=results[0][1],
-            c=results[0][2],
+    # print(
+    #     "Fitted curve: {a:.2g} + {b:.2g}ln(G) + {c:.2g}|ln(G)|^2 ".format(
+    #         a=results[0][0],
+    #         b=results[0][1],
+    #         c=results[0][2],
+    #     )
+    #     + "+ {a:.2g}ln(m_dot) + {b:.2g}|ln(m_dot)|^2 + {c:.2g}ln(m_dot) * ln(G) ".format(
+    #         a=results[0][3],
+    #         b=results[0][4],
+    #         c=results[0][5],
+    #     )
+    #     + "+ {a:.2g}v_w + {b:.2g}v_w^2 + {c:.2g}v_w^3 ".format(
+    #         a=results[0][6],
+    #         b=results[0][7],
+    #         c=results[0][8],
+    #     )
+    #     + "+ {a:.2g}v_w^4 + {b:.2g}v_w^5 ".format(
+    #         a=results[0][9],
+    #         b=results[0][10],
+    #     )
+    #     + "+ v_w * ({a:.2g}ln(m_dot) + {b:.2g}ln(G) ) ".format(
+    #         a=results[0][11],
+    #         b=results[0][12],
+    #     )
+    #     + "+ v_w^2 * ({a:.2g}ln(m_dot) + {b:.2g}ln(G) ) ".format(
+    #         a=results[0][13],
+    #         b=results[0][14],
+    #     )
+    #     + "+ T_amb * ({a:.2g} + {b:.2g}ln(G) + {c:.2g}|ln(G)|^2 ".format(
+    #         a=results[0][15],
+    #         b=results[0][16],
+    #         c=results[0][17],
+    #     )
+    #     + "+ {a:.2g}ln(m_dot) + {b:.2g}|ln(m_dot)|^2 + {c:.2g}ln(m_dot) * ln(G) ".format(
+    #         a=results[0][18],
+    #         b=results[0][19],
+    #         c=results[0][20],
+    #     )
+    #     + "+ {a:.2g}v_w + {b:.2g}v_w^2 + {c:.2g}v_w^3 ".format(
+    #         a=results[0][21],
+    #         b=results[0][22],
+    #         c=results[0][23],
+    #     )
+    #     + "+ {a:.2g}v_w^4 + {b:.2g}v_w^5 ".format(
+    #         a=results[0][24],
+    #         b=results[0][25],
+    #     )
+    #     + "+ v_w * ({a:.2g}ln(m_dot) + {b:.2g}ln(G) ) ".format(
+    #         a=results[0][26],
+    #         b=results[0][27],
+    #     )
+    #     + "+ v_w^2 * ({a:.2g}ln(m_dot) + {b:.2g}ln(G) )) ".format(
+    #         a=results[0][28],
+    #         b=results[0][29],
+    #     )
+    #     + "+ T_c,in * ({a:.2g} + {b:.2g}ln(G) + {c:.2g}|ln(G)|^2 ".format(
+    #         a=results[0][30],
+    #         b=results[0][31],
+    #         c=results[0][32],
+    #     )
+    #     + "+ {a:.2g}ln(m_dot) + {b:.2g}|ln(m_dot)|^2 + {c:.2g}ln(m_dot) * ln(G) ".format(
+    #         a=results[0][33],
+    #         b=results[0][34],
+    #         c=results[0][35],
+    #     )
+    #     + "+ {a:.2g}v_w + {b:.2g}v_w^2 + {c:.2g}v_w^3 ".format(
+    #         a=results[0][36],
+    #         b=results[0][37],
+    #         c=results[0][38],
+    #     )
+    #     + "+ {a:.2g}v_w^4 + {b:.2g}v_w^5 ".format(
+    #         a=results[0][39],
+    #         b=results[0][40],
+    #     )
+    #     + "+ v_w * ({a:.2g}ln(m_dot) + {b:.2g}ln(G) ) ".format(
+    #         a=results[0][41],
+    #         b=results[0][42],
+    #     )
+    #     + "+ v_w^2 * ({a:.2g}ln(m_dot) + {b:.2g}ln(G) )) ".format(
+    #         a=results[0][43],
+    #         b=results[0][44],
+    #     )
+    # )
+
+    params = [
+        "-> fit #1:\n{params}".format(
+            params="\n".join(
+                [
+                    "{sub_index}:  -> {value}: {sd}".format(
+                        value=results[0][sub_index],
+                        sd=np.sqrt(np.diag(np.ma.masked_invalid(results[1])))[
+                            sub_index
+                        ],
+                        sub_index=sub_index,
+                    )
+                    for sub_index in range(len(results[0]))
+                ]
+            ),
         )
-        + "+ {a:.2g}ln(m_dot) + {b:.2g}|ln(m_dot)|^2 + {c:.2g}ln(m_dot) * ln(G) ".format(
-            a=results[0][3],
-            b=results[0][4],
-            c=results[0][5],
-        )
-        + "+ {a:.2g}v_w + {b:.2g}v_w^2 + {c:.2g}v_w^3 ".format(
-            a=results[0][6],
-            b=results[0][7],
-            c=results[0][8],
-        )
-        + "+ {a:.2g}v_w^4 + {b:.2g}v_w^5 ".format(
-            a=results[0][9],
-            b=results[0][10],
-        )
-        + "+ v_w * ({a:.2g}ln(m_dot) + {b:.2g}ln(G) ) ".format(
-            a=results[0][11],
-            b=results[0][12],
-        )
-        + "+ v_w^2 * ({a:.2g}ln(m_dot) + {b:.2g}ln(G) ) ".format(
-            a=results[0][13],
-            b=results[0][14],
-        )
-        + "+ T_amb * ({a:.2g} + {b:.2g}ln(G) + {c:.2g}|ln(G)|^2 ".format(
-            a=results[0][15],
-            b=results[0][16],
-            c=results[0][17],
-        )
-        + "+ {a:.2g}ln(m_dot) + {b:.2g}|ln(m_dot)|^2 + {c:.2g}ln(m_dot) * ln(G) ".format(
-            a=results[0][18],
-            b=results[0][19],
-            c=results[0][20],
-        )
-        + "+ {a:.2g}v_w + {b:.2g}v_w^2 + {c:.2g}v_w^3 ".format(
-            a=results[0][21],
-            b=results[0][22],
-            c=results[0][23],
-        )
-        + "+ {a:.2g}v_w^4 + {b:.2g}v_w^5 ".format(
-            a=results[0][24],
-            b=results[0][25],
-        )
-        + "+ v_w * ({a:.2g}ln(m_dot) + {b:.2g}ln(G) ) ".format(
-            a=results[0][26],
-            b=results[0][27],
-        )
-        + "+ v_w^2 * ({a:.2g}ln(m_dot) + {b:.2g}ln(G) )) ".format(
-            a=results[0][28],
-            b=results[0][29],
-        )
-        + "+ T_c,in * ({a:.2g} + {b:.2g}ln(G) + {c:.2g}|ln(G)|^2 ".format(
-            a=results[0][30],
-            b=results[0][31],
-            c=results[0][32],
-        )
-        + "+ {a:.2g}ln(m_dot) + {b:.2g}|ln(m_dot)|^2 + {c:.2g}ln(m_dot) * ln(G) ".format(
-            a=results[0][33],
-            b=results[0][34],
-            c=results[0][35],
-        )
-        + "+ {a:.2g}v_w + {b:.2g}v_w^2 + {c:.2g}v_w^3 ".format(
-            a=results[0][36],
-            b=results[0][37],
-            c=results[0][38],
-        )
-        + "+ {a:.2g}v_w^4 + {b:.2g}v_w^5 ".format(
-            a=results[0][39],
-            b=results[0][40],
-        )
-        + "+ v_w * ({a:.2g}ln(m_dot) + {b:.2g}ln(G) ) ".format(
-            a=results[0][41],
-            b=results[0][42],
-        )
-        + "+ v_w^2 * ({a:.2g}ln(m_dot) + {b:.2g}ln(G) )) ".format(
-            a=results[0][43],
-            b=results[0][44],
-        )
-    )
+    ]
+
+    filename = re.sub("-| |:", "_", str(datetime.datetime.now()))
+
+    with open(f"fitted_parameters_{filename}.txt", "w") as f:
+        f.write("\n -> ".join(params))
+    print("Fitted curve params:\n{}".format("\n - ".join(params)))
 
     plt.scatter(ambient_temperatures, y_data, label=TECHNICAL_MODEL)
     plt.scatter(
@@ -782,25 +874,49 @@ def fit(data_file_name: str) -> None:
         data = json.load(f)
 
     # Transform the data to tuples.
-    processed_data = [
-        (
-            entry[AMBIENT_TEMPERATURE],
-            entry[COLLECTOR_INPUT_TEMPERATURE],
-            entry[ELECTRICAL_EFFICIENCY],
-            entry[MASS_FLOW_RATE],
-            entry[SOLAR_IRRADIANCE],
-            entry[THERMAL_EFFICIENCY],
-            entry[WIND_SPEED],
-        )
-        for entry in data
-        if entry[AMBIENT_TEMPERATURE] is not None
-        and entry[COLLECTOR_INPUT_TEMPERATURE] is not None
-        and entry[ELECTRICAL_EFFICIENCY] is not None
-        and entry[MASS_FLOW_RATE] is not None
-        and entry[SOLAR_IRRADIANCE] is not None
-        and entry[THERMAL_EFFICIENCY] is not None
-        and entry[WIND_SPEED] is not None
-    ]
+    if isinstance(data, list):
+        processed_data = [
+            (
+                entry[AMBIENT_TEMPERATURE],
+                entry[COLLECTOR_INPUT_TEMPERATURE],
+                entry[ELECTRICAL_EFFICIENCY],
+                entry[MASS_FLOW_RATE],
+                entry[SOLAR_IRRADIANCE],
+                entry[COLLECTOR_OUTPUT_TEMPERATURE],
+                entry[WIND_SPEED],
+            )
+            for entry in data
+            if entry[AMBIENT_TEMPERATURE] is not None
+            and entry[COLLECTOR_INPUT_TEMPERATURE] is not None
+            and entry[ELECTRICAL_EFFICIENCY] is not None
+            and entry[MASS_FLOW_RATE] is not None
+            and entry[SOLAR_IRRADIANCE] is not None
+            and entry[COLLECTOR_OUTPUT_TEMPERATURE] is not None
+            and entry[WIND_SPEED] is not None
+            and entry[COLLECTOR_OUTPUT_TEMPERATURE] <= 100
+        ]
+    else:
+        processed_data = [
+            (
+                entry[AMBIENT_TEMPERATURE],
+                entry[COLLECTOR_INPUT_TEMPERATURE],
+                entry[ELECTRICAL_EFFICIENCY],
+                entry[MASS_FLOW_RATE],
+                entry[SOLAR_IRRADIANCE],
+                entry[COLLECTOR_OUTPUT_TEMPERATURE],
+                entry[WIND_SPEED],
+            )
+            for entry in data.values()
+            if entry[AMBIENT_TEMPERATURE] is not None
+            and entry[COLLECTOR_INPUT_TEMPERATURE] is not None
+            and entry[ELECTRICAL_EFFICIENCY] is not None
+            and entry[MASS_FLOW_RATE] is not None
+            and entry[SOLAR_IRRADIANCE] is not None
+            and entry[COLLECTOR_OUTPUT_TEMPERATURE] is not None
+            and entry[WIND_SPEED] is not None
+            and entry[COLLECTOR_OUTPUT_TEMPERATURE] <= 100
+            and entry[COLLECTOR_INPUT_TEMPERATURE] <= 90
+        ]
 
     ambient_temperatures = [entry[0] for entry in processed_data]
     collector_input_temperatures = [entry[1] for entry in processed_data]
@@ -812,51 +928,51 @@ def fit(data_file_name: str) -> None:
 
     # Set up initial guesses for the parameters.
     initial_guesses = (
-        -2.8,
-        1,
-        -0.05,
-        0.4,
-        -0.1,
-        0.005,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
+        0.5,  # a_0
+        1,  # a_1
+        -0.05,  # a_2
+        0.4,  # a_3
+        -0.1,  # a_4
+        0.6215,  # a_5
+        -11.37,  # a_6
+        0.3965,  # a_7
+        0,  # a_8
+        0,  # a_9
+        0,  # a_10
+        0,  # a_11
+        0,  # a_12
+        0,  # a_13
+        0,  # a_14
+        0,  # a_15
+        0,  # a_16
+        0,  # a_17
+        0,  # a_18
+        0,  # a_19
+        0,  # a_20
+        0,  # a_21
+        0,  # a_22
+        0,  # a_23
+        0,  # a_24
+        0,  # a_25
+        0,  # a_26
+        0,  # a_27
+        0,  # a_28
+        0,  # a_29
+        # 0,  # a_30
+        # 0,  # a_31
+        # 0,  # a_32
+        # # 0,  # a_33
+        # 0,  # a_34
+        # 0,  # a_35
+        # 0,  # a_36
+        # 0,  # a_37
+        # 0,  # a_38
+        # 0,  # a_39
+        # 0,  # a_40
+        # 0,  # a_41
+        # 0,  # a_42
+        # 0,  # a_43
+        # 0,  # a_44
     )
 
     # Attempt a curve fit.

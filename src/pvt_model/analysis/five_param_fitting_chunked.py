@@ -21,7 +21,7 @@ import json
 import re
 import sys
 
-from typing import List, Set, Tuple
+from typing import Callable, List, Set, Tuple
 
 import numpy as np  # type: ignore  # pylint: disable=import-error
 
@@ -300,6 +300,103 @@ def analyse(data_file_name: str) -> None:
     plt.show()
 
 
+def _best_electrical_guess(
+    input_runs: Tuple[List[float], List[float], List[float], List[float], List[float]],
+    a_0: float,
+    a_1: float,
+    a_2: float,
+    a_3: float,
+    a_4: float,
+    a_5: float,
+    a_6: float,
+    a_7: float,
+    a_8: float,
+    a_9: float,
+    a_10: float,
+    a_11: float,
+    a_12: float,
+    a_13: float,
+    a_14: float,
+    a_15: float,
+    # a_16: float,
+    # a_17: float,
+    # a_18: float,
+    # a_19: float,
+    # a_20: float,
+    # a_21: float,
+    # a_22: float,
+    # a_23: float,
+    # a_24: float,
+    # a_25: float,
+    # a_26: float,
+    # a_27: float,
+    # a_28: float,
+    # a_29: float,
+    # a_30: float,
+    # a_31: float,
+    # a_32: float,
+    # a_33: float,
+    # a_34: float,
+    # a_35: float,
+    # a_36: float,
+    # a_37: float,
+    # a_38: float,
+    # a_39: float,
+    # a_40: float,
+    # a_41: float,
+    # a_42: float,
+    # a_43: float,
+    # a_44: float,
+) -> List[float]:
+    """
+    Attempts a best-guess solution
+
+    :param input_runs:
+        The input run information.
+
+    :params: a_1, a_2, ...
+        Parameters used for specifying the fit.
+
+    """
+
+    (
+        ambient_temperature,
+        collector_input_temperature,
+        mass_flow_rate,
+        solar_irradiance,
+        wind_speed,
+    ) = input_runs
+
+    return (
+        a_0
+        + (
+            (a_1 * np.log(solar_irradiance) + a_2 * (np.log(solar_irradiance)) ** 2)
+            + (a_3 * np.log(mass_flow_rate) + a_4 * (np.log(mass_flow_rate)) ** 2)
+        )
+        + (
+            a_5 * ambient_temperature
+            + a_6 * wind_speed ** 0.16
+            + a_7 * ambient_temperature * wind_speed ** 0.16
+        )
+        * (
+            (
+                (a_8 * np.log(solar_irradiance) + a_9 * (np.log(solar_irradiance)) ** 2)
+                + (a_10 * np.log(mass_flow_rate) + a_11 * (np.log(mass_flow_rate)) ** 2)
+            )
+        )
+        + collector_input_temperature
+        * (
+            (
+                (
+                    a_12 * np.log(solar_irradiance)
+                    + a_13 * (np.log(solar_irradiance)) ** 2
+                )
+                + (a_14 * np.log(mass_flow_rate) + a_15 * (np.log(mass_flow_rate)) ** 2)
+            )
+        )
+    )
+
+
 def _best_guess(
     input_runs: Tuple[List[float], List[float], List[float], List[float], List[float]],
     a_0: float,
@@ -328,28 +425,25 @@ def _best_guess(
     a_23: float,
     a_24: float,
     a_25: float,
-    a_26: float,
-    a_27: float,
-    a_28: float,
-    a_29: float,
-    a_30: float,
-    a_31: float,
-    a_32: float,
-    a_33: float,
-    a_34: float,
-    a_35: float,
-    a_36: float,
-    a_37: float,
-    a_38: float,
-    a_39: float,
-    a_40: float,
-    a_41: float,
-    a_42: float,
-    a_43: float,
-    a_44: float,
-    a_45: float,
-    a_46: float,
-    a_47: float,
+    # a_26: float,
+    # a_27: float,
+    # a_28: float,
+    # a_29: float,
+    # a_30: float,
+    # a_31: float,
+    # a_32: float,
+    # a_33: float,
+    # a_34: float,
+    # a_35: float,
+    # a_36: float,
+    # a_37: float,
+    # a_38: float,
+    # a_39: float,
+    # a_40: float,
+    # a_41: float,
+    # a_42: float,
+    # a_43: float,
+    # a_44: float,
 ) -> List[float]:
     """
     Attempts a best-guess solution
@@ -372,60 +466,113 @@ def _best_guess(
 
     return (
         a_0
-        + a_1 * np.log(solar_irradiance)
-        + a_2 * (np.log(solar_irradiance)) ** 2
-        + a_3 * mass_flow_rate
-        + a_4 * mass_flow_rate ** 2
-        + a_5 * np.log(solar_irradiance) * mass_flow_rate
-        + a_6 * abs(wind_speed ** 2 + a_7) ** (1 / 2)
-        + a_8 * abs(wind_speed ** 3 + a_7) ** (1 / 3)
-        + a_10 * wind_speed * mass_flow_rate
-        + a_11 * wind_speed * mass_flow_rate ** 2
-        + a_12 * wind_speed * np.log(solar_irradiance)
-        + a_13 * wind_speed ** 2 * mass_flow_rate
-        + a_45 * wind_speed ** 2 * mass_flow_rate ** 2
-        + a_14 * wind_speed ** 2 * np.log(solar_irradiance)
+        + (
+            (a_1 * np.log(solar_irradiance) + a_2 * (np.log(solar_irradiance)) ** 2)
+            + (
+                a_3 * np.log(mass_flow_rate)
+                # a_3 * mass_flow_rate
+                + a_4 * (np.log(mass_flow_rate)) ** 2
+                # + a_4 * (1 - np.exp(-a_4 ** 2 / mass_flow_rate)) ** 2
+                # + a_4 * mass_flow_rate * (1 - np.exp(-a_4 ** 2 / mass_flow_rate)) ** 2
+            )
+            + a_5 * np.log(mass_flow_rate) * np.log(solar_irradiance)
+        )
         + ambient_temperature
         * (
-            a_15
-            + a_16 * np.log(solar_irradiance)
-            + a_17 * (np.log(solar_irradiance)) ** 2
-            + a_18 * mass_flow_rate
-            + a_19 * mass_flow_rate ** 2
-            + a_20 * np.log(solar_irradiance) * mass_flow_rate
-            + a_21 * abs(wind_speed ** 2 + a_22) ** (1 / 2)
-            + a_23 * abs(wind_speed ** 3 + a_24) ** (1 / 3)
-            + a_25 * wind_speed * mass_flow_rate
-            + a_26 * wind_speed * mass_flow_rate ** 2
-            + a_27 * wind_speed * np.log(solar_irradiance)
-            + a_28 * wind_speed ** 2 * mass_flow_rate
-            + a_46 * wind_speed ** 2 * mass_flow_rate ** 2
-            + a_29 * wind_speed ** 2 * np.log(solar_irradiance)
+            (a_6 * np.log(solar_irradiance) + a_7 * (np.log(solar_irradiance)) ** 2)
+            + (
+                a_8 * np.log(mass_flow_rate)
+                # a_12 * mass_flow_rate
+                + a_9 * (np.log(mass_flow_rate)) ** 2
+                # + a_13 * (1 - np.exp(-a_13 ** 2 / mass_flow_rate)) ** 2
+                # + a_13 * mass_flow_rate * (1 - np.exp(-a_13 ** 2 / mass_flow_rate)) ** 2
+            )
+            + a_10 * np.log(solar_irradiance) * np.log(mass_flow_rate)
+        )
+        + wind_speed ** 0.16
+        * (
+            (a_11 * np.log(solar_irradiance) + a_12 * (np.log(solar_irradiance)) ** 2)
+            + (
+                a_13 * np.log(mass_flow_rate)
+                # a_12 * mass_flow_rate
+                + a_14 * (np.log(mass_flow_rate)) ** 2
+                # + a_13 * (1 - np.exp(-a_13 ** 2 / mass_flow_rate)) ** 2
+                # + a_13 * mass_flow_rate * (1 - np.exp(-a_13 ** 2 / mass_flow_rate)) ** 2
+            )
+            + a_15 * np.log(solar_irradiance) * np.log(mass_flow_rate)
+        )
+        + ambient_temperature
+        * wind_speed ** 0.16
+        * (
+            (a_16 * np.log(solar_irradiance) + a_17 * (np.log(solar_irradiance)) ** 2)
+            + (
+                a_18 * np.log(mass_flow_rate)
+                # a_12 * mass_flow_rate
+                + a_19 * (np.log(mass_flow_rate)) ** 2
+                # + a_13 * (1 - np.exp(-a_13 ** 2 / mass_flow_rate)) ** 2
+                # + a_13 * mass_flow_rate * (1 - np.exp(-a_13 ** 2 / mass_flow_rate)) ** 2
+            )
+            + a_20 * np.log(solar_irradiance) * np.log(mass_flow_rate)
         )
         + collector_input_temperature
         * (
-            a_30
-            + a_31 * np.log(solar_irradiance)
-            + a_32 * (np.log(solar_irradiance)) ** 2
-            + a_33 * mass_flow_rate
-            + a_34 * mass_flow_rate ** 2
-            + a_35 * np.log(solar_irradiance) * mass_flow_rate
-            + a_36 * abs(wind_speed ** 2 + a_37) ** (1 / 2)
-            + a_38 * abs(wind_speed ** 3 + a_39) ** (1 / 3)
-            + a_40 * wind_speed * mass_flow_rate
-            + a_41 * wind_speed * mass_flow_rate ** 2
-            + a_42 * wind_speed * np.log(solar_irradiance)
-            + a_43 * wind_speed ** 2 * mass_flow_rate
-            + a_47 * wind_speed ** 2 * mass_flow_rate ** 2
-            + a_44 * wind_speed ** 2 * np.log(solar_irradiance)
+            (a_21 * np.log(solar_irradiance) + a_22 * (np.log(solar_irradiance)) ** 2)
+            + (
+                a_23 * np.log(mass_flow_rate)
+                # a_21 * mass_flow_rate
+                + a_24 * (np.log(mass_flow_rate)) ** 2
+                # + a_22 * (1 - np.exp(-a_22 ** 2 / mass_flow_rate)) ** 2
+                # + a_22 * mass_flow_rate * (1 - np.exp(-a_22 ** 2 / mass_flow_rate)) ** 2
+            )
+            + a_25 * np.log(solar_irradiance) * np.log(mass_flow_rate)
         )
     )
+
+    # return (
+    #     a_0
+    #     + a_1 * np.log(solar_irradiance)
+    #     + a_2 * (np.log(solar_irradiance)) ** 2
+    #     + a_3 * mass_flow_rate * (1 - np.exp(-a_3/ mass_flow_rate))
+    #     + a_4 * np.log(solar_irradiance) * mass_flow_rate * (1 - np.exp(-a_5 ** 2 / mass_flow_rate))
+    #     + a_6 * (wind_speed ** 3 + a_7 ** 2) ** (1 / 3)
+    #     + a_8 * wind_speed * (
+    #         + a_9 * mass_flow_rate * (1 - np.exp(-a_9 / mass_flow_rate))
+    #         + a_10 * np.log(solar_irradiance)
+    #     )
+    #     + ambient_temperature
+    #     * (
+    #         a_11
+    #         + a_12 * np.log(solar_irradiance)
+    #         + a_13 * (np.log(solar_irradiance)) ** 2
+    #         + a_14 * mass_flow_rate * (1 - np.exp(-a_14 / mass_flow_rate))
+    #         + a_15 * np.log(solar_irradiance) * mass_flow_rate * (1 - np.exp(-a_16 / mass_flow_rate))
+    #         + a_17 * (wind_speed ** 3 + a_18 ** 2) ** (1 / 3)
+    #         + a_19 * wind_speed * (
+    #             + a_20 * mass_flow_rate * (1 - np.exp(-a_20 / mass_flow_rate))
+    #             + a_21 * np.log(solar_irradiance)
+    #         )
+    #     )
+    #     + collector_input_temperature
+    #     * (
+    #         a_22
+    #         + a_23 * np.log(solar_irradiance)
+    #         + a_24 * (np.log(solar_irradiance)) ** 2
+    #         + a_25 * mass_flow_rate * (1 - np.exp(-a_25 / mass_flow_rate))
+    #         + a_26 * np.log(solar_irradiance) * mass_flow_rate * (1 - np.exp(-a_27 / mass_flow_rate))
+    #         + a_28 * (wind_speed ** 3 + a_29 ** 2) ** (1 / 3)
+    #         + a_30 * wind_speed * (
+    #             + a_31 * mass_flow_rate * (1 - np.exp(-a_31 / mass_flow_rate))
+    #             + a_32 * np.log(solar_irradiance)
+    #         )
+    #     )
+    # )
 
 
 def _plot(
     ambient_temperatures: List[float],
     collector_input_temperatures: List[float],
     data_type: str,
+    guess_function: Callable,
     mass_flow_rates: List[float],
     results: List[np.ndarray],
     solar_irradiances: List[float],
@@ -447,128 +594,148 @@ def _plot(
     print("Saving output ........................... ", end="")
 
     params = [
-        "- fit #{fit_number}:\n{params}".format(
+        "fit #{fit_number}:\n{params}".format(
             fit_number=index,
             params="\n".join(
                 [
-                    "  - {value}: {sd}".format(
+                    "{sub_index}:  -> {value}: {sd}".format(
                         value=entry[0][sub_index],
-                        sd=np.sqrt(
-                            np.diag(entry[1])
-                        )[sub_index],
+                        sd=np.sqrt(np.diag(np.ma.masked_invalid(entry[1])))[sub_index],
+                        sub_index=sub_index,
                     )
-                    for sub_index in range(48)
+                    for sub_index in range(len(results[0][0]))
                 ]
             ),
         )
         for index, entry in enumerate(results)
     ]
 
-    with open(f"fitted_parameters_{datetime.datetime.now()}.txt", "w") as f:
-        f.write("\n - ".join(params))
+    filename = re.sub("-| |:", "_", str(datetime.datetime.now()))
+
+    with open(f"fitted_parameters_{filename}.txt", "w") as f:
+        f.write("\n -> ".join(params))
+    print("Fitted curve params saved to .txt file.")
+
+    csv_params = [
+        "\n".join(
+            [
+                ",".join(
+                    [
+                        str(entry[0][sub_index]),
+                        str(np.sqrt(np.diag(np.ma.masked_invalid(entry[1])))[sub_index]),
+                    ]
+                )
+                for sub_index in range(int(len(entry[0])))
+            ]
+        )
+        for entry in results
+    ]
+
+    with open(f"fitted_parameters_{filename}.csv", "w") as f:
+        f.write("\n\n".join(csv_params))
 
     print("[  DONE  ]")
 
     print(
         f"Fitted curve params:\n- first chunk: {results[0][0]}\n- second chunk: {results[1][0]}\n- third chunk: {results[2][0]}"
     )
-    for index, chunk_name in enumerate(
-        [
-            "first",
-            "second",
-            "third",
-            "fourth",
-            "fifth",
-            "sixth",
-            "seventh",
-            "eigth",
-            "ninth",
-            "tenth",
-            "eleventh",
-            "twelth",
-        ]
-    ):
-        print(
-            "Fitted curve for {name} chunk: {a:.2g} + {b:.2g}ln(G) + {c:.2g}|ln(G)|^2 ".format(
-                name=chunk_name,
-                a=results[index][0][0],
-                b=results[index][0][1],
-                c=results[index][0][2],
-            )
-            + "+ {a:.2g}m_dot + {b:.2g}m_dot^2 + {c:.2g}m_dot * ln(G) ".format(
-                a=results[index][0][3],
-                b=results[index][0][4],
-                c=results[index][0][5],
-            )
-            + "+ {a:.2g}v_w + {b:.2g}v_w^2 + {c:.2g}v_w^3 + {d:.2g}v_2^4 ".format(
-                a=results[index][0][6],
-                b=results[index][0][7],
-                c=results[index][0][8],
-                d=results[index][0][9],
-            )
-            + "+ v_w * ({a:.2g}m_dot + {b:.2g}m_dot^2 + {c:.2g}ln(G) ) ".format(
-                a=results[index][0][10],
-                b=results[index][0][11],
-                c=results[index][0][12],
-            )
-            + "+ v_w^2 * ({a:.2g}m_dot + {b:.2g}m_dot^2 + {b:.2g}ln(G) ) ".format(
-                a=results[index][0][13],
-                b=results[index][0][45],
-                c=results[index][0][14],
-            )
-            + "+ T_amb * ({a:.2g} + {b:.2g}ln(G) + {c:.2g}|ln(G)|^2 ".format(
-                a=results[index][0][15],
-                b=results[index][0][16],
-                c=results[index][0][17],
-            )
-            + "+ {a:.2g}ln(m_dot) + {b:.2g}|ln(m_dot)|^2 + {c:.2g}ln(m_dot) * ln(G) ".format(
-                a=results[index][0][18],
-                b=results[index][0][19],
-                c=results[index][0][20],
-            )
-            + "+ {a:.2g}v_w + {b:.2g}v_w^2 + {c:.2g}v_w^3 + {d:.2g}v_w^4 ".format(
-                a=results[index][0][21],
-                b=results[index][0][22],
-                c=results[index][0][23],
-                d=results[index][0][24],
-            )
-            + "+ v_w * ({a:.2g}m_dot + {b:.2g}m_dot^2 + {c:.2g}ln(G) ) ".format(
-                a=results[index][0][25],
-                b=results[index][0][26],
-                c=results[index][0][27],
-            )
-            + "+ v_w^2 * ({a:.2g}m_dot + {b:.2g}m_dot^2 + {c:.2g}ln(G) )) ".format(
-                a=results[index][0][28],
-                b=results[index][0][46],
-                c=results[index][0][29],
-            )
-            + "+ T_c,in * ({a:.2g} + {b:.2g}ln(G) + {c:.2g}|ln(G)|^2 ".format(
-                a=results[index][0][30],
-                b=results[index][0][31],
-                c=results[index][0][32],
-            )
-            + "+ {a:.2g}m_dot + {b:.2g}m_dot^2 + {c:.2g}m_dot * ln(G) ".format(
-                a=results[index][0][33],
-                b=results[index][0][34],
-                c=results[index][0][35],
-            )
-            + "+ {a:.2g}v_w + {b:.2g}v_w^2 + {c:.2g}v_w^3 + {d:.2g}v_w^4 ".format(
-                a=results[index][0][36],
-                b=results[index][0][37],
-                c=results[index][0][38],
-                d=results[index][0][39],
-            )
-            + "+ v_w * ({a:.2g}m_dot + {b:.2g}m_dot^2 + {c:.2g}ln(G) ) ".format(
-                a=results[index][0][40],
-                b=results[index][0][41],
-                c=results[index][0][42],
-            )
-            + "+ v_w^2 * ({a:.2g}m_dot + {b:.2g}m_dot^2 + {c:.2g}ln(G) )) ".format(
-                a=results[index][0][43],
-                b=results[index][0][47],
-                c=results[index][0][44],
-            )
-        )
+    # for index, chunk_name in enumerate(
+    #     [
+    #         "first",
+    #         "second",
+    #         "third",
+    #         "fourth",
+    #         "fifth",
+    #         "sixth",
+    #         "seventh",
+    #         "eigth",
+    #         "ninth",
+    #         "tenth",
+    #         "eleventh",
+    #         "twelth",
+    #     ]
+    # ):
+    #     print(
+    #         "Fitted curve for {name} chunk: {a:.2g} + {b:.2g}ln(G) + {c:.2g}|ln(G)|^2 ".format(
+    #             name=chunk_name,
+    #             a=results[index][0][0],
+    #             b=results[index][0][1],
+    #             c=results[index][0][2],
+    #         )
+    #         + "+ {a:.2g}m_dot + {b:.2g}m_dot^2 + {c:.2g}m_dot * ln(G) ".format(
+    #             a=results[index][0][3],
+    #             b=results[index][0][4],
+    #             c=results[index][0][5],
+    #         )
+    #         + "+ {a:.2g}v_w + {b:.2g}v_w^2 + {c:.2g}v_w^3 + {d:.2g}v_2^4 ".format(
+    #             a=results[index][0][6],
+    #             b=results[index][0][7],
+    #             c=results[index][0][8],
+    #             d=results[index][0][9],
+    #         )
+    #         + "+ v_w * ({a:.2g}m_dot + {b:.2g}m_dot^2 + {c:.2g}ln(G) ) ".format(
+    #             a=results[index][0][10],
+    #             b=results[index][0][11],
+    #             c=results[index][0][12],
+    #         )
+    #         + "+ v_w^2 * ({a:.2g}m_dot + {b:.2g}m_dot^2 + {b:.2g}ln(G) ) ".format(
+    #             a=results[index][0][13],
+    #             b=results[index][0][45],
+    #             c=results[index][0][14],
+    #         )
+    #         + "+ T_amb * ({a:.2g} + {b:.2g}ln(G) + {c:.2g}|ln(G)|^2 ".format(
+    #             a=results[index][0][15],
+    #             b=results[index][0][16],
+    #             c=results[index][0][17],
+    #         )
+    #         + "+ {a:.2g}ln(m_dot) + {b:.2g}|ln(m_dot)|^2 + {c:.2g}ln(m_dot) * ln(G) ".format(
+    #             a=results[index][0][18],
+    #             b=results[index][0][19],
+    #             c=results[index][0][20],
+    #         )
+    #         + "+ {a:.2g}v_w + {b:.2g}v_w^2 + {c:.2g}v_w^3 + {d:.2g}v_w^4 ".format(
+    #             a=results[index][0][21],
+    #             b=results[index][0][22],
+    #             c=results[index][0][23],
+    #             d=results[index][0][24],
+    #         )
+    #         + "+ v_w * ({a:.2g}m_dot + {b:.2g}m_dot^2 + {c:.2g}ln(G) ) ".format(
+    #             a=results[index][0][25],
+    #             b=results[index][0][26],
+    #             c=results[index][0][27],
+    #         )
+    #         + "+ v_w^2 * ({a:.2g}m_dot + {b:.2g}m_dot^2 + {c:.2g}ln(G) )) ".format(
+    #             a=results[index][0][28],
+    #             b=results[index][0][46],
+    #             c=results[index][0][29],
+    #         )
+    #         + "+ T_c,in * ({a:.2g} + {b:.2g}ln(G) + {c:.2g}|ln(G)|^2 ".format(
+    #             a=results[index][0][30],
+    #             b=results[index][0][31],
+    #             c=results[index][0][32],
+    #         )
+    #         + "+ {a:.2g}m_dot + {b:.2g}m_dot^2 + {c:.2g}m_dot * ln(G) ".format(
+    #             a=results[index][0][33],
+    #             b=results[index][0][34],
+    #             c=results[index][0][35],
+    #         )
+    #         + "+ {a:.2g}v_w + {b:.2g}v_w^2 + {c:.2g}v_w^3 + {d:.2g}v_w^4 ".format(
+    #             a=results[index][0][36],
+    #             b=results[index][0][37],
+    #             c=results[index][0][38],
+    #             d=results[index][0][39],
+    #         )
+    #         + "+ v_w * ({a:.2g}m_dot + {b:.2g}m_dot^2 + {c:.2g}ln(G) ) ".format(
+    #             a=results[index][0][40],
+    #             b=results[index][0][41],
+    #             c=results[index][0][42],
+    #         )
+    #         + "+ v_w^2 * ({a:.2g}m_dot + {b:.2g}m_dot^2 + {c:.2g}ln(G) )) ".format(
+    #             a=results[index][0][43],
+    #             b=results[index][0][47],
+    #             c=results[index][0][44],
+    #         )
+    #     )
 
     print("Computing best-guess data ............... ", end="")
     # Compute the chunk-by-chunk best-guess data.
@@ -576,7 +743,7 @@ def _plot(
     for index, collector_input_temperature in enumerate(collector_input_temperatures):
         if ambient_temperatures[index] < 15 and collector_input_temperature < 20:
             best_guess_data.append(
-                _best_guess(
+                guess_function(
                     (
                         np.array(ambient_temperatures[index]),
                         np.array(collector_input_temperature),
@@ -590,7 +757,7 @@ def _plot(
             continue
         if 15 <= ambient_temperatures[index] < 30 and collector_input_temperature < 20:
             best_guess_data.append(
-                _best_guess(
+                guess_function(
                     (
                         np.array(ambient_temperatures[index]),
                         np.array(collector_input_temperature),
@@ -604,7 +771,7 @@ def _plot(
             continue
         if 30 <= ambient_temperatures[index] <= 45 and collector_input_temperature < 20:
             best_guess_data.append(
-                _best_guess(
+                guess_function(
                     (
                         np.array(ambient_temperatures[index]),
                         np.array(collector_input_temperature),
@@ -618,7 +785,7 @@ def _plot(
             continue
         if ambient_temperatures[index] < 15 and 20 <= collector_input_temperature < 40:
             best_guess_data.append(
-                _best_guess(
+                guess_function(
                     (
                         np.array(ambient_temperatures[index]),
                         np.array(collector_input_temperature),
@@ -635,7 +802,7 @@ def _plot(
             and 20 <= collector_input_temperature < 40
         ):
             best_guess_data.append(
-                _best_guess(
+                guess_function(
                     (
                         np.array(ambient_temperatures[index]),
                         np.array(collector_input_temperature),
@@ -652,7 +819,7 @@ def _plot(
             and 20 <= collector_input_temperature < 40
         ):
             best_guess_data.append(
-                _best_guess(
+                guess_function(
                     (
                         np.array(ambient_temperatures[index]),
                         np.array(collector_input_temperature),
@@ -666,7 +833,7 @@ def _plot(
             continue
         if ambient_temperatures[index] < 15 and 40 <= collector_input_temperature < 60:
             best_guess_data.append(
-                _best_guess(
+                guess_function(
                     (
                         np.array(ambient_temperatures[index]),
                         np.array(collector_input_temperature),
@@ -683,7 +850,7 @@ def _plot(
             and 40 <= collector_input_temperature < 60
         ):
             best_guess_data.append(
-                _best_guess(
+                guess_function(
                     (
                         np.array(ambient_temperatures[index]),
                         np.array(collector_input_temperature),
@@ -699,7 +866,7 @@ def _plot(
             and 40 <= collector_input_temperature < 60
         ):
             best_guess_data.append(
-                _best_guess(
+                guess_function(
                     (
                         np.array(ambient_temperatures[index]),
                         np.array(collector_input_temperature),
@@ -712,7 +879,7 @@ def _plot(
             )
         if ambient_temperatures[index] < 15 and 60 <= collector_input_temperature < 80:
             best_guess_data.append(
-                _best_guess(
+                guess_function(
                     (
                         np.array(ambient_temperatures[index]),
                         np.array(collector_input_temperature),
@@ -728,7 +895,7 @@ def _plot(
             and 60 <= collector_input_temperature < 80
         ):
             best_guess_data.append(
-                _best_guess(
+                guess_function(
                     (
                         np.array(ambient_temperatures[index]),
                         np.array(collector_input_temperature),
@@ -744,7 +911,7 @@ def _plot(
             and 60 <= collector_input_temperature < 80
         ):
             best_guess_data.append(
-                _best_guess(
+                guess_function(
                     (
                         np.array(ambient_temperatures[index]),
                         np.array(collector_input_temperature),
@@ -1337,55 +1504,88 @@ def _partial_fit(
     ]
 
     # Set up initial guesses for the parameters.
-    initial_guesses = (
-        -2.8,
-        1,
-        -0.05,
-        0.4,
-        -0.1,
-        0.005,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
+    initial_guess = (
+        0.1,  # a_0
+        0.1,  # a_1
+        0.1,  # a_2
+        0.1,  # a_3
+        0.1,  # a_4
+        0.1,  # a_5
+        0.1,  # a_6
+        0.1,  # a_7
+        0.1,  # a_8
+        0.1,  # a_9
+        0.1,  # a_10
+        0.1,  # a_11
+        0.1,  # a_12
+        0.1,  # a_13
+        0.1,  # a_14
+        0.1,  # a_15
+        0.1,  # a_16
+        0.1,  # a_17
+        0.1,  # a_18
+        0.1,  # a_19
+        0.1,  # a_20
+        0.1,  # a_21
+        0.1,  # a_22
+        0.1,  # a_23
+        0.1,  # a_24
+        0.1,  # a_25
+        # 0.1, # a_26
+        # 0.1, # a_27
+        # 0.1, # a_28
+        # 0.1, # a_29
+        # 0.1, # a_30
+        # 0.1, # a_31
+        # 0.1, # a_32
+        # 0.1, # a_33
+        # 0.1, # a_34
+        # 0.1, # a_35
+        # 0.1, # a_36
+        # 0.1, # a_37
+        # 0.1, # a_38
+    )
+
+    initial_electrical_guess = (
+        0.1,  # a_0
+        0.1,  # a_1
+        0.1,  # a_2
+        0.1,  # a_3
+        0.1,  # a_4
+        0.1,  # a_5
+        0.1,  # a_6
+        0.1,  # a_7
+        0.1,  # a_8
+        0.1,  # a_9
+        0.1,  # a_10
+        0.1,  # a_11
+        0.1,  # a_12
+        0.1,  # a_13
+        0.1,  # a_14
+        0.1,  # a_15
+        # 0.1, # a_16
+        # 0.1, # a_17
+        # 0.1, # a_18
+        # 0.1,  # a_19
+        # 0.1,  # a_20
+        # 0.1,  # a_21
+        # 0.1,  # a_22
+        # 0.1,  # a_23
+        # 0.1,  # a_24
+        # 0.1, # a_25
+        # 0.1, # a_26
+        # 0.1, # a_27
+        # 0.1, # a_28
+        # 0.1, # a_29
+        # 0.1, # a_30
+        # 0.1, # a_31
+        # 0.1, # a_32
+        # 0.1, # a_33
+        # 0.1, # a_34
+        # 0.1, # a_35
+        # 0.1, # a_36
+        # 0.1, # a_37
+        # 0.1, # a_38
     )
 
     print("Computing fit for first chunk ........... ", end="")
@@ -1405,11 +1605,56 @@ def _partial_fit(
             if ambient_temperatures[index] < 15
             and collector_input_temperatures[index] < 20
         ],
-        initial_guesses,
+        initial_guess,
+        # bounds = (
+        #     [
+        #         -100,  # a_0
+        #         -100,  # a_1
+        #         -100,  # a_2
+        #         0.0000000001,  # a_3
+        #         -100,  # a_4
+        #         0,  # a_5
+        #         -100,  # a_6
+        #         0,  # a_7
+        #         -100,  # a_8
+        #         0,  # a_9
+        #         -100,  # a_10
+        #         -100,  # a_11
+        #         -100,  # a_12
+        #         -100,  # a_13
+        #         0.0000000001,  # a_14
+        #         -100,  # a_15
+        #         0,  # a_16
+        #         -100,  # a_17
+        #         0,  # a_18
+        #         -100,  # a_19
+        #         0,  # a_20
+        #         -100,  # a_21
+        #         -100,  # a_22
+        #         -100,  # a_23
+        #         -100,  # a_24
+        #         0.0000000001,  # a_25
+        #         -100,  # a_26
+        #         0,  # a_27
+        #         -100,  # a_28
+        #         0,  # a_29
+        #         -100,  # a_30
+        #         0,  # a_31
+        #         -100,  # a_32
+        #         # -100,  # a_33
+        #         # -100,  # a_34
+        #         # -100,  # a_35
+        #         # -100,  # a_36
+        #         # -100,  # a_37
+        #         # -100,  # a_38
+        #     ],
+        #     [100] * 33,
+        # ),
+        # maxfev=10000,
     )
 
     first_electrical_efficiency_results = curve_fit(
-        _best_guess,
+        _best_electrical_guess,
         (
             ambient_temperatures_first_chunk,
             collector_input_temperatures_first_chunk,
@@ -1423,7 +1668,7 @@ def _partial_fit(
             if ambient_temperatures[index] < 15
             and collector_input_temperatures[index] < 20
         ],
-        initial_guesses,
+        initial_electrical_guess,
     )
     print("[  DONE  ]")
 
@@ -1444,11 +1689,11 @@ def _partial_fit(
             if 15 <= ambient_temperatures[index] < 30
             and collector_input_temperatures[index] < 20
         ],
-        initial_guesses,
+        initial_guess,
     )
 
     second_electrical_efficiency_results = curve_fit(
-        _best_guess,
+        _best_electrical_guess,
         (
             ambient_temperatures_second_chunk,
             collector_input_temperatures_second_chunk,
@@ -1462,7 +1707,7 @@ def _partial_fit(
             if 15 <= ambient_temperatures[index] < 30
             and collector_input_temperatures[index] < 20
         ],
-        initial_guesses,
+        initial_electrical_guess,
     )
     print("[  DONE  ]")
 
@@ -1483,11 +1728,11 @@ def _partial_fit(
             if 30 <= ambient_temperatures[index] <= 45
             and collector_input_temperatures[index] < 20
         ],
-        initial_guesses,
+        initial_guess,
     )
 
     third_electrical_efficiency_results = curve_fit(
-        _best_guess,
+        _best_electrical_guess,
         (
             ambient_temperatures_third_chunk,
             collector_input_temperatures_third_chunk,
@@ -1501,7 +1746,7 @@ def _partial_fit(
             if 30 <= ambient_temperatures[index] <= 45
             and collector_input_temperatures[index] < 20
         ],
-        initial_guesses,
+        initial_electrical_guess,
     )
     print("[  DONE  ]")
 
@@ -1522,11 +1767,11 @@ def _partial_fit(
             if ambient_temperatures[index] < 15
             and 20 <= collector_input_temperatures[index] < 40
         ],
-        initial_guesses,
+        initial_guess,
     )
 
     fourth_electrical_efficiency_results = curve_fit(
-        _best_guess,
+        _best_electrical_guess,
         (
             ambient_temperatures_fourth_chunk,
             collector_input_temperatures_fourth_chunk,
@@ -1540,7 +1785,7 @@ def _partial_fit(
             if ambient_temperatures[index] < 15
             and 20 <= collector_input_temperatures[index] < 40
         ],
-        initial_guesses,
+        initial_electrical_guess,
     )
     print("[  DONE  ]")
 
@@ -1561,11 +1806,11 @@ def _partial_fit(
             if 15 <= ambient_temperatures[index] < 30
             and 20 <= collector_input_temperatures[index] < 40
         ],
-        initial_guesses,
+        initial_guess,
     )
 
     fifth_electrical_efficiency_results = curve_fit(
-        _best_guess,
+        _best_electrical_guess,
         (
             ambient_temperatures_fifth_chunk,
             collector_input_temperatures_fifth_chunk,
@@ -1579,7 +1824,7 @@ def _partial_fit(
             if 15 <= ambient_temperatures[index] < 30
             and 20 <= collector_input_temperatures[index] < 40
         ],
-        initial_guesses,
+        initial_electrical_guess,
     )
     print("[  DONE  ]")
 
@@ -1600,11 +1845,11 @@ def _partial_fit(
             if 30 <= ambient_temperatures[index] <= 45
             and 20 <= collector_input_temperatures[index] < 40
         ],
-        initial_guesses,
+        initial_guess,
     )
 
     sixth_electrical_efficiency_results = curve_fit(
-        _best_guess,
+        _best_electrical_guess,
         (
             ambient_temperatures_sixth_chunk,
             collector_input_temperatures_sixth_chunk,
@@ -1618,7 +1863,7 @@ def _partial_fit(
             if 30 <= ambient_temperatures[index] <= 45
             and 20 <= collector_input_temperatures[index] < 40
         ],
-        initial_guesses,
+        initial_electrical_guess,
     )
     print("[  DONE  ]")
 
@@ -1639,11 +1884,11 @@ def _partial_fit(
             if ambient_temperatures[index] < 15
             and 40 <= collector_input_temperatures[index] < 60
         ],
-        initial_guesses,
+        initial_guess,
     )
 
     seventh_electrical_efficiency_results = curve_fit(
-        _best_guess,
+        _best_electrical_guess,
         (
             ambient_temperatures_seventh_chunk,
             collector_input_temperatures_seventh_chunk,
@@ -1657,7 +1902,7 @@ def _partial_fit(
             if ambient_temperatures[index] < 15
             and 40 <= collector_input_temperatures[index] < 60
         ],
-        initial_guesses,
+        initial_electrical_guess,
     )
     print("[  DONE  ]")
 
@@ -1678,11 +1923,11 @@ def _partial_fit(
             if 15 <= ambient_temperatures[index] < 30
             and 40 <= collector_input_temperatures[index] < 60
         ],
-        initial_guesses,
+        initial_guess,
     )
 
     eigth_electrical_efficiency_results = curve_fit(
-        _best_guess,
+        _best_electrical_guess,
         (
             ambient_temperatures_eigth_chunk,
             collector_input_temperatures_eigth_chunk,
@@ -1696,7 +1941,7 @@ def _partial_fit(
             if 15 <= ambient_temperatures[index] < 30
             and 40 <= collector_input_temperatures[index] < 60
         ],
-        initial_guesses,
+        initial_electrical_guess,
     )
     print("[  DONE  ]")
 
@@ -1717,11 +1962,11 @@ def _partial_fit(
             if 30 <= ambient_temperatures[index] <= 45
             and 40 <= collector_input_temperatures[index] < 60
         ],
-        initial_guesses,
+        initial_guess,
     )
 
     ninth_electrical_efficiency_results = curve_fit(
-        _best_guess,
+        _best_electrical_guess,
         (
             ambient_temperatures_ninth_chunk,
             collector_input_temperatures_ninth_chunk,
@@ -1735,7 +1980,7 @@ def _partial_fit(
             if 30 <= ambient_temperatures[index] <= 45
             and 40 <= collector_input_temperatures[index] < 60
         ],
-        initial_guesses,
+        initial_electrical_guess,
     )
     print("[  DONE  ]")
 
@@ -1756,11 +2001,11 @@ def _partial_fit(
             if ambient_temperatures[index] < 15
             and 60 <= collector_input_temperatures[index] < 80
         ],
-        initial_guesses,
+        initial_guess,
     )
 
     tenth_electrical_efficiency_results = curve_fit(
-        _best_guess,
+        _best_electrical_guess,
         (
             ambient_temperatures_tenth_chunk,
             collector_input_temperatures_tenth_chunk,
@@ -1774,7 +2019,7 @@ def _partial_fit(
             if ambient_temperatures[index] < 15
             and 60 <= collector_input_temperatures[index] < 80
         ],
-        initial_guesses,
+        initial_electrical_guess,
     )
     print("[  DONE  ]")
 
@@ -1795,11 +2040,11 @@ def _partial_fit(
             if 15 <= ambient_temperatures[index] < 30
             and 60 <= collector_input_temperatures[index] < 80
         ],
-        initial_guesses,
+        initial_guess,
     )
 
     eleventh_electrical_efficiency_results = curve_fit(
-        _best_guess,
+        _best_electrical_guess,
         (
             ambient_temperatures_eleventh_chunk,
             collector_input_temperatures_eleventh_chunk,
@@ -1813,7 +2058,7 @@ def _partial_fit(
             if 15 <= ambient_temperatures[index] < 30
             and 60 <= collector_input_temperatures[index] < 80
         ],
-        initial_guesses,
+        initial_electrical_guess,
     )
     print("[  DONE  ]")
 
@@ -1834,11 +2079,11 @@ def _partial_fit(
             if 30 <= ambient_temperatures[index] <= 45
             and 60 <= collector_input_temperatures[index] < 80
         ],
-        initial_guesses,
+        initial_guess,
     )
 
     twelth_electrical_efficiency_results = curve_fit(
-        _best_guess,
+        _best_electrical_guess,
         (
             ambient_temperatures_twelth_chunk,
             collector_input_temperatures_twelth_chunk,
@@ -1852,7 +2097,7 @@ def _partial_fit(
             if 30 <= ambient_temperatures[index] <= 45
             and 60 <= collector_input_temperatures[index] < 80
         ],
-        initial_guesses,
+        initial_electrical_guess,
     )
     print("[  DONE  ]")
 
@@ -1861,6 +2106,7 @@ def _partial_fit(
         ambient_temperatures,
         collector_input_temperatures,
         "Thermal efficiency",
+        _best_guess,
         mass_flow_rates,
         [
             first_thermal_efficiency_results,
@@ -1885,6 +2131,7 @@ def _partial_fit(
         ambient_temperatures,
         collector_input_temperatures,
         "Electrical efficiency",
+        _best_electrical_guess,
         mass_flow_rates,
         [
             first_electrical_efficiency_results,
