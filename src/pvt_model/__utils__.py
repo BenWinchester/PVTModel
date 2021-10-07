@@ -723,10 +723,17 @@ class SteadyStateRun:
 
         """
 
+        if "irradiance" in data:
+            irradiance = data["irradiance"]
+        elif "solar_irradiance" in data:
+            irradiance = data["solar_irradiance"]
+        else:
+            raise Exception("No irradiance or solar irradiance in steady-state entry.")
+
         return cls(
             data["ambient_temperature"],
             data["collector_input_temperature"],
-            data["irradiance"],
+            irradiance,
             data["mass_flow_rate"],
             data["wind_speed"],
         )

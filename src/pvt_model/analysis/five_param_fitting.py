@@ -914,9 +914,13 @@ def fit(data_file_name: str) -> None:
             and entry[SOLAR_IRRADIANCE] is not None
             and entry[COLLECTOR_OUTPUT_TEMPERATURE] is not None
             and entry[WIND_SPEED] is not None
-            and entry[COLLECTOR_OUTPUT_TEMPERATURE] <= 100
-            and entry[COLLECTOR_INPUT_TEMPERATURE] <= 90
         ]
+
+    processed_data = [
+        entry
+        for entry in processed_data
+        if entry[1] <= 90
+    ]
 
     ambient_temperatures = [entry[0] for entry in processed_data]
     collector_input_temperatures = [entry[1] for entry in processed_data]
@@ -1006,7 +1010,7 @@ def fit(data_file_name: str) -> None:
     _plot(
         ambient_temperatures,
         collector_input_temperatures,
-        "Thermal efficiency",
+        "Collector output temperature / degC",
         mass_flow_rates,
         thermal_efficiency_results,
         solar_irradiances,
