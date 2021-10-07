@@ -31,5 +31,5 @@ python3.7 -u -m src.pvt_model --skip-analysis \
     --decoupled --steady-state --initial-month 7 --location system_data/london_ilaria/ \
     --portion-covered 1 \
     --pvt-data-file system_data/pvt_panels/autotherm.yaml \
-    --x-resolution 71 --y-resolution 31 --average-irradiance --skip-2d-output \
+    --x-resolution 31 --y-resolution 11 --average-irradiance --skip-2d-output \
     --layers g pv a p f
