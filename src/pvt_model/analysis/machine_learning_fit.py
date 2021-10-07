@@ -19,11 +19,12 @@ import argparse
 import datetime
 import json
 import pdb
+import pickle
 import re
 import sys
 
 from typing import List, Set, Tuple
-from sklearn.linear_model import Lasso, LassoCV
+from sklearn.linear_model import Lasso, LassoCV, Ridge
 from sklearn.model_selection import cross_val_score, RepeatedKFold
 
 import numpy as np  # type: ignore  # pylint: disable=import-error
@@ -164,8 +165,8 @@ def analyse(data_file_name: str) -> None:
     print(f"Thermal model scores: {np.mean(np.abs(therm_scores)):.3g} ({np.std(np.abs(therm_scores)):.3g})")
 
     # Attempt to fit the data with a tuned alpha value.
-    variable_alpha_electrical_model = LassoCV(alphas=np.arange(1e-4, 100, 0.1), cv=evaluation_method, n_jobs=-1)
-    variable_alpha_thermal_model = LassoCV(alphas=np.arange(1e-4, 100, 0.1, cv=evaluation_method, n_jobs=-1)
+    variable_alpha_electrical_model = LassoCV(alphas=np.arange(1e-9, 1e-7, 1e-9), cv=evaluation_method, n_jobs=-1)
+    variable_alpha_thermal_model = LassoCV(alphas=np.arange(3e-7, 4e-7, 1e-9), cv=evaluation_method, n_jobs=-1)
 
     # Train the models on the data.
     print("Varying alpha values")
@@ -181,6 +182,8 @@ def analyse(data_file_name: str) -> None:
     print("Re-running at suggested alpha values... ", end="")
     electrical_model = Lasso(alpha=variable_alpha_electrical_model.alpha_)
     thermal_model = Lasso(alpha=variable_alpha_thermal_model.alpha_)
+    electrical_model.fit(x_data, y_elec_data)
+    thermal_model.fit(x_data, y_therm_data)
     print("[  DONE  ]")
     print("Generating model scores................ ", end="")
     elec_scores = cross_val_score(electrical_model, x_data, y_elec_data, scoring="neg_mean_absolute_error", cv=evaluation_method, n_jobs=-1)
@@ -195,8 +198,49 @@ def analyse(data_file_name: str) -> None:
     # Predict sone new data based on the test data.
     test_data_struct = pd.DataFrame(test_data)
     test_x_data = test_data_struct[[0, 1, 2, 3, 4]]
+    test_technical_electrical = test_data_struct[6]    
+    test_technical_thermal = test_data_struct[5]    
+    predicted_electrical = electrical_model.predict(test_x_data)
+    predicted_thermal = thermal_model.predict(test_x_data)
 
+    # Plot the predicted and generated data.
+    plt.scatter(test_x_data[0], test_technical_electrical, label="technical", marker="x")
+    plt.scatter(test_x_data[0], predicted_electrical, label="reduced", marker="x")
+    plt.xlabel("Data point")
+    plt.ylabel("Electrical efficiency")
+    plt.title("Selection of points chosen for model comparison")
+    plt.legend()
+    plt.savefig("electrical_efficiency_ai_fitting.png", transparent=True)
+    plt.close()
+
+    plt.scatter(test_x_data[0], test_technical_thermal, label="technical", marker="x")
+    plt.scatter(test_x_data[0], predicted_thermal, label="reduced", marker="x")
+    plt.xlabel("Data point")
+    plt.ylabel("Collector output temperature")
+    plt.title("Selection of points chosen for model comparison")
+    plt.legend()
+    plt.savefig("thermal_efficiency_ai_fitting.png", transparent=True)
+    plt.close()
     
+    # print("Re-running at alpha=1................ ", end="")
+    # electrical_model = Ridge(alpha=1e-9)
+    # thermal_model = Ridge(alpha=3.09e-7)
+    # electrical_model.fit(x_data, y_elec_data)
+    # thermal_model.fit(x_data, y_therm_data)
+    # print("[  DONE  ]")
+    # print("Generating model scores................ ", end="")
+    # elec_scores = cross_val_score(electrical_model, x_data, y_elec_data, scoring="neg_mean_absolute_error", cv=evaluation_method, n_jobs=-1)
+    # therm_scores = cross_val_score(thermal_model, x_data, y_therm_data, scoring="neg_mean_absolute_error", cv=evaluation_method, n_jobs=-1)
+    # print("[  DONE  ]")
+
+    print(f"Electrical model scores: {np.mean(np.abs(elec_scores)):.3g} ({np.std(np.abs(elec_scores)):.3g})")
+    print(f"Thermal model scores: {np.mean(np.abs(therm_scores)):.3g} ({np.std(np.abs(therm_scores)):.3g})")
+
+    # Save the models.
+    with open("electrical_model.sav", "wb") as f:
+        pickle.dump(electrical_model, f)
+    with open("thermal_model.sav", "wb") as f:
+        pickle.dump(thermal_model, f)
 
 if __name__ == "__main__":
     parsed_args = _parse_args(sys.argv[1:])
