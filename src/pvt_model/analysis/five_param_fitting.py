@@ -916,11 +916,7 @@ def fit(data_file_name: str) -> None:
             and entry[WIND_SPEED] is not None
         ]
 
-    processed_data = [
-        entry
-        for entry in processed_data
-        if entry[1] <= 90
-    ]
+    processed_data = [entry for entry in processed_data if entry[1] <= 90]
 
     ambient_temperatures = [entry[0] for entry in processed_data]
     collector_input_temperatures = [entry[1] for entry in processed_data]

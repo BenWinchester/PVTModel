@@ -622,7 +622,9 @@ def _plot(
                 ",".join(
                     [
                         str(entry[0][sub_index]),
-                        str(np.sqrt(np.diag(np.ma.masked_invalid(entry[1])))[sub_index]),
+                        str(
+                            np.sqrt(np.diag(np.ma.masked_invalid(entry[1])))[sub_index]
+                        ),
                     ]
                 )
                 for sub_index in range(int(len(entry[0])))
