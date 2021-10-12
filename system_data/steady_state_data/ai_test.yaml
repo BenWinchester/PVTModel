@@ -1,0 +1,63 @@
+---
+################################################################################
+# ai_test.yaml - Steady-state experimental data used for verification.
+#
+# Copyright 2021, Ben Winchester
+################################################################################
+
+# Data values obtained from
+# http://intergeo.sk/wp-content/uploads/GLAZED-TR-UNIEN12975-2-ENG-ITA-COMPLETO-1.pdf
+#
+
+# Ambient temperature measured in Celcius.
+# Collector input temperatures measured in Celcius.
+# Irradiance measured in Watts per meter squared.
+# Mass flow rate is measured in litres per minute.
+# Wind speed measured in meters per second.
+#
+
+- ambient_temperature: 30
+  collector_input_temperature: 60
+  mass_flow_rate: 7
+  irradiance: 850
+  wind_speed: 5
+- ambient_temperature: 30
+  collector_input_temperature: 70
+  mass_flow_rate: 7
+  irradiance: 850
+  wind_speed: 5
+- ambient_temperature: 30
+  collector_input_temperature: 80
+  mass_flow_rate: 7
+  irradiance: 850
+  wind_speed: 5
+- ambient_temperature: 40
+  collector_input_temperature: 60
+  mass_flow_rate: 4.5
+  irradiance: 850
+  wind_speed: 5
+- ambient_temperature: 40
+  collector_input_temperature: 70
+  mass_flow_rate: 4.5
+  irradiance: 850
+  wind_speed: 5
+- ambient_temperature: 40
+  collector_input_temperature: 80
+  mass_flow_rate: 4.5
+  irradiance: 850
+  wind_speed: 5
+- ambient_temperature: 50
+  collector_input_temperature: 60
+  mass_flow_rate: 0.5
+  irradiance: 850
+  wind_speed: 5
+- ambient_temperature: 50
+  collector_input_temperature: 70
+  mass_flow_rate: 0.5
+  irradiance: 850
+  wind_speed: 5
+- ambient_temperature: 50
+  collector_input_temperature: 80
+  mass_flow_rate: 0.5
+  irradiance: 850
+  wind_speed: 5

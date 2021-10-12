@@ -24,12 +24,15 @@ import re
 import sys
 
 from typing import List, Set, Tuple
-from sklearn.linear_model import Lasso, LassoCV, Ridge
-from sklearn.model_selection import cross_val_score, RepeatedKFold
+from scipy.sparse.construct import rand
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeRegressor
 
 import numpy as np  # type: ignore  # pylint: disable=import-error
 import pandas as pd  # type: ignore  # pylint: disable=import-error
 
+from dtreeviz.trees import dtreeviz
 from matplotlib import pyplot as plt
 from scipy.optimize import curve_fit
 from scipy.sparse import data
@@ -48,7 +51,7 @@ COLLECTOR_INPUT_TEMPERATURE: str = "collector_input_temperature"
 COLLECTOR_OUTPUT_TEMPERATURE: str = "collector_output_temperature"
 
 # Electrical efficiency:
-#   Keyword for the electrical efficiency of the collector.
+#   Keyword for the electric efficiency of the collector.
 ELECTRICAL_EFFICIENCY: str = "electrical_efficiency"
 
 # Mass-flow rate:
@@ -106,62 +109,159 @@ def analyse(data_file_name: str) -> None:
     """
 
     # Parse the input data.
+    print("Parsing input data file................ ", end="")
     with open(data_file_name, "r") as f:
         data = json.load(f)
+    print("[  DONE  ]")
 
     # Re-structure the data into a Lasso-friendly format.
+    print("Restructuring input data............... ", end="")
     if isinstance(data, list):
-        processed_data = [
-            (
-                entry[AMBIENT_TEMPERATURE],
-                entry[COLLECTOR_INPUT_TEMPERATURE],
-                entry[MASS_FLOW_RATE],
-                entry[SOLAR_IRRADIANCE],
-                entry[WIND_SPEED],
-                entry[COLLECTOR_OUTPUT_TEMPERATURE],
-                entry[ELECTRICAL_EFFICIENCY],
-            )
-            for entry in data
-            if entry[AMBIENT_TEMPERATURE] is not None
-            and entry[COLLECTOR_INPUT_TEMPERATURE] is not None
-            and entry[MASS_FLOW_RATE] is not None
-            and entry[SOLAR_IRRADIANCE] is not None
-            and entry[WIND_SPEED] is not None
-            and entry[COLLECTOR_OUTPUT_TEMPERATURE] is not None
-            and entry[ELECTRICAL_EFFICIENCY] is not None
-        ]
+        processed_data = pd.DataFrame(
+            [
+                (
+                    entry[AMBIENT_TEMPERATURE],
+                    entry[COLLECTOR_INPUT_TEMPERATURE],
+                    entry[MASS_FLOW_RATE],
+                    entry[SOLAR_IRRADIANCE],
+                    entry[WIND_SPEED],
+                    entry[COLLECTOR_OUTPUT_TEMPERATURE],
+                    entry[ELECTRICAL_EFFICIENCY],
+                )
+                for entry in data
+                if entry[AMBIENT_TEMPERATURE] is not None
+                and entry[COLLECTOR_INPUT_TEMPERATURE] is not None
+                and entry[MASS_FLOW_RATE] is not None
+                and entry[SOLAR_IRRADIANCE] is not None
+                and entry[WIND_SPEED] is not None
+                and entry[COLLECTOR_OUTPUT_TEMPERATURE] is not None
+                and entry[ELECTRICAL_EFFICIENCY] is not None
+            ]
+        )
     else:
         raise Exception(
             "Input data must be of type `list`. Other formats are not supported."
         )
-
-    # Reject data where the collector input temperature is greater than zero.
-    processed_data = [entry for entry in processed_data if entry[1] < 100]
+    print("[  DONE  ]")
 
     # Split the last 50 entries out as test data.
-    train_data = processed_data[::2]
-    test_data = [entry for entry in processed_data if entry not in train_data]
+    print("Separating out test and train data..... ", end="")
+    x_train_therm, x_test_therm, y_train_therm, y_test_therm = train_test_split(
+        processed_data[[0, 1, 2, 3, 4]],
+        processed_data[5],
+        test_size = 0.33,
+        random_state=42
+    )
+    x_train_electric, x_test_electric, y_train_electric, y_test_electric = train_test_split(
+        processed_data[[0, 1, 2, 3, 4]],
+        processed_data[6],
+        test_size = 0.33,
+        random_state=42
+    )
+    print("[  DONE  ]")
 
     # Define the variables needed for the fit.
-    evaluation_method = RepeatedKFold(n_splits=10, n_repeats=3, random_state=1)
-    electrical_model = Lasso(alpha=1)
-    thermal_model = Lasso(alpha=1)
-    train_data_struct = pd.DataFrame(train_data)
-    x_data = train_data_struct[[0, 1, 2, 3, 4]]
-    y_elec_data = train_data_struct[6]
-    y_therm_data = train_data_struct[5]
+    electric_tree = DecisionTreeRegressor(
+        max_depth=4,
+        min_samples_split=50,
+        min_samples_leaf=10
+    )
+    thermal_tree = DecisionTreeRegressor(
+        max_depth=4,
+        min_samples_split=50,
+        min_samples_leaf=10
+    )
+    electric_forest = RandomForestRegressor(
+        n_estimators=100,
+        criterion="squared_error",
+        max_depth=10,
+        min_samples_split=25,
+        min_samples_leaf=5,
+    )
+    thermal_forest = RandomForestRegressor(
+        n_estimators=100,
+        criterion="squared_error",
+        max_depth=10,
+        min_samples_split=25,
+        min_samples_leaf=5,
+    )
 
     # Train the models on the data.
-    print("Fixed alpha at 0.1")
-    print("Fitting the models..................... ", end="")
-    electrical_model.fit(x_data, y_elec_data)
-    thermal_model.fit(x_data, y_therm_data)
+    print("Fitting the electrical tree............ ", end="")
+    electric_tree.fit(x_train_electric, y_train_electric)
     print("[  DONE  ]")
+    print("Fitting the thermal tree............... ", end="")
+    thermal_tree.fit(x_train_therm, y_train_therm)
+    print("[  DONE  ]")
+
+    print("Fitting the electrical forest.......... ", end="")
+    electric_forest.fit(x_train_electric, y_train_electric)
+    print("[  DONE  ]")
+    print("Fitting the thermal forest............. ", end="")
+    thermal_forest.fit(x_train_therm, y_train_therm)
+    print("[  DONE  ]")
+
+    # Save the models.
+    with open("electric_tree.sav", "wb") as f:
+        pickle.dump(electric_tree, f)
+    with open("thermal_tree.sav", "wb") as f:
+        pickle.dump(thermal_tree, f)
+
+    with open("electric_forest.sav", "wb") as f:
+        pickle.dump(electric_forest, f)
+    with open("thermal_forest.sav", "wb") as f:
+        pickle.dump(thermal_forest, f)
+
+    # Make predictions using these models.
+    y_predict_electric_tree = electric_tree.predict(x_test_electric)
+    y_predict_therm_tree = thermal_tree.predict(x_test_therm)
+    y_predict_electric_forest = electric_forest.predict(x_test_electric)
+    y_predict_therm_forest = thermal_forest.predict(x_test_therm)
+
+    # Compute the baseline error and error improvement.
+    # The electric baseline error is computed using the collector input temperature as
+    # the temperature of the collector.
+    electric_error_tree = abs(y_predict_electric_tree - y_test_electric)
+    electric_error_tree_baseline = abs(y_test_electric - 0.125 * (1 - 0.0052 * x_test_electric[1]))
+    electric_error_forest = abs(y_predict_electric_forest - y_test_electric)
+    electric_error_forest_baseline = abs(y_test_electric - 0.125 * (1 - 0.0052 * x_test_electric[1]))
+    # The thermal baseline error is computed using the collector output temperature as
+    # the temperature of the collector.
+    thermal_error_tree = abs(y_predict_therm_tree - y_test_therm)
+    thermal_error_tree_baseline = abs(y_test_therm - x_test_therm[1])
+    thermal_error_forest = abs(y_predict_therm_forest - y_test_therm)
+    thermal_error_forest_baseline = abs(y_test_therm - x_test_therm[1])
+    print(f"The electric tree had an error of {np.mean(electric_error_tree): .3g}degC.")
+    print(f"This compares to a baseline electric error of {np.mean(electric_error_tree_baseline): .3g}degC.")
+    print(f"The electric forest had an error of {np.mean(electric_error_forest): .3g}degC.")
+    print(f"This compares to a baseline electric error of {np.mean(electric_error_forest_baseline): .3g}degC.")
+    print(f"The thermal tree had an error of {np.mean(thermal_error_tree): .3g}degC.")
+    print(f"This compares to a baseline thermal error of {np.mean(thermal_error_tree_baseline): .3g}degC.")
+    print(f"The thermal forest had an error of {np.mean(thermal_error_forest): .3g}degC.")
+    print(f"This compares to a baseline thermal error of {np.mean(thermal_error_forest_baseline): .3g}degC.")
+
+    # Compute the mean average percentage error as a measure of the accuracy.
+    electric_tree_mape = 100 * (electric_error_tree / y_test_electric)
+    electric_tree_accuracy = 100 - np.mean(electric_tree_mape)
+    print(f"The electric tree had an accuracy of {electric_tree_accuracy: .3g}%.")
+    electric_forest_mape = 100 * (electric_error_forest / y_test_electric)
+    electric_forest_accuracy = 100 - np.mean(electric_forest_mape)
+    print(f"The electric forest had an accuracy of {electric_forest_accuracy: .3g}%.")
+    thermal_tree_mape = 100 * (thermal_error_tree / y_test_therm)
+    thermal_tree_accuracy = 100 - np.mean(thermal_tree_mape)
+    print(f"The thermal tree had an accuracy of {thermal_tree_accuracy: .3g}%.")
+    thermal_forest_mape = 100 * (thermal_error_forest / y_test_therm)
+    thermal_forest_accuracy = 100 - np.mean(thermal_forest_mape)
+    print(f"The thermal forest had an accuracy of {thermal_forest_accuracy: .3g}%.")
+
+    import pdb
+
+    pdb.set_trace()
 
     # Output the model scores.
     print("Generating model scores................ ", end="")
     elec_scores = cross_val_score(
-        electrical_model,
+        electric_model,
         x_data,
         y_elec_data,
         scoring="neg_mean_absolute_error",
@@ -185,7 +285,7 @@ def analyse(data_file_name: str) -> None:
     )
 
     # Attempt to fit the data with a tuned alpha value.
-    variable_alpha_electrical_model = LassoCV(
+    variable_alpha_electric_model = LassoCV(
         alphas=np.arange(1e-9, 1e-7, 1e-9), cv=evaluation_method, n_jobs=-1
     )
     variable_alpha_thermal_model = LassoCV(
@@ -195,23 +295,23 @@ def analyse(data_file_name: str) -> None:
     # Train the models on the data.
     print("Varying alpha values")
     print("Fitting the models..................... ", end="")
-    variable_alpha_electrical_model.fit(x_data, y_elec_data)
+    variable_alpha_electric_model.fit(x_data, y_elec_data)
     variable_alpha_thermal_model.fit(x_data, y_therm_data)
     print("[  DONE  ]")
 
-    print(f"Electrical alpha value: {variable_alpha_electrical_model.alpha_:.3g}")
+    print(f"Electrical alpha value: {variable_alpha_electric_model.alpha_:.3g}")
     print(f"Thermal alpha value: {variable_alpha_thermal_model.alpha_:.3g}")
 
     # Output the model scores.
     print("Re-running at suggested alpha values... ", end="")
-    electrical_model = Lasso(alpha=variable_alpha_electrical_model.alpha_)
+    electric_model = Lasso(alpha=variable_alpha_electric_model.alpha_)
     thermal_model = Lasso(alpha=variable_alpha_thermal_model.alpha_)
-    electrical_model.fit(x_data, y_elec_data)
+    electric_model.fit(x_data, y_elec_data)
     thermal_model.fit(x_data, y_therm_data)
     print("[  DONE  ]")
     print("Generating model scores................ ", end="")
     elec_scores = cross_val_score(
-        electrical_model,
+        electric_model,
         x_data,
         y_elec_data,
         scoring="neg_mean_absolute_error",
@@ -234,28 +334,27 @@ def analyse(data_file_name: str) -> None:
         f"Thermal model scores: {np.mean(np.abs(therm_scores)):.3g} ({np.std(np.abs(therm_scores)):.3g})"
     )
 
-    print(f"Electrical alpha value: {variable_alpha_electrical_model.alpha_:.3g}")
+    print(f"Electrical alpha value: {variable_alpha_electric_model.alpha_:.3g}")
     print(f"Thermal alpha value: {variable_alpha_thermal_model.alpha_:.3g}")
 
     # Predict sone new data based on the test data.
     test_data_struct = pd.DataFrame(test_data)
     test_x_data = test_data_struct[[0, 1, 2, 3, 4]]
-    test_technical_electrical = test_data_struct[6]
+    test_technical_electric = test_data_struct[6]
     test_technical_thermal = test_data_struct[5]
-    predicted_electrical = electrical_model.predict(test_x_data)
+    predicted_electric = electric_model.predict(test_x_data)
     predicted_thermal = thermal_model.predict(test_x_data)
 
     # Plot the predicted and generated data.
     plt.scatter(
-        test_x_data[0], test_technical_electrical, label="technical", marker="x"
+        test_x_data[0], test_technical_electric, label="technical", marker="x"
     )
-    plt.scatter(test_x_data[0], predicted_electrical, label="reduced", marker="x")
+    plt.scatter(test_x_data[0], predicted_electric, label="reduced", marker="x")
     plt.xlabel("Data point")
     plt.ylabel("Electrical efficiency")
     plt.title("Selection of points chosen for model comparison")
     plt.legend()
-    plt.savefig("electrical_efficiency_ai_fitting.png", transparent=True)
-    plt.show()
+    plt.savefig("electric_efficiency_ai_fitting.png", transparent=True)
     plt.close()
 
     plt.scatter(test_x_data[0], test_technical_thermal, label="technical", marker="x")
@@ -265,19 +364,21 @@ def analyse(data_file_name: str) -> None:
     plt.title("Selection of points chosen for model comparison")
     plt.legend()
     plt.savefig("thermal_efficiency_ai_fitting.png", transparent=True)
-    plt.show()
     plt.close()
 
-    # print("Re-running at alpha=1................ ", end="")
-    # electrical_model = Ridge(alpha=1e-9)
-    # thermal_model = Ridge(alpha=3.09e-7)
-    # electrical_model.fit(x_data, y_elec_data)
-    # thermal_model.fit(x_data, y_therm_data)
-    # print("[  DONE  ]")
-    # print("Generating model scores................ ", end="")
-    # elec_scores = cross_val_score(electrical_model, x_data, y_elec_data, scoring="neg_mean_absolute_error", cv=evaluation_method, n_jobs=-1)
-    # therm_scores = cross_val_score(thermal_model, x_data, y_therm_data, scoring="neg_mean_absolute_error", cv=evaluation_method, n_jobs=-1)
-    # print("[  DONE  ]")
+    # Plot the decision tree in high resolution
+    thermal_visualisation = dtreeviz(
+        thermal_model,
+        test_x_data[0],
+        predicted_thermal,
+        target_name="collector output temperature",
+        feature_names=thermal_model.feature_names_in_
+    )
+    thermal_visualisation
+    import pdb
+
+    pdb.set_trace()
+
 
     print(
         f"Electrical model scores: {np.mean(np.abs(elec_scores)):.3g} ({np.std(np.abs(elec_scores)):.3g})"
@@ -286,12 +387,7 @@ def analyse(data_file_name: str) -> None:
         f"Thermal model scores: {np.mean(np.abs(therm_scores)):.3g} ({np.std(np.abs(therm_scores)):.3g})"
     )
 
-    # Save the models.
-    with open("electrical_model.sav", "wb") as f:
-        pickle.dump(electrical_model, f)
-    with open("thermal_model.sav", "wb") as f:
-        pickle.dump(thermal_model, f)
-
+    
 
 if __name__ == "__main__":
     parsed_args = _parse_args(sys.argv[1:])
