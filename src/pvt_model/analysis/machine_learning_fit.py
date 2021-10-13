@@ -23,19 +23,18 @@ import pickle
 import re
 import sys
 
-from typing import List, Set, Tuple
-from scipy.sparse.construct import rand
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.model_selection import train_test_split
-from sklearn.tree import DecisionTreeRegressor
-
+from typing import Dict, List, Set, Tuple
 import numpy as np  # type: ignore  # pylint: disable=import-error
 import pandas as pd  # type: ignore  # pylint: disable=import-error
 
 from dtreeviz.trees import dtreeviz
 from matplotlib import pyplot as plt
+from scipy.sparse.construct import rand
 from scipy.optimize import curve_fit
 from scipy.sparse import data
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeRegressor
 from tqdm import tqdm
 
 # Ambient temperature:
@@ -58,6 +57,10 @@ ELECTRICAL_EFFICIENCY: str = "electrical_efficiency"
 #   Keyword for the mass-flow rate of the collector.
 MASS_FLOW_RATE: str = "mass_flow_rate"
 
+# Number of estimators:
+#   The number of estimators ("trees") to include in the random forests.
+NUM_ESTIMATORS: int = 100
+
 # Reconstruction resolution:
 #   The resolution to use when reconstructing reduced plots.
 RECONSTRUCTION_RESOLUTION: int = 800
@@ -65,6 +68,11 @@ RECONSTRUCTION_RESOLUTION: int = 800
 # Reduced model:
 #   Label to use for reduced model data.
 REDUCED_MODEL: str = "reduced model"
+
+# Skip resolution:
+#   The number of points to skip out when processing the skipped/reduced data for
+#   plotting.
+SKIP_RESOLUTION: int = 257
 
 # Solar irradiance:
 #   Keyword for the solar irradiance.
@@ -193,14 +201,14 @@ def analyse(data_file_name: str, use_existing_fits: bool) -> None:
             max_depth=6, min_samples_split=50, min_samples_leaf=10
         )
         electric_forest = RandomForestRegressor(
-            n_estimators=100,
+            NUM_ESTIMATORS=NUM_ESTIMATORS,
             criterion="squared_error",
             max_depth=10,
             min_samples_split=25,
             min_samples_leaf=5,
         )
         thermal_forest = RandomForestRegressor(
-            n_estimators=100,
+            NUM_ESTIMATORS=NUM_ESTIMATORS,
             criterion="squared_error",
             max_depth=10,
             min_samples_split=25,
@@ -291,24 +299,24 @@ def analyse(data_file_name: str, use_existing_fits: bool) -> None:
     thermal_forest_accuracy = 100 - np.mean(thermal_forest_mape)
     print(f"The thermal forest had an accuracy of {thermal_forest_accuracy: .3g}%.")
 
-    x_test_electric_skipped = pd.DataFrame(x_test_electric[::257]).reset_index(
+    x_test_electric_skipped = pd.DataFrame(x_test_electric[::SKIP_RESOLUTION]).reset_index(
         drop=True
     )
     y_predict_electric_tree_skipped = pd.DataFrame(
-        y_predict_electric_tree[::257]
+        y_predict_electric_tree[::SKIP_RESOLUTION]
     ).reset_index(drop=True)
-    x_train_electric_skipped = pd.DataFrame(x_train_electric[::257]).reset_index(
+    x_train_electric_skipped = pd.DataFrame(x_train_electric[::SKIP_RESOLUTION]).reset_index(
         drop=True
     )
-    y_train_electric_skipped = pd.DataFrame(y_train_electric[::257]).reset_index(
+    y_train_electric_skipped = pd.DataFrame(y_train_electric[::SKIP_RESOLUTION]).reset_index(
         drop=True
     )
-    x_test_therm_skipped = pd.DataFrame(x_test_therm[::257]).reset_index(drop=True)
+    x_test_therm_skipped = pd.DataFrame(x_test_therm[::SKIP_RESOLUTION]).reset_index(drop=True)
     y_predict_therm_tree_skipped = pd.DataFrame(
-        y_predict_therm_tree[::257]
+        y_predict_therm_tree[::SKIP_RESOLUTION]
     ).reset_index(drop=True)
-    x_train_therm_skipped = pd.DataFrame(x_train_therm[::257]).reset_index(drop=True)
-    y_train_therm_skipped = pd.DataFrame(y_train_therm[::257]).reset_index(drop=True)
+    x_train_therm_skipped = pd.DataFrame(x_train_therm[::SKIP_RESOLUTION]).reset_index(drop=True)
+    y_train_therm_skipped = pd.DataFrame(y_train_therm[::SKIP_RESOLUTION]).reset_index(drop=True)
 
     electric_viz = dtreeviz(
         electric_tree,
@@ -384,133 +392,135 @@ def analyse(data_file_name: str, use_existing_fits: bool) -> None:
     electric_viz.save("electric_decision_tree_train.svg")
     thermal_viz.save("thermal_decision_tree_train.svg")
 
-    # Output the model scores.
-    # print("Generating model scores................ ", end="")
-    # elec_scores = cross_val_score(
-    #     electric_model,
-    #     x_data,
-    #     y_elec_data,
-    #     scoring="neg_mean_absolute_error",
-    #     cv=evaluation_method,
-    #     n_jobs=-1,
-    # )
-    # therm_scores = cross_val_score(
-    #     thermal_model,
-    #     x_data,
-    #     y_therm_data,
-    #     scoring="neg_mean_absolute_error",
-    #     cv=evaluation_method,
-    #     n_jobs=-1,
-    # )
-    # print("[  DONE  ]")
-    # print(
-    #     f"Electrical model scores: {np.mean(np.abs(elec_scores)):.3g} ({np.std(np.abs(elec_scores)):.3g})"
-    # )
-    # print(
-    #     f"Thermal model scores: {np.mean(np.abs(therm_scores)):.3g} ({np.std(np.abs(therm_scores)):.3g})"
-    # )
+    # Determine the best refressor from the random forest.
+    therm_estimator_accuracy: Dict[int, float] = {}
+    for index in tqdm(
+        range(NUM_ESTIMATORS),
+        desc="determining best thermal tree",
+        unit="tree",
+        leave=True
+    ):
+        therm_estimator_accuracy[index] = np.mean(np.sqrt(
+            y_test_therm - thermal_forest.estimators_[index].predict(x_test_therm)
+        ) ** 2)
+    thermal_forest_accuracy = {value: key for key, value in therm_estimator_accuracy.items()}
+    best_thermal_tree = thermal_forest_accuracy[min(thermal_forest_accuracy.keys())]
 
-    # # Attempt to fit the data with a tuned alpha value.
-    # variable_alpha_electric_model = LassoCV(
-    #     alphas=np.arange(1e-9, 1e-7, 1e-9), cv=evaluation_method, n_jobs=-1
-    # )
-    # variable_alpha_thermal_model = LassoCV(
-    #     alphas=np.arange(3e-7, 4e-7, 1e-9), cv=evaluation_method, n_jobs=-1
-    # )
+    electric_forest_accuracy: Dict[int, float] = {}
+    for index in tqdm(
+        range(NUM_ESTIMATORS),
+        desc="determining best thermal tree",
+        unit="tree",
+        leave=True
+    ):
+        electric_forest_accuracy[index] = np.mean(np.sqrt(
+            y_test_electric - electric_forest.estimators_[index].predict(x_test_electric)
+        ) ** 2)
+    electric_forest_accuracy = {value: key for key, value in electric_forest_accuracy.items()}
+    best_electric_tree = electric_forest_accuracy[min(electric_forest_accuracy.keys())]
 
-    # # Train the models on the data.
-    # print("Varying alpha values")
-    # print("Fitting the models..................... ", end="")
-    # variable_alpha_electric_model.fit(x_data, y_elec_data)
-    # variable_alpha_thermal_model.fit(x_data, y_therm_data)
-    # print("[  DONE  ]")
+    # Predict the values based on these trees and display their accuracies.
+    y_predict_best_electric_tree = best_electric_tree.predict(x_test_electric)
+    best_electric_error_tree = np.sqrt((y_predict_best_electric_tree - y_test_electric) ** 2)
+    print(
+        f"The best electric tree had a sd of {100 * np.mean(best_electric_error_tree): .3g}% efficiency."
+    )
+    print(
+        f"This compares to a baseline electric sd of {100 * np.mean(electric_error_tree_baseline): .3g}% efficiency."
+    )
+    best_electric_tree_mape = 100 * (best_electric_error_tree / y_test_electric)
+    best_electric_tree_accuracy = 100 - np.mean(best_electric_tree_mape)
+    print(f"The best electric tree had an accuracy of {best_electric_tree_accuracy: .3g}%.")
 
-    # print(f"Electrical alpha value: {variable_alpha_electric_model.alpha_:.3g}")
-    # print(f"Thermal alpha value: {variable_alpha_thermal_model.alpha_:.3g}")
+    y_predict_best_thermal_tree = best_electric_tree.predict(x_test_therm)
+    best_thermal_error_tree = np.sqrt((y_predict_best_thermal_tree - y_test_therm) ** 2)
+    print(
+        f"The best thermal tree had a sd of {np.mean(best_thermal_error_tree): .3g}degC."
+    )
+    print(
+        f"This compares to a baseline electric sd of {np.mean(thermal_error_tree_baseline): .3g}degC."
+    )
+    best_thermal_tree_mape = 100 * (best_thermal_error_tree / y_test_therm)
+    best_thermal_tree_accuracy = 100 - np.mean(best_thermal_tree_mape)
+    print(f"The best thermal tree had an accuracy of {best_thermal_tree_accuracy: .3g}%.")
 
-    # # Output the model scores.
-    # print("Re-running at suggested alpha values... ", end="")
-    # electric_model = Lasso(alpha=variable_alpha_electric_model.alpha_)
-    # thermal_model = Lasso(alpha=variable_alpha_thermal_model.alpha_)
-    # electric_model.fit(x_data, y_elec_data)
-    # thermal_model.fit(x_data, y_therm_data)
-    # print("[  DONE  ]")
-    # print("Generating model scores................ ", end="")
-    # elec_scores = cross_val_score(
-    #     electric_model,
-    #     x_data,
-    #     y_elec_data,
-    #     scoring="neg_mean_absolute_error",
-    #     cv=evaluation_method,
-    #     n_jobs=-1,
-    # )
-    # therm_scores = cross_val_score(
-    #     thermal_model,
-    #     x_data,
-    #     y_therm_data,
-    #     scoring="neg_mean_absolute_error",
-    #     cv=evaluation_method,
-    #     n_jobs=-1,
-    # )
-    # print("[  DONE  ]")
-    # print(
-    #     f"Electrical model scores: {np.mean(np.abs(elec_scores)):.3g} ({np.std(np.abs(elec_scores)):.3g})"
-    # )
-    # print(
-    #     f"Thermal model scores: {np.mean(np.abs(therm_scores)):.3g} ({np.std(np.abs(therm_scores)):.3g})"
-    # )
+    y_predict_best_electric_tree_skipped = best_electric_tree.predict(x_test_electric_skipped)
+    y_predict_best_thermal_tree_skipped = best_thermal_tree.predict(x_test_therm_skipped)
 
-    # print(f"Electrical alpha value: {variable_alpha_electric_model.alpha_:.3g}")
-    # print(f"Thermal alpha value: {variable_alpha_thermal_model.alpha_:.3g}")
+    # Plot these "best" decision trees.
+    electric_viz = dtreeviz(
+        best_electric_tree,
+        np.asarray(x_test_electric_skipped),
+        np.asarray(y_predict_best_electric_tree_skipped),
+        target_name="electric efficiency",
+        feature_names=[
+            "T_ambient",
+            "T_in",
+            "mass-flow rate",
+            "irradiance",
+            "v_wind",
+        ],
+        X=np.asarray(x_test_electric_skipped.loc[23]),
+        orientation="LR",
+        precision=5,
+        show_just_path=True,
+    )
+    thermal_viz = dtreeviz(
+        best_thermal_tree,
+        np.asarray(x_test_therm_skipped),
+        np.asarray(y_predict_best_therm_tree_skipped),
+        target_name="T_out",
+        feature_names=[
+            "T_ambient",
+            "T_in",
+            "mass-flow rate",
+            "irradiance",
+            "v_wind",
+        ],
+        X=np.asarray(x_test_electric_skipped.loc[23]),
+        orientation="LR",
+        precision=5,
+        show_just_path=True,
+    )
+    electric_viz.save("best_electric_decision_tree_test.svg")
+    thermal_viz.save("best_thermal_decision_tree_test.svg")
 
-    # # Predict sone new data based on the test data.
-    # test_data_struct = pd.DataFrame(test_data)
-    # test_x_data = test_data_struct[[0, 1, 2, 3, 4]]
-    # test_technical_electric = test_data_struct[6]
-    # test_technical_thermal = test_data_struct[5]
-    # predicted_electric = electric_model.predict(test_x_data)
-    # predicted_thermal = thermal_model.predict(test_x_data)
-
-    # # Plot the predicted and generated data.
-    # plt.scatter(
-    #     test_x_data[0], test_technical_electric, label="technical", marker="x"
-    # )
-    # plt.scatter(test_x_data[0], predicted_electric, label="reduced", marker="x")
-    # plt.xlabel("Data point")
-    # plt.ylabel("Electrical efficiency")
-    # plt.title("Selection of points chosen for model comparison")
-    # plt.legend()
-    # plt.savefig("electric_efficiency_ai_fitting.png", transparent=True)
-    # plt.close()
-
-    # plt.scatter(test_x_data[0], test_technical_thermal, label="technical", marker="x")
-    # plt.scatter(test_x_data[0], predicted_thermal, label="reduced", marker="x")
-    # plt.xlabel("Data point")
-    # plt.ylabel("Collector output temperature")
-    # plt.title("Selection of points chosen for model comparison")
-    # plt.legend()
-    # plt.savefig("thermal_efficiency_ai_fitting.png", transparent=True)
-    # plt.close()
-
-    # # Plot the decision tree in high resolution
-    # thermal_visualisation = dtreeviz(
-    #     thermal_model,
-    #     test_x_data[0],
-    #     predicted_thermal,
-    #     target_name="collector output temperature",
-    #     feature_names=thermal_model.feature_names_in_
-    # )
-    # thermal_visualisation
-    # import pdb
-
-    # pdb.set_trace()
-
-    # print(
-    #     f"Electrical model scores: {np.mean(np.abs(elec_scores)):.3g} ({np.std(np.abs(elec_scores)):.3g})"
-    # )
-    # print(
-    #     f"Thermal model scores: {np.mean(np.abs(therm_scores)):.3g} ({np.std(np.abs(therm_scores)):.3g})"
-    # )
+    electric_viz = dtreeviz(
+        best_electric_tree,
+        np.asarray(x_train_electric_skipped),
+        np.asarray(y_train_electric_skipped),
+        target_name="electric efficiency",
+        feature_names=[
+            "T_ambient",
+            "T_in",
+            "mass-flow rate",
+            "irradiance",
+            "v_wind",
+        ],
+        X=np.asarray(x_train_electric_skipped.loc[23]),
+        orientation="LR",
+        precision=5,
+        show_just_path=True,
+    )
+    thermal_viz = dtreeviz(
+        best_thermal_tree,
+        np.asarray(x_train_therm_skipped),
+        np.asarray(y_train_therm_skipped),
+        target_name="T_out",
+        feature_names=[
+            "T_ambient",
+            "T_in",
+            "mass-flow rate",
+            "irradiance",
+            "v_wind",
+        ],
+        X=np.asarray(x_train_therm_skipped.loc[23]),
+        orientation="LR",
+        precision=5,
+        show_just_path=True,
+    )
+    electric_viz.save("best_electric_decision_tree_train.svg")
+    thermal_viz.save("best_thermal_decision_tree_train.svg")
 
 
 if __name__ == "__main__":
