@@ -124,7 +124,7 @@ def analyse(data_file_name: str, use_existing_fits: bool) -> None:
                 (
                     entry[AMBIENT_TEMPERATURE],
                     entry[COLLECTOR_INPUT_TEMPERATURE],
-                    entry[MASS_FLOW_RATE],
+                    3600 * entry[MASS_FLOW_RATE],
                     entry[SOLAR_IRRADIANCE],
                     entry[WIND_SPEED],
                     entry[COLLECTOR_OUTPUT_TEMPERATURE],
@@ -167,10 +167,10 @@ def analyse(data_file_name: str, use_existing_fits: bool) -> None:
     )
 
     # Reset the index columns.
-    x_train_electric.reset_index(drop=True)
-    x_test_electric.reset_index(drop=True)
-    y_train_therm.reset_index(drop=True)
-    y_test_therm.reset_index(drop=True)
+    x_train_electric = x_train_electric.reset_index(drop=True)
+    x_test_electric = x_test_electric.reset_index(drop=True)
+    y_train_therm = y_train_therm.reset_index(drop=True)
+    y_test_therm = y_test_therm.reset_index(drop=True)
 
     print("[  DONE  ]")
 
@@ -291,47 +291,57 @@ def analyse(data_file_name: str, use_existing_fits: bool) -> None:
     thermal_forest_accuracy = 100 - np.mean(thermal_forest_mape)
     print(f"The thermal forest had an accuracy of {thermal_forest_accuracy: .3g}%.")
 
-    x_test_electric_skipped = x_test_electric[::499]
-    y_predict_electric_tree_skipped = y_predict_electric_tree[::499]
-    x_train_electric_skipped = x_train_electric[::499]
-    y_train_electric_skipped = y_train_electric[::499]
-    x_test_therm_skipped = x_test_therm[::499]
-    y_predict_therm_tree_skipped = y_predict_therm_tree[::499]
-    x_train_therm_skipped = x_train_therm[::499]
-    y_train_therm_skipped = y_train_therm[::499]
-
-    import pdb
-
-    pdb.set_trace()
+    x_test_electric_skipped = pd.DataFrame(x_test_electric[::257]).reset_index(
+        drop=True
+    )
+    y_predict_electric_tree_skipped = pd.DataFrame(
+        y_predict_electric_tree[::257]
+    ).reset_index(drop=True)
+    x_train_electric_skipped = pd.DataFrame(x_train_electric[::257]).reset_index(
+        drop=True
+    )
+    y_train_electric_skipped = pd.DataFrame(y_train_electric[::257]).reset_index(
+        drop=True
+    )
+    x_test_therm_skipped = pd.DataFrame(x_test_therm[::257]).reset_index(drop=True)
+    y_predict_therm_tree_skipped = pd.DataFrame(
+        y_predict_therm_tree[::257]
+    ).reset_index(drop=True)
+    x_train_therm_skipped = pd.DataFrame(x_train_therm[::257]).reset_index(drop=True)
+    y_train_therm_skipped = pd.DataFrame(y_train_therm[::257]).reset_index(drop=True)
 
     electric_viz = dtreeviz(
         electric_tree,
-        x_test_electric_skipped,
-        y_predict_electric_tree_skipped,
-        target_name="collector output temperature",
+        np.asarray(x_test_electric_skipped),
+        np.asarray(y_predict_electric_tree_skipped),
+        target_name="electric efficiency",
         feature_names=[
-            "ambient temp.",
-            "input temp.",
+            "T_ambient",
+            "T_in",
             "mass-flow rate",
             "irradiance",
-            "wind speed",
+            "v_wind",
         ],
-        X=x_test_electric_skipped[5],
+        X=np.asarray(x_test_electric_skipped.loc[23]),
+        orientation="LR",
+        precision=5,
         show_just_path=True,
     )
     thermal_viz = dtreeviz(
         thermal_tree,
-        x_test_therm_skipped,
-        y_predict_therm_tree_skipped,
-        target_name="collector output temperature",
+        np.asarray(x_test_therm_skipped),
+        np.asarray(y_predict_therm_tree_skipped),
+        target_name="T_out",
         feature_names=[
-            "ambient temp.",
-            "input temp.",
+            "T_ambient",
+            "T_in",
             "mass-flow rate",
             "irradiance",
-            "wind speed",
+            "v_wind",
         ],
-        X=x_test_electric_skipped[5],
+        X=np.asarray(x_test_electric_skipped.loc[23]),
+        orientation="LR",
+        precision=5,
         show_just_path=True,
     )
     electric_viz.save("electric_decision_tree_test.svg")
@@ -339,32 +349,36 @@ def analyse(data_file_name: str, use_existing_fits: bool) -> None:
 
     electric_viz = dtreeviz(
         electric_tree,
-        x_train_electric_skipped,
-        y_train_electric_skipped,
-        target_name="collector output temperature",
+        np.asarray(x_train_electric_skipped),
+        np.asarray(y_train_electric_skipped),
+        target_name="electric efficiency",
         feature_names=[
-            "ambient temp.",
-            "input temp.",
+            "T_ambient",
+            "T_in",
             "mass-flow rate",
             "irradiance",
-            "wind speed",
+            "v_wind",
         ],
-        X=x_train_electric_skipped[5],
+        X=np.asarray(x_train_electric_skipped.loc[23]),
+        orientation="LR",
+        precision=5,
         show_just_path=True,
     )
     thermal_viz = dtreeviz(
         thermal_tree,
-        x_train_therm_skipped,
-        y_train_therm_skipped,
-        target_name="collector output temperature",
+        np.asarray(x_train_therm_skipped),
+        np.asarray(y_train_therm_skipped),
+        target_name="T_out",
         feature_names=[
-            "ambient temp.",
-            "input temp.",
+            "T_ambient",
+            "T_in",
             "mass-flow rate",
             "irradiance",
-            "wind speed",
+            "v_wind",
         ],
-        X=x_train_therm_skipped[5],
+        X=np.asarray(x_train_therm_skipped.loc[23]),
+        orientation="LR",
+        precision=5,
         show_just_path=True,
     )
     electric_viz.save("electric_decision_tree_train.svg")
