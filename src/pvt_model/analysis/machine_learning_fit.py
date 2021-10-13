@@ -165,6 +165,13 @@ def analyse(data_file_name: str, use_existing_fits: bool) -> None:
         test_size=0.33,
         random_state=42,
     )
+
+    # Reset the index columns.
+    x_train_electric.reset_index(drop=True)
+    x_test_electric.reset_index(drop=True)
+    y_train_therm.reset_index(drop=True)
+    y_test_therm.reset_index(drop=True)
+
     print("[  DONE  ]")
 
     if use_existing_fits:
@@ -235,41 +242,39 @@ def analyse(data_file_name: str, use_existing_fits: bool) -> None:
     # Compute the baseline error and error improvement.
     # The electric baseline error is computed using the collector input temperature as
     # the temperature of the collector.
-    electric_error_tree = abs(y_predict_electric_tree - y_test_electric)
-    electric_error_tree_baseline = abs(
-        y_test_electric - 0.125 * (1 - 0.0052 * x_test_electric[1])
+    electric_error_tree = np.sqrt((y_predict_electric_tree - y_test_electric) ** 2)
+    electric_error_tree_baseline = np.sqrt(
+        (y_test_electric - 0.125 * (1 - 0.0052 * x_test_electric[1])) ** 2
     )
-    electric_error_forest = abs(y_predict_electric_forest - y_test_electric)
-    electric_error_forest_baseline = abs(
-        y_test_electric - 0.125 * (1 - 0.0052 * x_test_electric[1])
+    electric_error_forest = np.sqrt((y_predict_electric_forest - y_test_electric) ** 2)
+    electric_error_forest_baseline = np.sqrt(
+        (y_test_electric - 0.125 * (1 - 0.0052 * x_test_electric[1])) ** 2
     )
     # The thermal baseline error is computed using the collector output temperature as
     # the temperature of the collector.
-    thermal_error_tree = abs(y_predict_therm_tree - y_test_therm)
-    thermal_error_tree_baseline = abs(y_test_therm - x_test_therm[1])
-    thermal_error_forest = abs(y_predict_therm_forest - y_test_therm)
-    thermal_error_forest_baseline = abs(y_test_therm - x_test_therm[1])
+    thermal_error_tree = np.sqrt((y_predict_therm_tree - y_test_therm) ** 2)
+    thermal_error_tree_baseline = np.sqrt((y_test_therm - x_test_therm[1]) ** 2)
+    thermal_error_forest = np.sqrt((y_predict_therm_forest - y_test_therm) ** 2)
+    thermal_error_forest_baseline = np.sqrt((y_test_therm - x_test_therm[1]) ** 2)
     print(
-        f"The electric tree had an error of {100 * np.mean(electric_error_tree): .3g}% efficiency."
+        f"The electric tree had a sd of {100 * np.mean(electric_error_tree): .3g}% efficiency."
     )
     print(
-        f"This compares to a baseline electric error of {100 * np.mean(electric_error_tree_baseline): .3g}% efficiency."
+        f"This compares to a baseline electric sd of {100 * np.mean(electric_error_tree_baseline): .3g}% efficiency."
     )
     print(
-        f"The electric forest had an error of {100 * np.mean(electric_error_forest): .3g}% efficiency."
+        f"The electric forest had a sd of {100 * np.mean(electric_error_forest): .3g}% efficiency."
     )
     print(
-        f"This compares to a baseline electric error of {100 * np.mean(electric_error_forest_baseline): .3g}% efficiency."
+        f"This compares to a baseline electric sd of {100 * np.mean(electric_error_forest_baseline): .3g}% efficiency."
     )
-    print(f"The thermal tree had an error of {np.mean(thermal_error_tree): .3g}degC.")
+    print(f"The thermal tree had a sd of {np.mean(thermal_error_tree): .3g}degC.")
     print(
-        f"This compares to a baseline thermal error of {np.mean(thermal_error_tree_baseline): .3g}degC."
+        f"This compares to a baseline thermal sd of {np.mean(thermal_error_tree_baseline): .3g}degC."
     )
+    print(f"The thermal forest had a sd of {np.mean(thermal_error_forest): .3g}degC.")
     print(
-        f"The thermal forest had an error of {np.mean(thermal_error_forest): .3g}degC."
-    )
-    print(
-        f"This compares to a baseline thermal error of {np.mean(thermal_error_forest_baseline): .3g}degC."
+        f"This compares to a baseline thermal sd of {np.mean(thermal_error_forest_baseline): .3g}degC."
     )
 
     # Compute the mean average percentage error as a measure of the accuracy.
@@ -286,10 +291,23 @@ def analyse(data_file_name: str, use_existing_fits: bool) -> None:
     thermal_forest_accuracy = 100 - np.mean(thermal_forest_mape)
     print(f"The thermal forest had an accuracy of {thermal_forest_accuracy: .3g}%.")
 
+    x_test_electric_skipped = x_test_electric[::499]
+    y_predict_electric_tree_skipped = y_predict_electric_tree[::499]
+    x_train_electric_skipped = x_train_electric[::499]
+    y_train_electric_skipped = y_train_electric[::499]
+    x_test_therm_skipped = x_test_therm[::499]
+    y_predict_therm_tree_skipped = y_predict_therm_tree[::499]
+    x_train_therm_skipped = x_train_therm[::499]
+    y_train_therm_skipped = y_train_therm[::499]
+
+    import pdb
+
+    pdb.set_trace()
+
     electric_viz = dtreeviz(
         electric_tree,
-        x_test_electric,
-        y_predict_electric_tree,
+        x_test_electric_skipped,
+        y_predict_electric_tree_skipped,
         target_name="collector output temperature",
         feature_names=[
             "ambient temp.",
@@ -298,13 +316,13 @@ def analyse(data_file_name: str, use_existing_fits: bool) -> None:
             "irradiance",
             "wind speed",
         ],
-        X=x_test_electric.loc[0],
+        X=x_test_electric_skipped[5],
         show_just_path=True,
     )
     thermal_viz = dtreeviz(
         thermal_tree,
-        x_test_therm,
-        y_predict_therm_tree,
+        x_test_therm_skipped,
+        y_predict_therm_tree_skipped,
         target_name="collector output temperature",
         feature_names=[
             "ambient temp.",
@@ -313,11 +331,44 @@ def analyse(data_file_name: str, use_existing_fits: bool) -> None:
             "irradiance",
             "wind speed",
         ],
-        X=x_test_therm.loc[0],
+        X=x_test_electric_skipped[5],
         show_just_path=True,
     )
-    electric_viz.save("electric_decision_tree.svg")
-    thermal_viz.save("thermal_decision_tree.svg")
+    electric_viz.save("electric_decision_tree_test.svg")
+    thermal_viz.save("thermal_decision_tree_test.svg")
+
+    electric_viz = dtreeviz(
+        electric_tree,
+        x_train_electric_skipped,
+        y_train_electric_skipped,
+        target_name="collector output temperature",
+        feature_names=[
+            "ambient temp.",
+            "input temp.",
+            "mass-flow rate",
+            "irradiance",
+            "wind speed",
+        ],
+        X=x_train_electric_skipped[5],
+        show_just_path=True,
+    )
+    thermal_viz = dtreeviz(
+        thermal_tree,
+        x_train_therm_skipped,
+        y_train_therm_skipped,
+        target_name="collector output temperature",
+        feature_names=[
+            "ambient temp.",
+            "input temp.",
+            "mass-flow rate",
+            "irradiance",
+            "wind speed",
+        ],
+        X=x_train_therm_skipped[5],
+        show_just_path=True,
+    )
+    electric_viz.save("electric_decision_tree_train.svg")
+    thermal_viz.save("thermal_decision_tree_train.svg")
 
     # Output the model scores.
     # print("Generating model scores................ ", end="")
