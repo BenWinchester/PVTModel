@@ -57,6 +57,14 @@ ELECTRICAL_EFFICIENCY: str = "electrical_efficiency"
 #   Keyword for the mass-flow rate of the collector.
 MASS_FLOW_RATE: str = "mass_flow_rate"
 
+# Max forest depth:
+#   The maximum depth to go to when computing the random forests.
+MAX_FOREST_DEPTH: int = 12
+
+# Max tree depth:
+#   The maximum depth to go to when computing the individual tree.
+MAX_TREE_DEPTH: int = 6
+
 # Number of estimators:
 #   The number of estimators ("trees") to include in the random forests.
 NUM_ESTIMATORS: int = 100
@@ -195,22 +203,22 @@ def analyse(data_file_name: str, use_existing_fits: bool) -> None:
     else:
         # Define the variables needed for the fit.
         electric_tree = DecisionTreeRegressor(
-            max_depth=6, min_samples_split=50, min_samples_leaf=10
+            max_depth=MAX_TREE_DEPTH, min_samples_split=50, min_samples_leaf=10
         )
         thermal_tree = DecisionTreeRegressor(
-            max_depth=6, min_samples_split=50, min_samples_leaf=10
+            max_depth=MAX_TREE_DEPTH, min_samples_split=50, min_samples_leaf=10
         )
         electric_forest = RandomForestRegressor(
-            NUM_ESTIMATORS=NUM_ESTIMATORS,
+            n_estimators=NUM_ESTIMATORS,
             criterion="squared_error",
-            max_depth=10,
+            max_depth=MAX_FOREST_DEPTH,
             min_samples_split=25,
             min_samples_leaf=5,
         )
         thermal_forest = RandomForestRegressor(
-            NUM_ESTIMATORS=NUM_ESTIMATORS,
+            n_estimators=NUM_ESTIMATORS,
             criterion="squared_error",
-            max_depth=10,
+            max_depth=MAX_FOREST_DEPTH,
             min_samples_split=25,
             min_samples_leaf=5,
         )
