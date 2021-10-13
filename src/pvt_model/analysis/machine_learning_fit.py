@@ -299,24 +299,30 @@ def analyse(data_file_name: str, use_existing_fits: bool) -> None:
     thermal_forest_accuracy = 100 - np.mean(thermal_forest_mape)
     print(f"The thermal forest had an accuracy of {thermal_forest_accuracy: .3g}%.")
 
-    x_test_electric_skipped = pd.DataFrame(x_test_electric[::SKIP_RESOLUTION]).reset_index(
-        drop=True
-    )
+    x_test_electric_skipped = pd.DataFrame(
+        x_test_electric[::SKIP_RESOLUTION]
+    ).reset_index(drop=True)
     y_predict_electric_tree_skipped = pd.DataFrame(
         y_predict_electric_tree[::SKIP_RESOLUTION]
     ).reset_index(drop=True)
-    x_train_electric_skipped = pd.DataFrame(x_train_electric[::SKIP_RESOLUTION]).reset_index(
+    x_train_electric_skipped = pd.DataFrame(
+        x_train_electric[::SKIP_RESOLUTION]
+    ).reset_index(drop=True)
+    y_train_electric_skipped = pd.DataFrame(
+        y_train_electric[::SKIP_RESOLUTION]
+    ).reset_index(drop=True)
+    x_test_therm_skipped = pd.DataFrame(x_test_therm[::SKIP_RESOLUTION]).reset_index(
         drop=True
     )
-    y_train_electric_skipped = pd.DataFrame(y_train_electric[::SKIP_RESOLUTION]).reset_index(
-        drop=True
-    )
-    x_test_therm_skipped = pd.DataFrame(x_test_therm[::SKIP_RESOLUTION]).reset_index(drop=True)
     y_predict_therm_tree_skipped = pd.DataFrame(
         y_predict_therm_tree[::SKIP_RESOLUTION]
     ).reset_index(drop=True)
-    x_train_therm_skipped = pd.DataFrame(x_train_therm[::SKIP_RESOLUTION]).reset_index(drop=True)
-    y_train_therm_skipped = pd.DataFrame(y_train_therm[::SKIP_RESOLUTION]).reset_index(drop=True)
+    x_train_therm_skipped = pd.DataFrame(x_train_therm[::SKIP_RESOLUTION]).reset_index(
+        drop=True
+    )
+    y_train_therm_skipped = pd.DataFrame(y_train_therm[::SKIP_RESOLUTION]).reset_index(
+        drop=True
+    )
 
     electric_viz = dtreeviz(
         electric_tree,
@@ -398,30 +404,49 @@ def analyse(data_file_name: str, use_existing_fits: bool) -> None:
         range(NUM_ESTIMATORS),
         desc="determining best thermal tree",
         unit="tree",
-        leave=True
+        leave=True,
     ):
-        therm_estimator_accuracy[index] = np.mean(np.sqrt(
-            y_test_therm - thermal_forest.estimators_[index].predict(x_test_therm)
-        ) ** 2)
-    thermal_forest_accuracy = {value: key for key, value in therm_estimator_accuracy.items()}
-    best_thermal_tree = thermal_forest_accuracy[min(thermal_forest_accuracy.keys())]
+        therm_estimator_accuracy[index] = np.mean(
+            np.sqrt(
+                (y_test_therm - thermal_forest.estimators_[index].predict(x_test_therm))
+                ** 2
+            )
+        )
+    thermal_forest_accuracy = {
+        value: key for key, value in therm_estimator_accuracy.items()
+    }
+    best_thermal_tree = thermal_forest.estimators_[
+        thermal_forest_accuracy[min(thermal_forest_accuracy.keys())]
+    ]
 
     electric_forest_accuracy: Dict[int, float] = {}
     for index in tqdm(
         range(NUM_ESTIMATORS),
-        desc="determining best thermal tree",
+        desc="determining best electric tree",
         unit="tree",
-        leave=True
+        leave=True,
     ):
-        electric_forest_accuracy[index] = np.mean(np.sqrt(
-            y_test_electric - electric_forest.estimators_[index].predict(x_test_electric)
-        ) ** 2)
-    electric_forest_accuracy = {value: key for key, value in electric_forest_accuracy.items()}
-    best_electric_tree = electric_forest_accuracy[min(electric_forest_accuracy.keys())]
+        electric_forest_accuracy[index] = np.mean(
+            np.sqrt(
+                (
+                    y_test_electric
+                    - electric_forest.estimators_[index].predict(x_test_electric)
+                )
+                ** 2
+            )
+        )
+    electric_forest_accuracy = {
+        value: key for key, value in electric_forest_accuracy.items()
+    }
+    best_electric_tree = electric_forest.estimators_[
+        electric_forest_accuracy[min(electric_forest_accuracy.keys())]
+    ]
 
     # Predict the values based on these trees and display their accuracies.
     y_predict_best_electric_tree = best_electric_tree.predict(x_test_electric)
-    best_electric_error_tree = np.sqrt((y_predict_best_electric_tree - y_test_electric) ** 2)
+    best_electric_error_tree = np.sqrt(
+        (y_predict_best_electric_tree - y_test_electric) ** 2
+    )
     print(
         f"The best electric tree had a sd of {100 * np.mean(best_electric_error_tree): .3g}% efficiency."
     )
@@ -430,9 +455,11 @@ def analyse(data_file_name: str, use_existing_fits: bool) -> None:
     )
     best_electric_tree_mape = 100 * (best_electric_error_tree / y_test_electric)
     best_electric_tree_accuracy = 100 - np.mean(best_electric_tree_mape)
-    print(f"The best electric tree had an accuracy of {best_electric_tree_accuracy: .3g}%.")
+    print(
+        f"The best electric tree had an accuracy of {best_electric_tree_accuracy: .3g}%."
+    )
 
-    y_predict_best_thermal_tree = best_electric_tree.predict(x_test_therm)
+    y_predict_best_thermal_tree = best_thermal_tree.predict(x_test_therm)
     best_thermal_error_tree = np.sqrt((y_predict_best_thermal_tree - y_test_therm) ** 2)
     print(
         f"The best thermal tree had a sd of {np.mean(best_thermal_error_tree): .3g}degC."
@@ -442,10 +469,16 @@ def analyse(data_file_name: str, use_existing_fits: bool) -> None:
     )
     best_thermal_tree_mape = 100 * (best_thermal_error_tree / y_test_therm)
     best_thermal_tree_accuracy = 100 - np.mean(best_thermal_tree_mape)
-    print(f"The best thermal tree had an accuracy of {best_thermal_tree_accuracy: .3g}%.")
+    print(
+        f"The best thermal tree had an accuracy of {best_thermal_tree_accuracy: .3g}%."
+    )
 
-    y_predict_best_electric_tree_skipped = best_electric_tree.predict(x_test_electric_skipped)
-    y_predict_best_thermal_tree_skipped = best_thermal_tree.predict(x_test_therm_skipped)
+    y_predict_best_electric_tree_skipped = best_electric_tree.predict(
+        x_test_electric_skipped
+    )
+    y_predict_best_thermal_tree_skipped = best_thermal_tree.predict(
+        x_test_therm_skipped
+    )
 
     # Plot these "best" decision trees.
     electric_viz = dtreeviz(
@@ -468,7 +501,7 @@ def analyse(data_file_name: str, use_existing_fits: bool) -> None:
     thermal_viz = dtreeviz(
         best_thermal_tree,
         np.asarray(x_test_therm_skipped),
-        np.asarray(y_predict_best_therm_tree_skipped),
+        np.asarray(y_predict_best_thermal_tree_skipped),
         target_name="T_out",
         feature_names=[
             "T_ambient",
@@ -521,6 +554,11 @@ def analyse(data_file_name: str, use_existing_fits: bool) -> None:
     )
     electric_viz.save("best_electric_decision_tree_train.svg")
     thermal_viz.save("best_thermal_decision_tree_train.svg")
+
+    with open("best_electric_tree.sav", "wb") as f:
+        pickle.dump(best_electric_tree, f)
+    with open("best_thermal_tree.sav", "wb") as f:
+        pickle.dump(best_thermal_tree, f)
 
 
 if __name__ == "__main__":
