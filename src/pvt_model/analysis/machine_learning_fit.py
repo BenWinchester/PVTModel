@@ -53,6 +53,10 @@ COLLECTOR_OUTPUT_TEMPERATURE: str = "collector_output_temperature"
 #   Keyword for the electric efficiency of the collector.
 ELECTRICAL_EFFICIENCY: str = "electrical_efficiency"
 
+# Index for plot:
+#   The index to use for plotting.
+INDEX_FOR_PLOT: int = 5
+
 # Mass-flow rate:
 #   Keyword for the mass-flow rate of the collector.
 MASS_FLOW_RATE: str = "mass_flow_rate"
@@ -344,7 +348,7 @@ def analyse(data_file_name: str, use_existing_fits: bool) -> None:
             "irradiance",
             "v_wind",
         ],
-        X=np.asarray(x_test_electric_skipped.loc[23]),
+        X=np.asarray(x_test_electric_skipped.loc[INDEX_FOR_PLOT]),
         orientation="LR",
         precision=5,
         show_just_path=True,
@@ -361,7 +365,7 @@ def analyse(data_file_name: str, use_existing_fits: bool) -> None:
             "irradiance",
             "v_wind",
         ],
-        X=np.asarray(x_test_electric_skipped.loc[23]),
+        X=np.asarray(x_test_electric_skipped.loc[INDEX_FOR_PLOT]),
         orientation="LR",
         precision=5,
         show_just_path=True,
@@ -381,7 +385,7 @@ def analyse(data_file_name: str, use_existing_fits: bool) -> None:
             "irradiance",
             "v_wind",
         ],
-        X=np.asarray(x_train_electric_skipped.loc[23]),
+        X=np.asarray(x_train_electric_skipped.loc[INDEX_FOR_PLOT]),
         orientation="LR",
         precision=5,
         show_just_path=True,
@@ -398,7 +402,7 @@ def analyse(data_file_name: str, use_existing_fits: bool) -> None:
             "irradiance",
             "v_wind",
         ],
-        X=np.asarray(x_train_therm_skipped.loc[23]),
+        X=np.asarray(x_train_therm_skipped.loc[INDEX_FOR_PLOT]),
         orientation="LR",
         precision=5,
         show_just_path=True,
@@ -501,7 +505,7 @@ def analyse(data_file_name: str, use_existing_fits: bool) -> None:
             "irradiance",
             "v_wind",
         ],
-        X=np.asarray(x_test_electric_skipped.loc[23]),
+        X=np.asarray(x_test_electric_skipped.loc[INDEX_FOR_PLOT]),
         orientation="LR",
         precision=5,
         show_just_path=True,
@@ -518,7 +522,7 @@ def analyse(data_file_name: str, use_existing_fits: bool) -> None:
             "irradiance",
             "v_wind",
         ],
-        X=np.asarray(x_test_electric_skipped.loc[23]),
+        X=np.asarray(x_test_electric_skipped.loc[INDEX_FOR_PLOT]),
         orientation="LR",
         precision=5,
         show_just_path=True,
@@ -538,7 +542,7 @@ def analyse(data_file_name: str, use_existing_fits: bool) -> None:
             "irradiance",
             "v_wind",
         ],
-        X=np.asarray(x_train_electric_skipped.loc[23]),
+        X=np.asarray(x_train_electric_skipped.loc[INDEX_FOR_PLOT]),
         orientation="LR",
         precision=5,
         show_just_path=True,
@@ -555,7 +559,7 @@ def analyse(data_file_name: str, use_existing_fits: bool) -> None:
             "irradiance",
             "v_wind",
         ],
-        X=np.asarray(x_train_therm_skipped.loc[23]),
+        X=np.asarray(x_train_therm_skipped.loc[INDEX_FOR_PLOT]),
         orientation="LR",
         precision=5,
         show_just_path=True,
