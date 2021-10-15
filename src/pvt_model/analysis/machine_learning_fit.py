@@ -55,7 +55,7 @@ ELECTRICAL_EFFICIENCY: str = "electrical_efficiency"
 
 # Index for plot:
 #   The index to use for plotting.
-INDEX_FOR_PLOT: int = 5
+INDEX_FOR_PLOT: int = 23
 
 # Mass-flow rate:
 #   Keyword for the mass-flow rate of the collector.
@@ -63,11 +63,19 @@ MASS_FLOW_RATE: str = "mass_flow_rate"
 
 # Max forest depth:
 #   The maximum depth to go to when computing the random forests.
-MAX_FOREST_DEPTH: int = 12
+MAX_FOREST_DEPTH: int = 20
 
 # Max tree depth:
 #   The maximum depth to go to when computing the individual tree.
-MAX_TREE_DEPTH: int = 6
+MAX_TREE_DEPTH: int = 20
+
+# Min samples leaf:
+#   The minimum number of samples to leave on a leaf.
+MIN_SAMPLES_LEAF: int = 5
+
+# Min samples split:
+#   The minimum number of samples required to split at a node.
+MIN_SAMPLES_SPLIT: int = 20
 
 # Number of estimators:
 #   The number of estimators ("trees") to include in the random forests.
@@ -207,24 +215,32 @@ def analyse(data_file_name: str, use_existing_fits: bool) -> None:
     else:
         # Define the variables needed for the fit.
         electric_tree = DecisionTreeRegressor(
-            max_depth=MAX_TREE_DEPTH, min_samples_split=50, min_samples_leaf=10
+            max_depth=MAX_TREE_DEPTH,
+            min_samples_split=MIN_SAMPLES_SPLIT,
+            min_samples_leaf=MIN_SAMPLES_LEAF,
+            max_features=5,
         )
         thermal_tree = DecisionTreeRegressor(
-            max_depth=MAX_TREE_DEPTH, min_samples_split=50, min_samples_leaf=10
+            max_depth=MAX_TREE_DEPTH,
+            min_samples_split=MIN_SAMPLES_SPLIT,
+            min_samples_leaf=MIN_SAMPLES_LEAF,
+            max_features=5,
         )
         electric_forest = RandomForestRegressor(
             n_estimators=NUM_ESTIMATORS,
             criterion="squared_error",
             max_depth=MAX_FOREST_DEPTH,
-            min_samples_split=25,
-            min_samples_leaf=5,
+            min_samples_split=MIN_SAMPLES_SPLIT,
+            min_samples_leaf=MIN_SAMPLES_LEAF,
+            max_features=5,
         )
         thermal_forest = RandomForestRegressor(
             n_estimators=NUM_ESTIMATORS,
             criterion="squared_error",
             max_depth=MAX_FOREST_DEPTH,
-            min_samples_split=25,
-            min_samples_leaf=5,
+            min_samples_split=MIN_SAMPLES_SPLIT,
+            min_samples_leaf=MIN_SAMPLES_LEAF,
+            max_features=5,
         )
 
         # Train the models on the data.
