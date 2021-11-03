@@ -49,6 +49,10 @@ COLLECTOR_INPUT_TEMPERATURE: str = "collector_input_temperature"
 #   Keyword for the output temperature of the collector.
 COLLECTOR_OUTPUT_TEMPERATURE: str = "collector_output_temperature"
 
+# Data reduction factor:
+#   The factor by which to reduce the input data.
+DATA_REDUCTION_FACTOR: int = 1
+
 # Electrical efficiency:
 #   Keyword for the electric efficiency of the collector.
 ELECTRICAL_EFFICIENCY: str = "electrical_efficiency"
@@ -63,11 +67,11 @@ MASS_FLOW_RATE: str = "mass_flow_rate"
 
 # Max forest depth:
 #   The maximum depth to go to when computing the random forests.
-MAX_FOREST_DEPTH: int = 20
+MAX_FOREST_DEPTH: int = 12
 
 # Max tree depth:
 #   The maximum depth to go to when computing the individual tree.
-MAX_TREE_DEPTH: int = 20
+MAX_TREE_DEPTH: int = 12
 
 # Min samples leaf:
 #   The minimum number of samples to leave on a leaf.
@@ -75,11 +79,11 @@ MIN_SAMPLES_LEAF: int = 5
 
 # Min samples split:
 #   The minimum number of samples required to split at a node.
-MIN_SAMPLES_SPLIT: int = 20
+MIN_SAMPLES_SPLIT: int = 10
 
 # Number of estimators:
 #   The number of estimators ("trees") to include in the random forests.
-NUM_ESTIMATORS: int = 100
+NUM_ESTIMATORS: int = 150
 
 # Reconstruction resolution:
 #   The resolution to use when reconstructing reduced plots.
@@ -87,7 +91,7 @@ RECONSTRUCTION_RESOLUTION: int = 800
 
 # Reduced model:
 #   Label to use for reduced model data.
-REDUCED_MODEL: str = "reduced model"
+REDUCED_MODEL: str = "decision tree fit"
 
 # Skip resolution:
 #   The number of points to skip out when processing the skipped/reduced data for
@@ -100,7 +104,7 @@ SOLAR_IRRADIANCE: str = "solar_irradiance"
 
 # Technical model:
 #   Label to use for technical 3d model data.
-TECHNICAL_MODEL: str = "technical 3d model"
+TECHNICAL_MODEL: str = "3d model"
 
 # Thermal efficiency:
 #   Keyword for the thermal efficiency.
@@ -109,6 +113,50 @@ THERMAL_EFFICIENCY: str = "thermal_efficiency"
 # Wind speed:
 #   Keyword for the wind speed.
 WIND_SPEED: str = "wind_speed"
+
+###################
+# Hyperparameters #
+###################
+
+# The hyperparamter bounds are set below for attempting to tune the radnom forest.
+#
+
+# Number of estimators:
+#   Number of trees in random forest
+N_ESTIMATORS = [int(x) for x in np.linspace(start=50, stop=2000, num=40)]
+
+# Max features:
+#   Number of features to consider at every split
+MAX_FEATURES = ["auto", "sqrt"]
+
+# Max depth:
+#   Maximum number of levels in tree
+MAX_DEPTH = [int(x) for x in np.linspace(5, 110, num=22)]
+MAX_DEPTH.append(None)
+
+# Min samples spllit:
+#   Minimum number of samples required to split a node
+MIN_SAMPLES_SPLIT = [2, 5, 10, 15, 20, 40]
+
+# Min samples leaf:
+#   Minimum number of samples required at each leaf node
+MIN_SAMPLES_LEAF = [1, 2, 4, 8, 15, 30]
+
+# Bootstrap:
+#   Method of selecting samples for training each tree
+BOOTSTRAP = [True, False]
+
+# Random grid:
+#   The random grid used for searching for the random forest with the best set of
+#   hyperparameters.
+RANDOM_GRID = {
+    "n_estimators": N_ESTIMATORS,
+    "max_features": MAX_FEATURES,
+    "max_depth": MAX_DEPTH,
+    "min_samples_split": MIN_SAMPLES_SPLIT,
+    "min_samples_leaf": MIN_SAMPLES_LEAF,
+    "bootstrap": BOOTSTRAP,
+}
 
 
 def _parse_args(args) -> argparse.Namespace:
@@ -143,6 +191,9 @@ def analyse(data_file_name: str, use_existing_fits: bool) -> None:
     with open(data_file_name, "r") as f:
         data = json.load(f)
     print("[  DONE  ]")
+
+    # Reduce the number of data points used.
+    data = data[::DATA_REDUCTION_FACTOR]
 
     # Re-structure the data into a Lasso-friendly format.
     print("Restructuring input data............... ", end="")

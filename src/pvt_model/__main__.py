@@ -129,57 +129,52 @@ def _get_system_fourier_numbers(
     # Determine the Fourier coefficients of the panel's layers.
     fourier_number_map: Dict[TemperatureName, float] = dict()
     if pvt_collector.glass is not None:
-        fourier_number_map[TemperatureName.glass] = round(
+        fourier_number_map[TemperatureName.glass] = "{:.4g}".format(
             fourier_number(
                 pvt_collector.glass.thickness,
                 pvt_collector.glass.conductivity,
                 pvt_collector.glass.density,
                 pvt_collector.glass.heat_capacity,
                 resolution,
-            ),
-            2,
+            )
         )
     if pvt_collector.pv is not None:
-        fourier_number_map[TemperatureName.pv] = round(
+        fourier_number_map[TemperatureName.pv] = "{:.4g}".format(
             fourier_number(
                 pvt_collector.pv.thickness,
                 pvt_collector.pv.conductivity,
                 pvt_collector.pv.density,
                 pvt_collector.pv.heat_capacity,
                 resolution,
-            ),
-            2,
+            )
         )
-    fourier_number_map[TemperatureName.absorber] = round(
-        fourier_number(
-            pvt_collector.absorber.thickness,
-            pvt_collector.absorber.conductivity,
-            pvt_collector.absorber.density,
-            pvt_collector.absorber.heat_capacity,
-            resolution,
-        ),
-        2,
-    )
-    fourier_number_map[TemperatureName.htf] = round(
-        fourier_number(
-            pvt_collector.absorber.inner_pipe_diameter,
-            THERMAL_CONDUCTIVITY_OF_WATER,
-            DENSITY_OF_WATER,
-            pvt_collector.absorber.htf_heat_capacity,
-            resolution,
-        ),
-        2,
-    )
+        fourier_number_map[TemperatureName.absorber] = "{:.4g}".format(
+            fourier_number(
+                pvt_collector.absorber.thickness,
+                pvt_collector.absorber.conductivity,
+                pvt_collector.absorber.density,
+                pvt_collector.absorber.heat_capacity,
+                resolution,
+            )
+        )
+        fourier_number_map[TemperatureName.htf] = "{:.4g}".format(
+            fourier_number(
+                pvt_collector.absorber.inner_pipe_diameter,
+                THERMAL_CONDUCTIVITY_OF_WATER,
+                DENSITY_OF_WATER,
+                pvt_collector.absorber.htf_heat_capacity,
+                resolution,
+            )
+        )
     if hot_water_tank is not None:
-        fourier_number_map[TemperatureName.tank] = round(
+        fourier_number_map[TemperatureName.tank] = "{:.4g}".format(
             fourier_number(
                 hot_water_tank.diameter,
                 THERMAL_CONDUCTIVITY_OF_WATER,
                 DENSITY_OF_WATER,
                 HEAT_CAPACITY_OF_WATER,
                 resolution,
-            ),
-            5,
+            )
         )
 
     return fourier_number_map
