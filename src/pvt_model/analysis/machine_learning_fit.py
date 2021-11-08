@@ -18,6 +18,7 @@ type-check the external matplotlib.pyplot module.
 import argparse
 import datetime
 import json
+import os
 import pdb
 import pickle
 import re
@@ -33,7 +34,7 @@ from scipy.sparse.construct import rand
 from scipy.optimize import curve_fit
 from scipy.sparse import data
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import RandomizedSearchCV, train_test_split
 from sklearn.tree import DecisionTreeRegressor
 from tqdm import tqdm
 
@@ -65,25 +66,17 @@ INDEX_FOR_PLOT: int = 23
 #   Keyword for the mass-flow rate of the collector.
 MASS_FLOW_RATE: str = "mass_flow_rate"
 
-# Max forest depth:
-#   The maximum depth to go to when computing the random forests.
-MAX_FOREST_DEPTH: int = 12
-
 # Max tree depth:
 #   The maximum depth to go to when computing the individual tree.
-MAX_TREE_DEPTH: int = 12
+MAX_TREE_DEPTH: int = 10
 
 # Min samples leaf:
 #   The minimum number of samples to leave on a leaf.
-MIN_SAMPLES_LEAF: int = 5
+MIN_SAMPLES_TREE_LEAF: int = 15
 
 # Min samples split:
 #   The minimum number of samples required to split at a node.
-MIN_SAMPLES_SPLIT: int = 10
-
-# Number of estimators:
-#   The number of estimators ("trees") to include in the random forests.
-NUM_ESTIMATORS: int = 150
+MIN_SAMPLES_TREE_SPLIT: int = 150
 
 # Reconstruction resolution:
 #   The resolution to use when reconstructing reduced plots.
@@ -123,7 +116,7 @@ WIND_SPEED: str = "wind_speed"
 
 # Number of estimators:
 #   Number of trees in random forest
-N_ESTIMATORS = [int(x) for x in np.linspace(start=50, stop=2000, num=40)]
+N_ESTIMATORS = [int(x) for x in np.linspace(start=5, stop=200, num=40)]
 
 # Max features:
 #   Number of features to consider at every split
@@ -131,7 +124,7 @@ MAX_FEATURES = ["auto", "sqrt"]
 
 # Max depth:
 #   Maximum number of levels in tree
-MAX_DEPTH = [int(x) for x in np.linspace(5, 110, num=22)]
+MAX_DEPTH = [int(x) for x in np.linspace(1, 50, num=50)]
 MAX_DEPTH.append(None)
 
 # Min samples spllit:
@@ -225,6 +218,9 @@ def analyse(data_file_name: str, use_existing_fits: bool) -> None:
         )
     print("[  DONE  ]")
 
+    # Remove entries for which any have none.
+    processed_data = processed_data.dropna()
+
     # Split the last 50 entries out as test data.
     print("Separating out test and train data..... ", end="")
     x_train_therm, x_test_therm, y_train_therm, y_test_therm = train_test_split(
@@ -267,46 +263,25 @@ def analyse(data_file_name: str, use_existing_fits: bool) -> None:
         # Define the variables needed for the fit.
         electric_tree = DecisionTreeRegressor(
             max_depth=MAX_TREE_DEPTH,
-            min_samples_split=MIN_SAMPLES_SPLIT,
-            min_samples_leaf=MIN_SAMPLES_LEAF,
-            max_features=5,
+            min_samples_split=MIN_SAMPLES_TREE_SPLIT,
+            min_samples_leaf=MIN_SAMPLES_TREE_LEAF,
+            max_features=3,
         )
         thermal_tree = DecisionTreeRegressor(
             max_depth=MAX_TREE_DEPTH,
-            min_samples_split=MIN_SAMPLES_SPLIT,
-            min_samples_leaf=MIN_SAMPLES_LEAF,
-            max_features=5,
+            min_samples_split=MIN_SAMPLES_TREE_SPLIT,
+            min_samples_leaf=MIN_SAMPLES_TREE_LEAF,
+            max_features=3,
         )
-        electric_forest = RandomForestRegressor(
-            n_estimators=NUM_ESTIMATORS,
-            criterion="squared_error",
-            max_depth=MAX_FOREST_DEPTH,
-            min_samples_split=MIN_SAMPLES_SPLIT,
-            min_samples_leaf=MIN_SAMPLES_LEAF,
-            max_features=5,
-        )
-        thermal_forest = RandomForestRegressor(
-            n_estimators=NUM_ESTIMATORS,
-            criterion="squared_error",
-            max_depth=MAX_FOREST_DEPTH,
-            min_samples_split=MIN_SAMPLES_SPLIT,
-            min_samples_leaf=MIN_SAMPLES_LEAF,
-            max_features=5,
-        )
+        electric_forest = RandomForestRegressor()
+        thermal_forest = RandomForestRegressor()
 
         # Train the models on the data.
-        print("Fitting the electrical tree............ ", end="")
+        print("Fitting the electrical tree ........... ", end="")
         electric_tree.fit(x_train_electric, y_train_electric)
         print("[  DONE  ]")
-        print("Fitting the thermal tree............... ", end="")
+        print("Fitting the thermal tree .............. ", end="")
         thermal_tree.fit(x_train_therm, y_train_therm)
-        print("[  DONE  ]")
-
-        print("Fitting the electrical forest.......... ", end="")
-        electric_forest.fit(x_train_electric, y_train_electric)
-        print("[  DONE  ]")
-        print("Fitting the thermal forest............. ", end="")
-        thermal_forest.fit(x_train_therm, y_train_therm)
         print("[  DONE  ]")
 
         # Save the models.
@@ -315,16 +290,63 @@ def analyse(data_file_name: str, use_existing_fits: bool) -> None:
         with open("thermal_tree.sav", "wb") as f:
             pickle.dump(thermal_tree, f)
 
-        with open("electric_forest.sav", "wb") as f:
-            pickle.dump(electric_forest, f)
-        with open("thermal_forest.sav", "wb") as f:
-            pickle.dump(thermal_forest, f)
+        with open(
+            os.path.join("..", "CLOVER", "src", "clover", "src", "electric_tree.sav"),
+            "wb",
+        ) as f:
+            pickle.dump(electric_tree, f)
+        with open(
+            os.path.join("..", "CLOVER", "src", "clover", "src", "thermal_tree.sav"),
+            "wb",
+        ) as f:
+            pickle.dump(thermal_tree, f)
+
+        pdb.set_trace(header="Paused before carrying out random CV search.")
+
+        electric_forest_search = RandomizedSearchCV(
+            estimator=electric_forest,
+            param_distributions=RANDOM_GRID,
+            n_iter=100,
+            cv=3,
+            verbose=10,
+            random_state=42,
+            n_jobs=2,
+            pre_dispatch="2*n_jobs",
+        )
+        thermal_forest_search = RandomizedSearchCV(
+            estimator=thermal_forest,
+            param_distributions=RANDOM_GRID,
+            n_iter=100,
+            cv=3,
+            verbose=10,
+            random_state=42,
+            n_jobs=2,
+            pre_dispatch="2*n_jobs",
+        )
+
+        print("Fitting the hyper electrical forest ... ", end="")
+        electric_forest_search.fit(x_train_electric, y_train_electric)
+        print("[  DONE  ]")
+        print("Fitting the hyper thermal forest ...... ", end="")
+        thermal_forest_search.fit(x_train_therm, y_train_therm)
+        print("[  DONE  ]")
+
+        print(f"Best electric forest params: {electric_forest_search.best_params_}")
+        print(f"Best thermal forest params: {thermal_forest_search.best_params_}")
+
+        best_electric_forest = electric_forest_search.best_estimator_
+        best_thermal_forest = thermal_forest_search.best_estimator_
+
+        with open("best_electric_forest.sav", "wb") as f:
+            pickle.dump(best_electric_forest, f)
+        with open("best_thermal_forest.sav", "wb") as f:
+            pickle.dump(best_thermal_forest, f)
 
     # Make predictions using these models.
     y_predict_electric_tree = electric_tree.predict(x_test_electric)
     y_predict_therm_tree = thermal_tree.predict(x_test_therm)
-    y_predict_electric_forest = electric_forest.predict(x_test_electric)
-    y_predict_therm_forest = thermal_forest.predict(x_test_therm)
+    y_predict_electric_forest = best_electric_forest.predict(x_test_electric)
+    y_predict_therm_forest = best_thermal_forest.predict(x_test_therm)
 
     # Compute the baseline error and error improvement.
     # The electric baseline error is computed using the collector input temperature as
@@ -487,14 +509,17 @@ def analyse(data_file_name: str, use_existing_fits: bool) -> None:
     ):
         therm_estimator_accuracy[index] = np.mean(
             np.sqrt(
-                (y_test_therm - thermal_forest.estimators_[index].predict(x_test_therm))
+                (
+                    y_test_therm
+                    - best_thermal_forest.estimators_[index].predict(x_test_therm)
+                )
                 ** 2
             )
         )
     thermal_forest_accuracy = {
         value: key for key, value in therm_estimator_accuracy.items()
     }
-    best_thermal_tree = thermal_forest.estimators_[
+    best_thermal_tree = best_thermal_forest.estimators_[
         thermal_forest_accuracy[min(thermal_forest_accuracy.keys())]
     ]
 
@@ -509,7 +534,7 @@ def analyse(data_file_name: str, use_existing_fits: bool) -> None:
             np.sqrt(
                 (
                     y_test_electric
-                    - electric_forest.estimators_[index].predict(x_test_electric)
+                    - best_electric_forest.estimators_[index].predict(x_test_electric)
                 )
                 ** 2
             )
@@ -517,7 +542,7 @@ def analyse(data_file_name: str, use_existing_fits: bool) -> None:
     electric_forest_accuracy = {
         value: key for key, value in electric_forest_accuracy.items()
     }
-    best_electric_tree = electric_forest.estimators_[
+    best_electric_tree = best_electric_forest.estimators_[
         electric_forest_accuracy[min(electric_forest_accuracy.keys())]
     ]
 
