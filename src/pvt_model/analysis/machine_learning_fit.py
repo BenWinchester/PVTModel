@@ -52,7 +52,7 @@ COLLECTOR_OUTPUT_TEMPERATURE: str = "collector_output_temperature"
 
 # Data reduction factor:
 #   The factor by which to reduce the input data.
-DATA_REDUCTION_FACTOR: int = 1
+DATA_REDUCTION_FACTOR: int = 19347
 
 # Electrical efficiency:
 #   Keyword for the electric efficiency of the collector.
@@ -68,7 +68,7 @@ MASS_FLOW_RATE: str = "mass_flow_rate"
 
 # Max tree depth:
 #   The maximum depth to go to when computing the individual tree.
-MAX_TREE_DEPTH: int = 10
+MAX_TREE_DEPTH: int = 7
 
 # Min samples leaf:
 #   The minimum number of samples to leave on a leaf.
@@ -185,9 +185,6 @@ def analyse(data_file_name: str, use_existing_fits: bool) -> None:
         data = json.load(f)
     print("[  DONE  ]")
 
-    # Reduce the number of data points used.
-    data = data[::DATA_REDUCTION_FACTOR]
-
     # Re-structure the data into a Lasso-friendly format.
     print("Restructuring input data............... ", end="")
     if isinstance(data, list):
@@ -226,7 +223,7 @@ def analyse(data_file_name: str, use_existing_fits: bool) -> None:
     x_train_therm, x_test_therm, y_train_therm, y_test_therm = train_test_split(
         processed_data[[0, 1, 2, 3, 4]],
         processed_data[5],
-        test_size=0.33,
+        test_size=0.33 / DATA_REDUCTION_FACTOR,
         random_state=42,
     )
     (
