@@ -872,7 +872,10 @@ def analyse_decoupled_steady_state_data(
         logger.info("%s figures will be plotted.", int(len(data.keys()) * 5 + 2))
 
     for temperature in data.keys():
-        temperature_string = str(round(float(temperature), 2)).replace(".", "_")
+        try:
+            temperature_string = str(round(float(temperature), 2)).replace(".", "_")
+        except ValueError:
+            temperature_string = temperature
 
         if not skip_2d_plots:
             # Glass Temperatures
