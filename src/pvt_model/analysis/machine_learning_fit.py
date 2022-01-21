@@ -270,8 +270,8 @@ def analyse(data_file_name: str, use_existing_fits: bool) -> None:
             min_samples_leaf=MIN_SAMPLES_TREE_LEAF,
             max_features=3,
         )
-        electric_forest = RandomForestRegressor()
-        thermal_forest = RandomForestRegressor()
+        electric_forest = RandomForestRegressor(criterion="squared_error")
+        thermal_forest = RandomForestRegressor(criterion="squared_error")
 
         # Train the models on the data.
         print("Fitting the electrical tree ........... ", end="")
