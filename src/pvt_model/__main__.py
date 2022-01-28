@@ -848,6 +848,10 @@ def main(args) -> None:  # pylint: disable=too-many-branches
     # Parse the arguments passed in.
     parsed_args = argparser.parse_args(args)
 
+    print(f"DEBUG:\nArgs: {'\n'.join(args)}")
+    print(f"DEBUG:\nParsed args: {parsed_args}")
+    print(f"DEBUG:\nCWD: {os.getcwd()}")
+
     # Initialise logging.
     logger = get_logger(parsed_args.disable_logging, LOGGER_NAME, parsed_args.verbose)
     logger.info(

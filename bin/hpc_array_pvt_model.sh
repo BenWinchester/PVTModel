@@ -13,7 +13,6 @@
 ########################################################################################
 
 # Depending on the environmental variable, run the appropriate HPC job.
-
 module load anaconda3/personal
 source activate py37
 
@@ -21,9 +20,10 @@ OUTPUT_DIR="$PBS_O_WORKDIR/output_files"
 CURRENT_DIR=$(pwd)
 cd $PBS_O_WORKDIR
 
-INPUT_FILE=$(cat steady_state_data_files.txt | head -n $PBS_ARRAY_INDEX | tail -n 1)
-INPUT_FILE="new_steady_state_runs/$INPUT_FILE"
-OUTPUT_FILE="output_files/large_parameter_space_probe/output_file_$PBS_ARRAY_INDEX"
+INPUT_FILE=$(cat bahraich_steady_state_data_files.txt | head -n $PBS_ARRAY_INDEX | tail -n 1)
+INPUT_FILE="system_data/steady_state_data/$INPUT_FILE"
+echo "Input file: $INPUT_FILE"
+OUTPUT_FILE="$PBS_O_WORKDIR/output_files/bahraich_parameter_probe/bahraich_output_file_$PBS_ARRAY_INDEX"
 
 python3.7 -u -m src.pvt_model --skip-analysis \
     --output $OUTPUT_FILE \
