@@ -29,3 +29,6 @@ foo.txt
 # Ignore packages
 **/dist
 *egg*
+# Ignore bahraich run yaml files
+bahraich_run_[0-9]*_[0-9]*_[0-9]*.yaml
+bahraich_run_[0-9]*_[0-9]*_[0-9]*_[0-9]*_.yaml
