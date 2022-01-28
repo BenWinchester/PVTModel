@@ -1,4 +1,3 @@
-#!/bin/bash
 #PBS -J 350001-360000
 #PBS -lwalltime=01:00:00
 #PBS -lselect=1:ncpus=8:mem=11800Mb

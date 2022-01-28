@@ -1,4 +1,3 @@
-#!/bin/bash
 ########################################################################################
 # hpc_array_pvt_model.sh.py - Runs the PV-T model in an HPC array job.                 #
 #                                                                                      #
