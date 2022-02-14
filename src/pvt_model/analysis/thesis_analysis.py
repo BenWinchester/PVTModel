@@ -353,7 +353,7 @@ def _plot_experimental_data() -> plt.Axes:
         )
         fit = numpy.polyfit(x_data, y_data, 2)
         x_series = numpy.linspace(min(x_data), max(x_data), 100)
-        y_series = [fit[0] * entry ** 2 + fit[1] * entry + fit[2] for entry in x_series]
+        y_series = [fit[0] * entry**2 + fit[1] * entry + fit[2] for entry in x_series]
         plt.plot(x_series, y_series)
 
     return ax1

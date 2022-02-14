@@ -354,7 +354,7 @@ def decoupled_steady_state_run(
         "Beginning steady-state model:\n  Running on: %s\n  Running at convergent "
         "precision: %sK",
         initial_date_and_time.date().strftime("%d/%m/%Y"),
-        str(10 ** -CONVERGENT_SOLUTION_PRECISION),
+        str(10**-CONVERGENT_SOLUTION_PRECISION),
     )
 
     system_data[0] = system_data_from_run(

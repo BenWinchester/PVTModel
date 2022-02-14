@@ -256,7 +256,7 @@ def _validation_figure(
         for data_entry_name in ["single_glazed", "double_glazed", "unglazed"]:
             data_entry = validation_data_dict[data_entry_name]
             y_data_sets[data_entry_name] = (
-                data_entry["x_squared"] * x_data_series ** 2
+                data_entry["x_squared"] * x_data_series**2
                 + data_entry["linear_x"] * x_data_series
                 + data_entry["y_intercept"]
             )

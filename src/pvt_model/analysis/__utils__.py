@@ -278,7 +278,7 @@ def plot(  # pylint: disable=too-many-branches
             min(x_model_data), max(x_model_data), TRENDLINE_RESOLUTION
         )
         trendline_y_data = [
-            trend[0] * entry ** 2 + trend[1] * entry + trend[2]
+            trend[0] * entry**2 + trend[1] * entry + trend[2]
             for entry in trendline_x_data
         ]
 

@@ -394,7 +394,7 @@ def _best_guess(
             )
             + a_11 * np.log(solar_irradiance) * np.log(mass_flow_rate)
         )
-        + wind_speed ** 0.16
+        + wind_speed**0.16
         * (
             a_12
             + (a_13 * np.log(solar_irradiance) + a_14 * (np.log(solar_irradiance)) ** 2)
@@ -408,7 +408,7 @@ def _best_guess(
             + a_17 * np.log(solar_irradiance) * np.log(mass_flow_rate)
         )
         + ambient_temperature
-        * wind_speed ** 0.16
+        * wind_speed**0.16
         * (
             a_18
             + (a_19 * np.log(solar_irradiance) + a_20 * (np.log(solar_irradiance)) ** 2)

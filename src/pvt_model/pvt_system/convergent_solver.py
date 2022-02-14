@@ -88,7 +88,7 @@ def solve_temperature_vector_convergence_method(
     run_one_temperature_vector: Union[List[float], numpy.ndarray],
     weather_conditions: WeatherConditions,
     convergence_run_number: int = 0,
-    run_one_temperature_difference: float = 5 * ZERO_CELCIUS_OFFSET ** 2,
+    run_one_temperature_difference: float = 5 * ZERO_CELCIUS_OFFSET**2,
     collector_input_temperature: Optional[float] = None,
     current_hot_water_load: Optional[float] = None,
     heat_exchanger: Optional[exchanger.Exchanger] = None,
@@ -271,7 +271,7 @@ def solve_temperature_vector_convergence_method(
     )
 
     # If the solution has converged, return the temperature vector.
-    if run_two_temperature_difference < (10 ** -CONVERGENT_SOLUTION_PRECISION):
+    if run_two_temperature_difference < (10**-CONVERGENT_SOLUTION_PRECISION):
         logger.debug(
             "Date and time: %s; Run number: %s: Convergent solution found. "
             "Convergent difference: %s",

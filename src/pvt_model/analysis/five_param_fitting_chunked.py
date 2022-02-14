@@ -375,8 +375,8 @@ def _best_electrical_guess(
         )
         + (
             a_5 * ambient_temperature
-            + a_6 * wind_speed ** 0.16
-            + a_7 * ambient_temperature * wind_speed ** 0.16
+            + a_6 * wind_speed**0.16
+            + a_7 * ambient_temperature * wind_speed**0.16
         )
         * (
             (
@@ -489,7 +489,7 @@ def _best_guess(
             )
             + a_10 * np.log(solar_irradiance) * np.log(mass_flow_rate)
         )
-        + wind_speed ** 0.16
+        + wind_speed**0.16
         * (
             (a_11 * np.log(solar_irradiance) + a_12 * (np.log(solar_irradiance)) ** 2)
             + (
@@ -502,7 +502,7 @@ def _best_guess(
             + a_15 * np.log(solar_irradiance) * np.log(mass_flow_rate)
         )
         + ambient_temperature
-        * wind_speed ** 0.16
+        * wind_speed**0.16
         * (
             (a_16 * np.log(solar_irradiance) + a_17 * (np.log(solar_irradiance)) ** 2)
             + (

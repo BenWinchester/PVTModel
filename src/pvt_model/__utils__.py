@@ -175,7 +175,7 @@ def fourier_number(
     f_num: float = (conductivity * time_scale) / (  # [W/m*K] * [s]
         heat_capacity  # [J/kg*K]
         * density  # [kg/m^3]
-        * conductive_length_scale ** 2  # [m]^2
+        * conductive_length_scale**2  # [m]^2
     )
 
     return f_num

@@ -113,7 +113,7 @@ def _calculate_value_at_zero_reduced_temperature(
 
     trend = numpy.polyfit(x_series, y_series, 2)
     return (
-        trend[2] * REDUCED_TEMPERATURE_COMPARISON_POINT ** 2
+        trend[2] * REDUCED_TEMPERATURE_COMPARISON_POINT**2
         + trend[1] * REDUCED_TEMPERATURE_COMPARISON_POINT
         + trend[2]
     )

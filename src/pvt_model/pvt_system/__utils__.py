@@ -429,7 +429,7 @@ class WeatherConditions:
 
         """
 
-        return (1.458 * (10 ** (-6)) * (self.ambient_temperature ** 1.5)) / (
+        return (1.458 * (10 ** (-6)) * (self.ambient_temperature**1.5)) / (
             self.ambient_temperature + 110.4
         )
 
@@ -494,7 +494,7 @@ class WeatherConditions:
 
         """
 
-        return 0.0552 * (self.ambient_temperature ** 1.5)
+        return 0.0552 * (self.ambient_temperature**1.5)
 
     @property
     def thermal_conductivity_of_air(self) -> float:

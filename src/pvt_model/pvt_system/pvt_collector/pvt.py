@@ -334,7 +334,7 @@ class PVT:
             )
 
         return self.upper_glass.reflectance + (
-            self.glass.reflectance * self.upper_glass.transmittance ** 2
+            self.glass.reflectance * self.upper_glass.transmittance**2
         ) / (1 - self.upper_glass.reflectance * self.glass.reflectance)
 
     @property

@@ -69,7 +69,7 @@ def _top_heat_transfer_coefficient(
     """
 
     heat_transfer_coefficient: float = (
-        weather_conditions.wind_heat_transfer_coefficient ** 3
+        weather_conditions.wind_heat_transfer_coefficient**3
         + free_heat_transfer_coefficient_of_air(
             pvt_collector, element_top_temperature, weather_conditions
         )
@@ -135,7 +135,7 @@ def convective_heat_transfer_coefficient_of_water(
 
     return (
         0.23
-        * (current_reynolds_number ** 0.8)
+        * (current_reynolds_number**0.8)
         * (prandtl_number(weather_conditions) ** 0.4)
         * THERMAL_CONDUCTIVITY_OF_WATER
         / pvt_collector.absorber.inner_pipe_diameter
@@ -216,11 +216,11 @@ def free_heat_transfer_coefficient_of_air(
         weather_conditions,
     )
 
-    if current_rayleigh_number >= 10 ** 9:
+    if current_rayleigh_number >= 10**9:
         return (weather_conditions.thermal_conductivity_of_air / length_scale) * (
             0.68
             + (
-                (0.67 * current_rayleigh_number ** 0.25)
+                (0.67 * current_rayleigh_number**0.25)
                 / (
                     (1 + (0.492 / prandtl_number(weather_conditions)) ** (9 / 16))
                     ** (4 / 9)
@@ -271,11 +271,11 @@ def grashof_number(
         weather_conditions.thermal_expansivity_of_air  # [1/K]
         * ACCELERATION_DUE_TO_GRAVITY  # [m/s^2]
         * math.cos((pi / 2) - tilt_in_radians)
-        * weather_conditions.density_of_air ** 2  # [kg/m^3]
-        * length_scale ** 3  # [m^3]
+        * weather_conditions.density_of_air**2  # [kg/m^3]
+        * length_scale**3  # [m^3]
         * abs(surface_temperature - weather_conditions.ambient_temperature)  # [K]
     ) / (
-        weather_conditions.dynamic_viscosity_of_air ** 2
+        weather_conditions.dynamic_viscosity_of_air**2
     )  # [kg/m*s]
 
 
@@ -384,7 +384,7 @@ def radiative_heat_transfer_coefficient(
         return (
             STEFAN_BOLTZMAN_CONSTANT  # [W/m^2*K^4]
             * source_emissivity
-            * (source_temperature ** 2 + destination_temperature ** 2)  # [K^2]
+            * (source_temperature**2 + destination_temperature**2)  # [K^2]
             * (source_temperature + destination_temperature)  # [K]
         )
 
@@ -406,7 +406,7 @@ def radiative_heat_transfer_coefficient(
 
     return (
         STEFAN_BOLTZMAN_CONSTANT  # [W/m^2*K^4]
-        * (source_temperature ** 2 + destination_temperature ** 2)  # [K^2]
+        * (source_temperature**2 + destination_temperature**2)  # [K^2]
         * (source_temperature + destination_temperature)  # [K]
     ) / ((1 / source_emissivity) + (1 / destination_emissivity) - 1)
 
