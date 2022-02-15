@@ -124,7 +124,7 @@ MAX_FEATURES = ["auto", "sqrt"]
 
 # Max depth:
 #   Maximum number of levels in tree
-MAX_DEPTH = [int(x) for x in np.linspace(1, 50, num=50)]
+MAX_DEPTH = [int(x) for x in np.linspace(1, 15, num=15)]
 MAX_DEPTH.append(None)
 
 # Min samples spllit:
@@ -163,17 +163,22 @@ def _parse_args(args) -> argparse.Namespace:
     parser.add_argument(
         "--data-file-name", "-df", help="Path to the data file to parse."
     )
+    parser.add_argument(
+        "--num-pipes-correction", "-np", help="Correction factor for the number of pipes.", type=int
+    )
     parser.add_argument("--use-existing-fits", action="store_true", default=False)
 
     return parser.parse_args(args)
 
 
-def analyse(data_file_name: str, use_existing_fits: bool) -> None:
+def analyse(data_file_name: str, num_pipes_correction: int, use_existing_fits: bool) -> None:
     """
     Analysis function for fitting parameters.
 
     :param data_file_name:
         The data-file name.
+    :param num_pipes_correction:
+        Correction for the number of pipes.
     :param use_existing_fits:
         Whether to use existing fitted data.
 
@@ -193,7 +198,7 @@ def analyse(data_file_name: str, use_existing_fits: bool) -> None:
                 (
                     entry[AMBIENT_TEMPERATURE],
                     entry[COLLECTOR_INPUT_TEMPERATURE],
-                    3600 * entry[MASS_FLOW_RATE],
+                    3600 * entry[MASS_FLOW_RATE] * num_pipes_correction,
                     entry[SOLAR_IRRADIANCE],
                     entry[WIND_SPEED],
                     entry[COLLECTOR_OUTPUT_TEMPERATURE],
@@ -671,4 +676,4 @@ if __name__ == "__main__":
     # )
 
     # Attempt at fitting
-    analyse(parsed_args.data_file_name, parsed_args.use_existing_fits)
+    analyse(parsed_args.data_file_name, parsed_args.num_pipes_correction, parsed_args.use_existing_fits)
