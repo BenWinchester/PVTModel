@@ -16,15 +16,12 @@ type-check the external matplotlib.pyplot module.
 """
 
 import argparse
-import datetime
 import json
 import os
-import pdb
 import pickle
-import re
 import sys
 
-from typing import Dict, List, Set, Tuple
+from typing import Dict, List, Optional
 import numpy as np  # type: ignore  # pylint: disable=import-error
 import pandas as pd  # type: ignore  # pylint: disable=import-error
 
@@ -62,21 +59,29 @@ ELECTRICAL_EFFICIENCY: str = "electrical_efficiency"
 #   The index to use for plotting.
 INDEX_FOR_PLOT: int = 23
 
+# Low irradiance threshold:
+#   The threshold to use for treating low-irradiance data separately.
+LOW_IRRADIANCE_THRESHOLD: int = 25
+
+# Low temperature threshold:
+#   The threshold to use for treating low-temperature input temperature data separately.
+LOW_TEMP_THRESHOLD: int = 50
+
 # Mass-flow rate:
 #   Keyword for the mass-flow rate of the collector.
 MASS_FLOW_RATE: str = "mass_flow_rate"
 
 # Max tree depth:
 #   The maximum depth to go to when computing the individual tree.
-MAX_TREE_DEPTH: int = 7
+MAX_TREE_DEPTH: int = 15
 
 # Min samples leaf:
 #   The minimum number of samples to leave on a leaf.
-MIN_SAMPLES_TREE_LEAF: int = 15
+MIN_SAMPLES_TREE_LEAF: int = 5
 
 # Min samples split:
 #   The minimum number of samples required to split at a node.
-MIN_SAMPLES_TREE_SPLIT: int = 150
+MIN_SAMPLES_TREE_SPLIT: int = 25
 
 # Reconstruction resolution:
 #   The resolution to use when reconstructing reduced plots.
@@ -120,24 +125,24 @@ N_ESTIMATORS = [int(x) for x in np.linspace(start=5, stop=200, num=40)]
 
 # Max features:
 #   Number of features to consider at every split
-MAX_FEATURES = ["auto", "sqrt"]
+MAX_FEATURES: List[str] = ["auto", "sqrt"]
 
 # Max depth:
 #   Maximum number of levels in tree
-MAX_DEPTH = [int(x) for x in np.linspace(1, 15, num=15)]
+MAX_DEPTH: List[Optional[int]] = [int(x) for x in np.linspace(1, 15, num=15)]
 MAX_DEPTH.append(None)
 
 # Min samples spllit:
 #   Minimum number of samples required to split a node
-MIN_SAMPLES_SPLIT = [2, 5, 10, 15, 20, 40]
+MIN_SAMPLES_SPLIT: List[int] = [2, 5, 10, 15, 20, 40]
 
 # Min samples leaf:
 #   Minimum number of samples required at each leaf node
-MIN_SAMPLES_LEAF = [1, 2, 4, 8, 15, 30]
+MIN_SAMPLES_LEAF: List[int] = [1, 2, 4, 8, 15, 30]
 
 # Bootstrap:
 #   Method of selecting samples for training each tree
-BOOTSTRAP = [True, False]
+BOOTSTRAP: List[bool] = [True, False]
 
 # Random grid:
 #   The random grid used for searching for the random forest with the best set of
@@ -161,24 +166,246 @@ def _parse_args(args) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
+        "--cv-search",
+        "-cv",
+        help="Carry out a CV grid search of the available hyperparameter space.",
+        default=False,
+        action="store_true"
+    )
+    parser.add_argument(
         "--data-file-name", "-df", help="Path to the data file to parse."
     )
     parser.add_argument(
-        "--num-pipes-correction", "-np", help="Correction factor for the number of pipes.", type=int
+        "--forest",
+        "-f",
+        help="Fit a random forest regressor in addition to the base decision tree fit.",
+        default=False,
+        action="store_true"
+    )
+    parser.add_argument(
+        "--num-pipes-correction",
+        "-np",
+        help="Correction factor for the number of pipes.",
+        type=int,
     )
     parser.add_argument("--use-existing-fits", action="store_true", default=False)
 
     return parser.parse_args(args)
 
 
-def analyse(data_file_name: str, num_pipes_correction: int, use_existing_fits: bool) -> None:
+def _train_trees_and_forest(
+    cv_search: bool,
+    data_name: str,
+    forest: bool,
+    use_existing_fits: bool,
+    x_train_electric,
+    x_train_therm,
+    y_train_electric,
+    y_train_therm,
+):
+    """
+    This takes training and testing data for both the electrical and thermal instances
+    and carries out training.
+
+    :param cv_search:
+        Whether to carry out a CV grid search.
+
+    :param data_name:
+        The name of the specific data set being modelled.
+
+    :param forest:
+        Whether to carry out a forest fit.
+
+    :param use_existing_fits:
+        Use existing fit files.
+
+    :param x_train_electric:
+        The X training data for the electric models.
+
+    :param x_train_therm:
+        The X training data for the thermal models.
+
+    :param y_train_electric:
+        The Y training data for the electric models.
+
+    :param y_train_therm:
+        The Y training data for the thermal models.
+
+    """
+
+
+    if use_existing_fits:
+        with open(f"{data_name}_electric_tree.sav", "rb") as f:
+            electric_tree = pickle.load(f)
+        with open(f"{data_name}_thermal_tree.sav", "rb") as f:
+            thermal_tree = pickle.load(f)
+        with open(f"{data_name}_electric_forest.sav", "rb") as f:
+            electric_forest = pickle.load(f)
+        with open(f"{data_name}_thermal_forest.sav", "rb") as f:
+            thermal_forest = pickle.load(f)
+
+    else:
+        # Define the variables needed for the fit.
+        electric_tree = DecisionTreeRegressor(
+            max_depth=MAX_TREE_DEPTH,
+            min_samples_split=MIN_SAMPLES_TREE_SPLIT,
+            min_samples_leaf=MIN_SAMPLES_TREE_LEAF,
+            max_features=3,
+        )
+        thermal_tree = DecisionTreeRegressor(
+            max_depth=MAX_TREE_DEPTH,
+            min_samples_split=MIN_SAMPLES_TREE_SPLIT,
+            min_samples_leaf=MIN_SAMPLES_TREE_LEAF,
+            max_features=3,
+        )
+
+        # Train the models on the data.
+        print(f"Fitting the {data_name} electrical tree ... ", end="")
+        electric_tree.fit(x_train_electric, y_train_electric)
+        print("[  DONE  ]")
+        print(f"Fitting the {data_name} thermal tree ...... ", end="")
+        thermal_tree.fit(x_train_therm, y_train_therm)
+        print("[  DONE  ]")
+
+        # Save the models.
+        with open(f"{data_name}_electric_tree.sav", "wb") as f:
+            pickle.dump(electric_tree, f)
+        with open(f"{data_name}_thermal_tree.sav", "wb") as f:
+            pickle.dump(thermal_tree, f)
+
+        with open(
+            os.path.join("..", "CLOVER", "src", "clover", "src", f"{data_name}_electric_tree.sav"),
+            "wb",
+        ) as f:
+            pickle.dump(electric_tree, f)
+        with open(
+            os.path.join("..", "CLOVER", "src", "clover", "src", f"{data_name}_thermal_tree.sav"),
+            "wb",
+        ) as f:
+            pickle.dump(thermal_tree, f)
+
+        if not forest:
+            return
+
+        electric_forest = RandomForestRegressor(
+            criterion="squared_error",
+            max_depth=MAX_TREE_DEPTH,
+            max_features=3,
+            min_samples_split=MIN_SAMPLES_TREE_SPLIT,
+            min_samples_leaf=MIN_SAMPLES_TREE_LEAF,
+            n_estimators=100,
+        )
+        thermal_forest = RandomForestRegressor(
+            criterion="squared_error",
+            max_depth=MAX_TREE_DEPTH,
+            max_features=3,
+            min_samples_split=MIN_SAMPLES_TREE_SPLIT,
+            min_samples_leaf=MIN_SAMPLES_TREE_LEAF,
+            n_estimators=100,
+        )
+
+        # Train the models on the data.
+        print(f"Fitting the {data_name} simple electrical forest ... ", end="")
+        electric_forest.fit(x_train_electric, y_train_electric)
+        print("[  DONE  ]")
+        print(f"Fitting the {data_name} simple thermal forest ...... ", end="")
+        thermal_forest.fit(x_train_therm, y_train_therm)
+        print("[  DONE  ]")
+
+        # Save the models.
+        with open(f"{data_name}_electric_forest.sav", "wb") as f:
+            pickle.dump(electric_forest, f)
+        with open(f"{data_name}_thermal_forest.sav", "wb") as f:
+            pickle.dump(thermal_forest, f)
+
+        with open(
+            os.path.join("..", "CLOVER", "src", "clover", "src", f"{data_name}_electric_forest.sav"),
+            "wb",
+        ) as f:
+            pickle.dump(electric_forest, f)
+        with open(
+            os.path.join("..", "CLOVER", "src", "clover", "src", f"{data_name}_thermal_forest.sav"),
+            "wb",
+        ) as f:
+            pickle.dump(thermal_forest, f)
+
+        if not cv_search:
+            return
+
+        electric_forest = RandomForestRegressor(criterion="squared_error")
+        thermal_forest = RandomForestRegressor(criterion="squared_error")
+
+        electric_forest_search = RandomizedSearchCV(
+            estimator=electric_forest,
+            param_distributions=RANDOM_GRID,
+            n_iter=100,
+            cv=3,
+            verbose=10,
+            random_state=42,
+            n_jobs=2,
+            pre_dispatch="2*n_jobs",
+        )
+        thermal_forest_search = RandomizedSearchCV(
+            estimator=thermal_forest,
+            param_distributions=RANDOM_GRID,
+            n_iter=100,
+            cv=3,
+            verbose=10,
+            random_state=42,
+            n_jobs=2,
+            pre_dispatch="2*n_jobs",
+        )
+
+        print(f"Fitting the {data_name} hyper electrical forest ... ", end="")
+        electric_forest_search.fit(x_train_electric, y_train_electric)
+        print("[  DONE  ]")
+        print(f"Fitting the {data_name} hyper thermal forest ...... ", end="")
+        thermal_forest_search.fit(x_train_therm, y_train_therm)
+        print("[  DONE  ]")
+
+        print(f"Best {data_name} electric forest params: {electric_forest_search.best_params_}")
+        print(f"Best {data_name} thermal forest params: {thermal_forest_search.best_params_}")
+
+        best_electric_forest = electric_forest_search.best_estimator_
+        best_thermal_forest = thermal_forest_search.best_estimator_
+
+        # Save the models.
+        with open(f"{data_name}_best_electric_forest.sav", "wb") as f:
+            pickle.dump(best_electric_forest, f)
+        with open(f"{data_name}_best_thermal_forest.sav", "wb") as f:
+            pickle.dump(best_thermal_forest, f)
+
+        with open(
+            os.path.join("..", "CLOVER", "src", "clover", "src", f"{data_name}_best_electric_forest.sav"),
+            "wb",
+        ) as f:
+            pickle.dump(best_electric_forest, f)
+        with open(
+            os.path.join("..", "CLOVER", "src", "clover", "src", f"{data_name}_best_thermal_forest.sav"),
+            "wb",
+        ) as f:
+            pickle.dump(best_thermal_forest, f)
+
+
+
+def analyse(
+    cv_search: bool, data_file_name: str, forest: bool, num_pipes_correction: int, use_existing_fits: bool
+) -> None:
     """
     Analysis function for fitting parameters.
 
+    :param cv_search:
+        Carry out a randomised CV grid search.
+
     :param data_file_name:
         The data-file name.
+
+    :param forest:
+        Fit an electric or thermal forest.
+
     :param num_pipes_correction:
         Correction for the number of pipes.
+
     :param use_existing_fits:
         Whether to use existing fitted data.
 
@@ -223,7 +450,7 @@ def analyse(data_file_name: str, num_pipes_correction: int, use_existing_fits: b
     # Remove entries for which any have none.
     processed_data = processed_data.dropna()
 
-    # Split the last 50 entries out as test data.
+    # Split out test data.
     print("Separating out test and train data..... ", end="")
     x_train_therm, x_test_therm, y_train_therm, y_test_therm = train_test_split(
         processed_data[[0, 1, 2, 3, 4]],
@@ -246,103 +473,185 @@ def analyse(data_file_name: str, num_pipes_correction: int, use_existing_fits: b
     # Reset the index columns.
     x_train_electric = x_train_electric.reset_index(drop=True)
     x_test_electric = x_test_electric.reset_index(drop=True)
+    x_train_therm = x_train_therm.reset_index(drop=True)
+    x_test_therm = x_test_therm.reset_index(drop=True)
+    y_train_electric = y_train_electric.reset_index(drop=True)
+    y_test_electric = y_test_electric.reset_index(drop=True)
     y_train_therm = y_train_therm.reset_index(drop=True)
     y_test_therm = y_test_therm.reset_index(drop=True)
 
+    # Split the data into "standard" and "low" irradiance and "low_temp" and "high_temp"
+    # data sets.
+
+    # Electric data sets.
+    x_standard_electric = x_train_electric[
+        x_train_electric[3] >= LOW_IRRADIANCE_THRESHOLD
+    ]
+    y_standard_electric = y_train_electric[
+        x_train_electric[3] >= LOW_IRRADIANCE_THRESHOLD
+    ]
+    x_low_irradiance_electric = x_train_electric[
+        x_train_electric[3] < LOW_IRRADIANCE_THRESHOLD
+    ]
+    y_low_irradiance_electric = y_train_electric[
+        x_train_electric[3] < LOW_IRRADIANCE_THRESHOLD
+    ]
+
+    # Thermal data sets.
+    x_standard_thermal = x_train_therm[x_train_therm[3] >= LOW_IRRADIANCE_THRESHOLD]
+    y_standard_thermal = y_train_therm[x_train_therm[3] >= LOW_IRRADIANCE_THRESHOLD]
+    x_low_irradiance_thermal = x_train_therm[
+        x_train_therm[3] < LOW_IRRADIANCE_THRESHOLD
+    ]
+    y_low_irradiance_thermal = y_train_therm[
+        x_train_therm[3] < LOW_IRRADIANCE_THRESHOLD
+    ]
+
+    # Datasets for standard irradiance and high_temp through the collector.
+    x_standard_high_temp_electric = x_standard_electric[
+        x_standard_electric[1] >= LOW_TEMP_THRESHOLD
+    ]
+    x_standard_high_temp_electric = x_standard_high_temp_electric.reset_index(drop=True)
+
+    y_standard_high_temp_electric = y_standard_electric[
+        x_standard_electric[1] >= LOW_TEMP_THRESHOLD
+    ]
+    y_standard_high_temp_electric = y_standard_high_temp_electric.reset_index(drop=True)
+
+    x_standard_high_temp_thermal = x_standard_thermal[
+        x_standard_thermal[1] >= LOW_TEMP_THRESHOLD
+    ]
+    x_standard_high_temp_thermal = x_standard_high_temp_thermal.reset_index(drop=True)
+
+    y_standard_high_temp_thermal = y_standard_thermal[
+        x_standard_thermal[1] >= LOW_TEMP_THRESHOLD
+    ]
+    y_standard_high_temp_thermal = y_standard_high_temp_thermal.reset_index(drop=True)
+
+    # Datasets for standard irradiance and expected low_temp through the collector.
+    x_standard_low_temp_electric = x_standard_electric[
+        x_standard_electric[1] < LOW_TEMP_THRESHOLD
+    ]
+    x_standard_low_temp_electric = x_standard_low_temp_electric.reset_index(drop=True)
+
+    y_standard_low_temp_electric = y_standard_electric[
+        x_standard_electric[1] < LOW_TEMP_THRESHOLD
+    ]
+    y_standard_low_temp_electric = y_standard_low_temp_electric.reset_index(drop=True)
+
+    x_standard_low_temp_thermal = x_standard_thermal[
+        x_standard_thermal[1] < LOW_TEMP_THRESHOLD
+    ]
+    x_standard_low_temp_thermal = x_standard_low_temp_thermal.reset_index(drop=True)
+
+    y_standard_low_temp_thermal = y_standard_thermal[
+        x_standard_thermal[1] < LOW_TEMP_THRESHOLD
+    ]
+    y_standard_low_temp_thermal = y_standard_low_temp_thermal.reset_index(drop=True)
+
+    # Datasets for standard irradiance and high_temp through the collector.
+    x_low_irradiance_high_temp_electric = x_low_irradiance_electric[
+        x_low_irradiance_electric[1] >= LOW_TEMP_THRESHOLD
+    ]
+    x_low_irradiance_high_temp_electric = x_low_irradiance_high_temp_electric.reset_index(
+        drop=True
+    )
+
+    y_low_irradiance_high_temp_electric = y_low_irradiance_electric[
+        x_low_irradiance_electric[1] >= LOW_TEMP_THRESHOLD
+    ]
+    y_low_irradiance_high_temp_electric = y_low_irradiance_high_temp_electric.reset_index(
+        drop=True
+    )
+
+    x_low_irradiance_high_temp_thermal = x_low_irradiance_thermal[
+        x_low_irradiance_thermal[1] >= LOW_TEMP_THRESHOLD
+    ]
+    x_low_irradiance_high_temp_thermal = x_low_irradiance_high_temp_thermal.reset_index(
+        drop=True
+    )
+
+    y_low_irradiance_high_temp_thermal = y_low_irradiance_thermal[
+        x_low_irradiance_thermal[1] >= LOW_TEMP_THRESHOLD
+    ]
+    y_low_irradiance_high_temp_thermal = y_low_irradiance_high_temp_thermal.reset_index(
+        drop=True
+    )
+
+    # Datasets for standard irradiance and expected low_temp through the collector.
+    x_low_irradiance_low_temp_electric = x_low_irradiance_electric[
+        x_low_irradiance_electric[1] < LOW_TEMP_THRESHOLD
+    ]
+    x_low_irradiance_low_temp_electric = x_low_irradiance_low_temp_electric.reset_index(
+        drop=True
+    )
+
+    y_low_irradiance_low_temp_electric = y_low_irradiance_electric[
+        x_low_irradiance_electric[1] < LOW_TEMP_THRESHOLD
+    ]
+    y_low_irradiance_low_temp_electric = y_low_irradiance_low_temp_electric.reset_index(
+        drop=True
+    )
+
+    x_low_irradiance_low_temp_thermal = x_low_irradiance_thermal[
+        x_low_irradiance_thermal[1] < LOW_TEMP_THRESHOLD
+    ]
+    x_low_irradiance_low_temp_thermal = x_low_irradiance_low_temp_thermal.reset_index(
+        drop=True
+    )
+
+    y_low_irradiance_low_temp_thermal = y_low_irradiance_thermal[
+        x_low_irradiance_thermal[1] < LOW_TEMP_THRESHOLD
+    ]
+    y_low_irradiance_low_temp_thermal = y_low_irradiance_low_temp_thermal.reset_index(
+        drop=True
+    )
+
     print("[  DONE  ]")
 
-    if use_existing_fits:
-        with open("electric_tree.sav", "rb") as f:
-            electric_tree = pickle.load(f)
-        with open("thermal_tree.sav", "rb") as f:
-            thermal_tree = pickle.load(f)
-        with open("electric_forest.sav", "rb") as f:
-            electric_forest = pickle.load(f)
-        with open("thermal_forest.sav", "rb") as f:
-            thermal_forest = pickle.load(f)
+    _train_trees_and_forest(
+        cv_search,
+        "low_irradiance_low_temp",
+        forest,
+        use_existing_fits,
+        x_low_irradiance_low_temp_electric,
+        x_low_irradiance_low_temp_thermal,
+        y_low_irradiance_low_temp_electric,
+        y_low_irradiance_low_temp_thermal
+    )
 
-    else:
-        # Define the variables needed for the fit.
-        electric_tree = DecisionTreeRegressor(
-            max_depth=MAX_TREE_DEPTH,
-            min_samples_split=MIN_SAMPLES_TREE_SPLIT,
-            min_samples_leaf=MIN_SAMPLES_TREE_LEAF,
-            max_features=3,
-        )
-        thermal_tree = DecisionTreeRegressor(
-            max_depth=MAX_TREE_DEPTH,
-            min_samples_split=MIN_SAMPLES_TREE_SPLIT,
-            min_samples_leaf=MIN_SAMPLES_TREE_LEAF,
-            max_features=3,
-        )
-        electric_forest = RandomForestRegressor(criterion="squared_error")
-        thermal_forest = RandomForestRegressor(criterion="squared_error")
+    _train_trees_and_forest(
+        cv_search,
+        "low_irradiance_high_temp",
+        forest,
+        use_existing_fits,
+        x_low_irradiance_high_temp_electric,
+        x_low_irradiance_high_temp_thermal,
+        y_low_irradiance_high_temp_electric,
+        y_low_irradiance_high_temp_thermal
+    )
 
-        # Train the models on the data.
-        print("Fitting the electrical tree ........... ", end="")
-        electric_tree.fit(x_train_electric, y_train_electric)
-        print("[  DONE  ]")
-        print("Fitting the thermal tree .............. ", end="")
-        thermal_tree.fit(x_train_therm, y_train_therm)
-        print("[  DONE  ]")
+    _train_trees_and_forest(
+        cv_search,
+        "standard_irradiance_low_temp",
+        forest,
+        use_existing_fits,
+        x_standard_low_temp_electric,
+        x_standard_low_temp_thermal,
+        y_standard_low_temp_electric,
+        y_standard_low_temp_thermal,
+    )
 
-        # Save the models.
-        with open("electric_tree.sav", "wb") as f:
-            pickle.dump(electric_tree, f)
-        with open("thermal_tree.sav", "wb") as f:
-            pickle.dump(thermal_tree, f)
-
-        with open(
-            os.path.join("..", "CLOVER", "src", "clover", "src", "electric_tree.sav"),
-            "wb",
-        ) as f:
-            pickle.dump(electric_tree, f)
-        with open(
-            os.path.join("..", "CLOVER", "src", "clover", "src", "thermal_tree.sav"),
-            "wb",
-        ) as f:
-            pickle.dump(thermal_tree, f)
-
-        pdb.set_trace(header="Paused before carrying out random CV search.")
-
-        electric_forest_search = RandomizedSearchCV(
-            estimator=electric_forest,
-            param_distributions=RANDOM_GRID,
-            n_iter=100,
-            cv=3,
-            verbose=10,
-            random_state=42,
-            n_jobs=2,
-            pre_dispatch="2*n_jobs",
-        )
-        thermal_forest_search = RandomizedSearchCV(
-            estimator=thermal_forest,
-            param_distributions=RANDOM_GRID,
-            n_iter=100,
-            cv=3,
-            verbose=10,
-            random_state=42,
-            n_jobs=2,
-            pre_dispatch="2*n_jobs",
-        )
-
-        print("Fitting the hyper electrical forest ... ", end="")
-        electric_forest_search.fit(x_train_electric, y_train_electric)
-        print("[  DONE  ]")
-        print("Fitting the hyper thermal forest ...... ", end="")
-        thermal_forest_search.fit(x_train_therm, y_train_therm)
-        print("[  DONE  ]")
-
-        print(f"Best electric forest params: {electric_forest_search.best_params_}")
-        print(f"Best thermal forest params: {thermal_forest_search.best_params_}")
-
-        best_electric_forest = electric_forest_search.best_estimator_
-        best_thermal_forest = thermal_forest_search.best_estimator_
-
-        with open("best_electric_forest.sav", "wb") as f:
-            pickle.dump(best_electric_forest, f)
-        with open("best_thermal_forest.sav", "wb") as f:
-            pickle.dump(best_thermal_forest, f)
+    _train_trees_and_forest(
+        cv_search,
+        "standard_irradiance_high_temp",
+        forest,
+        use_existing_fits,
+        x_standard_high_temp_electric,
+        x_standard_high_temp_thermal,
+        y_standard_high_temp_electric,
+        y_standard_high_temp_thermal,
+    )
 
     # Make predictions using these models.
     y_predict_electric_tree = electric_tree.predict(x_test_electric)
@@ -661,9 +970,9 @@ def analyse(data_file_name: str, num_pipes_correction: int, use_existing_fits: b
     electric_viz.save("best_electric_decision_tree_train.svg")
     thermal_viz.save("best_thermal_decision_tree_train.svg")
 
-    with open("best_electric_tree.sav", "wb") as f:
+    with open(f"{data_name}_best_electric_tree.sav", "wb") as f:
         pickle.dump(best_electric_tree, f)
-    with open("best_thermal_tree.sav", "wb") as f:
+    with open(f"{data_name}_best_thermal_tree.sav", "wb") as f:
         pickle.dump(best_thermal_tree, f)
 
 
@@ -676,4 +985,10 @@ if __name__ == "__main__":
     # )
 
     # Attempt at fitting
-    analyse(parsed_args.data_file_name, parsed_args.num_pipes_correction, parsed_args.use_existing_fits)
+    analyse(
+        parsed_args.cv_search,
+        parsed_args.data_file_name,
+        parsed_args.forest,
+        parsed_args.num_pipes_correction,
+        parsed_args.use_existing_fits,
+    )
