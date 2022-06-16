@@ -1,4 +1,4 @@
-# FirstPVTModel
+# PVTModel
 2D model for a PVT system.
 
 ## Model basics.
