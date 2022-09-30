@@ -387,7 +387,6 @@ def _train_trees_and_forest(
             pickle.dump(best_thermal_forest, f)
 
 
-
 def analyse(
     cv_search: bool, data_file_name: str, forest: bool, num_pipes_correction: int, use_existing_fits: bool
 ) -> None:
