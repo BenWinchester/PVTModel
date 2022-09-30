@@ -121,7 +121,7 @@ WIND_SPEED: str = "wind_speed"
 
 # Number of estimators:
 #   Number of trees in random forest
-N_ESTIMATORS = [int(x) for x in np.linspace(start=5, stop=200, num=40)]
+N_ESTIMATORS = [int(x) for x in np.linspace(start=5, stop=1000, num=200)]
 
 # Max features:
 #   Number of features to consider at every split
@@ -129,16 +129,16 @@ MAX_FEATURES: List[str] = ["auto", "sqrt"]
 
 # Max depth:
 #   Maximum number of levels in tree
-MAX_DEPTH: List[Optional[int]] = [int(x) for x in np.linspace(1, 15, num=15)]
+MAX_DEPTH: List[Optional[int]] = [int(x) for x in np.linspace(1, 40, num=40)]
 MAX_DEPTH.append(None)
 
 # Min samples spllit:
 #   Minimum number of samples required to split a node
-MIN_SAMPLES_SPLIT: List[int] = [2, 5, 10, 15, 20, 40]
+MIN_SAMPLES_SPLIT: List[int] = [int(x) for x in np.linspace(5, 100, num=10)]
 
 # Min samples leaf:
 #   Minimum number of samples required at each leaf node
-MIN_SAMPLES_LEAF: List[int] = [1, 2, 4, 8, 15, 30]
+MIN_SAMPLES_LEAF: List[int] = [int(x) for x in np.linspace(1, 100, num=20)]
 
 # Bootstrap:
 #   Method of selecting samples for training each tree
