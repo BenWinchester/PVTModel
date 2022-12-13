@@ -73,15 +73,15 @@ MASS_FLOW_RATE: str = "mass_flow_rate"
 
 # Max tree depth:
 #   The maximum depth to go to when computing the individual tree.
-MAX_TREE_DEPTH: int = 15
+MAX_TREE_DEPTH: int = 5
 
 # Min samples leaf:
 #   The minimum number of samples to leave on a leaf.
-MIN_SAMPLES_TREE_LEAF: int = 5
+MIN_SAMPLES_TREE_LEAF: int = 500
 
 # Min samples split:
 #   The minimum number of samples required to split at a node.
-MIN_SAMPLES_TREE_SPLIT: int = 25
+MIN_SAMPLES_TREE_SPLIT: int = 6000
 
 # Reconstruction resolution:
 #   The resolution to use when reconstructing reduced plots.

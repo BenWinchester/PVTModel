@@ -25,6 +25,7 @@ from typing import Dict, List, Optional, Tuple, Union
 import numpy
 
 from dateutil.relativedelta import relativedelta
+from tqdm import tqdm
 
 from .. import convergent_solver, weather
 from ..pvt_collector import pvt
@@ -198,6 +199,7 @@ def decoupled_dynamic_run(
         List[float], numpy.ndarray
     ] = initial_system_temperature_vector
 
+
     for run_number, date_and_time in enumerate(
         time_iterator(
             first_time=initial_date_and_time,
@@ -268,6 +270,8 @@ def decoupled_dynamic_run(
             weather_conditions,
         )
         previous_run_temperature_vector = current_run_temperature_vector
+
+        print(f"Calculation complete for time step {run_number}.")
 
     return numpy.asarray(current_run_temperature_vector), system_data
 
