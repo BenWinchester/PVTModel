@@ -209,6 +209,7 @@ def calculate_pv_equation(  # pylint: disable=too-many-branches
         + pv_to_glass_radiation
         + pv_to_glass_conduction
         + pv_to_absorber_conduction
+        + pv_to_mcf_conduction
     )
 
     # Compute the T_pv(i+1, j) term provided that that element exists.
