@@ -44,9 +44,10 @@ def calculate_pv_equation(  # pylint: disable=too-many-branches
     number_of_y_elements: int,
     operating_mode: OperatingMode,
     previous_temperature_vector: Optional[numpy.ndarray],
-    pv_to_absorber_conduction: float,
+    pv_to_absorber_conduction: float, # 0 when absorber below MCF
     pv_to_glass_conduction: float,
     pv_to_glass_radiation: float,
+    pv_to_mcf_conduction: float, # 0 when MCF below absorber
     pvt_collector: pvt.PVT,
     resolution: Optional[int],
     element: Element,
