@@ -87,6 +87,9 @@ class PVT:
     .. attribute:: longitude
         The longitude of the panel, measured in degrees.
 
+    .. attribute:: mcf
+        Represents the MCF layer of the panel.
+
     .. attribute:: portion_covered
         The portion of the PV-T panel which is covered with PV.
 
