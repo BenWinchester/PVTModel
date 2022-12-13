@@ -1,15 +1,17 @@
 #!/usr/bin/python3.7
 ########################################################################################
-# pvt_collector/pv.py - Represents a absorber within a PVT panel.
+# pvt_collector/mcf.py - Represents a absorber within a PVT panel.
 #
-# Author: Ben Winchester
-# Copyright: Ben Winchester, 2021
+# Author: Ben Winchester, Maria Rita Golia
+# Copyright: Ben Winchester, 2022
 ########################################################################################
 
 """
-The PV module for the PV-T model.
+The MCF module for the PV-T model.
 
-This module represents a PV layer within a PV-T panel.
+This module represents a MCF layer within a PV-T panel.
+
+NOTE: This needs to contain all the properties about the MCF.
 
 """
 
@@ -24,26 +26,11 @@ from .__utils__ import (
 __all__ = ("PV",)
 
 
-class PV(OpticalLayer):
+class MCF(OpticalLayer):
     """
     Represents the photovoltaic (middle) layer of the PV-T panel.
 
     """
-
-    # Private attributes:
-    #
-    # .. attribute:: reference_efficiency
-    #   The efficiency of the PV layer at the reference temperature. Thie value varies
-    #   between 1 (corresponding to 100% efficiency), and 0 (corresponding to 0%
-    #   efficiency)
-    #
-    # .. attribute:: reference_temperature
-    #   The referencee temperature, in Kelvin, at which the reference efficiency is
-    #   defined.
-    #
-    # .. attribute:: thermal_coefficient
-    #   The thermal coefficient for the efficiency of the panel.
-    #
 
     def __init__(self, pv_params: PVParameters) -> None:
         """
@@ -65,11 +52,8 @@ class PV(OpticalLayer):
                 pv_params.emissivity,
             )
         )
-
-        self.reference_efficiency = pv_params.reference_efficiency
-        self.reference_temperature = pv_params.reference_temperature
-        self.thermal_coefficient = pv_params.thermal_coefficient
-
+        
+        
     def __repr__(self) -> str:
         """
         Returns a nice representation of the layer.
