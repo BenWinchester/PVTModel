@@ -13,6 +13,7 @@ The utility module for the analysis component.
 """
 
 import enum
+import math
 import os
 
 from logging import Logger
@@ -22,6 +23,8 @@ import json
 import re
 
 import numpy
+
+import seaborn as sns
 
 from matplotlib.axes import Axes
 from matplotlib import cm
@@ -46,6 +49,7 @@ except ModuleNotFoundError:
 __all__ = (
     "GraphDetail",
     "load_model_data",
+    "multi_layer_temperature_plot",
     "plot",
     "plot_figure",
     "plot_two_dimensional_figure",
@@ -365,7 +369,7 @@ def save_figure(figure_name: str, transparent: bool = False) -> None:
     filenames.reverse()
 
     # Incriment all files in the old_figures directory.
-    for filename in tqdm(filenames, desc="renaming old files", uint="file"):
+    for filename in tqdm(filenames, desc="renaming old files", unit="file"):
         file_match = re.match(file_regex, filename)
         if file_match is None:
             continue
@@ -587,6 +591,150 @@ def plot_figure(  # pylint: disable=too-many-branches
     save_figure(figure_name, transparent)
 
 
+def multi_layer_temperature_plot(logger, model_data, *, entry_number) -> None:
+    """
+    Plot a figure with a temperature heatmap for each layer.
+
+    :param logger:
+        The logger used for the analysis module.
+
+    :param model_data:
+        The data outputted from the model.
+
+    :param entry_number:
+        If provided, this is used to compute the entry to plot. Otherwise, hour and
+        minute are used.
+
+    """
+
+    def _process_layer_data(key_to_process: str) -> numpy.ndarray:
+        """
+        Process the data for a layer
+
+        :param: key_to_process
+            The key for the layer being processed.
+
+        :return: The array for the data.
+
+        """
+        x_series = [
+            int(re.match(coordinate_regex, coordinate).group("x_index"))
+            for coordinate in data_entry[key_to_process]
+        ]
+        y_series = [
+            int(re.match(coordinate_regex, coordinate).group("y_index"))
+            for coordinate in data_entry[key_to_process]
+        ]
+        z_series = list(data_entry[key_to_process].values())
+
+        # Reshape the data for plotting.
+        array_shape = (len(set(y_series)), len(set(x_series)))
+
+        z_array = numpy.zeros(array_shape)
+        for index, value in enumerate(z_series):
+            z_array[len(set(y_series)) - (y_series[index] + 1), x_series[index]] = value
+
+        return z_array
+
+    # Determine the data index number based on the time.
+    if entry_number is None:
+        entry_number = int(len(model_data) * ((hour / 24) + (minute / (24 * 60))))
+    try:
+        data_entry = model_data[entry_number]
+    except KeyError:
+        try:
+            data_entry = model_data[str(entry_number)]
+        except KeyError as e:
+            logger.error(
+                "Key lookup failed for data entry number %s: %s", entry_number, str(e)
+            )
+            raise
+
+    coordinate_regex = re.compile(r"\((?P<x_index>[0-9]*), (?P<y_index>[0-9]*)\)")
+
+    # Process the data sets
+    from matplotlib import rc
+
+    rc("font", **{"family": "sans-serif", "sans-serif": ["Arial"]})
+
+    glass_array = _process_layer_data("layer_temperature_map_glass")
+    pv_array = _process_layer_data("layer_temperature_map_pv")
+    absorber_array = _process_layer_data("layer_temperature_map_absorber")
+
+    vmin = math.floor(min(numpy.min(glass_array), numpy.min(pv_array), numpy.min(absorber_array)))
+    vmax = math.ceil(max(numpy.max(glass_array), numpy.max(pv_array), numpy.max(absorber_array)))
+
+    # Form the data into the right shape for each layer
+    _, axes = plt.subplots(1, 3, figsize=(48 / 5, 32 / 5))
+    palette = sns.cubehelix_palette(start=1.5, rot=-0.5, dark=0.05, light=0.95, as_cmap=True)
+    palette = sns.diverging_palette(205, 18, s=100, l=50, n=100)
+    plt.subplots_adjust(hspace=0.3)
+
+    sns.set_context("paper")
+    sns.set_style("ticks")
+
+    # Plots
+    linewidth: float = 0
+    sns.heatmap(glass_array, cmap=palette, ax=axes[0], vmin=vmin, vmax=vmax, cbar=False, square=False, linewidths=linewidth, linecolor="white")
+    sns.heatmap(pv_array, cmap=palette, ax=axes[1], vmin=vmin, vmax=vmax, cbar=False, square=False, linewidths=linewidth, linecolor="white")
+    sns.heatmap(absorber_array, cmap=palette, ax=axes[2], vmin=vmin, vmax=vmax, cbar_kws={"pad": 0.02, "label":"Temperature / $^\circ$C"}, cbar=True, square=False, linewidths=linewidth, linecolor="white")
+
+    axes[0].set_title("Glass", weight="bold")
+    axes[0].set_xlabel("X-index")
+    axes[0].set_ylabel("Y-index")
+    axes[0].text(
+        -0.05,
+        1.04,
+        "a.",
+        transform=axes[0].transAxes,
+        fontsize=12,
+        fontweight="bold",
+        va="top",
+        ha="right",
+    )
+
+    axes[1].set_title("PV", weight="bold")
+    axes[1].set_xlabel("X-index")
+    axes[1].text(
+        -0.05,
+        1.04,
+        "b.",
+        transform=axes[1].transAxes,
+        fontsize=12,
+        fontweight="bold",
+        va="top",
+        ha="right",
+    )
+
+    axes[2].set_title("Absorber", weight="bold")
+    axes[2].set_xlabel("X-index")
+    axes[2].text(
+        -0.05,
+        1.04,
+        "c.",
+        transform=axes[2].transAxes,
+        fontsize=12,
+        fontweight="bold",
+        va="top",
+        ha="right",
+    )
+
+    axes[1].tick_params(labelleft=False)
+    axes[2].tick_params(labelleft=False)
+
+    import pdb
+
+    pdb.set_trace()
+
+    figname: str = "pvt_temperatures_1.png"
+
+    plt.savefig(
+        figname,
+        transparent=True,
+        dpi=300,
+        bbox_inches="tight"
+    )
+
 def plot_two_dimensional_figure(
     figure_name: str,
     logger: Logger,
@@ -594,11 +742,12 @@ def plot_two_dimensional_figure(
     thing_to_plot: str,
     *,
     axis_label: str,
-    plot_title: str,
+    plot_title: Optional[str] = None,
     entry_number: Optional[int] = None,
     hold: bool = False,
     hour: Optional[int] = None,
     minute: Optional[int] = None,
+    palette: sns.palettes._ColorPalette = sns.diverging_palette(213, 347, as_cmap=True),
     x_axis_label: str = "Y element index",
 ) -> None:
     """
@@ -607,7 +756,7 @@ def plot_two_dimensional_figure(
     :param figure_name:
         The name to use when saving the figure.
 
-    :param loger:
+    :param logger:
         The logger used for the analysis module.
 
     :param model_data:
@@ -715,14 +864,19 @@ def plot_two_dimensional_figure(
     surface = plt.imshow(
         # axes3D,
         z_array,
-        cmap=cm.coolwarm,  # pylint: disable=no-member
+        cmap=palette,  # pylint: disable=no-member
         # linewidth=0,
         # antialiased=False,
         aspect=array_shape[1] / array_shape[0],
     )
-    plt.title(plot_title)
+    if plot_title is not None:
+        plt.title(plot_title)
     plt.xlabel("Element x index")
     plt.ylabel("Element y index")
+
+    import pdb
+
+    pdb.set_trace()
 
     # Add axes and colour scale.
     fig3D.colorbar(surface, shrink=0.5, aspect=5, label=axis_label)
