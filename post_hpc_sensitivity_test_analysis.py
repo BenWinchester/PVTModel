@@ -397,7 +397,6 @@ for _component_name, start_hue in zip(
             bbox_inches="tight",
             pad_inches=0,
         )
-        plt.show()
 
 ################################
 # Circular plot of sensitivity #
