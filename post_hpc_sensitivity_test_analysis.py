@@ -302,7 +302,7 @@ sns.set_context("notebook")
 
 parameter_name_to_unit_map: dict[str, str] = {
     "Absorptivity": None,
-    "Collector width": "m",
+    "Collector width": "pipes",
     "Density": "kg/m$^3$",
     "Diffuse reflection coefficient": None,
     "Emissivity": None,
@@ -315,8 +315,8 @@ parameter_name_to_unit_map: dict[str, str] = {
     "Width": "m",
 }
 
-start=3
-end=4
+start=7
+end=8
 
 for _component_name, start_hue in zip(
     [
@@ -345,6 +345,10 @@ for _component_name, start_hue in zip(
         frame_to_plot.loc[:, "parameter_value"] = frame_to_plot[
             "parameter_value"
         ].astype(float)
+        if _component_name == "Pvt":
+            frame_to_plot.loc[:, "parameter_value"] = [int(0.86 / entry) for entry in frame_to_plot[
+                "parameter_value"
+            ].astype(float)]
         _unit: str | None = parameter_name_to_unit_map[_parameter_name]
         fig = plt.figure(figsize=(48 / 5, 32 / 5))
         sns.swarmplot(
@@ -378,7 +382,7 @@ for _component_name, start_hue in zip(
         colorbar = axis.figure.colorbar(
             scalar_mappable,
             ax=axis,
-            label=f"{_component_name} {_parameter_name}"
+            label=f"{_component_name} {_parameter_name}" if _component_name != "Pvt" else "Number of pipes"
             + (f" / {_unit}" if _unit is not None else ""),
         )
         axis = plt.gca()
@@ -482,6 +486,49 @@ for sector in circos.sectors:
 
 circos.savefig("circular_sensitivity.png", dpi=400)
 
+circos = Circos(sectors, space=5)
+max_mean: float = 0
+# Create a bar with the mean value
+for sector in circos.sectors:
+    # Plot sector name
+    sector.text(f"{sector.name}", r=110, size=15)
+    # # Create x positions & randomized y values for data plotting
+    # x = np.arange(sector.start, sector.end) + 0.5
+    # y = np.random.randint(0, 100, len(x))
+    # # Plot line
+    # line_track = sector.add_track((75, 100), r_pad_ratio=0.1)
+    # line_track.axis()
+    # line_track.xticks_by_interval(1)
+    # line_track.line(x, y)
+    # # Plot points
+    # points_track = sector.add_track((45, 70), r_pad_ratio=0.1)
+    # points_track.axis()
+    # points_track.scatter(x, y)
+    # Plot bar
+    bar_track = sector.add_track((15, 100), r_pad_ratio=0.1)
+    bar_track.axis()
+    # bar_track.xticks(sorted(name_to_position_map.values()), label_size=8, label_orientation="vertical", label_formatter=lambda value:{v: k for k, v in name_to_position_map.items()}[value + .5])
+    bar_data = {parameter_name: sub_frame["squared_thermal_efficiency_change"].mean() for parameter_name, sub_frame in combined_output_frame[
+                combined_output_frame["component_name"] == sector.name
+            ].groupby("parameter_name")}
+    name_to_position_map = {
+        name: index / len(bar_data.keys()) * (sector.end - sector.start)
+        + sector.start
+        + 0.5
+        for index, name in enumerate(bar_data.keys())
+    }
+    x_data = [name_to_position_map[key] for key in sorted(bar_data)]
+    y_data = [bar_data[key] for key in sorted(bar_data)]
+    bar_track.bar(
+        x=x_data,
+        height=y_data,
+    )
+    print(f"Component {sector.name}")
+    print("\n".join(sorted(bar_data)))
+    max_mean = max(max_mean, max(y_data))
+
+circos.savefig("circular_sensitivity_bar.png", dpi=400)
+
 vmax = combined_output_frame["squared_thermal_efficiency_change"].dropna().max()
 
 sectors = {
@@ -518,11 +565,11 @@ for sector in circos.sectors:
     # Plot bar
     bar_track = sector.add_track((15, 100), r_pad_ratio=0.1)
     bar_track.axis()
-    category_names = set(
+    category_names = sorted(set(
         combined_output_frame[combined_output_frame["component_name"] == sector.name][
             "parameter_name"
         ]
-    )
+    ))
     name_to_position_map = {
         name: index / len(category_names) * (sector.end - sector.start)
         + sector.start
@@ -550,6 +597,46 @@ for sector in circos.sectors:
     )
 
 circos.savefig("circular_sensitivity_with_max.png", dpi=400)
+
+circos = Circos(sectors, space=5)
+# Create a bar with the mean value
+for sector in circos.sectors:
+    # Plot sector name
+    sector.text(f"{sector.name}", r=110, size=15)
+    # # Create x positions & randomized y values for data plotting
+    # x = np.arange(sector.start, sector.end) + 0.5
+    # y = np.random.randint(0, 100, len(x))
+    # # Plot line
+    # line_track = sector.add_track((75, 100), r_pad_ratio=0.1)
+    # line_track.axis()
+    # line_track.xticks_by_interval(1)
+    # line_track.line(x, y)
+    # # Plot points
+    # points_track = sector.add_track((45, 70), r_pad_ratio=0.1)
+    # points_track.axis()
+    # points_track.scatter(x, y)
+    # Plot bar
+    bar_track = sector.add_track((15, 100), r_pad_ratio=0.1)
+    bar_track.axis()
+    # bar_track.xticks(sorted(name_to_position_map.values()), label_size=8, label_orientation="vertical", label_formatter=lambda value:{v: k for k, v in name_to_position_map.items()}[value + .5])
+    bar_data = {parameter_name: sub_frame["squared_thermal_efficiency_change"].mean() for parameter_name, sub_frame in combined_output_frame[
+                combined_output_frame["component_name"] == sector.name
+            ].groupby("parameter_name")}
+    name_to_position_map = {
+        name: index / len(bar_data.keys()) * (sector.end - sector.start)
+        + sector.start
+        + 0.5
+        for index, name in enumerate(bar_data.keys())
+    }
+    x_data = [name_to_position_map[key] for key in sorted(bar_data)]
+    y_data = [bar_data[key] for key in sorted(bar_data)]
+    bar_track.bar(
+        x=x_data,
+        height=y_data,
+        vmax=max_mean,
+    )
+
+circos.savefig("circular_sensitivity_bar_with_max.png", dpi=400)
 
 ########################################
 # Plot the impact of the PV efficiency #
