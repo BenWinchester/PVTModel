@@ -83,6 +83,28 @@ blue_first_thesis_palette = sns.color_palette(
     ]
 )
 
+# Expand the thesis blue-first palette to have double the number of colours
+blue_first_thesis_colours = blue_first_thesis_palette.as_hex()
+
+colourmap = mcolors.LinearSegmentedColormap.from_list(
+    "", np.array(blue_first_thesis_colours), 20
+)
+
+blue_first_thesis_palette_7 = sns.color_palette(
+    colourmap(np.linspace(0, 1, 7)).tolist()
+)
+sns.set_palette(blue_first_thesis_palette_7)
+
+blue_first_thesis_palette_18 = sns.color_palette(
+    colourmap(np.linspace(0, 1, 18)).tolist()
+)
+sns.set_palette(blue_first_thesis_palette_18)
+
+blue_first_thesis_palette_20 = sns.color_palette(
+    colourmap(np.linspace(0, 1, 20)).tolist()
+)
+sns.set_palette(blue_first_thesis_palette_20)
+
 # Figure size
 # fig, axes = plt.subplots(2, 2, figsize=(48 / 5, 32 / 5))
 fig = plt.figure(figsize=(48 / 5, 32 / 5))
@@ -315,8 +337,32 @@ parameter_name_to_unit_map: dict[str, str] = {
     "Width": "m",
 }
 
-start=7
-end=8
+start = 0
+end = 8
+
+def _size_from_component_and_parameter(component: str, parameter: str) -> int:
+    """Determine the size of the points based on the component and parameter."""
+    if component == "Absorber":
+        if parameter in ("Thickness"):
+            return 1
+    if component in ("Adhesive", "Eva", "Tedlar"):
+        if parameter in ("Thermal conductivity"):
+            return 1
+    if component == "Bond":
+        if parameter in ("Thermal conductivity", "Width"):
+            return 1
+    if component == "Glass":
+        if parameter in ("Diffuse reflection coefficient", "Emissivity", "Thermal conductivity", "Thickenss"):
+            return 1
+    if component == "Insulation":
+        if parameter in ("Thermal conductivity", "Thickness"):
+            return 1
+    if component == "PV":
+        if parameter in ("Emissivity", "Reference efficiency", "Thermal coefficienct", "Transmissivity"):
+            return 1
+    if component == "Pvt":
+        return 1
+    return 3
 
 for _component_name, start_hue in zip(
     [
@@ -340,15 +386,20 @@ for _component_name, start_hue in zip(
         frame_to_plot = combined_output_frame[
             (combined_output_frame["component_name"] == _component_name)
             & (combined_output_frame["parameter_name"] == _parameter_name)
-            & (~combined_output_frame["parameter_value"].astype(str).str.contains("checkpoint"))
+            & (
+                ~combined_output_frame["parameter_value"]
+                .astype(str)
+                .str.contains("checkpoint")
+            )
         ]
         frame_to_plot.loc[:, "parameter_value"] = frame_to_plot[
             "parameter_value"
         ].astype(float)
         if _component_name == "Pvt":
-            frame_to_plot.loc[:, "parameter_value"] = [int(0.86 / entry) for entry in frame_to_plot[
-                "parameter_value"
-            ].astype(float)]
+            frame_to_plot.loc[:, "parameter_value"] = [
+                int(0.86 / entry)
+                for entry in frame_to_plot["parameter_value"].astype(float)
+            ]
         _unit: str | None = parameter_name_to_unit_map[_parameter_name]
         fig = plt.figure(figsize=(48 / 5, 32 / 5))
         sns.swarmplot(
@@ -364,7 +415,7 @@ for _component_name, start_hue in zip(
                 )
             ),
             marker="D",
-            size=3,
+            size=_size_from_component_and_parameter(_component_name, _parameter_name),
         )
         axis = plt.gca()
         norm = plt.Normalize(
@@ -382,8 +433,11 @@ for _component_name, start_hue in zip(
         colorbar = axis.figure.colorbar(
             scalar_mappable,
             ax=axis,
-            label=f"{_component_name} {_parameter_name}" if _component_name != "Pvt" else "Number of pipes"
-            + (f" / {_unit}" if _unit is not None else ""),
+            label=(
+                f"{_component_name} {_parameter_name}"
+                if _component_name != "Pvt"
+                else "Number of pipes" + (f" / {_unit}" if _unit is not None else "")
+            ),
         )
         axis = plt.gca()
         axis.get_legend().remove()
@@ -507,9 +561,12 @@ for sector in circos.sectors:
     bar_track = sector.add_track((15, 100), r_pad_ratio=0.1)
     bar_track.axis()
     # bar_track.xticks(sorted(name_to_position_map.values()), label_size=8, label_orientation="vertical", label_formatter=lambda value:{v: k for k, v in name_to_position_map.items()}[value + .5])
-    bar_data = {parameter_name: sub_frame["squared_thermal_efficiency_change"].mean() for parameter_name, sub_frame in combined_output_frame[
-                combined_output_frame["component_name"] == sector.name
-            ].groupby("parameter_name")}
+    bar_data = {
+        parameter_name: sub_frame["squared_thermal_efficiency_change"].mean()
+        for parameter_name, sub_frame in combined_output_frame[
+            combined_output_frame["component_name"] == sector.name
+        ].groupby("parameter_name")
+    }
     name_to_position_map = {
         name: index / len(bar_data.keys()) * (sector.end - sector.start)
         + sector.start
@@ -564,11 +621,13 @@ for sector in circos.sectors:
     # Plot bar
     bar_track = sector.add_track((15, 100), r_pad_ratio=0.1)
     bar_track.axis()
-    category_names = sorted(set(
-        combined_output_frame[combined_output_frame["component_name"] == sector.name][
-            "parameter_name"
-        ]
-    ))
+    category_names = sorted(
+        set(
+            combined_output_frame[
+                combined_output_frame["component_name"] == sector.name
+            ]["parameter_name"]
+        )
+    )
     name_to_position_map = {
         name: index / len(category_names) * (sector.end - sector.start)
         + sector.start
@@ -618,9 +677,12 @@ for sector in circos.sectors:
     bar_track = sector.add_track((15, 100), r_pad_ratio=0.1)
     bar_track.axis()
     # bar_track.xticks(sorted(name_to_position_map.values()), label_size=8, label_orientation="vertical", label_formatter=lambda value:{v: k for k, v in name_to_position_map.items()}[value + .5])
-    bar_data = {parameter_name: sub_frame["squared_thermal_efficiency_change"].mean() for parameter_name, sub_frame in combined_output_frame[
-                combined_output_frame["component_name"] == sector.name
-            ].groupby("parameter_name")}
+    bar_data = {
+        parameter_name: sub_frame["squared_thermal_efficiency_change"].mean()
+        for parameter_name, sub_frame in combined_output_frame[
+            combined_output_frame["component_name"] == sector.name
+        ].groupby("parameter_name")
+    }
     name_to_position_map = {
         name: index / len(bar_data.keys()) * (sector.end - sector.start)
         + sector.start
