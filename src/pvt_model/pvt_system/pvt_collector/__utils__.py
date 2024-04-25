@@ -161,6 +161,10 @@ class OpticalLayer(Layer):
 
         """
 
+        # FIXME: I'm not convinced that this calculation is correct...
+
+        return 1 - self.absorptivity - self.transmissivity
+
         return sqrt(1 - self.absorptivity**2 - self.transmissivity**2)
 
     @property
