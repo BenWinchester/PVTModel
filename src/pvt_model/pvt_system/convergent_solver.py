@@ -181,9 +181,11 @@ def solve_temperature_vector_convergence_method(
 
     logger.info(
         "Date and time: %s; Run number: %s: Beginning convergent calculation.",
-        next_date_and_time.strftime("%d/%m/%Y %H:%M:%S")
-        if next_date_and_time is not None
-        else "[time-independent]",
+        (
+            next_date_and_time.strftime("%d/%m/%Y %H:%M:%S")
+            if next_date_and_time is not None
+            else "[time-independent]"
+        ),
         convergence_run_number,
     )
 
@@ -259,9 +261,11 @@ def solve_temperature_vector_convergence_method(
     logger.debug(
         "Date and time: %s; Run number: %s: "
         "Temperatures successfully computed. Temperature vector: T = %s",
-        next_date_and_time.strftime("%d/%m/%Y %H:%M:%S")
-        if next_date_and_time is not None
-        else "[time-independent]",
+        (
+            next_date_and_time.strftime("%d/%m/%Y %H:%M:%S")
+            if next_date_and_time is not None
+            else "[time-independent]"
+        ),
         convergence_run_number,
         run_two_temperature_vector,
     )
@@ -275,9 +279,11 @@ def solve_temperature_vector_convergence_method(
         logger.debug(
             "Date and time: %s; Run number: %s: Convergent solution found. "
             "Convergent difference: %s",
-            next_date_and_time.strftime("%d/%m/%Y %H:%M:%S")
-            if next_date_and_time is not None
-            else "[time-independent]",
+            (
+                next_date_and_time.strftime("%d/%m/%Y %H:%M:%S")
+                if next_date_and_time is not None
+                else "[time-independent]"
+            ),
             convergence_run_number,
             run_two_temperature_difference,
         )
@@ -286,9 +292,11 @@ def solve_temperature_vector_convergence_method(
     logger.debug(
         "Date and time: %s; Run number: %s: Solution not convergent. "
         "Convergent difference: %s",
-        next_date_and_time.strftime("%d/%m/%Y %H:%M:%S")
-        if next_date_and_time is not None
-        else "[time-independent]",
+        (
+            next_date_and_time.strftime("%d/%m/%Y %H:%M:%S")
+            if next_date_and_time is not None
+            else "[time-independent]"
+        ),
         convergence_run_number,
         run_two_temperature_difference,
     )

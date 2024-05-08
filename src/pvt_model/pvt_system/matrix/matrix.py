@@ -872,9 +872,11 @@ def calculate_matrix_equation(  # pylint: disable=too-many-branches
                 " Heat exchanger missing." if heat_exchanger is None else "",
                 " Hot water load missing." if hot_water_load is None else "",
                 " Hot-water tank missing." if hot_water_tank is None else "",
-                " Previous temperature vector is missing."
-                if previous_temperature_vector is None
-                else "",
+                (
+                    " Previous temperature vector is missing."
+                    if previous_temperature_vector is None
+                    else ""
+                ),
                 BColours.FAIL,
                 BColours.ENDC,
             )

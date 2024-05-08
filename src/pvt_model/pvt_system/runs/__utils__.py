@@ -213,14 +213,14 @@ def system_data_from_run(
             TemperatureName.upper_glass,
             temperature_vector,
         )
-        temperature_map_upper_glass_layer: Optional[
-            Dict[str, float]
-        ] = _layer_temperature_profile(
-            number_of_pipes,
-            number_of_x_elements,
-            pvt_collector,
-            TemperatureName.upper_glass,
-            temperature_vector,
+        temperature_map_upper_glass_layer: Optional[Dict[str, float]] = (
+            _layer_temperature_profile(
+                number_of_pipes,
+                number_of_x_elements,
+                pvt_collector,
+                TemperatureName.upper_glass,
+                temperature_vector,
+            )
         )
     else:
         average_upper_glass_temperature = None
@@ -232,14 +232,14 @@ def system_data_from_run(
             TemperatureName.glass,
             temperature_vector,
         )
-        temperature_map_glass_layer: Optional[
-            Dict[str, float]
-        ] = _layer_temperature_profile(
-            number_of_pipes,
-            number_of_x_elements,
-            pvt_collector,
-            TemperatureName.glass,
-            temperature_vector,
+        temperature_map_glass_layer: Optional[Dict[str, float]] = (
+            _layer_temperature_profile(
+                number_of_pipes,
+                number_of_x_elements,
+                pvt_collector,
+                TemperatureName.glass,
+                temperature_vector,
+            )
         )
     else:
         average_glass_temperature = None
@@ -387,12 +387,16 @@ def system_data_from_run(
     return SystemData(
         date=date.strftime("%d/%m/%Y"),
         time=formatted_time,
-        upper_glass_temperature=average_upper_glass_temperature - ZERO_CELCIUS_OFFSET
-        if average_upper_glass_temperature is not None
-        else None,
-        glass_temperature=average_glass_temperature - ZERO_CELCIUS_OFFSET
-        if average_glass_temperature is not None
-        else None,
+        upper_glass_temperature=(
+            average_upper_glass_temperature - ZERO_CELCIUS_OFFSET
+            if average_upper_glass_temperature is not None
+            else None
+        ),
+        glass_temperature=(
+            average_glass_temperature - ZERO_CELCIUS_OFFSET
+            if average_glass_temperature is not None
+            else None
+        ),
         pv_temperature=average_pv_temperature - ZERO_CELCIUS_OFFSET,
         absorber_temperature=average_absorber_temperature - ZERO_CELCIUS_OFFSET,
         collector_input_temperature=collector_input_temperature - ZERO_CELCIUS_OFFSET,
@@ -406,22 +410,22 @@ def system_data_from_run(
         tank_temperature=tank_temperature,
         collector_temperature_gain=collector_output_temperature
         - collector_input_temperature,
-        layer_temperature_map_bulk_water=temperature_map_bulk_water_layer
-        if save_2d_output
-        else None,
-        layer_temperature_map_absorber=temperature_map_absorber_layer
-        if save_2d_output
-        else None,
-        layer_temperature_map_glass=temperature_map_glass_layer
-        if save_2d_output
-        else None,
-        layer_temperature_map_pipe=temperature_map_pipe_layer
-        if save_2d_output
-        else None,
+        layer_temperature_map_bulk_water=(
+            temperature_map_bulk_water_layer if save_2d_output else None
+        ),
+        layer_temperature_map_absorber=(
+            temperature_map_absorber_layer if save_2d_output else None
+        ),
+        layer_temperature_map_glass=(
+            temperature_map_glass_layer if save_2d_output else None
+        ),
+        layer_temperature_map_pipe=(
+            temperature_map_pipe_layer if save_2d_output else None
+        ),
         layer_temperature_map_pv=temperature_map_pv_layer if save_2d_output else None,
-        layer_temperature_map_upper_glass=temperature_map_upper_glass_layer
-        if save_2d_output
-        else None,
+        layer_temperature_map_upper_glass=(
+            temperature_map_upper_glass_layer if save_2d_output else None
+        ),
         electrical_efficiency=electrical_efficiency,
         reduced_collector_temperature=reduced_system_temperature,
         thermal_efficiency=thermal_efficiency,

@@ -201,20 +201,26 @@ def _absorber_params_from_data(
     try:
         return CollectorParameters(
             absorptivity=absorber_data["absorptivity"],  # [unitless]
-            conductivity=absorber_data["thermal_conductivity"]
-            if "thermal_conductivity" in absorber_data
-            else None,
+            conductivity=(
+                absorber_data["thermal_conductivity"]
+                if "thermal_conductivity" in absorber_data
+                else None
+            ),
             density=absorber_data["density"] if "density" in absorber_data else None,
             emissivity=absorber_data["emissivity"],  # [unitless]
             heat_capacity=absorber_data["heat_capacity"],  # [J/kg*K]
-            htf_heat_capacity=absorber_data["htf_heat_capacity"]  # [J/kg*K]
-            if "htf_heat_capacity" in absorber_data
-            else HEAT_CAPACITY_OF_WATER,  # [J/kg*K]
+            htf_heat_capacity=(
+                absorber_data["htf_heat_capacity"]  # [J/kg*K]
+                if "htf_heat_capacity" in absorber_data
+                else HEAT_CAPACITY_OF_WATER
+            ),  # [J/kg*K]
             inner_pipe_diameter=absorber_data["inner_pipe_diameter"],  # [m]
             length=length,  # [m]
-            mass_flow_rate=override_mass_flow_rate
-            if override_mass_flow_rate is not None
-            else absorber_data["mass_flow_rate"],  # [Litres/hour]
+            mass_flow_rate=(
+                override_mass_flow_rate
+                if override_mass_flow_rate is not None
+                else absorber_data["mass_flow_rate"]
+            ),  # [Litres/hour]
             number_of_pipes=absorber_data["number_of_pipes"],  # [pipes]
             outer_pipe_diameter=absorber_data["outer_pipe_diameter"],  # [m]
             pipe_density=absorber_data["pipe_density"],  # [kg/m^3]
@@ -248,9 +254,11 @@ def _glass_params_from_data(glass_data: Dict[str, Any]) -> OpticalLayerParameter
     try:
         return OpticalLayerParameters(
             absorptivity=glass_data["absorptivity"],  # [unitless]
-            conductivity=glass_data["thermal_conductivity"]
-            if "thermal_conductivity" in glass_data
-            else None,
+            conductivity=(
+                glass_data["thermal_conductivity"]
+                if "thermal_conductivity" in glass_data
+                else None
+            ),
             density=glass_data["density"],  # [kg/m^3]
             emissivity=glass_data["emissivity"],  # [unitless]
             heat_capacity=glass_data["heat_capacity"],  # [J/kg*K]
@@ -289,9 +297,11 @@ def _pv_params_from_data(pv_data: Optional[Dict[str, Any]]) -> PVParameters:
 
     try:
         return PVParameters(
-            conductivity=pv_data["thermal_conductivity"]
-            if "thermal_conductivity" in pv_data
-            else None,
+            conductivity=(
+                pv_data["thermal_conductivity"]
+                if "thermal_conductivity" in pv_data
+                else None
+            ),
             density=pv_data["density"] if "density" in pv_data else None,  # [kg/m^3]
             heat_capacity=pv_data["heat_capacity"],  # [J/kg*K]
             thickness=pv_data["thickness"],  # [m]
@@ -449,31 +459,43 @@ def _elements_from_data(
             ): element.Element(
                 absorber=TemperatureName.absorber in layers,
                 glass=TemperatureName.glass in layers,
-                length=edge_length
-                if y_coordinate(element_number, x_resolution) in {0, y_resolution - 1}
-                else nominal_element_length,
-                pipe=x_coordinate(element_number, x_resolution) in pipe_positions
-                if TemperatureName.pipe in layers
-                else False,
-                pv=y_coordinate(element_number, x_resolution) <= pv_coordinate_cutoff
-                if TemperatureName.pv in layers
-                else False,
+                length=(
+                    edge_length
+                    if y_coordinate(element_number, x_resolution)
+                    in {0, y_resolution - 1}
+                    else nominal_element_length
+                ),
+                pipe=(
+                    x_coordinate(element_number, x_resolution) in pipe_positions
+                    if TemperatureName.pipe in layers
+                    else False
+                ),
+                pv=(
+                    y_coordinate(element_number, x_resolution) <= pv_coordinate_cutoff
+                    if TemperatureName.pv in layers
+                    else False
+                ),
                 upper_glass=TemperatureName.upper_glass in layers,
                 # Use the edge with if the element is an edge element.
-                width=edge_width
-                if x_coordinate(element_number, x_resolution) in {0, x_resolution - 1}
-                # Otherwise, use the bond width if the element is a pipe element.
-                else bond_width
-                if x_coordinate(element_number, x_resolution) in pipe_positions
-                # Otherwise, use the nominal element width.
-                else nominal_element_width,
+                width=(
+                    edge_width
+                    if x_coordinate(element_number, x_resolution)
+                    in {0, x_resolution - 1}
+                    # Otherwise, use the bond width if the element is a pipe element.
+                    else (
+                        bond_width
+                        if x_coordinate(element_number, x_resolution) in pipe_positions
+                        # Otherwise, use the nominal element width.
+                        else nominal_element_width
+                    )
+                ),
                 x_index=x_coordinate(element_number, x_resolution),
                 y_index=y_coordinate(element_number, x_resolution),
-                pipe_index=pipe_positions.index(
-                    x_coordinate(element_number, x_resolution)
-                )
-                if x_coordinate(element_number, x_resolution) in pipe_positions
-                else None,
+                pipe_index=(
+                    pipe_positions.index(x_coordinate(element_number, x_resolution))
+                    if x_coordinate(element_number, x_resolution) in pipe_positions
+                    else None
+                ),
             )
             for element_number in range(x_resolution * y_resolution)
         }
@@ -529,9 +551,9 @@ def pvt_collector_from_path(
 
     # If there is upper-glass data present, process this accordingly.
     if "upper_glass" in pvt_data and TemperatureName.upper_glass in layers:
-        upper_glass_parameters: Optional[
-            OpticalLayerParameters
-        ] = _glass_params_from_data(pvt_data["upper_glass"])
+        upper_glass_parameters: Optional[OpticalLayerParameters] = (
+            _glass_params_from_data(pvt_data["upper_glass"])
+        )
     elif "glass" in pvt_data and TemperatureName.upper_glass in layers:
         upper_glass_parameters = _glass_params_from_data(pvt_data["glass"])
     elif TemperatureName.upper_glass in layers:
@@ -589,10 +611,12 @@ def pvt_collector_from_path(
                 pvt_data["adhesive"]["thickness"],
             ),
             air_gap_thickness=air_gap_thickness,
-            area=pvt_data["pvt_collector"]["area"]
-            if "area" in pvt_data["pvt_collector"]
-            else pvt_data["pvt_collector"]["width"]
-            * pvt_data["pvt_collector"]["length"],  # [m^2]
+            area=(
+                pvt_data["pvt_collector"]["area"]
+                if "area" in pvt_data["pvt_collector"]
+                else pvt_data["pvt_collector"]["width"]
+                * pvt_data["pvt_collector"]["length"]
+            ),  # [m^2]
             absorber_parameters=absorber_parameters,
             eva=eva.EVA(
                 pvt_data["eva"]["thermal_conductivity"], pvt_data["eva"]["thickness"]
@@ -617,16 +641,18 @@ def pvt_collector_from_path(
             ),
             upper_glass_parameters=upper_glass_parameters,
             width=pvt_data["pvt_collector"]["width"],  # [m]
-            azimuthal_orientation=pvt_data["pvt_collector"][
-                "azimuthal_orientation"
-            ]  # [deg]
-            if "azimuthal_orientation" in pvt_data["pvt_collector"]
-            else None,
+            azimuthal_orientation=(
+                pvt_data["pvt_collector"]["azimuthal_orientation"]  # [deg]
+                if "azimuthal_orientation" in pvt_data["pvt_collector"]
+                else None
+            ),
             horizontal_tracking=pvt_data["pvt_collector"]["horizontal_tracking"],
             vertical_tracking=pvt_data["pvt_collector"]["vertical_tracking"],
-            tilt=pvt_data["pvt_collector"]["tilt"]  # [deg]
-            if "tilt" in pvt_data["pvt_collector"]
-            else None,
+            tilt=(
+                pvt_data["pvt_collector"]["tilt"]  # [deg]
+                if "tilt" in pvt_data["pvt_collector"]
+                else None
+            ),
         )
     except KeyError as e:
         raise MissingParametersError(

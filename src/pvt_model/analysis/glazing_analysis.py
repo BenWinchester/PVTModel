@@ -273,9 +273,9 @@ def analyse_decoupled_steady_state_data(  # pylint: disable=too-many-branches
             ]
             thermal_efficiency_labels.add(f"thermal efficiency p.c.={portion_covered}")
             # Store the specific electrical efficiency.
-            reduced_data[sub_key][
-                f"electrical efficiency p.c.={portion_covered}"
-            ] = value["electrical_efficiency"]
+            reduced_data[sub_key][f"electrical efficiency p.c.={portion_covered}"] = (
+                value["electrical_efficiency"]
+            )
             electrical_efficiency_labels.add(
                 f"electrical efficiency p.c.={portion_covered}"
             )
@@ -317,9 +317,9 @@ def analyse_decoupled_steady_state_data(  # pylint: disable=too-many-branches
             ]
             thermal_efficiency_labels.add(f"thermal efficiency p.c.={portion_covered}")
             # Store the specific electrical efficiency.
-            reduced_data[sub_key][
-                f"electrical efficiency p.c.={portion_covered}"
-            ] = value["electrical_efficiency"]
+            reduced_data[sub_key][f"electrical efficiency p.c.={portion_covered}"] = (
+                value["electrical_efficiency"]
+            )
             electrical_efficiency_labels.add(
                 f"electrical efficiency p.c.={portion_covered}"
             )
@@ -361,9 +361,9 @@ def analyse_decoupled_steady_state_data(  # pylint: disable=too-many-branches
             ]
             thermal_efficiency_labels.add(f"thermal efficiency p.c.={portion_covered}")
             # Store the specific electrical efficiency.
-            reduced_data[sub_key][
-                f"electrical efficiency p.c.={portion_covered}"
-            ] = value["electrical_efficiency"]
+            reduced_data[sub_key][f"electrical efficiency p.c.={portion_covered}"] = (
+                value["electrical_efficiency"]
+            )
             electrical_efficiency_labels.add(
                 f"electrical efficiency p.c.={portion_covered}"
             )
@@ -405,9 +405,9 @@ def analyse_decoupled_steady_state_data(  # pylint: disable=too-many-branches
             ]
             thermal_efficiency_labels.add(f"thermal efficiency p.c.={portion_covered}")
             # Store the specific electrical efficiency.
-            reduced_data[sub_key][
-                f"electrical efficiency p.c.={portion_covered}"
-            ] = value["electrical_efficiency"]
+            reduced_data[sub_key][f"electrical efficiency p.c.={portion_covered}"] = (
+                value["electrical_efficiency"]
+            )
             electrical_efficiency_labels.add(
                 f"electrical efficiency p.c.={portion_covered}"
             )
@@ -449,9 +449,9 @@ def analyse_decoupled_steady_state_data(  # pylint: disable=too-many-branches
             ]
             thermal_efficiency_labels.add(f"thermal efficiency p.c.={portion_covered}")
             # Store the specific electrical efficiency.
-            reduced_data[sub_key][
-                f"electrical efficiency p.c.={portion_covered}"
-            ] = value["electrical_efficiency"]
+            reduced_data[sub_key][f"electrical efficiency p.c.={portion_covered}"] = (
+                value["electrical_efficiency"]
+            )
             electrical_efficiency_labels.add(
                 f"electrical efficiency p.c.={portion_covered}"
             )
@@ -493,9 +493,9 @@ def analyse_decoupled_steady_state_data(  # pylint: disable=too-many-branches
             ]
             thermal_efficiency_labels.add(f"thermal efficiency p.c.={portion_covered}")
             # Store the specific electrical efficiency.
-            reduced_data[sub_key][
-                f"electrical efficiency p.c.={portion_covered}"
-            ] = value["electrical_efficiency"]
+            reduced_data[sub_key][f"electrical efficiency p.c.={portion_covered}"] = (
+                value["electrical_efficiency"]
+            )
             electrical_efficiency_labels.add(
                 f"electrical efficiency p.c.={portion_covered}"
             )
@@ -871,14 +871,14 @@ def analyse_decoupled_steady_state_data(  # pylint: disable=too-many-branches
         #     continue
         # Only include important mass-flow rates.
         for sub_key, value in sub_dict.items():
-            reduced_data[sub_key][
-                f"{glazing} thermal efficiency {pipes} pipes"
-            ] = value["thermal_efficiency"]
+            reduced_data[sub_key][f"{glazing} thermal efficiency {pipes} pipes"] = (
+                value["thermal_efficiency"]
+            )
             thermal_efficiency_labels.add(f"{glazing} thermal efficiency {pipes} pipes")
             # Store the specific electrical efficiency.
-            reduced_data[sub_key][
-                f"{glazing} electrical efficiency {pipes} pipes"
-            ] = value["electrical_efficiency"]
+            reduced_data[sub_key][f"{glazing} electrical efficiency {pipes} pipes"] = (
+                value["electrical_efficiency"]
+            )
             electrical_efficiency_labels.add(
                 f"{glazing} electrical efficiency {pipes} pipes"
             )
@@ -913,14 +913,14 @@ def analyse_decoupled_steady_state_data(  # pylint: disable=too-many-branches
             continue
         # Only include important mass-flow rates.
         for sub_key, value in sub_dict.items():
-            reduced_data[sub_key][
-                f"{glazing} thermal efficiency {pipes} pipes"
-            ] = value["thermal_efficiency"]
+            reduced_data[sub_key][f"{glazing} thermal efficiency {pipes} pipes"] = (
+                value["thermal_efficiency"]
+            )
             thermal_efficiency_labels.add(f"{glazing} thermal efficiency {pipes} pipes")
             # Store the specific electrical efficiency.
-            reduced_data[sub_key][
-                f"{glazing} electrical efficiency {pipes} pipes"
-            ] = value["electrical_efficiency"]
+            reduced_data[sub_key][f"{glazing} electrical efficiency {pipes} pipes"] = (
+                value["electrical_efficiency"]
+            )
             electrical_efficiency_labels.add(
                 f"{glazing} electrical efficiency {pipes} pipes"
             )

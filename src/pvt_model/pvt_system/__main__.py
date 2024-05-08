@@ -356,15 +356,15 @@ def main(  # pylint: disable=too-many-branches
     # Instantiate the rest of the PVT system if relevant.
     if operating_mode.coupled:
         # Set up the heat exchanger.
-        heat_exchanger: Optional[
-            exchanger.Exchanger
-        ] = process_pvt_system_data.heat_exchanger_from_path(exchanger_data_file)
+        heat_exchanger: Optional[exchanger.Exchanger] = (
+            process_pvt_system_data.heat_exchanger_from_path(exchanger_data_file)
+        )
         logger.info("Heat exchanger successfully instantiated: %s", heat_exchanger)
 
         # Set up the hot-water tank.
-        hot_water_tank: Optional[
-            tank.Tank
-        ] = process_pvt_system_data.hot_water_tank_from_path(tank_data_file)
+        hot_water_tank: Optional[tank.Tank] = (
+            process_pvt_system_data.hot_water_tank_from_path(tank_data_file)
+        )
         logger.info("Hot-water tank successfully instantiated: %s", hot_water_tank)
 
         # Set up the mains supply system.
@@ -502,7 +502,10 @@ def main(  # pylint: disable=too-many-branches
                     BColours.FAIL, BColours.ENDC
                 )
             )
-        (final_run_temperature_vector, system_data,) = decoupled.decoupled_dynamic_run(
+        (
+            final_run_temperature_vector,
+            system_data,
+        ) = decoupled.decoupled_dynamic_run(
             cloud_efficacy_factor,
             override_collector_input_temperature,
             days,

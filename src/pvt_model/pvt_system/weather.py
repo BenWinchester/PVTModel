@@ -884,9 +884,11 @@ class WeatherForecaster:
             data,
             monthly_irradiance_profiles,
             temperature_profiles,
-            override_ambient_temperature + ZERO_CELCIUS_OFFSET
-            if override_ambient_temperature is not None
-            else None,
+            (
+                override_ambient_temperature + ZERO_CELCIUS_OFFSET
+                if override_ambient_temperature is not None
+                else None
+            ),
             override_irradiance,
             override_wind_speed,
         )

@@ -661,12 +661,18 @@ def multi_layer_temperature_plot(logger, model_data, *, entry_number) -> None:
     pv_array = _process_layer_data("layer_temperature_map_pv")
     absorber_array = _process_layer_data("layer_temperature_map_absorber")
 
-    vmin = math.floor(min(numpy.min(glass_array), numpy.min(pv_array), numpy.min(absorber_array)))
-    vmax = math.ceil(max(numpy.max(glass_array), numpy.max(pv_array), numpy.max(absorber_array)))
+    vmin = math.floor(
+        min(numpy.min(glass_array), numpy.min(pv_array), numpy.min(absorber_array))
+    )
+    vmax = math.ceil(
+        max(numpy.max(glass_array), numpy.max(pv_array), numpy.max(absorber_array))
+    )
 
     # Form the data into the right shape for each layer
     _, axes = plt.subplots(1, 3, figsize=(48 / 5, 32 / 5))
-    palette = sns.cubehelix_palette(start=1.5, rot=-0.5, dark=0.05, light=0.95, as_cmap=True)
+    palette = sns.cubehelix_palette(
+        start=1.5, rot=-0.5, dark=0.05, light=0.95, as_cmap=True
+    )
     palette = sns.diverging_palette(205, 18, s=100, l=50, n=100)
     plt.subplots_adjust(hspace=0.3)
 
@@ -675,9 +681,40 @@ def multi_layer_temperature_plot(logger, model_data, *, entry_number) -> None:
 
     # Plots
     linewidth: float = 0
-    sns.heatmap(glass_array, cmap=palette, ax=axes[0], vmin=vmin, vmax=vmax, cbar=False, square=False, linewidths=linewidth, linecolor="white")
-    sns.heatmap(pv_array, cmap=palette, ax=axes[1], vmin=vmin, vmax=vmax, cbar=False, square=False, linewidths=linewidth, linecolor="white")
-    sns.heatmap(absorber_array, cmap=palette, ax=axes[2], vmin=vmin, vmax=vmax, cbar_kws={"pad": 0.02, "label":"Temperature / $^\circ$C"}, cbar=True, square=False, linewidths=linewidth, linecolor="white")
+    sns.heatmap(
+        glass_array,
+        cmap=palette,
+        ax=axes[0],
+        vmin=vmin,
+        vmax=vmax,
+        cbar=False,
+        square=False,
+        linewidths=linewidth,
+        linecolor="white",
+    )
+    sns.heatmap(
+        pv_array,
+        cmap=palette,
+        ax=axes[1],
+        vmin=vmin,
+        vmax=vmax,
+        cbar=False,
+        square=False,
+        linewidths=linewidth,
+        linecolor="white",
+    )
+    sns.heatmap(
+        absorber_array,
+        cmap=palette,
+        ax=axes[2],
+        vmin=vmin,
+        vmax=vmax,
+        cbar_kws={"pad": 0.02, "label": "Temperature / $^\circ$C"},
+        cbar=True,
+        square=False,
+        linewidths=linewidth,
+        linecolor="white",
+    )
 
     axes[0].set_title("Glass", weight="bold")
     axes[0].set_xlabel("X-index")
@@ -728,12 +765,8 @@ def multi_layer_temperature_plot(logger, model_data, *, entry_number) -> None:
 
     figname: str = "pvt_temperatures_1.png"
 
-    plt.savefig(
-        figname,
-        transparent=True,
-        dpi=300,
-        bbox_inches="tight"
-    )
+    plt.savefig(figname, transparent=True, dpi=300, bbox_inches="tight")
+
 
 def plot_two_dimensional_figure(
     figure_name: str,

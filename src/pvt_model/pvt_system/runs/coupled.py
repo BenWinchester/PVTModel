@@ -193,9 +193,9 @@ def coupled_dynamic_run(
         weather_conditions,
     )
 
-    previous_run_temperature_vector: Union[
-        List[float], numpy.ndarray
-    ] = initial_system_temperature_vector
+    previous_run_temperature_vector: Union[List[float], numpy.ndarray] = (
+        initial_system_temperature_vector
+    )
 
     for run_number, date_and_time in enumerate(
         time_iterator(

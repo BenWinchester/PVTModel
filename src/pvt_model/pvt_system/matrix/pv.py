@@ -95,7 +95,10 @@ def calculate_pv_equation(  # pylint: disable=too-many-branches
 
     # Compute the upward environmental losses.
     if not element.glass:
-        (pv_to_air_conduction, pv_to_sky_radiation,) = physics_utils.upward_loss_terms(
+        (
+            pv_to_air_conduction,
+            pv_to_sky_radiation,
+        ) = physics_utils.upward_loss_terms(
             best_guess_temperature_vector,
             pvt_collector,
             element,

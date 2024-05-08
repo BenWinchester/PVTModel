@@ -397,9 +397,11 @@ def _determine_consistent_conditions(
         override_ambient_temperature=override_ambient_temperature,
         override_collector_input_temperature=override_collector_input_temperature,
         override_irradiance=override_irradiance,
-        override_mass_flow_rate=override_mass_flow_rate
-        if override_mass_flow_rate is not None
-        else parsed_args.mass_flow_rate,
+        override_mass_flow_rate=(
+            override_mass_flow_rate
+            if override_mass_flow_rate is not None
+            else parsed_args.mass_flow_rate
+        ),
         override_wind_speed=override_wind_speed,
         run_number=run_depth,
         start_time=parsed_args.start_time,
@@ -439,9 +441,11 @@ def _determine_consistent_conditions(
         override_ambient_temperature=override_ambient_temperature,
         override_collector_input_temperature=override_collector_input_temperature,
         override_irradiance=override_irradiance,
-        override_mass_flow_rate=override_mass_flow_rate
-        if override_mass_flow_rate is not None
-        else parsed_args.mass_flow_rate,
+        override_mass_flow_rate=(
+            override_mass_flow_rate
+            if override_mass_flow_rate is not None
+            else parsed_args.mass_flow_rate
+        ),
         override_wind_speed=override_wind_speed,
         resolution=resolution,
         run_depth=run_depth + 1,

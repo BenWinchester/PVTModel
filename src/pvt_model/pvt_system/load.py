@@ -219,9 +219,9 @@ def _process_csv(
     # @@@ -coded in. Ideally, there would be some regex matching here.
     profile_type = ProfileType.ELECTRICITY
 
-    electrical_load_profile: Dict[
-        _MonthAndDayType, LoadProfile
-    ] = collections.defaultdict(LoadProfile)
+    electrical_load_profile: Dict[_MonthAndDayType, LoadProfile] = (
+        collections.defaultdict(LoadProfile)
+    )
 
     # Open the csv file, and cycle through the rows, processing them.
     with open(csv_file_path, "r") as csv_file:

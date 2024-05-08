@@ -170,7 +170,7 @@ def _parse_args(args) -> argparse.Namespace:
         "-cv",
         help="Carry out a CV grid search of the available hyperparameter space.",
         default=False,
-        action="store_true"
+        action="store_true",
     )
     parser.add_argument(
         "--data-file-name", "-df", help="Path to the data file to parse."
@@ -180,7 +180,7 @@ def _parse_args(args) -> argparse.Namespace:
         "-f",
         help="Fit a random forest regressor in addition to the base decision tree fit.",
         default=False,
-        action="store_true"
+        action="store_true",
     )
     parser.add_argument(
         "--num-pipes-correction",
@@ -233,7 +233,6 @@ def _train_trees_and_forest(
 
     """
 
-
     if use_existing_fits:
         with open(f"{data_name}_electric_tree.sav", "rb") as f:
             electric_tree = pickle.load(f)
@@ -274,12 +273,16 @@ def _train_trees_and_forest(
             pickle.dump(thermal_tree, f)
 
         with open(
-            os.path.join("..", "CLOVER", "src", "clover", "src", f"{data_name}_electric_tree.sav"),
+            os.path.join(
+                "..", "CLOVER", "src", "clover", "src", f"{data_name}_electric_tree.sav"
+            ),
             "wb",
         ) as f:
             pickle.dump(electric_tree, f)
         with open(
-            os.path.join("..", "CLOVER", "src", "clover", "src", f"{data_name}_thermal_tree.sav"),
+            os.path.join(
+                "..", "CLOVER", "src", "clover", "src", f"{data_name}_thermal_tree.sav"
+            ),
             "wb",
         ) as f:
             pickle.dump(thermal_tree, f)
@@ -319,12 +322,26 @@ def _train_trees_and_forest(
             pickle.dump(thermal_forest, f)
 
         with open(
-            os.path.join("..", "CLOVER", "src", "clover", "src", f"{data_name}_electric_forest.sav"),
+            os.path.join(
+                "..",
+                "CLOVER",
+                "src",
+                "clover",
+                "src",
+                f"{data_name}_electric_forest.sav",
+            ),
             "wb",
         ) as f:
             pickle.dump(electric_forest, f)
         with open(
-            os.path.join("..", "CLOVER", "src", "clover", "src", f"{data_name}_thermal_forest.sav"),
+            os.path.join(
+                "..",
+                "CLOVER",
+                "src",
+                "clover",
+                "src",
+                f"{data_name}_thermal_forest.sav",
+            ),
             "wb",
         ) as f:
             pickle.dump(thermal_forest, f)
@@ -363,8 +380,12 @@ def _train_trees_and_forest(
         thermal_forest_search.fit(x_train_therm, y_train_therm)
         print("[  DONE  ]")
 
-        print(f"Best {data_name} electric forest params: {electric_forest_search.best_params_}")
-        print(f"Best {data_name} thermal forest params: {thermal_forest_search.best_params_}")
+        print(
+            f"Best {data_name} electric forest params: {electric_forest_search.best_params_}"
+        )
+        print(
+            f"Best {data_name} thermal forest params: {thermal_forest_search.best_params_}"
+        )
 
         best_electric_forest = electric_forest_search.best_estimator_
         best_thermal_forest = thermal_forest_search.best_estimator_
@@ -376,19 +397,37 @@ def _train_trees_and_forest(
             pickle.dump(best_thermal_forest, f)
 
         with open(
-            os.path.join("..", "CLOVER", "src", "clover", "src", f"{data_name}_best_electric_forest.sav"),
+            os.path.join(
+                "..",
+                "CLOVER",
+                "src",
+                "clover",
+                "src",
+                f"{data_name}_best_electric_forest.sav",
+            ),
             "wb",
         ) as f:
             pickle.dump(best_electric_forest, f)
         with open(
-            os.path.join("..", "CLOVER", "src", "clover", "src", f"{data_name}_best_thermal_forest.sav"),
+            os.path.join(
+                "..",
+                "CLOVER",
+                "src",
+                "clover",
+                "src",
+                f"{data_name}_best_thermal_forest.sav",
+            ),
             "wb",
         ) as f:
             pickle.dump(best_thermal_forest, f)
 
 
 def analyse(
-    cv_search: bool, data_file_name: str, forest: bool, num_pipes_correction: int, use_existing_fits: bool
+    cv_search: bool,
+    data_file_name: str,
+    forest: bool,
+    num_pipes_correction: int,
+    use_existing_fits: bool,
 ) -> None:
     """
     Analysis function for fitting parameters.
@@ -552,15 +591,15 @@ def analyse(
     x_low_irradiance_high_temp_electric = x_low_irradiance_electric[
         x_low_irradiance_electric[1] >= LOW_TEMP_THRESHOLD
     ]
-    x_low_irradiance_high_temp_electric = x_low_irradiance_high_temp_electric.reset_index(
-        drop=True
+    x_low_irradiance_high_temp_electric = (
+        x_low_irradiance_high_temp_electric.reset_index(drop=True)
     )
 
     y_low_irradiance_high_temp_electric = y_low_irradiance_electric[
         x_low_irradiance_electric[1] >= LOW_TEMP_THRESHOLD
     ]
-    y_low_irradiance_high_temp_electric = y_low_irradiance_high_temp_electric.reset_index(
-        drop=True
+    y_low_irradiance_high_temp_electric = (
+        y_low_irradiance_high_temp_electric.reset_index(drop=True)
     )
 
     x_low_irradiance_high_temp_thermal = x_low_irradiance_thermal[
@@ -616,7 +655,7 @@ def analyse(
         x_low_irradiance_low_temp_electric,
         x_low_irradiance_low_temp_thermal,
         y_low_irradiance_low_temp_electric,
-        y_low_irradiance_low_temp_thermal
+        y_low_irradiance_low_temp_thermal,
     )
 
     _train_trees_and_forest(
@@ -627,7 +666,7 @@ def analyse(
         x_low_irradiance_high_temp_electric,
         x_low_irradiance_high_temp_thermal,
         y_low_irradiance_high_temp_electric,
-        y_low_irradiance_high_temp_thermal
+        y_low_irradiance_high_temp_thermal,
     )
 
     _train_trees_and_forest(

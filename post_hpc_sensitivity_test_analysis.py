@@ -2,6 +2,7 @@
 
 import json
 import matplotlib.colors as mcolors
+import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -9,14 +10,17 @@ import pandas as pd
 import re
 import seaborn as sns
 
-from matplotlib import rc
+from matplotlib import rc, rcParams
 from pycirclize import Circos
 from tqdm import tqdm
 
-COMBINED_CSV_FILENAME: str = "combined_post_hpc_sensitivity_test"
+COMBINED_CSV_FILENAME: str = "combined_25_apr_post_hpc_sensitivity_test"
 TOTEX_HEADER: str = "Other TOTEX"
 
 rc("font", **{"family": "sans-serif", "sans-serif": ["Arial"]})
+rc("figure", **{"figsize": (48 / 5, 32 / 5)})
+rcParams["pdf.fonttype"] = 42
+rcParams["ps.fonttype"] = 42
 sns.set_context("paper")
 sns.set_style("whitegrid")
 
@@ -122,8 +126,8 @@ with open(
     (
         reduced_temperature_plot_filename := os.path.join(
             "output_files",
-            "22_feb_24",
-            "autotherm_sensitivity_of_absorber_absorptivity_with_value_0.81.json",
+            "25_apr_24",
+            "autotherm_sensitivity_of_glass_thermal_conductivity_with_value_0.58.json",
         )
     )
 ) as f:
@@ -140,13 +144,17 @@ reduced_temperature_fit = np.poly1d(
 )
 
 frame_to_plot["marker"] = [
-    "h" if row[1]["wind_speed"] == 1 else "H" for row in frame_to_plot.iterrows()
+    "h" if row[1]["wind_speed"] == 1 else "H" if row[1]["wind_speed"] == 5 else "D"
+    for row in frame_to_plot.iterrows()
 ]
 
 fig = plt.figure(figsize=(48 / 5, 32 / 5))
 for marker, sub_frame in frame_to_plot.groupby("marker"):
     plt.scatter(
-        [], [], alpha=0, label=f"Wind speed = {'1' if marker == 'h' else '10'} m/s"
+        [],
+        [],
+        alpha=0,
+        label=f"Wind speed = {'1' if marker == 'h' else '5' if marker == 'H' else '10'} m/s",
     )
     sns.scatterplot(
         sub_frame,
@@ -156,28 +164,30 @@ for marker, sub_frame in frame_to_plot.groupby("marker"):
         marker=marker,
         alpha=0.5,
         s=200,
-        palette=sns.color_palette("RdBu_r" if marker == "h" else "PiYG_r", 4),
+        palette=sns.color_palette(
+            "RdBu_r" if marker == "h" else "PiYG_r" if marker == "H" else "PRGn", 4
+        ),
         linewidth=0,
     )
-    sub_reduced_temperature_fit = np.poly1d(
-        np.polyfit(
-            sub_frame["reduced_collector_temperature"],
-            sub_frame["thermal_efficiency"],
-            2,
-        )
-    )
-    sns.lineplot(
-        x=(
-            x_linspace := np.linspace(
-                min(sub_frame["reduced_collector_temperature"]),
-                max(sub_frame["reduced_collector_temperature"]),
-            )
-        ),
-        y=sub_reduced_temperature_fit(x_linspace),
-        color="C4",
-        dashes=(2, 2),
-        label="Quadratic fit",
-    )
+    # sub_reduced_temperature_fit = np.poly1d(
+    #     np.polyfit(
+    #         sub_frame["reduced_collector_temperature"],
+    #         sub_frame["thermal_efficiency"],
+    #         2,
+    #     )
+    # )
+    # sns.lineplot(
+    #     x=(
+    #         x_linspace := np.linspace(
+    #             min(sub_frame["reduced_collector_temperature"]),
+    #             max(sub_frame["reduced_collector_temperature"]),
+    #         )
+    #     ),
+    #     y=sub_reduced_temperature_fit(x_linspace),
+    #     color="C4",
+    #     dashes=(2, 2),
+    #     label="Quadratic fit",
+    # )
 
 plt.xlabel("Reduced collector temperature / Km$^2$/W")
 plt.ylabel("Thermal efficiency")
@@ -188,7 +198,9 @@ plt.legend(
 )
 
 plt.savefig(
-    reduced_temperature_plot_filename.split("autotherm_sensitivity_of_")[1] + ".png",
+    "25_apr_"
+    + reduced_temperature_plot_filename.split("autotherm_sensitivity_of_")[1]
+    + ".png",
     transparent=True,
     bbox_inches="tight",
     dpi=400,
@@ -204,18 +216,19 @@ plt.savefig(
 # various parameters that were explored.
 
 filename_regex = re.compile(
-    r"autotherm_sensitivity_of_(?P<component_name>absorber|adhesive|bond|eva|glass|insulation|pipe|pv|pvt|tedlar)_(?P<parameter_name>.*)_with_value_(?P<value>.*)\.json"
+    r"autotherm_sensitivity_of_(?P<component_name>absorber|adhesive|air_gap|bond|eva|glass|insulation|pipe|pv|pvt|tedlar)_(?P<parameter_name>.*)_with_value_(?P<value>.*)\.json"
 )
 run_number_regex = re.compile(r"run_(?P<run_number>\d*)_T.*")
 
-with open((benchmark_filename := "15_mar_benchmark.json")) as benchmark_file:
+# with open((benchmark_filename := "15_mar_benchmark.json")) as benchmark_file:
+with open((benchmark_filename := "30_apr_benchmark.json")) as benchmark_file:
     benchmark_data = json.load(benchmark_file)
 
 if not os.path.isfile(COMBINED_CSV_FILENAME):
     un_concatenated_dataframes: list[pd.DataFrame] = []
     for filename in tqdm(
         os.listdir(
-            (output_directory_name := os.path.join("output_files", "22_feb_24"))
+            (output_directory_name := os.path.join("output_files", "25_apr_24"))
         ),
         desc="processing files",
         unit="files",
@@ -287,6 +300,15 @@ if not os.path.isfile(COMBINED_CSV_FILENAME):
             ) / _this_benchmark_value
         except KeyError:
             continue
+        except TypeError:
+            combined_output_frame.at[index, "fractional_thermal_efficiency_change"] = (
+                None
+            )
+            combined_output_frame.at[index, "percentage_thermal_efficiency_change"] = (
+                None
+            )
+            combined_output_frame.at[index, "squared_thermal_efficiency_change"] = None
+            continue
         _percentage_thermal_efficiency_change = (
             100 * _fractional_thermal_efficiency_change
         )
@@ -316,6 +338,106 @@ else:
     with open(COMBINED_CSV_FILENAME, "r") as combined_outputfile:
         combined_output_frame = pd.read_csv(combined_outputfile, index_col=0)
 
+###############################################
+# Plot a marginal abatement curve--style plot #
+###############################################
+
+blue_first_thesis_palette_20 = sns.color_palette(
+    colourmap(np.linspace(0, 1, 20)).tolist()
+)
+sns.set_palette(blue_first_thesis_palette_20)
+
+combined_output_frame["combined_name"] = (
+    combined_output_frame["component_name"]
+    + " "
+    + combined_output_frame["parameter_name"]
+)
+
+for G in tqdm([200, 400, 600, 800, 1000]):
+    parameter_median_squared_fractional_changes: dict[tuple[str, str], float] = {}
+    parameter_mean_squared_fractional_changes: dict[tuple[str, str], float] = {}
+    frame_to_plot = combined_output_frame[
+        combined_output_frame["solar_irradiance"] == G
+    ]
+    for component_name, sub_frame in tqdm(
+        frame_to_plot.groupby("component_name"), leave=True
+    ):
+        for parameter_name, sub_sub_frame in tqdm(
+            sub_frame.groupby("parameter_name"), leave=False
+        ):
+            parameter_median_squared_fractional_changes[
+                component_name, parameter_name
+            ] = float(sub_sub_frame["squared_thermal_efficiency_change"].median())
+            parameter_mean_squared_fractional_changes[
+                component_name, parameter_name
+            ] = float(sub_sub_frame["squared_thermal_efficiency_change"].median())
+    sorted_medians = sorted(
+        parameter_median_squared_fractional_changes.items(), key=lambda item: item[1]
+    )
+    sorted_means = sorted(
+        parameter_mean_squared_fractional_changes.items(), key=lambda item: item[1]
+    )
+    # g = sns.catplot(x=["_".join(entry[0]) for entry in sorted_medians], y=[entry[1] for entry in sorted_medians], hue=[entry[0][0] for entry in sorted_medians], kind="bar")
+    gng = sns.catplot(
+        frame_to_plot,
+        x="combined_name",
+        y="squared_thermal_efficiency_change",
+        hue="component_name",
+        kind="box",
+        log_scale=True,
+        order=[" ".join(entry[0]) for entry in sorted_medians],
+        whis=(1, 99),
+        flierprops={"marker": "D", "alpha": 0.7},
+    )
+    ax = plt.gca()
+    ax.tick_params(axis="x", rotation=90)
+    ax.set_xlabel("")
+    ax.set_ylabel("Squared fractional change in thermal efficiency")
+    gng.legend.set_title("Component")
+    # rect = mpatches.Rectangle(
+    #     [ax.get_position().x0, ax.get_position().y0],
+    #     ax.get_position().x1 - ax.get_position().x0,
+    #     0.5,
+    #     ec="k",
+    #     fc="grey",
+    #     alpha=0.1,
+    #     clip_on=False,
+    #     transform=fig.transFigure,
+    #     linewidth=0,
+    # )
+    # ax.add_patch(rect)
+    plt.savefig(
+        f"squared_box_sensitivity_autotherm_G_{G}.pdf",
+        transparent=True,
+        format="pdf",
+        dpi=300,
+        bbox_inches="tight",
+    )
+    gng = sns.catplot(
+        frame_to_plot,
+        x="combined_name",
+        y="squared_thermal_efficiency_change",
+        hue="component_name",
+        kind="boxen",
+        log_scale=True,
+        order=[" ".join(entry[0]) for entry in sorted_medians],
+    )
+    ax = plt.gca()
+    ax.tick_params(axis="x", rotation=90)
+    ax.set_xlabel("")
+    ax.set_ylabel("Squared fractional change in thermal efficiency")
+    gng.legend.set_title("Component")
+    plt.savefig(
+        f"squared_boxen_sensitivity_autotherm_G_{G}.pdf",
+        transparent=True,
+        format="pdf",
+        dpi=300,
+        bbox_inches="tight",
+    )
+
+
+plt.show()
+
 #####################################################################
 # Plot a single variable with the parameter value dictating the hue #
 #####################################################################
@@ -331,7 +453,7 @@ parameter_name_to_unit_map: dict[str, str] = {
     "Heat capacity": "J/kgK",
     "Reference efficiency": None,
     "Thermal coefficient": "K$^-1$",
-    "Thermal conductivity": "W/Km",
+    "Thermal conductivity": "W/m K",
     "Thickness": "m",
     "Transmissivity": None,
     "Width": "m",
@@ -340,35 +462,153 @@ parameter_name_to_unit_map: dict[str, str] = {
 start = 0
 end = 8
 
+
 def _size_from_component_and_parameter(component: str, parameter: str) -> int:
     """Determine the size of the points based on the component and parameter."""
-    if component == "Absorber":
-        if parameter in ("Thickness"):
-            return 1
-    if component in ("Adhesive", "Eva", "Tedlar"):
-        if parameter in ("Thermal conductivity"):
-            return 1
-    if component == "Bond":
-        if parameter in ("Thermal conductivity", "Width"):
-            return 1
-    if component == "Glass":
-        if parameter in ("Diffuse reflection coefficient", "Emissivity", "Thermal conductivity", "Thickenss"):
-            return 1
-    if component == "Insulation":
-        if parameter in ("Thermal conductivity", "Thickness"):
-            return 1
-    if component == "PV":
-        if parameter in ("Emissivity", "Reference efficiency", "Thermal coefficienct", "Transmissivity"):
-            return 1
-    if component == "Pvt":
-        return 1
-    return 3
+    # if component == "Absorber":
+    #     if parameter in ("Thickness"):
+    #         return 0.5
+    # if component in ("Adhesive", "Eva", "Tedlar", "Air gap",):
+    #     if parameter in ("Thermal conductivity"):
+    #         return 0.5
+    # if component == "Bond":
+    #     if parameter in ("Thermal conductivity", "Width"):
+    #         return 0.5
+    # if component == "Glass":
+    #     if parameter in ("Diffuse reflection coefficient", "Emissivity", "Thermal conductivity", "Thickenss"):
+    #         return 0.5
+    # if component == "Insulation":
+    #     if parameter in ("Thermal conductivity", "Thickness"):
+    #         return 0.5
+    # if component == "PV":
+    #     if parameter in ("Emissivity", "Reference efficiency", "Thermal coefficienct", "Transmissivity"):
+    #         return 0.5
+    # if component == "Pvt":
+    #     return 0.5
+    return 0.25
+
+
+for irradiance in [0, 200, 400, 600, 800, 1000]:
+    plotting_frame = combined_output_frame[
+        combined_output_frame["solar_irradiance"] == irradiance
+    ]
+    for _component_name, start_hue in zip(
+        [
+            # "Absorber",
+            "Adhesive",
+            "Air gap",
+            # "Bond",
+            "Eva",
+            "Glass",
+            "Insulation",
+            "Pv",
+            "Pvt",
+            "Tedlar",
+        ][start:end],
+        [0.2, 0.0, -0.2, -0.4, -0.6, -0.8, -1.0, -1.2, -1.4][start:end],
+    ):
+        for _parameter_name in set(
+            plotting_frame[(plotting_frame["component_name"] == _component_name)][
+                "parameter_name"
+            ]
+        ):
+            frame_to_plot = plotting_frame[
+                (plotting_frame["component_name"] == _component_name)
+                & (plotting_frame["parameter_name"] == _parameter_name)
+                & (
+                    ~plotting_frame["parameter_value"]
+                    .astype(str)
+                    .str.contains("checkpoint")
+                )
+            ]
+            frame_to_plot.loc[:, "parameter_value"] = frame_to_plot[
+                "parameter_value"
+            ].astype(float)
+            if _component_name == "Pvt":
+                frame_to_plot.loc[:, "parameter_value"] = [
+                    int(0.86 / entry)
+                    for entry in frame_to_plot["parameter_value"].astype(float)
+                ]
+            _unit: str | None = parameter_name_to_unit_map[_parameter_name]
+            fig = plt.figure(figsize=(48 / 5, 32 / 5))
+            # sns.swarmplot(
+            #     frame_to_plot,
+            #     x="percentage_thermal_efficiency_change",
+            #     y="parameter_name",
+            #     hue="parameter_value",
+            #     palette=(
+            #         this_palette := sns.cubehelix_palette(
+            #             start=start_hue,
+            #             rot=-0.2,
+            #             dark=0.1,
+            #             n_colors=len(set(frame_to_plot["parameter_value"])),
+            #         )
+            #     ),
+            #     marker="D",
+            #     size=_size_from_component_and_parameter(_component_name, _parameter_name),
+            # )
+            sns.stripplot(
+                frame_to_plot,
+                x="percentage_thermal_efficiency_change",
+                y="parameter_name",
+                hue="parameter_value",
+                palette=(
+                    this_palette := sns.cubehelix_palette(
+                        start=start_hue,
+                        rot=-0.6,
+                        dark=0.15,
+                        light=0.9,
+                        n_colors=len(set(frame_to_plot["parameter_value"])),
+                    )
+                ),
+                marker="D",
+                alpha=0.3,
+                size=10,
+            )
+            axis = plt.gca()
+            norm = plt.Normalize(
+                frame_to_plot["parameter_value"].min(),
+                frame_to_plot["parameter_value"].max(),
+            )
+            scalar_mappable = plt.cm.ScalarMappable(
+                cmap=mcolors.LinearSegmentedColormap.from_list(
+                    "Custom",
+                    this_palette.as_hex(),
+                    len(set(frame_to_plot["parameter_value"])),
+                ),
+                norm=norm,
+            )
+            colorbar = axis.figure.colorbar(
+                scalar_mappable,
+                ax=axis,
+                label=(
+                    (
+                        f"{_component_name} {_parameter_name}"
+                        if _component_name != "Pvt"
+                        else "Number of pipes"
+                    )
+                    + (f" / {_unit}" if _unit is not None else "")
+                ),
+            )
+            axis = plt.gca()
+            axis.get_legend().remove()
+            axis.set_xlabel("Percentage change in thermal efficiency /  %")
+            axis.set(ylabel=None, yticklabels=[])
+            axis.axvline(x=0, linestyle="--", color="grey", linewidth=1)
+            plt.savefig(
+                f"(Strip) G_{irradiance} Sensitivity of {_component_name} {_parameter_name}.png",
+                transparent=True,
+                dpi=400,
+                bbox_inches="tight",
+                pad_inches=0,
+            )
 
 for _component_name, start_hue in zip(
     [
-        "Absorber",
+        # "Absorber",
         "Adhesive",
-        "Bond",
+        "Air gap",
+        # "Bond",
         "Eva",
         "Glass",
         "Insulation",
@@ -411,12 +651,30 @@ for _component_name, start_hue in zip(
                 this_palette := sns.cubehelix_palette(
                     start=start_hue,
                     rot=-0.2,
+                    dark=0.1,
                     n_colors=len(set(frame_to_plot["parameter_value"])),
                 )
             ),
             marker="D",
             size=_size_from_component_and_parameter(_component_name, _parameter_name),
         )
+        # sns.stripplot(
+        #     frame_to_plot,
+        #     x="percentage_thermal_efficiency_change",
+        #     y="parameter_name",
+        #     hue="parameter_value",
+        #     palette=(
+        #         this_palette := sns.cubehelix_palette(
+        #             start=start_hue,
+        #             rot=-0.2,
+        #             dark=0.1,
+        #             n_colors=len(set(frame_to_plot["parameter_value"])),
+        #         )
+        #     ),
+        #     marker="D",
+        #     alpha=0.1,
+        #     size=5,
+        # )
         axis = plt.gca()
         norm = plt.Normalize(
             frame_to_plot["parameter_value"].min(),
@@ -434,9 +692,12 @@ for _component_name, start_hue in zip(
             scalar_mappable,
             ax=axis,
             label=(
-                f"{_component_name} {_parameter_name}"
-                if _component_name != "Pvt"
-                else "Number of pipes" + (f" / {_unit}" if _unit is not None else "")
+                (
+                    f"{_component_name} {_parameter_name}"
+                    if _component_name != "Pvt"
+                    else "Number of pipes"
+                )
+                + (f" / {_unit}" if _unit is not None else "")
             ),
         )
         axis = plt.gca()
@@ -445,7 +706,7 @@ for _component_name, start_hue in zip(
         axis.set(ylabel=None, yticklabels=[])
         axis.axvline(x=0, linestyle="--", color="grey", linewidth=1)
         plt.savefig(
-            f"Sensitivity of {_component_name} {_parameter_name}.png",
+            f"(Swarm) Sensitivity of {_component_name} {_parameter_name}.png",
             transparent=True,
             dpi=400,
             bbox_inches="tight",
