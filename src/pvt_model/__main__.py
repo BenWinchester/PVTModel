@@ -63,6 +63,8 @@ from .pvt_system.process_pvt_system_data import (
     pvt_collector_from_path,
 )
 
+__all__ = ("main",)
+
 
 # Done message:
 #   The message to display when a task was successful.
@@ -837,7 +839,7 @@ def _determine_and_print_average_temperatures(
     )
 
 
-def main(args) -> None:  # pylint: disable=too-many-branches
+def main(args) -> dict[float, SystemData]:  # pylint: disable=too-many-branches
     """
     The main module for the code.
 
@@ -1183,7 +1185,8 @@ def main(args) -> None:  # pylint: disable=too-many-branches
         print("Analysis complete. Figures can be found in `./figures`.")
         logger.info("Analysis complete.")
 
-    logger.info("Exiting.")
+    logger.info("Exiting and returning data.")
+    return system_data
 
 
 if __name__ == "__main__":

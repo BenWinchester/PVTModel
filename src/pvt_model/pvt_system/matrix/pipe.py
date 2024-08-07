@@ -37,7 +37,7 @@ from ..__utils__ import WeatherConditions
 from ..pvt_collector.element import Element
 from ..pvt_collector.physics_utils import insulation_thermal_resistance
 
-__all__ = "calculate_pipe_equation"
+__all__ = ("calculate_pipe_equation",)
 
 
 def calculate_pipe_equation(

@@ -27,6 +27,8 @@ from ..__utils__ import (
 
 from .__utils__ import UtilityType
 
+__all__ = ("MainsSupply",)
+
 
 @dataclass
 class _Utility:
