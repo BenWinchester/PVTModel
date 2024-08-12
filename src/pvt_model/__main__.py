@@ -21,7 +21,9 @@ from functools import partial
 from logging import Logger
 from multiprocessing import Pool
 from statistics import mean
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple
+
+import pandas as pd
 
 from tqdm import tqdm
 
@@ -1065,10 +1067,18 @@ def main(args) -> dict[float, SystemData]:  # pylint: disable=too-many-branches
 
         if parsed_args.steady_state_data_file is not None:
             # If specified, parse the steady-state data file.
-            steady_state_runs = [
-                SteadyStateRun.from_data(entry)
-                for entry in read_yaml(parsed_args.steady_state_data_file)
-            ]
+            if parsed_args.steady_state_data_file.endswith(".yaml"):
+                steady_state_runs = [
+                    SteadyStateRun.from_data(entry)
+                    for entry in read_yaml(parsed_args.steady_state_data_file)
+                ]
+            elif parsed_args.steady_state_data_file.endswith(".csv"):
+                steady_state_runs = [
+                    SteadyStateRun.from_data(entry[1])
+                    for entry in pd.read_csv(
+                        parsed_args.steady_state_data_file
+                    ).iterrows()
+                ]
 
             for steady_state_run in steady_state_runs:
                 if parsed_args.ambient_temperature is not None:

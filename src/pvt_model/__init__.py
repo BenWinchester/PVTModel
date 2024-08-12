@@ -9,4 +9,3 @@
 
 from .__main__ import main
 from .__utils__ import SystemData
-from .pvt_system.__init__ import *

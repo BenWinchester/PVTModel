@@ -31,6 +31,7 @@ __all__ = (
     "dc_weighted_average_from_dc_values",
     "electrical_efficiency",
     "thermal_efficiency",
+    "thermal_output",
 )
 
 
@@ -234,6 +235,33 @@ def electrical_efficiency(
     )
 
 
+def calculate_thermal_power(mass_flow_rate: float, temperature_gain: float) -> float:
+    """
+    Compute the thermal efficiency.
+
+    :param area:
+        The area of the panel, measured in meters squared.
+
+    :param mass_flow_rate:
+        The mass flow rate of HTF through the absorber.
+
+    :param solar_irradiance:
+        The solar irradiance, measured in Watts per meter squared.
+
+    :param temperature_gain:
+        The temperature gain across the panel, measured in Kelvin.
+
+    :return:
+        The thermal efficiency, based on the input parameters, for a PV-T absorber.
+
+    """
+
+    # Compute the thermal efficiency of the absorber.
+    thermal_output: float = mass_flow_rate * HEAT_CAPACITY_OF_WATER * temperature_gain
+
+    return thermal_output
+
+
 def thermal_efficiency(
     area: float, mass_flow_rate: float, solar_irradiance: float, temperature_gain: float
 ) -> float:
@@ -259,6 +287,6 @@ def thermal_efficiency(
 
     # Compute the thermal efficiency of the absorber.
     thermal_input: float = area * solar_irradiance
-    thermal_output: float = mass_flow_rate * HEAT_CAPACITY_OF_WATER * temperature_gain
+    thermal_output: float = calculate_thermal_power(mass_flow_rate, temperature_gain)
 
     return thermal_output / thermal_input

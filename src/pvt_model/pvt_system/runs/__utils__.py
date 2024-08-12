@@ -367,6 +367,9 @@ def system_data_from_run(
         electrical_efficiency: Optional[float] = efficiency.electrical_efficiency(
             pvt_collector, average_pv_temperature
         )
+        electrical_power: Optional[float] = (
+            electrical_efficiency * pvt_collector.area * weather_conditions.irradiance
+        )
         reduced_system_temperature: Optional[float] = reduced_temperature(
             weather_conditions.ambient_temperature,
             average_bulk_water_temperature,
@@ -378,10 +381,16 @@ def system_data_from_run(
             weather_conditions.irradiance,
             collector_output_temperature - collector_input_temperature,
         )
+        thermal_power: Optional[float] = efficiency.calculate_thermal_power(
+            pvt_collector.absorber.mass_flow_rate,
+            collector_output_temperature - collector_input_temperature,
+        )
     else:
         electrical_efficiency = None
+        electrical_power = None
         reduced_system_temperature = None
         thermal_efficiency = None
+        thermal_power = None
 
     # Return the system data.
     return SystemData(
@@ -427,8 +436,10 @@ def system_data_from_run(
             temperature_map_upper_glass_layer if save_2d_output else None
         ),
         electrical_efficiency=electrical_efficiency,
+        electrical_power=electrical_power,
         reduced_collector_temperature=reduced_system_temperature,
         thermal_efficiency=thermal_efficiency,
+        thermal_power=thermal_power,
         solar_irradiance=weather_conditions.irradiance,
         mass_flow_rate=pvt_collector.absorber.mass_flow_rate,
         wind_speed=weather_conditions.wind_speed,

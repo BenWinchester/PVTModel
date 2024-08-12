@@ -407,6 +407,9 @@ class SystemData:
     .. attribute:: electrical_efficiency
         The electrical efficiency of the PV layer of the collector.
 
+    .. attribute:: electrical_power
+        The electrical power produced by the PV layer of the collector.
+
     .. attribute:: exchanger_temperature_drop
         The temperature drop through the heat exchanger in the tank, measured in Kelvin
         or Celcius. (As it is a temperature difference, the two scales are equivalent.)
@@ -440,6 +443,9 @@ class SystemData:
 
     .. attribute:: thermal_efficiency
         The thermal efficiency of the system.
+
+    .. attribute:: thermal_power
+        The thermal power produced by the PV layer of the system.
 
     .. attribute:: upper_glass_temperature
         The temperature of the upper-glass (i.e., double-glazing) temperature, measured
@@ -493,6 +499,7 @@ class SystemData:
     bulk_water_temperature: float
     date: str
     electrical_efficiency: Optional[float]
+    electrical_power: Optional[float]
     glass_temperature: Optional[float]
     exchanger_temperature_drop: Optional[float]
     mass_flow_rate: float
@@ -503,6 +510,7 @@ class SystemData:
     solar_irradiance: float
     tank_temperature: Optional[float]
     thermal_efficiency: Optional[float]
+    thermal_power: Optional[float]
     upper_glass_temperature: Optional[float]
     wind_speed: float
     collector_input_temperature: Optional[float] = None
