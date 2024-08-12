@@ -368,7 +368,10 @@ def system_data_from_run(
             pvt_collector, average_pv_temperature
         )
         electrical_power: Optional[float] = (
-            electrical_efficiency * pvt_collector.area * weather_conditions.irradiance
+            electrical_efficiency
+            * pvt_collector.area
+            * weather_conditions.irradiance
+            * pvt_collector.pv_transmissivity_absorptivity_product
         )
         reduced_system_temperature: Optional[float] = reduced_temperature(
             weather_conditions.ambient_temperature,
