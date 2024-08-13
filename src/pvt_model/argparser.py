@@ -427,6 +427,13 @@ def parse_args(args) -> argparse.Namespace:
         "plots, will be saved and generated.",
     )
     parser.add_argument(
+        "--skip-output",
+        "-so",
+        action="store_true",
+        default=False,
+        help="If specified, the primary output file is not saved.",
+    )
+    parser.add_argument(
         "--skip-analysis",
         "-sa",
         action="store_true",

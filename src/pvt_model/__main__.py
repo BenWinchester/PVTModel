@@ -1127,7 +1127,10 @@ def main(args) -> dict[float, SystemData]:  # pylint: disable=too-many-branches
             #     logger.info("Multi-process worker pool successfully completed.")
 
             for run_number, steady_state_run in enumerate(
-                tqdm(steady_state_runs, desc="steady state runs", unit="run"), 1
+                tqdm(
+                    steady_state_runs, desc="steady state runs", unit="run", leave=False
+                ),
+                1,
             ):
                 logger.info(
                     "Carrying out steady-state run %s of %s.",
@@ -1156,10 +1159,10 @@ def main(args) -> dict[float, SystemData]:  # pylint: disable=too-many-branches
                         "A divergent solution occurred - have you considered the "
                         "difference between Celcius and Kelvin in all your units, "
                         "especially override CLI units. Consider checking this before "
-                        "investigating further.\nRun attempted: %s\nError: %s",
+                        "investigating further.\nRun attempted: %s",
                         steady_state_run,
-                        str(e),
                     )
+                    logger.info(str(e))
                     continue
 
                 for key, value in output.items():
@@ -1176,9 +1179,14 @@ def main(args) -> dict[float, SystemData]:  # pylint: disable=too-many-branches
         )
 
     # Save the data ouputted by the model.
-    logger.info("Saving output data to: %s.json.", parsed_args.output)
-    save_data(FileType.JSON, logger, operating_mode, parsed_args.output, system_data)
-    print(f"Model output successfully saved to {parsed_args.output}.json.")
+    if parsed_args.skip_output:
+        logger.info("No output information will be saved as `--skip-output` was used.")
+    else:
+        logger.info("Saving output data to: %s.json.", parsed_args.output)
+        save_data(
+            FileType.JSON, logger, operating_mode, parsed_args.output, system_data
+        )
+        print(f"Model output successfully saved to {parsed_args.output}.json.")
 
     # If in verbose mode, output average, min, and max temperatures.
     if parsed_args.verbose:

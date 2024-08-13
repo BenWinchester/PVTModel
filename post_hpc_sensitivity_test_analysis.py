@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import json
+import math
 import matplotlib.colors as mcolors
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
@@ -14,14 +15,15 @@ from matplotlib import rc, rcParams
 from pycirclize import Circos
 from tqdm import tqdm
 
-COMBINED_CSV_FILENAME: str = "combined_25_apr_post_hpc_sensitivity_test"
+COMBINED_CSV_FILENAME: str = "combined_17_may_post_hpc_sensitivity_test.csv"
+INDEX: int = 1
 TOTEX_HEADER: str = "Other TOTEX"
 
 rc("font", **{"family": "sans-serif", "sans-serif": ["Arial"]})
-rc("figure", **{"figsize": (48 / 5, 32 / 5)})
+# rc("figure", **{"figsize": (48 / 5, 32 / 5)})
 rcParams["pdf.fonttype"] = 42
 rcParams["ps.fonttype"] = 42
-sns.set_context("paper")
+sns.set_context("notebook")
 sns.set_style("whitegrid")
 
 # Set custom color-blind colormap
@@ -126,7 +128,7 @@ with open(
     (
         reduced_temperature_plot_filename := os.path.join(
             "output_files",
-            "25_apr_24",
+            "17_may_24",
             "autotherm_sensitivity_of_glass_thermal_conductivity_with_value_0.58.json",
         )
     )
@@ -137,8 +139,8 @@ with open(
 
 reduced_temperature_fit = np.poly1d(
     np.polyfit(
-        frame_to_plot["reduced_collector_temperature"],
-        frame_to_plot["thermal_efficiency"],
+        frame_to_plot["reduced_collector_temperature"].dropna(),
+        frame_to_plot["thermal_efficiency"].dropna(),
         2,
     )
 )
@@ -198,15 +200,15 @@ plt.legend(
 )
 
 plt.savefig(
-    "25_apr_"
+    "17_may_"
     + reduced_temperature_plot_filename.split("autotherm_sensitivity_of_")[1]
-    + ".png",
+    + f"_{INDEX}.png",
     transparent=True,
     bbox_inches="tight",
     dpi=400,
 )
 
-# plt.show()
+plt.show()
 
 #############################################
 # Sensitivity analysis of parameters varied #
@@ -228,7 +230,7 @@ if not os.path.isfile(COMBINED_CSV_FILENAME):
     un_concatenated_dataframes: list[pd.DataFrame] = []
     for filename in tqdm(
         os.listdir(
-            (output_directory_name := os.path.join("output_files", "25_apr_24"))
+            (output_directory_name := os.path.join("output_files", "17_may_24"))
         ),
         desc="processing files",
         unit="files",
@@ -338,6 +340,11 @@ else:
     with open(COMBINED_CSV_FILENAME, "r") as combined_outputfile:
         combined_output_frame = pd.read_csv(combined_outputfile, index_col=0)
 
+def _temp(data):
+    return [np.sqrt(entry) if entry is not None else None for entry in data]
+
+combined_output_frame["abs_thermal_efficiency_change"] = _temp(combined_output_frame["squared_thermal_efficiency_change"])
+
 ###############################################
 # Plot a marginal abatement curve--style plot #
 ###############################################
@@ -347,17 +354,161 @@ blue_first_thesis_palette_20 = sns.color_palette(
 )
 sns.set_palette(blue_first_thesis_palette_20)
 
+def _fix_component_name(name_to_fix: str) -> str:
+    """
+    Fix un-capitalised names.
+
+    Inputs:
+        - name_to_fix:
+            The name to fix.
+
+    Returns:
+        The fixed name.
+
+    """
+    match name_to_fix:
+        case "Pv":
+            return "PV"
+        case "Pvt":
+            return "PV-T"
+        case "Eva":
+            return "EVA"
+        case _:
+            return name_to_fix  \
+
+
+combined_output_frame["component_name"] = list(map(_fix_component_name, combined_output_frame["component_name"]))
+
 combined_output_frame["combined_name"] = (
     combined_output_frame["component_name"]
     + " "
     + combined_output_frame["parameter_name"]
 )
 
+sns.set_style("whitegrid")
+sns.set_context("notebook")
+
+# Exclude parameters that have no impact in order to reduce empty space
+# Ugly I know!!
+masked_combined_output_frame = combined_output_frame[combined_output_frame.combined_name != "Absorber Heat capacity"]
+masked_combined_output_frame = masked_combined_output_frame[masked_combined_output_frame.combined_name != "Glass Density"]
+masked_combined_output_frame = masked_combined_output_frame[masked_combined_output_frame.combined_name != "Glass Heat capacity"]
+masked_combined_output_frame = masked_combined_output_frame[masked_combined_output_frame.combined_name != "PV Density"]
+masked_combined_output_frame = masked_combined_output_frame[masked_combined_output_frame.combined_name != "PV Heat capacity"]
+
+# Generate a combined plot with the marker size and shape indicating the irradiance.
+parameter_median_squared_fractional_changes: dict[tuple[str, str], float] = {}
+for component_name, sub_frame in tqdm(
+    masked_combined_output_frame[masked_combined_output_frame["solar_irradiance"] == 1000].groupby("component_name"), leave=True
+):
+    for parameter_name, sub_sub_frame in tqdm(
+        sub_frame.groupby("parameter_name"), leave=False
+    ):
+        parameter_median_squared_fractional_changes[
+            component_name, parameter_name
+        ] = float(sub_sub_frame["abs_thermal_efficiency_change"].median())
+
+sorted_medians = sorted(
+    parameter_median_squared_fractional_changes.items(), key=lambda item: item[1]
+)
+
+median_values_by_irradiance = {G: {combined_name: sub_frame["abs_thermal_efficiency_change"].median() for combined_name, sub_frame in masked_combined_output_frame[masked_combined_output_frame["solar_irradiance"] == G].groupby("combined_name")} for G in [200, 400, 600, 800, 1000]}
+median_frame_to_plot = pd.concat([pd.DataFrame({"median_abs_change": median_values_by_irradiance[G], "Solar irradiance / W/m$^2$": G}) for G in [200, 400, 600, 800, 1000]], axis=0)
+median_frame_to_plot["Component"] = [entry.split(" ")[0].replace("Air", "Air gap") for entry in list(median_frame_to_plot.index)]
+
+fig = plt.figure(figsize=(32 / 5, 32 / 5))
+ax = plt.gca()
+sns.scatterplot(
+    (frame_to_plot:=median_frame_to_plot.sort_values(by="median_abs_change", ascending=False)),
+    y=frame_to_plot.index,
+    x="median_abs_change",
+    hue="Component",
+    hue_order=sorted(set(combined_output_frame["component_name"])),
+    markers=["h", "H", "s", "D", "P"],
+    s=150,
+    alpha=0.5,
+    style="Solar irradiance / W/m$^2$",
+    ax=ax,
+    edgecolor="black"
+)
+
+# ax.tick_params(axis="x", rotation=90)
+ax.set_ylabel("")
+ax.set_xlabel("Median absolute fractional change in thermal efficiency")
+ax.set_xscale("log")
+ax.axvline(0.01, linestyle="--", color="grey", label="1% impact")
+ax.axvline(0.042, linestyle="-.", color="grey", label="4.2% impact")
+ax.set_xlim((min_ylim:=10**(-4)), 1/3)
+ax.axvspan(min_ylim, 0.042,     color="grey",
+zorder=0,
+label="Rejected parameters", alpha=0.1)
+ax.axvspan(0.01, 0.042,     color="C0",
+zorder=0,
+label="Limited impact", alpha=0.1)
+legend = ax.legend(fancybox=True, framealpha=1, facecolor="white", bbox_to_anchor=(1, 1))
+# legend.set_title("Component")
+frame = legend.get_frame()
+frame.set_facecolor("white")
+frame.set_alpha(1)
+plt.savefig(
+    f"abs_scatter_sensitivity_autotherm_all_irradiances_{INDEX}.png",
+    transparent=True,
+    format="png",
+    dpi=400,
+    bbox_inches="tight",
+)
+
+
+# fig = plt.figure(figsize=(48 / 5, 32 / 5))
+# ax = plt.gca()
+# sns.scatterplot(
+#     (frame_to_plot:=median_frame_to_plot.sort_values(by="median_abs_change", ascending=True)),
+#     x=frame_to_plot.index,
+#     y="median_abs_change",
+#     hue="Component",
+#     hue_order=sorted(set(combined_output_frame["component_name"])),
+#     marker="h",
+#     alpha=0.5,
+#     s=200,
+#     size="Solar irradiance / W/m$^2$",
+#     ax=ax,
+# )
+
+# ax.tick_params(axis="x", rotation=90)
+# ax.set_xlabel("")
+# ax.set_ylabel("Median absolute fractional change in thermal efficiency")
+# ax.set_yscale("log")
+# ax.axhline(0.01, linestyle="--", color="grey", label="1% impact")
+# ax.axhline(0.042, linestyle="-.", color="grey", label="4.2% impact")
+# ax.set_ylim((min_ylim:=10**(-13)), 10)
+# ax.axhspan(min_ylim, 0.042,     color="grey",
+# zorder=0,
+# label="Rejected parameters", alpha=0.1)
+# ax.axhspan(0.01, 0.042,     color="C0",
+# zorder=0,
+# label="Limited impact", alpha=0.1)
+# legend = ax.legend(loc='lower right', fancybox=True, framealpha=1, facecolor="white")
+# # legend.set_title("Component")
+# frame = legend.get_frame()
+# frame.set_facecolor("white")
+# frame.set_alpha(1)
+# plt.savefig(
+#     f"abs_scatter_sensitivity_autotherm_all_irradiances_{INDEX}.png",
+#     transparent=True,
+#     format="png",
+#     dpi=300,
+#     bbox_inches="tight",
+# )
+
+median_frame_to_plot = median_frame_to_plot.sort_values(by="median_abs_change", ascending=True)
+
+
+# Generate separate plots disaggregated by irradiance
 for G in tqdm([200, 400, 600, 800, 1000]):
     parameter_median_squared_fractional_changes: dict[tuple[str, str], float] = {}
     parameter_mean_squared_fractional_changes: dict[tuple[str, str], float] = {}
-    frame_to_plot = combined_output_frame[
-        combined_output_frame["solar_irradiance"] == G
+    frame_to_plot = masked_combined_output_frame[
+        masked_combined_output_frame["solar_irradiance"] == G
     ]
     for component_name, sub_frame in tqdm(
         frame_to_plot.groupby("component_name"), leave=True
@@ -367,10 +518,10 @@ for G in tqdm([200, 400, 600, 800, 1000]):
         ):
             parameter_median_squared_fractional_changes[
                 component_name, parameter_name
-            ] = float(sub_sub_frame["squared_thermal_efficiency_change"].median())
+            ] = float(sub_sub_frame["abs_thermal_efficiency_change"].median())
             parameter_mean_squared_fractional_changes[
                 component_name, parameter_name
-            ] = float(sub_sub_frame["squared_thermal_efficiency_change"].median())
+            ] = float(sub_sub_frame["abs_thermal_efficiency_change"].median())
     sorted_medians = sorted(
         parameter_median_squared_fractional_changes.items(), key=lambda item: item[1]
     )
@@ -380,20 +531,34 @@ for G in tqdm([200, 400, 600, 800, 1000]):
     # g = sns.catplot(x=["_".join(entry[0]) for entry in sorted_medians], y=[entry[1] for entry in sorted_medians], hue=[entry[0][0] for entry in sorted_medians], kind="bar")
     gng = sns.catplot(
         frame_to_plot,
-        x="combined_name",
-        y="squared_thermal_efficiency_change",
+        x="abs_thermal_efficiency_change",
+        y="combined_name",
         hue="component_name",
         kind="box",
         log_scale=True,
-        order=[" ".join(entry[0]) for entry in sorted_medians],
+        order=[" ".join(entry[0]) for entry in reversed(sorted_medians)],
         whis=(1, 99),
         flierprops={"marker": "D", "alpha": 0.7},
+        hue_order=(alphabetical_component_names:=sorted(set(frame_to_plot["component_name"]))),
+        height=32/5,
+        aspect=48/32,
+        legend_out=True,
     )
-    ax = plt.gca()
-    ax.tick_params(axis="x", rotation=90)
-    ax.set_xlabel("")
-    ax.set_ylabel("Squared fractional change in thermal efficiency")
+    # gng.figure.axes[0].tick_params(axis="x", rotation=90)
+    gng.figure.axes[0].set_xlabel("Absolute fractional change in thermal efficiency")
+    gng.figure.axes[0].set_ylabel("")
+    gng.figure.axes[0].axvline(0.01, linestyle="--", color="grey", label="1% impact")
+    gng.figure.axes[0].axvline(0.042, linestyle="-.", color="grey", label="4.2% impact")
     gng.legend.set_title("Component")
+    gng.legend.set_alpha(1)
+    gng.figure.axes[0].set_xlim((min_ylim:=10**(-15)), 10**3)
+    # gng.figure.axes[0].axhspan(min_ylim, 0.042,     color="grey",
+    # zorder=0,
+    # label="Rejected parameters", alpha=0.1)
+    # gng.figure.axes[0].axhspan(0.01, 0.042,     color="C0",
+    # zorder=0,
+    # label="Limited impact", alpha=0.1)
+    # sns.move_legend(gng.figure, "upper left", bbox_to_anchor=(0.1, 0.725))
     # rect = mpatches.Rectangle(
     #     [ax.get_position().x0, ax.get_position().y0],
     #     ax.get_position().x1 - ax.get_position().x0,
@@ -407,36 +572,139 @@ for G in tqdm([200, 400, 600, 800, 1000]):
     # )
     # ax.add_patch(rect)
     plt.savefig(
-        f"squared_box_sensitivity_autotherm_G_{G}.pdf",
+        f"abs_box_sensitivity_autotherm_G_{G}_{INDEX}.png",
         transparent=True,
-        format="pdf",
+        format="png",
         dpi=300,
         bbox_inches="tight",
     )
     gng = sns.catplot(
         frame_to_plot,
-        x="combined_name",
-        y="squared_thermal_efficiency_change",
+        x="abs_thermal_efficiency_change",
+        y="combined_name",
         hue="component_name",
         kind="boxen",
         log_scale=True,
-        order=[" ".join(entry[0]) for entry in sorted_medians],
+        order=[" ".join(entry[0]) for entry in reversed(sorted_medians)],
+        outlier_prop=0,
+        showfliers=False,
+        hue_order=alphabetical_component_names,
+        height=32/5,
+        aspect=48/32,
+        legend_out=True,
     )
-    ax = plt.gca()
-    ax.tick_params(axis="x", rotation=90)
-    ax.set_xlabel("")
-    ax.set_ylabel("Squared fractional change in thermal efficiency")
+    # gng.figure.axes[0].tick_params(axis="x", rotation=90)
+    gng.figure.axes[0].set_xlabel("Absolute fractional change in thermal efficiency")
+    gng.figure.axes[0].set_ylabel("")
+    gng.figure.axes[0].axvline(0.01, linestyle="--", color="grey", label="1% impact")
+    gng.figure.axes[0].axvline(0.042, linestyle="-.", color="grey", label="4.2% impact")
     gng.legend.set_title("Component")
+    gng.legend.set_alpha(1)
+    gng.figure.axes[0].set_xlim((min_ylim:=10**(-15)), 10**3)
+    # gng.figure.axes[0].axhspan(min_ylim, 0.042,     color="grey",
+    # zorder=0,
+    # label="Rejected parameters", alpha=0.1)
+    # gng.figure.axes[0].axhspan(0.01, 0.042,     color="C0",
+    # zorder=0,
+    # label="Limited impact", alpha=0.1)
+    # sns.move_legend(gng.figure, "upper left", bbox_to_anchor=(0.1, 0.725))
     plt.savefig(
-        f"squared_boxen_sensitivity_autotherm_G_{G}.pdf",
+        f"abs_boxen_sensitivity_autotherm_G_{G}_{INDEX}.png",
         transparent=True,
-        format="pdf",
+        format="png",
         dpi=300,
         bbox_inches="tight",
     )
+    # Violin plot
+    # gng = sns.catplot(
+    #     frame_to_plot,
+    #     x="combined_name",
+    #     y="abs_thermal_efficiency_change",
+    #     hue="component_name",
+    #     kind="violin",
+    #     log_scale=True,
+    #     order=[" ".join(entry[0]) for entry in sorted_medians],
+    # )
+    # ax = plt.gca()
+    # ax.tick_params(axis="x", rotation=90)
+    # ax.set_xlabel("")
+    # ax.set_ylabel("Absolute fractional change in thermal efficiency")
+    # gng.figure.axes[0].axhline(0.01, linestyle="--", color="grey", label="1% impact")
+    # gng.figure.axes[0].axhline(0.042, linestyle="-.", color="grey", label="4.2% impact")
+    # gng.legend.set_title("Component")
+    # plt.savefig(
+    #     f"abs_violin_sensitivity_autotherm_G_{G}_{INDEX}.png",
+    #     transparent=True,
+    #     format="png",
+    #     dpi=300,
+    #     bbox_inches="tight",
+    # )
+    # Plot the median values only as a scatter
+    median_values_only = {combined_name: sub_frame["abs_thermal_efficiency_change"].median() for combined_name, sub_frame in frame_to_plot.groupby("combined_name")}
+    fig = plt.figure(figsize=(32 / 5, 32 / 5))
+    ax = plt.gca()
+    sns.scatterplot(
+        y = reversed(sorted_names:=[" ".join(entry[0]) for entry in sorted_medians]),
+        x=[median_values_only[name] for name in reversed(sorted_names)],
+        hue=[entry[0][0] for entry in sorted_medians],
+        ax=ax,
+        marker="D",
+        s=100,
+        alpha=1,
+        hue_order=alphabetical_component_names,
+        edgecolor=None,
+    )
+    # ax.tick_params(axis="x", rotation=90)
+    ax.set_ylabel("")
+    ax.set_xlabel("Median absolute fractional change in thermal efficiency")
+    ax.set_xscale("log")
+    ax.axvline(0.01, linestyle="--", color="grey", label="1% impact")
+    ax.axvline(0.042, linestyle="-.", color="grey", label="4.2% impact")
+    ax.set_xlim((min_ylim:=10**(-4)), 1/3)
+    ax.axvspan(min_ylim, 0.042,     color="grey",
+    zorder=0,
+    label="Rejected parameters", alpha=0.1)
+    ax.axvspan(0.01, 0.042,     color="C0",
+    zorder=0,
+    label="Limited impact", alpha=0.1)
+    legend = ax.legend(fancybox=True, framealpha=1, facecolor="white", bbox_to_anchor=(1, 1))
+    # legend.set_title("Component")
+    frame = legend.get_frame()
+    frame.set_facecolor("white")
+    frame.set_alpha(1)
+    plt.savefig(
+        f"abs_scatter_sensitivity_autotherm_G_{G}_{INDEX}.png",
+        transparent=True,
+        format="png",
+        dpi=400,
+        bbox_inches="tight",
+    )
 
+# Output, for each variable, the median impact.
+mapping: dict[int, dict[str, float]] = {}
+for G in tqdm([200, 400, 600, 800, 1000]):
+    parameter_median_squared_fractional_changes: dict[tuple[str, str], float] = {}
+    parameter_mean_squared_fractional_changes: dict[tuple[str, str], float] = {}
+    frame_to_plot = combined_output_frame[
+        combined_output_frame["solar_irradiance"] == G
+    ]
+    for component_name, sub_frame in frame_to_plot.groupby("component_name"):
+        for parameter_name, sub_sub_frame in sub_frame.groupby("parameter_name"):
+            parameter_median_squared_fractional_changes[
+                component_name, parameter_name
+            ] = float(sub_sub_frame["abs_thermal_efficiency_change"].median())
+            parameter_mean_squared_fractional_changes[
+                component_name, parameter_name
+            ] = float(sub_sub_frame["abs_thermal_efficiency_change"].median())
+    sorted_medians = sorted(
+        parameter_median_squared_fractional_changes.items(), key=lambda item: item[1]
+    )
+    median_values_only = {combined_name: sub_frame["abs_thermal_efficiency_change"].median() for combined_name, sub_frame in frame_to_plot.groupby("combined_name")}
+    print("\n".join([f"{'**' if median_values_only[name] >= 0.042 else '*' if median_values_only[name] >= 0.01 else ''}{name}: {median_values_only[name]:.3g}" for name in [f"{entry[0][0]} {entry[0][1]}" for entry in sorted_medians]]))
+    mapping[G] = {name: 100 * float(f"{median_values_only[name]:.3g}") for name in  [f"{entry[0][0]} {entry[0][1]}" for entry in sorted_medians]}
 
-plt.show()
+frame = pd.DataFrame.from_dict(mapping)
+frame = frame.sort_values(1000, ascending=False)
 
 #####################################################################
 # Plot a single variable with the parameter value dictating the hue #
@@ -488,120 +756,197 @@ def _size_from_component_and_parameter(component: str, parameter: str) -> int:
     return 0.25
 
 
-for irradiance in [0, 200, 400, 600, 800, 1000]:
-    plotting_frame = combined_output_frame[
-        combined_output_frame["solar_irradiance"] == irradiance
-    ]
-    for _component_name, start_hue in zip(
-        [
-            # "Absorber",
-            "Adhesive",
-            "Air gap",
-            # "Bond",
-            "Eva",
-            "Glass",
-            "Insulation",
-            "Pv",
-            "Pvt",
-            "Tedlar",
-        ][start:end],
-        [0.2, 0.0, -0.2, -0.4, -0.6, -0.8, -1.0, -1.2, -1.4][start:end],
+for _component_name, start_hue in zip(
+    [
+        # "Absorber",
+        "Adhesive",
+        "Air gap",
+        # "Bond",
+        "Eva",
+        "Glass",
+        "Insulation",
+        "Pv",
+        "Pvt",
+        "Tedlar",
+    ][start:end],
+    [0.2, 0.0, -0.2, -0.4, -0.6, -0.8, -1.0, -1.2, -1.4][start:end],
+):
+    for _parameter_name in set(
+        combined_output_frame[(combined_output_frame["component_name"] == _component_name)][
+            "parameter_name"
+        ]
     ):
-        for _parameter_name in set(
-            plotting_frame[(plotting_frame["component_name"] == _component_name)][
-                "parameter_name"
+        frame_to_plot = combined_output_frame[
+            (combined_output_frame["component_name"] == _component_name)
+            & (combined_output_frame["parameter_name"] == _parameter_name)
+            & (
+                ~combined_output_frame["parameter_value"]
+                .astype(str)
+                .str.contains("checkpoint")
+            )
+            & (combined_output_frame["solar_irradiance"] > 0)
+        ]
+        # Drop nan entries
+        frame_to_plot = frame_to_plot.dropna(subset="percentage_thermal_efficiency_change")
+        frame_to_plot.loc[:, "parameter_value"] = frame_to_plot[
+            "parameter_value"
+        ].astype(float)
+        if _component_name == "PV-T":
+            frame_to_plot.loc[:, "parameter_value"] = [
+                int(0.86 / entry)
+                for entry in frame_to_plot["parameter_value"].astype(float)
             ]
-        ):
-            frame_to_plot = plotting_frame[
-                (plotting_frame["component_name"] == _component_name)
-                & (plotting_frame["parameter_name"] == _parameter_name)
-                & (
-                    ~plotting_frame["parameter_value"]
-                    .astype(str)
-                    .str.contains("checkpoint")
+        _unit: str | None = parameter_name_to_unit_map[_parameter_name]
+        # sns.swarmplot(
+        #     frame_to_plot,
+        #     x="percentage_thermal_efficiency_change",
+        #     y="parameter_name",
+        #     hue="parameter_value",
+        #     palette=(
+        #         this_palette := sns.cubehelix_palette(
+        #             start=start_hue,
+        #             rot=-0.2,
+        #             dark=0.1,
+        #             n_colors=len(set(frame_to_plot["parameter_value"])),
+        #         )
+        #     ),
+        #     marker="D",
+        #     size=_size_from_component_and_parameter(_component_name, _parameter_name),
+        # )
+        # Create the data
+        # rs = np.random.RandomState(1979)
+        # x = rs.randn(500)
+        # g = np.tile(list("ABCDEFGHIJ"), 50)
+        # df = pd.DataFrame(dict(x=x, g=g))
+        # m = df.g.map(ord)
+        # df["x"] += m
+        # Initialize the FacetGrid object
+        # pal = sns.cubehelix_palette(10, rot=-.25, light=.7)
+        g = sns.FacetGrid(frame_to_plot, row="parameter_value", hue="parameter_value", aspect=15, height=0.5, palette=(
+                this_palette := sns.cubehelix_palette(
+                    start=start_hue,
+                    rot=-0.6,
+                    dark=0.15,
+                    light=0.9,
+                    n_colors=len(set(frame_to_plot["parameter_value"])),
                 )
-            ]
-            frame_to_plot.loc[:, "parameter_value"] = frame_to_plot[
-                "parameter_value"
-            ].astype(float)
-            if _component_name == "Pvt":
-                frame_to_plot.loc[:, "parameter_value"] = [
-                    int(0.86 / entry)
-                    for entry in frame_to_plot["parameter_value"].astype(float)
-                ]
-            _unit: str | None = parameter_name_to_unit_map[_parameter_name]
-            fig = plt.figure(figsize=(48 / 5, 32 / 5))
-            # sns.swarmplot(
-            #     frame_to_plot,
-            #     x="percentage_thermal_efficiency_change",
-            #     y="parameter_name",
-            #     hue="parameter_value",
-            #     palette=(
-            #         this_palette := sns.cubehelix_palette(
-            #             start=start_hue,
-            #             rot=-0.2,
-            #             dark=0.1,
-            #             n_colors=len(set(frame_to_plot["parameter_value"])),
-            #         )
-            #     ),
-            #     marker="D",
-            #     size=_size_from_component_and_parameter(_component_name, _parameter_name),
-            # )
-            sns.stripplot(
-                frame_to_plot,
-                x="percentage_thermal_efficiency_change",
-                y="parameter_name",
-                hue="parameter_value",
-                palette=(
-                    this_palette := sns.cubehelix_palette(
-                        start=start_hue,
-                        rot=-0.6,
-                        dark=0.15,
-                        light=0.9,
-                        n_colors=len(set(frame_to_plot["parameter_value"])),
-                    )
-                ),
-                marker="D",
-                alpha=0.3,
-                size=10,
-            )
-            axis = plt.gca()
-            norm = plt.Normalize(
-                frame_to_plot["parameter_value"].min(),
-                frame_to_plot["parameter_value"].max(),
-            )
-            scalar_mappable = plt.cm.ScalarMappable(
-                cmap=mcolors.LinearSegmentedColormap.from_list(
-                    "Custom",
-                    this_palette.as_hex(),
-                    len(set(frame_to_plot["parameter_value"])),
-                ),
-                norm=norm,
-            )
-            colorbar = axis.figure.colorbar(
-                scalar_mappable,
-                ax=axis,
-                label=(
-                    (
-                        f"{_component_name} {_parameter_name}"
-                        if _component_name != "Pvt"
-                        else "Number of pipes"
-                    )
-                    + (f" / {_unit}" if _unit is not None else "")
-                ),
-            )
-            axis = plt.gca()
-            axis.get_legend().remove()
-            axis.set_xlabel("Percentage change in thermal efficiency /  %")
-            axis.set(ylabel=None, yticklabels=[])
-            axis.axvline(x=0, linestyle="--", color="grey", linewidth=1)
-            plt.savefig(
-                f"(Strip) G_{irradiance} Sensitivity of {_component_name} {_parameter_name}.png",
-                transparent=True,
-                dpi=400,
-                bbox_inches="tight",
-                pad_inches=0,
-            )
+            ),)
+        # Draw the densities in a few steps
+        g.map(sns.kdeplot, "percentage_thermal_efficiency_change",
+            bw_adjust=.5, clip_on=False,
+            fill=True, alpha=1, linewidth=1.5)
+        # g.map(sns.kdeplot, "percentage_thermal_efficiency_change",
+        #     bw_adjust=.5, clip_on=False, fill=True,
+        #     linewidth=1.5,
+        #     marker="D",
+        #     alpha=0.1,
+        #     size=10
+        # )
+        g.map(sns.kdeplot, "percentage_thermal_efficiency_change", clip_on=False, color="w", lw=2, bw_adjust=.5)
+        # g.map(sns.stripplot, "percentage_thermal_efficiency_change",
+        #     #   clip_on=False,
+        #         color="w", linewidth=2,
+        #         # bw_adjust=.5
+        #     )
+        # passing color=None to refline() uses the hue mapping
+        g.refline(y=0, linewidth=2, linestyle="-", color=None, clip_on=False)
+        # Define and use a simple function to label the plot in axes coordinates
+        def label(x, color, label):
+            ax = plt.gca()
+            ax.text(0, 0.8, f"{label} W/m$^2$", fontweight="bold", color=color,
+                    ha="left", va="center", transform=ax.transAxes) \
+
+        g.map(label, "parameter_value")
+        # Set the subplots to overlap
+        g.figure.subplots_adjust(hspace=-0.1)
+        # Remove axes details that don't play well with overlap
+        g.set_titles("")
+        g.set(yticks=[], ylabel="")
+        g.despine(bottom=True, left=True)
+        # g.set_xlabels("Percentage thermal efficiency change")
+        # axis = plt.gca()
+        # levels = sorted(set(frame_to_plot["parameter_value"]))
+        # cmap, norm = mcolors.from_levels_and_colors(levels, this_palette[:-1])
+        # # norm = plt.Normalize(
+        # #     frame_to_plot["parameter_value"].min(),
+        # #     frame_to_plot["parameter_value"].max(),
+        # # )
+        # scalar_mappable = plt.cm.ScalarMappable(
+        #     cmap=cmap,
+        #     norm=norm,
+        # )
+        # colorbar = axis.figure.colorbar(
+        #     scalar_mappable,
+        #     ax=axis,
+        #     label=(
+        #         (
+        #             f"{_component_name} {_parameter_name}"
+        #             if _component_name != "PV-T"
+        #             else "Number of pipes"
+        #         )
+        #         + (f" / {_unit}" if _unit is not None else "")
+        #     ),
+        # )
+        axis = plt.gca()
+        # Stripplot
+        # sns.stripplot(
+        #     frame_to_plot,
+        #     x="solar_irradiance",
+        #     y="percentage_thermal_efficiency_change",
+        #     hue="parameter_value",
+        #     palette=(
+        #         this_palette := sns.cubehelix_palette(
+        #             start=start_hue,
+        #             rot=-0.6,
+        #             dark=0.15,
+        #             light=0.9,
+        #             n_colors=len(set(frame_to_plot["parameter_value"])),
+        #         )
+        #     ),
+        #     marker="D",
+        #     jitter=1,
+        #     dodge=True,
+        #     orient="h",
+        #     alpha=0.3,
+        #     size=10,
+        # )
+        # axis = plt.gca()
+        # norm = plt.Normalize(
+        #     frame_to_plot["parameter_value"].min(),
+        #     frame_to_plot["parameter_value"].max(),
+        # )
+        # scalar_mappable = plt.cm.ScalarMappable(
+        #     cmap=mcolors.LinearSegmentedColormap.from_list(
+        #         "Custom",
+        #         [(value, colour) for value, colour in zip(this_palette.as_hex(), sorted(frame_to_plot["parameter_value"]))],
+        #     ),
+        #     norm=norm,
+        # )
+        # colorbar = axis.figure.colorbar(
+        #     scalar_mappable,
+        #     ax=axis,
+        #     label=(
+        #         (
+        #             f"{_component_name} {_parameter_name}"
+        #             if _component_name != "PV-T"
+        #             else "Number of pipes"
+        #         )
+        #         + (f" / {_unit}" if _unit is not None else "")
+        #     ),
+        # )
+        # axis = plt.gca()
+        # axis.get_legend().remove()
+        # axis.set_xlabel("Percentage change in thermal efficiency /  %")
+        # axis.set(ylabel=None, yticklabels=[])
+        # axis.axvline(x=0, linestyle="--", color="grey", linewidth=1)
+        plt.savefig(
+            f"(KDE) Sensitivity of {_component_name} {_parameter_name}_{INDEX}.png",
+            transparent=True,
+            dpi=400,
+            bbox_inches="tight",
+            pad_inches=0,
+        )
+        # plt.show()
 
 for _component_name, start_hue in zip(
     [
@@ -706,7 +1051,7 @@ for _component_name, start_hue in zip(
         axis.set(ylabel=None, yticklabels=[])
         axis.axvline(x=0, linestyle="--", color="grey", linewidth=1)
         plt.savefig(
-            f"(Swarm) Sensitivity of {_component_name} {_parameter_name}.png",
+            f"(Swarm) Sensitivity of {_component_name} {_parameter_name}_{INDEX}.png",
             transparent=True,
             dpi=400,
             bbox_inches="tight",
@@ -798,7 +1143,7 @@ for sector in circos.sectors:
         alpha=0.3,
     )
 
-circos.savefig("circular_sensitivity.png", dpi=400)
+circos.savefig(f"circular_sensitivity_{INDEX}.png", dpi=400)
 
 circos = Circos(sectors, space=5)
 max_mean: float = 0
@@ -844,7 +1189,7 @@ for sector in circos.sectors:
     print("\n".join(sorted(bar_data)))
     max_mean = max(max_mean, max(y_data))
 
-circos.savefig("circular_sensitivity_bar.png", dpi=400)
+circos.savefig(f"circular_sensitivity_bar_{INDEX}.png", dpi=400)
 
 vmax = combined_output_frame["squared_thermal_efficiency_change"].dropna().max()
 
@@ -915,7 +1260,7 @@ for sector in circos.sectors:
         vmax=vmax,
     )
 
-circos.savefig("circular_sensitivity_with_max.png", dpi=400)
+circos.savefig(f"circular_sensitivity_with_max_{INDEX}.png", dpi=400)
 
 circos = Circos(sectors, space=5)
 # Create a bar with the mean value
@@ -958,7 +1303,7 @@ for sector in circos.sectors:
         vmax=max_mean,
     )
 
-circos.savefig("circular_sensitivity_bar_with_max.png", dpi=400)
+circos.savefig(f"circular_sensitivity_bar_with_max_{INDEX}.png", dpi=400)
 
 ########################################
 # Plot the impact of the PV efficiency #
@@ -1066,7 +1411,7 @@ colorbar = axis.figure.colorbar(scalar_mappable, ax=axis, label="Electrical effi
 #     _legend_handler._sizes = [150]
 
 plt.savefig(
-    "electrical_vs_thermal_efficiency_scatter.png",
+    f"electrical_vs_thermal_efficiency_scatter_{INDEX}.png",
     transparent=True,
     bbox_inches="tight",
     dpi=400,
@@ -1156,7 +1501,7 @@ scalar_mappable = plt.cm.ScalarMappable(
 colorbar = axis.figure.colorbar(scalar_mappable, ax=axis, label="Electrical efficiency")
 
 plt.savefig(
-    "electrical_vs_thermal_efficiency_scatter_with_lines.png",
+    f"electrical_vs_thermal_efficiency_scatter_with_lines_{INDEX}.png",
     transparent=True,
     bbox_inches="tight",
     dpi=400,
@@ -1253,7 +1598,7 @@ grid.legend.remove()
 # grid.add_legend(title="Component")
 
 plt.savefig(
-    "overall_sensitivity_bar.png", transparent=True, bbox_inches="tight", dpi=600
+    f"overall_sensitivity_bar_{INDEX}.png", transparent=True, bbox_inches="tight", dpi=600
 )
 
 # plt.show()
@@ -1281,7 +1626,7 @@ for ax in grid.axes.flat:
 grid.legend.remove()
 
 plt.savefig(
-    "overall_sensitivity_boxen.png", transparent=True, bbox_inches="tight", dpi=600
+    f"overall_sensitivity_boxen_{INDEX}.png", transparent=True, bbox_inches="tight", dpi=600
 )
 
 # plt.show()
@@ -1311,7 +1656,7 @@ for ax in grid.axes.flat:
 grid.legend.remove()
 
 plt.savefig(
-    "overall_sensitivity_box_and_whisker.png",
+    f"overall_sensitivity_box_and_whisker_{INDEX}.png",
     transparent=True,
     bbox_inches="tight",
     dpi=600,
@@ -1346,7 +1691,7 @@ for ax in grid.axes.flat:
 grid.legend.remove()
 
 plt.savefig(
-    "overall_sensitivity_strip.png", transparent=True, bbox_inches="tight", dpi=600
+    f"overall_sensitivity_strip_{INDEX}.png", transparent=True, bbox_inches="tight", dpi=600
 )
 
 # plt.show()
@@ -1531,7 +1876,7 @@ for component_name, sub_frame in combined_output_frame.groupby("component_name")
         weight="bold",
     )
     plt.savefig(
-        f"fractions_violins_for_{component_name}_with_border.png",
+        f"fractions_violins_for_{component_name}_with_border_{INDEX}.png",
         transparent=True,
         dpi=400,
         bbox_inches="tight",
@@ -1658,7 +2003,7 @@ for component_name, sub_frame in combined_output_frame.groupby("component_name")
         weight="bold",
     )
     plt.savefig(
-        f"squared_fractions_violins_for_{component_name}_with_border.png",
+        f"squared_fractions_violins_for_{component_name}_with_border_{INDEX}.png",
         transparent=True,
         dpi=400,
         bbox_inches="tight",
@@ -1783,7 +2128,7 @@ for component_name, sub_frame in combined_output_frame.groupby("component_name")
         weight="bold",
     )
     plt.savefig(
-        f"percentage_fractions_violins_for_{component_name}_with_border.png",
+        f"percentage_fractions_violins_for_{component_name}_with_border_{INDEX}.png",
         transparent=True,
         dpi=400,
         bbox_inches="tight",
@@ -1907,7 +2252,7 @@ for component_name, sub_frame in combined_output_frame.groupby("component_name")
         weight="bold",
     )
     plt.savefig(
-        f"no_lim_fractions_violins_for_{component_name}_with_border.png",
+        f"no_lim_fractions_violins_for_{component_name}_with_border_{INDEX}.png",
         transparent=True,
         dpi=400,
         bbox_inches="tight",
@@ -2030,7 +2375,7 @@ for component_name, sub_frame in combined_output_frame.groupby("component_name")
         weight="bold",
     )
     plt.savefig(
-        f"no_lim_squared_fractions_violins_for_{component_name}_with_border.png",
+        f"no_lim_squared_fractions_violins_for_{component_name}_with_border_{INDEX}.png",
         transparent=True,
         dpi=400,
         bbox_inches="tight",
@@ -2151,7 +2496,7 @@ for component_name, sub_frame in combined_output_frame.groupby("component_name")
         weight="bold",
     )
     plt.savefig(
-        f"no_lim_percentage_fractions_violins_for_{component_name}_with_border.png",
+        f"no_lim_percentage_fractions_violins_for_{component_name}_with_border_{INDEX}.png",
         transparent=True,
         dpi=400,
         bbox_inches="tight",

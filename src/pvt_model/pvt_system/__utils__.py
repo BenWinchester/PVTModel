@@ -121,8 +121,8 @@ class DivergentSolutionError(Exception):
             "Divergence is hence "
             f"{round(run_two_temperature_difference - run_one_temperature_difference, 2)}"
             " away from the current solution.\n"
-            f"Previous solution temperatures:\n{run_one_temperature_vector_string}\n"
-            f"Current solution temperatures:\n{run_two_temperature_vector_string}\n",
+            # f"Previous solution temperatures:\n{run_one_temperature_vector_string}\n"
+            # f"Current solution temperatures:\n{run_two_temperature_vector_string}\n",
         )
 
 

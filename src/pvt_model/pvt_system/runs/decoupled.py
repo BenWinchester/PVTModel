@@ -249,10 +249,10 @@ def decoupled_dynamic_run(
             )
         except DivergentSolutionError as e:
             logger.error(
-                "A divergent solution was reached at %s:%s",
+                "A divergent solution was reached at %s.",
                 date_and_time.strftime("%D/%M/%Y %H:%M:%S"),
-                str(e),
             )
+            logger.info(str(e))
             raise
 
         # Save the system data output and 2D profiles.
@@ -390,9 +390,9 @@ def decoupled_steady_state_run(
         )
     except DivergentSolutionError as e:
         logger.error(
-            "A divergent solution was when attempting to solve the system in steady-state:%s",
-            str(e),
+            "A divergent solution was when attempting to solve the system in steady-state.",
         )
+        logger.info(str(e))
         raise
 
     # Save the system data output and 2D profiles.
