@@ -217,6 +217,9 @@ def get_logger(
     if verbose:
         logger.setLevel(logging.DEBUG)
         ch.setLevel(logging.WARN)
+    elif disable_logging:
+        logger.setLevel(logging.CRITICAL)
+        ch.setLevel(logging.CRITICAL)
     else:
         logger.setLevel(logging.INFO)
         ch.setLevel(logging.ERROR)
