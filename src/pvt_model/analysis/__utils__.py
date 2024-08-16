@@ -26,6 +26,8 @@ import numpy
 
 import seaborn as sns
 
+import matplotlib.colors as mcolors
+
 from matplotlib.axes import Axes
 from matplotlib import cm
 from matplotlib import pyplot as plt
@@ -758,10 +760,6 @@ def multi_layer_temperature_plot(logger, model_data, *, entry_number) -> None:
 
     axes[1].tick_params(labelleft=False)
     axes[2].tick_params(labelleft=False)
-
-    import pdb
-
-    pdb.set_trace()
 
     figname: str = "pvt_temperatures_1.png"
 
