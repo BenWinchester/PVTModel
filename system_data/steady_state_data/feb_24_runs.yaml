@@ -21,27 +21,27 @@
   collector_input_temperature: 15
   collector_temperature_gain: 5.7
   irradiance: 983
-  mass_flow_rate: 8
+  mass_flow_rate: 1.72
   thermal_efficiency: 0.5
   thermal_power: 684
   wind_speed: 1.63
 
-- ambient_temperature: 22.2
-  average_bulk_water_temperature: 17.85
-  collector_input_temperature: 45
-  collector_temperature_gain: 5.7
-  irradiance: 983
-  mass_flow_rate: 8
-  thermal_efficiency: 0.5
-  thermal_power: 684
-  wind_speed: 1.63
+- ambient_temperature: 23.1
+  average_bulk_water_temperature: 41.12
+  collector_input_temperature: 38.81
+  collector_temperature_gain: 4.63
+  mass_flow_rate: 1.72
+  irradiance: 1006
+  thermal_efficiency: 0.39
+  thermal_power: 553
+  wind_speed: 1.51
 
-- ambient_temperature: 22.2
-  average_bulk_water_temperature: 17.85
-  collector_input_temperature: 45
-  collector_temperature_gain: 5.7
-  irradiance: 983
-  mass_flow_rate: 8
-  thermal_efficiency: 0.5
-  thermal_power: 684
-  wind_speed: 1.63
+- ambient_temperature: 28
+  average_bulk_water_temperature: 56.04
+  collector_input_temperature: 54.21
+  collector_temperature_gain: 3.66
+  irradiance: 992
+  mass_flow_rate: 1.73
+  thermal_efficiency: 0.32
+  thermal_power: 441
+  wind_speed: 1.1

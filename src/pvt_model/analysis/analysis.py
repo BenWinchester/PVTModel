@@ -22,6 +22,7 @@ import sys
 from logging import Logger
 from typing import Any, List, Dict, Optional, Union
 
+import seaborn as sns
 import yaml
 
 from matplotlib import pyplot as plt
@@ -998,6 +999,10 @@ def analyse_decoupled_steady_state_data(
     # Thermal efficiency plot.
     logger.info("Plotting thermal efficiency against the reduced temperature.")
 
+    import pdb
+
+    pdb.set_trace()
+
     # Plot the experimental data.
     _, ax1 = plt.subplots()
     ax1.scatter(
@@ -1025,18 +1030,69 @@ def analyse_decoupled_steady_state_data(
     )
 
     # Plot the experimental data.
-    _, ax1 = plt.subplots()
-    ax1.scatter(
+    from matplotlib import rc
+
+    rc("font", **{"family": "sans-serif", "sans-serif": ["Arial"]})
+
+    thesis_palette = sns.color_palette(
         [
-            entry["collector_input_temperature"]
-            for entry in experimental_steady_state_data
-        ],
-        [
-            entry["collector_temperature_gain"]
-            for entry in experimental_steady_state_data
-        ],
-        marker="s",
+            "#E04606",
+            "#F9A130",
+            "#EFF2DD",
+            "#27BFE6",  # SDG 6
+            "#144E56",
+            "#D8247C",  # Pink
+            "#EDEDED",  # Pale pink
+            "#E7DFBE",  # Pale yellow
+        ]
     )
+
+    sns.set_palette(thesis_palette)
+
+    sns.set_style("ticks")
+    sns.set_context("notebook")
+
+    fig = plt.figure(figsize=(48 / 5, 32 / 5))
+
+    sns.scatterplot(
+        x = [
+            entry["reduced_temperature"]
+            for entry in experimental_steady_state_data
+        ],
+        y = [
+            entry["thermal_efficiency"]
+            for entry in experimental_steady_state_data
+        ],
+        marker="h",
+        s=270,
+        alpha=0.55,
+        color="C4",
+        linewidth=0,
+        label="Experimental data"
+    )
+
+    def _extract_reduced_temperature(entry) -> float:
+        return ((entry["absorber_temperature"] + entry["pv_temperature"]) / 2 - entry["ambient_temperature"]) / entry["solar_irradiance"]
+
+    sns.scatterplot(
+        x = [entry["reduced_collector_temperature"] for entry in data.values()],
+        y = [entry["thermal_efficiency"] for entry in data.values()],
+        marker="H",
+        s=270,
+        alpha=0.55,
+        color="C0",
+        linewidth=0,
+        label="PVTModel output"
+    )
+
+    axis = plt.gca()
+    axis.set_xlabel("Reduced collector temperature / Km$^2$/W")
+    axis.set_ylabel("Thermal efficiency")
+    axis.legend(loc="upper right")
+
+    plt.savefig("solimpeks_standard_collector_validation_scatter.png", transparent=True, dpi=400, bbox_inches="tight")
+
+    plt.show()
 
     # Add the model data.
     plot_figure(
