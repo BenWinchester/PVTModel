@@ -27,7 +27,12 @@
   mass_flow_rate: 8 # [60 divided by number of pipes]
   wind_speed: 0
 - ambient_temperature: 25
-  collector_input_temperature: 20 
+  collector_input_temperature: 20
+  irradiance: 1000
+  mass_flow_rate: 8 # [60 divided by number of pipes]
+  wind_speed: 0
+- ambient_temperature: 25
+  collector_input_temperature: 25
   irradiance: 1000
   mass_flow_rate: 8 # [60 divided by number of pipes]
   wind_speed: 0
