@@ -22,6 +22,7 @@ import sys
 from logging import Logger
 from typing import Any, List, Dict, Optional, Union
 
+from scipy.optimize import curve_fit as scipy_curve_fit
 import seaborn as sns
 import yaml
 
@@ -494,7 +495,8 @@ def analyse_coupled_dynamic_data(
     # )
 
     # Plot glass layer temperatures at midnight, 6 am, noon, and 6 pm.
-    if not skip_2d_plots:
+    if False:
+    # if not skip_2d_plots:
         plot_two_dimensional_figure(
             "glass_temperature_0000",
             logger,
@@ -882,7 +884,8 @@ def analyse_decoupled_steady_state_data(
         except ValueError:
             save_fig_name = "{temperature}_{layer}"
 
-        if not skip_2d_plots:
+        # if not skip_2d_plots:
+        if False:
             multi_layer_temperature_plot(
                 logger,
                 data,
@@ -999,10 +1002,6 @@ def analyse_decoupled_steady_state_data(
     # Thermal efficiency plot.
     logger.info("Plotting thermal efficiency against the reduced temperature.")
 
-    import pdb
-
-    pdb.set_trace()
-
     # Plot the experimental data.
     _, ax1 = plt.subplots()
     ax1.scatter(
@@ -1055,14 +1054,14 @@ def analyse_decoupled_steady_state_data(
     fig = plt.figure(figsize=(48 / 5, 32 / 5))
 
     sns.scatterplot(
-        x = [
+        x = (x_experimental:=[
             entry["reduced_temperature"]
             for entry in experimental_steady_state_data
-        ],
-        y = [
+        ]),
+        y = (y_experimental:=[
             entry["thermal_efficiency"]
             for entry in experimental_steady_state_data
-        ],
+        ]),
         marker="h",
         s=270,
         alpha=0.55,
@@ -1075,8 +1074,8 @@ def analyse_decoupled_steady_state_data(
         return ((entry["absorber_temperature"] + entry["pv_temperature"]) / 2 - entry["ambient_temperature"]) / entry["solar_irradiance"]
 
     sns.scatterplot(
-        x = [entry["reduced_collector_temperature"] for entry in data.values()],
-        y = [entry["thermal_efficiency"] for entry in data.values()],
+        x = (x_model:=[entry["reduced_collector_temperature"] for entry in data.values()]),
+        y = (y_model:=[entry["thermal_efficiency"] for entry in data.values()]),
         marker="H",
         s=270,
         alpha=0.55,
@@ -1089,6 +1088,17 @@ def analyse_decoupled_steady_state_data(
     axis.set_xlabel("Reduced collector temperature / Km$^2$/W")
     axis.set_ylabel("Thermal efficiency")
     axis.legend(loc="upper right")
+
+    def _quadratic_curve(T_r, eta_0, a_1, a_2) -> float:
+        """Calculate the thermal efficiency."""
+        return eta_0 + a_1 * T_r + a_2 * (T_r ** 2)
+
+    fit_exp = scipy_curve_fit(_quadratic_curve, x_experimental, y_experimental)
+    fit_model = scipy_curve_fit(_quadratic_curve, x_model, y_model)
+
+    import pdb
+
+    pdb.set_trace()
 
     plt.savefig("solimpeks_standard_collector_validation_scatter.png", transparent=True, dpi=400, bbox_inches="tight")
 

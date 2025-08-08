@@ -549,7 +549,8 @@ class WeatherConditions:
 
         """
 
-        return 3.8 + 2 * self.wind_speed
+        return 6.5 + 3.3 * self.wind_speed
+        # return 3.8 + 2 * self.wind_speed
         # return 4.5 + 2.9 * self.wind_speed
 
     def __repr__(self) -> str:

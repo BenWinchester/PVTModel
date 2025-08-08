@@ -87,7 +87,7 @@ INTERNAL_HOUSEHOLD_AMBIENT_TEMPERATURE = ZERO_CELCIUS_OFFSET + 20  # [K]
 
 # The maximum recursion depth for which to run the model. Beyond this, an error will be
 # raised.
-MAXIMUM_RECURSION_DEPTH = 20
+MAXIMUM_RECURSION_DEPTH = 30
 
 # The gas constant of air in SI units of Joules per kilogram Kelvin.
 SPECIFIC_GAS_CONSTANT_OF_AIR = 287.05  # [J/kg*K]

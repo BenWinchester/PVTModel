@@ -905,10 +905,6 @@ def plot_two_dimensional_figure(
     plt.xlabel("Element x index")
     plt.ylabel("Element y index")
 
-    import pdb
-
-    pdb.set_trace()
-
     # Add axes and colour scale.
     fig3D.colorbar(surface, shrink=0.5, aspect=5, label=axis_label)
 
@@ -940,3 +936,5 @@ def plot_two_dimensional_figure(
     save_figure(f"{figure_name}_3d", False)
     if not hold:
         plt.close("all")
+
+    plt.show()

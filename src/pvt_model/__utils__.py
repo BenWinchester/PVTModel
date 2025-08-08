@@ -696,7 +696,8 @@ def save_data(
                 )
 
 
-@dataclass(frozen=True)
+# @dataclass(frozen=True)
+@dataclass
 class SteadyStateRun:
     """
     Represents a steady-state run which is to be carreid out.
