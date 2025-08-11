@@ -22,11 +22,12 @@ import sys
 from logging import Logger
 from typing import Any, List, Dict, Optional, Union
 
-from scipy.optimize import curve_fit as scipy_curve_fit
+import pandas as pd
 import seaborn as sns
 import yaml
 
 from matplotlib import pyplot as plt
+from scipy.optimize import curve_fit as scipy_curve_fit
 
 try:
     from ..__utils__ import get_logger
@@ -1046,6 +1047,9 @@ def analyse_decoupled_steady_state_data(
         ]
     )
 
+    with open("volther_powervolt_manufacturer.csv", "r") as f:
+        manufacturer_data = pd.read_csv(f)
+
     sns.set_palette(thesis_palette)
 
     sns.set_style("ticks")
@@ -1054,35 +1058,45 @@ def analyse_decoupled_steady_state_data(
     fig = plt.figure(figsize=(48 / 5, 32 / 5))
 
     sns.scatterplot(
-        x = (x_experimental:=[
-            entry["reduced_temperature"]
-            for entry in experimental_steady_state_data
-        ]),
-        y = (y_experimental:=[
-            entry["thermal_efficiency"]
-            for entry in experimental_steady_state_data
-        ]),
+        pd.DataFrame(experimental_steady_state_data),
+        x = "reduced_temperature",
+        y = "thermal_efficiency",
         marker="h",
         s=270,
         alpha=0.55,
-        color="C4",
+        hue="wind_speed",
         linewidth=0,
-        label="Experimental data"
+        palette=sns.cubehelix_palette(start=0.0, rot=-0.6, as_cmap=True)
+        # label="Experimental data"
     )
 
     def _extract_reduced_temperature(entry) -> float:
         return ((entry["absorber_temperature"] + entry["pv_temperature"]) / 2 - entry["ambient_temperature"]) / entry["solar_irradiance"]
 
     sns.scatterplot(
-        x = (x_model:=[entry["reduced_collector_temperature"] for entry in data.values()]),
-        y = (y_model:=[entry["thermal_efficiency"] for entry in data.values()]),
+        pd.DataFrame(data).transpose(),
+        x = "reduced_collector_temperature",
+        y = "thermal_efficiency",
         marker="H",
         s=270,
         alpha=0.55,
-        color="C0",
+        hue="wind_speed",
         linewidth=0,
-        label="PVTModel output"
+        palette=sns.cubehelix_palette(start=2.0, rot=-0.6, as_cmap=True)
+        # label="PVTModel output"
     )
+
+    # sns.scatterplot(
+    #     manufacturer_data,
+    #     x = "reduced_temperature",
+    #     y = "thermal_efficiency",
+    #     marker="D",
+    #     s=270,
+    #     alpha=0.55,
+    #     hue="wind_speed",
+    #     linewidth=0,
+    #     # label="PVTModel output"
+    # )
 
     axis = plt.gca()
     axis.set_xlabel("Reduced collector temperature / Km$^2$/W")
@@ -1093,8 +1107,10 @@ def analyse_decoupled_steady_state_data(
         """Calculate the thermal efficiency."""
         return eta_0 + a_1 * T_r + a_2 * (T_r ** 2)
 
-    fit_exp = scipy_curve_fit(_quadratic_curve, x_experimental, y_experimental)
-    fit_model = scipy_curve_fit(_quadratic_curve, x_model, y_model)
+    # fit_exp = scipy_curve_fit(_quadratic_curve, x_experimental, y_experimental)
+    # fit_model = scipy_curve_fit(_quadratic_curve, x_model, y_model)
+
+    plt.show()
 
     import pdb
 
